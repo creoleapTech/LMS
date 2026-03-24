@@ -1,0 +1,173 @@
+// app/admin/curriculum/page.tsx
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, BookOpen, GraduationCap, FileText, Layers, Book, List } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChapterContentManager } from "./ChapterContentManager";
+import { ChapterManager } from "./ChapterManager";
+import { CurriculumTable } from "./CurriculumTable";
+import { GradeBookManager } from "./GradeBookManager";
+import { AllGradeBooksTable } from "./AllGradeBooksTable";
+import { AllChaptersTable } from "./AllChaptersTable";
+
+export default function CurriculumManagementPage() {
+  const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
+  const [selectedGradeBookId, setSelectedGradeBookId] = useState<string | null>(null);
+  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
+
+  const handleBack = () => {
+    if (selectedChapterId) {
+      setSelectedChapterId(null);
+    } else if (selectedGradeBookId) {
+      setSelectedGradeBookId(null);
+    } else if (selectedCurriculumId) {
+      setSelectedCurriculumId(null);
+    }
+  };
+
+  const breadcrumb = () => {
+    if (!selectedCurriculumId) return "Curriculum Management";
+    if (!selectedGradeBookId) return "Grade Books";
+    if (!selectedChapterId) return "Chapters";
+    return "Chapter Content";
+  };
+
+  // Drill-down view component
+  const DrillDownView = () => (
+    <div className="space-y-8">
+      {/* Header for Drill-down */}
+      <div className="flex items-center gap-4 mb-4">
+        {(selectedCurriculumId || selectedGradeBookId || selectedChapterId) && (
+          <Button onClick={handleBack} variant="ghost" size="sm">
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Back
+          </Button>
+        )}
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+          {breadcrumb()}
+        </h2>
+      </div>
+
+      {/* Step 1: Curriculum List */}
+      {!selectedCurriculumId && (
+        <Card className="border-2">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-3">
+              <BookOpen className="h-6 w-6 text-blue-600" />
+              Curriculums
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CurriculumTable onSelectCurriculum={setSelectedCurriculumId} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 2: Grade Books */}
+      {selectedCurriculumId && !selectedGradeBookId && (
+        <Card className="border-2">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-3">
+              <GraduationCap className="h-6 w-6 text-blue-600" />
+              Grade Books
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <GradeBookManager
+              curriculumId={selectedCurriculumId}
+              onGradeSelect={setSelectedGradeBookId}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 3: Chapters */}
+      {selectedGradeBookId && !selectedChapterId && (
+        <Card className="border-2">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-3">
+              <FileText className="h-6 w-6 text-blue-600" />
+              Chapters
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChapterManager
+              gradeBookId={selectedGradeBookId}
+              onChapterSelect={setSelectedChapterId}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 4: Content Manager */}
+      {selectedChapterId && (
+        <Card className="border-2">
+          <CardHeader>
+            <CardTitle className="text-xl">Chapter Content Manager</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChapterContentManager chapterId={selectedChapterId} />
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <div className="container mx-auto py-8 px-4 max-w-7xl">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            Curriculum Management
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Manage curriculums, books, chapters, and content.
+          </p>
+        </div>
+
+        <Tabs defaultValue="curriculum" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+            <TabsTrigger value="curriculum" className="flex items-center gap-2">
+              <Layers className="h-4 w-4" /> Curriculum
+            </TabsTrigger>
+            <TabsTrigger value="books" className="flex items-center gap-2">
+              <Book className="h-4 w-4" /> All Books
+            </TabsTrigger>
+            <TabsTrigger value="chapters" className="flex items-center gap-2">
+              <List className="h-4 w-4" /> All Chapters
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="curriculum">
+            <DrillDownView />
+          </TabsContent>
+
+          <TabsContent value="books">
+            <Card>
+              <CardHeader>
+                <CardTitle>All Grade Books</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AllGradeBooksTable />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="chapters">
+            <Card>
+              <CardHeader>
+                <CardTitle>All Chapters</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AllChaptersTable />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}

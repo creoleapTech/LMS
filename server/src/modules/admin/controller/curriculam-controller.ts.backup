@@ -1,0 +1,349 @@
+// controllers/curriculum.controller.ts
+import Elysia, { t } from "elysia";
+import { BadRequestError } from "@/lib/shared/bad-request";
+import { ForbiddenError } from "@/lib/shared/errors/forbidden";
+import { Types } from "mongoose";
+import { CurriculumModel } from "@/schema/books/curriculam-model";
+import { GradeBookModel } from "@/schema/books/gradeBook-model";
+import { ChapterModel } from "@/schema/books/chapter-model";
+import { ChapterContentModel } from "@/schema/books/chapterContent-model";
+import { deleteFile, deliverFile, saveFile } from "@/lib/file";
+import { superAdminAuthMacro } from "@/modules/superAdmin/superAdmin-macro";
+
+interface DecodedToken {
+  role: string;
+  institutionId?: Types.ObjectId | string;
+}
+
+export const curriculumController = new Elysia({
+  prefix: "/curriculum",
+  tags: ["Curriculum System (Super Admin Only)"],
+})
+  .use(superAdminAuthMacro)
+  .guard({
+    isAuth: true
+  })
+
+  // ===================== CURRICULUM (Branches) =====================
+  .post("/", async ({ body, user, set }) => {
+    if (user.role !== "super_admin") {
+      throw new ForbiddenError("Only super_admin can create curriculums");
+    }
+
+    const existing = await CurriculumModel.findOne({ name: body.name });
+    if (existing) throw new BadRequestError("Curriculum with this name already exists");
+
+    // Handle file uploads
+    let thumbnailFilename = "";
+    let bannerFilename = "";
+
+    if (body.thumbnail) {
+      const result = await saveFile(body.thumbnail, "curriculum/thumbnails");
+      if (result.ok) thumbnailFilename = result.filename;
+    }
+
+    if (body.banner) {
+      const result = await saveFile(body.banner, "curriculum/banners");
+      if (result.ok) bannerFilename = result.filename;
+    }
+
+    // Parse FormData values to correct types
+    const grades = Array.isArray(body.grades) 
+      ? body.grades.map((g: any) => typeof g === 'string' ? parseInt(g) : g)
+      : [];
+    
+    const tags = Array.isArray(body.tags) 
+      ? body.tags 
+      : (body.tags ? [body.tags] : []);
+
+    const level = Array.isArray(body.level)
+      ? body.level
+      : (body.level ? [body.level] : []);
+    
+    const isPublished = typeof body.isPublished === 'string' 
+      ? body.isPublished === 'true' 
+      : body.isPublished;
+
+    const curriculumData = {
+      name: body.name,
+      description: body.description,
+      level,
+      grades,
+      tags,
+      isPublished,
+      thumbnail: thumbnailFilename,
+      banner: bannerFilename,
+    };
+
+    const curriculum = new CurriculumModel(curriculumData);
+    await curriculum.save();
+
+    set.status = 201;
+    return { 
+      success: true, 
+      data: {
+        ...curriculum.toObject(),
+        thumbnail: thumbnailFilename ?thumbnailFilename : "",
+        banner: bannerFilename ? bannerFilename : ""
+      }
+    };
+  }, {
+    body: t.Object({
+      name: t.String({ minLength: 3, maxLength: 100 }),
+      description: t.Optional(t.String()),
+      thumbnail: t.Optional(t.File()),
+      banner: t.Optional(t.File()),
+      tags: t.Optional(t.Union([t.Array(t.String()), t.String()])),
+      level: t.Optional(t.Union([t.Array(t.String()), t.String()])),
+      grades: t.Union([t.Array(t.Union([t.Number(), t.String()])), t.String()]),
+      isPublished: t.Optional(t.Union([t.Boolean(), t.String()])),
+    }),
+    detail: { summary: "Create new curriculum branch" }
+  })
+
+  .get("/", async ({ query, user, set }) => {
+    if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
+
+    const { page = 1, limit = 10, published, search } = query;
+    const filter: any = {};
+    if (published !== undefined) filter.isPublished = published === "true";
+    
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+    }
+
+    const curriculums = await CurriculumModel.find(filter)
+      .sort({ order: 1, createdAt: -1 })
+      .skip((+page - 1) * +limit)
+      .limit(+limit);
+
+    // Add full URLs for file paths
+    const curriculumsWithUrls = curriculums.map(curriculum => ({
+      ...curriculum.toObject(),
+      thumbnail: curriculum.thumbnail ? curriculum.thumbnail : "",
+      banner: curriculum.banner ? curriculum.banner : ""
+    }));
+
+    const total = await CurriculumModel.countDocuments(filter);
+
+    set.status = 200;
+    return { 
+      success: true, 
+      data: curriculumsWithUrls, 
+      meta: { total, page: +page, limit: +limit } 
+    };
+  }, {
+    query: t.Object({
+      page: t.Optional(t.String()),
+      limit: t.Optional(t.String()),
+      published: t.Optional(t.String()),
+      search: t.Optional(t.String()),
+    }),
+  })
+
+  .get("/curr/:id", async ({ params, user }) => {
+    if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
+
+    const curriculum = await CurriculumModel.findById(params.id);
+    if (!curriculum) throw new BadRequestError("Curriculum not found");
+
+    return { 
+      success: true, 
+      data: {
+        ...curriculum.toObject(),
+        thumbnail: curriculum.thumbnail ?curriculum.thumbnail : "",
+        banner: curriculum.banner ? curriculum.banner : ""
+      }
+    };
+  }, { params: t.Object({ id: t.String() }) })
+
+  .patch("/:id", async ({ params, body, user, set }) => {
+    if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
+
+    const existingCurriculum = await CurriculumModel.findById(params.id);
+    if (!existingCurriculum) throw new BadRequestError("Curriculum not found");
+
+    // Handle file uploads and deletions
+    let updateData: any = { ...body };
+    
+    if (body.thumbnail) {
+      // Delete old thumbnail if exists
+      if (existingCurriculum.thumbnail) {
+        await deleteFile(existingCurriculum.thumbnail, "curriculum/thumbnails");
+      }
+      
+      const result = await saveFile(body.thumbnail, "curriculum/thumbnails");
+      if (result.ok) updateData.thumbnail = result.filename;
+    }
+
+    if (body.banner) {
+      // Delete old banner if exists
+      if (existingCurriculum.banner) {
+        await deleteFile(existingCurriculum.banner, "curriculum/banners");
+      }
+      
+      const result = await saveFile(body.banner, "curriculum/banners");
+      if (result.ok) updateData.banner = result.filename;
+    }
+
+    // Parse FormData values for update
+    if (updateData.grades) {
+      updateData.grades = Array.isArray(updateData.grades)
+        ? updateData.grades.map((g: any) => typeof g === 'string' ? parseInt(g) : g)
+        : [];
+    }
+    
+    if (updateData.tags) {
+      updateData.tags = Array.isArray(updateData.tags)
+        ? updateData.tags
+        : (updateData.tags ? [updateData.tags] : []);
+    }
+
+    if (updateData.level) {
+      updateData.level = Array.isArray(updateData.level)
+        ? updateData.level
+        : [updateData.level];
+    }
+    
+    if (typeof updateData.isPublished === 'string') {
+      updateData.isPublished = updateData.isPublished === 'true';
+    }
+
+    // Remove file objects from update data if they exist as properties
+    delete updateData.thumbnailFile;
+    delete updateData.bannerFile;
+
+    const curriculum = await CurriculumModel.findByIdAndUpdate(
+      params.id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!curriculum) throw new BadRequestError("Curriculum not found");
+
+    if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
+
+    const chapter = await ChapterModel.findById(params.chapterId);
+    if (!chapter) throw new BadRequestError("Chapter not found");
+
+    const count = await ChapterContentModel.countDocuments({ chapterId: params.chapterId });
+
+    // Handle file upload
+    let fileFilename = "";
+    if (body.file) {
+       // Determine folder based on type
+       const folder = body.type === 'video' ? 'content/videos' : 'content/docs';
+       const result = await saveFile(body.file, folder);
+       if (result.ok) fileFilename = result.filename;
+    }
+
+    const contentData: any = {
+      chapterId: params.chapterId,
+      type: body.type,
+      title: body.title,
+      order: count + 1,
+      isFree: body.isFree === 'true' || body.isFree === true,
+    };
+
+    if (body.type === 'video') {
+      contentData.videoUrl = fileFilename;
+    } else {
+      contentData.fileUrl = fileFilename;
+    }
+
+    const content = new ChapterContentModel(contentData);
+    await content.save();
+
+    set.status = 201;
+    return { success: true, data: content };
+  }, {
+    params: t.Object({ chapterId: t.String() }),
+    body: t.Object({
+      type: t.String(),
+      title: t.String(),
+      file: t.Optional(t.File()),
+      isFree: t.Optional(t.Union([t.Boolean(), t.String()])),
+    })
+  })
+
+  .delete("/content/:id", async ({ params, user }) => {
+    if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
+    
+    const content = await ChapterContentModel.findById(params.id);
+    if (!content) throw new BadRequestError("Content not found");
+
+    if (content.fileUrl) await deleteFile(content.fileUrl, "content/docs");
+    if (content.videoUrl) await deleteFile(content.videoUrl, "content/videos");
+
+    await ChapterContentModel.findByIdAndDelete(params.id);
+    return { success: true, message: "Content deleted" };
+  }, { params: t.Object({ id: t.String() }) })
+
+  // ===================== GLOBAL LISTS (For Tabs) =====================
+  .get("/all-gradebooks", async ({ query, user }) => {
+    if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
+    
+    const { page = 1, limit = 10, search } = query;
+    const filter: any = {};
+    
+    if (search) {
+      filter.bookTitle = { $regex: search, $options: "i" };
+    }
+
+    const gradeBooks = await GradeBookModel.find(filter)
+      .populate('curriculumId', 'name') // Populate curriculum name
+      .sort({ createdAt: -1 })
+      .skip((+page - 1) * +limit)
+      .limit(+limit);
+      
+    const total = await GradeBookModel.countDocuments(filter);
+
+    return { 
+      success: true, 
+      data: gradeBooks,
+      meta: { total, page: +page, limit: +limit }
+    };
+  }, {
+    query: t.Object({
+      page: t.Optional(t.String()),
+      limit: t.Optional(t.String()),
+      search: t.Optional(t.String()),
+    })
+  })
+
+  .get("/all-chapters", async ({ query, user }) => {
+    if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
+    
+    const { page = 1, limit = 10, search } = query;
+    const filter: any = {};
+    
+    if (search) {
+      filter.title = { $regex: search, $options: "i" };
+    }
+
+    // Note: Deep population might be needed if we want curriculum name too, 
+    // but Mongoose 'populate' works on ref. Chapter has gradeBookId ref.
+    const chapters = await ChapterModel.find(filter)
+      .populate({
+        path: 'gradeBookId',
+        select: 'bookTitle curriculumId',
+        populate: { path: 'curriculumId', select: 'name' }
+      })
+      .sort({ createdAt: -1 })
+      .skip((+page - 1) * +limit)
+      .limit(+limit);
+      
+    const total = await ChapterModel.countDocuments(filter);
+
+    return { 
+      success: true, 
+      data: chapters,
+      meta: { total, page: +page, limit: +limit }
+    };
+  }, {
+    query: t.Object({
+      page: t.Optional(t.String()),
+      limit: t.Optional(t.String()),
+      search: t.Optional(t.String()),
+    })
+  });

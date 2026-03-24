@@ -1,0 +1,78 @@
+{
+  "_id": "64f123456789abcdef000001",
+  "username": "jane_doe",
+  "email": "jane.doe@example.com",
+  "role": "user",
+  "profileImage": "https://example.com/images/jane_doe_profile.jpg",
+  "lastLogin": "2025-09-16T22:30:00.000Z",
+  "isActive": true,
+  "permissions": ["read", "write"],
+  "isDeleted": false,
+  "fcmToken": "sample_fcm_token_456",
+  "mobile": "+9876543210",
+  "department": "Design",
+  "slug": "jane-doe",
+  "businessDetails": {
+    "companyName": "Jane Designs Inc.",
+    "companyAddress": "456 Creative Ave, City, Country",
+    "companyMobile": "+9876543210",
+    "companyEmail": "contact@janedesigns.com",
+    "companyWebsite": "https://janedesigns.com"
+  },
+  "socialMedia": {
+    "facebook": "https://facebook.com/janedoe",
+    "x": "https://x.com/janedoe",
+    "whatsapp": "https://wa.me/9876543210",
+    "youtube": "https://youtube.com/@janedoe",
+    "instagram": "https://instagram.com/janedoe"
+  },
+  "subscriptionPlan": "pro+",
+  "selectedIndustries": [
+    {
+      "industryId": "64f123456789abcdef000002",
+      "tags": ["structural", "surveying"]
+    },
+    {
+      "industryId": "64f123456789abcdef000003",
+      "tags": ["modern", "sustainable"]
+    }
+  ],
+  "attachedLinks": [
+    {
+      "categoryId": "64f123456789abcdef000004",
+      "userLinks": [
+        {
+          "subCategory": "facebook",
+          "url": "https://facebook.com/janedoe",
+          "icon": "fa-facebook"
+        },
+        {
+          "subCategory": "instagram",
+          "url": "https://instagram.com/janedoe",
+          "icon": "fa-instagram"
+        }
+      ]
+    },
+    {
+      "categoryId": "64f123456789abcdef000005",
+      "userLinks": [
+        {
+          "subCategory": "behance",
+          "url": "https://behance.net/janedoe",
+          "icon": "fa-behance"
+        },
+        {
+          "subCategory": "figma",
+          "url": "https://figma.com/@janedoe",
+          "icon": "fa-figma"
+        }
+      ]
+    }
+  ],
+  "businessImages": [
+    "https://example.com/images/business1.jpg",
+    "https://example.com/images/business2.jpg"
+  ],
+  "createdAt": "2025-09-16T22:30:00.000Z",
+  "updatedAt": "2025-09-16T22:30:00.000Z"
+}
