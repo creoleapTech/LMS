@@ -15,7 +15,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Curriculum', path: '/curriculum', icon: <BookOpenText className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
-  { name: 'Courses', path: '/courses', icon: <BookIcon className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
+  // { name: 'Courses', path: '/courses', icon: <BookIcon className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Institutions', path: '/institutions', icon: <Building className="w-5 h-5" />, roles: ['super_admin'] },
   { name: 'My Classes', path: '/my-classes', icon: <Users className="w-5 h-5" />, roles: ['staff', 'teacher'] },
   { name: 'Reports', path: '/reports', icon: <BarChart className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
