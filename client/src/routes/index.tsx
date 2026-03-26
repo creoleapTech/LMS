@@ -97,8 +97,8 @@ function LoginPage() {
           className="w-full h-full object-cover opacity-50 mix-blend-screen"
         />
         {/* Atmospheric gradients */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#03010A] via-transparent to-[#03010A]/80"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-[#03010A] via-[#03010A]/10 to-[#03010A]"></div>
+        <div className="absolute inset-0 bg-linear-to-t from-[#03010A] via-transparent to-[#03010A]/80"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-[#03010A] via-[#03010A]/10 to-[#03010A]"></div>
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
       </div>
 
@@ -108,11 +108,11 @@ function LoginPage() {
 
       {/* Main Glass Terminal */}
       <div className="z-10 w-full max-w-[1000px] p-4 sm:p-6 lg:p-8">
-        <div className="relative backdrop-blur-3xl bg-[#0C0620]/50 border border-white/5 shadow-[0_0_50px_rgba(111,66,193,0.1),_inset_0_1px_0_rgba(255,255,255,0.1)] rounded-[2rem] overflow-hidden flex flex-col lg:flex-row group transition-all duration-700 hover:shadow-[0_0_80px_rgba(111,66,193,0.15)] ring-1 ring-white/10 min-h-[550px]">
+        <div className="relative backdrop-blur-3xl bg-[#0C0620]/50 border border-white/5 shadow-[0_0_50px_rgba(111,66,193,0.1),inset_0_1px_0_rgba(255,255,255,0.1)] rounded-4xl overflow-hidden flex flex-col lg:flex-row group transition-all duration-700 hover:shadow-[0_0_80px_rgba(111,66,193,0.15)] ring-1 ring-white/10 min-h-[550px]">
           
           {/* Edge Glow Effect */}
-          <div className="absolute -top-px left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent opacity-50"></div>
-          <div className="absolute -bottom-px left-1/3 right-1/3 h-px bg-gradient-to-r from-transparent via-indigo-400 to-transparent opacity-50"></div>
+          <div className="absolute -top-px left-1/4 right-1/4 h-px bg-linear-to-r from-transparent via-purple-400 to-transparent opacity-50"></div>
+          <div className="absolute -bottom-px left-1/3 right-1/3 h-px bg-linear-to-r from-transparent via-indigo-400 to-transparent opacity-50"></div>
 
           {/* Left Panel - Information */}
           <div className="hidden lg:flex flex-1 flex-col justify-between p-8 xl:p-12 relative">
@@ -121,13 +121,13 @@ function LoginPage() {
               <div className="flex items-center space-x-3 mb-4">
                 <div className="relative">
                   <div className="absolute inset-0 bg-indigo-500 blur-lg opacity-40 animate-pulse"></div>
-                  <div className="bg-gradient-to-br from-indigo-500/40 to-purple-500/40 p-2.5 rounded-xl border border-white/10 relative z-10 backdrop-blur-sm">
+                  <div className="bg-linear-to-br from-indigo-500/40 to-purple-500/40 p-2.5 rounded-xl border border-white/10 relative z-10 backdrop-blur-sm">
                     <GraduationCap className="h-6 w-6 text-white" />
                   </div>
                 </div>
                 <div className="flex flex-col">
                   {/* <img src="" alt="" /> */}
-                  <span className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80">
+                  <span className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-linear-to-r from-white to-white/80">
                     Creoleap LMS
                   </span>
                   <span className="text-[10px] font-mono text-purple-300/80 tracking-widest uppercase mt-0.5">Advanced E-Learning Portal</span>
@@ -146,7 +146,7 @@ function LoginPage() {
             <div className="mt-6">
               <h1 className="text-4xl xl:text-5xl font-black leading-[1.1] tracking-tighter mb-4 relative">
                 Empower Your <br />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300">
+                <span className="bg-clip-text text-transparent bg-linear-to-r from-indigo-300 via-purple-300 to-pink-300">
                   Learning Experience
                 </span>
               </h1>
@@ -157,19 +157,19 @@ function LoginPage() {
 
             {/* Metric Displays (Futuristic Bento) */}
             <div className="grid grid-cols-2 gap-3 mt-10 relative z-10">
-              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 backdrop-blur-md group/card hover:bg-white/[0.05] transition-all">
+              <div className="bg-white/3 border border-white/5 rounded-xl p-4 backdrop-blur-md group/card hover:bg-white/5 transition-all">
                 <Cpu className="h-5 w-5 text-indigo-400 mb-2 opacity-70 group-hover/card:opacity-100 group-hover/card:text-indigo-300 transition-all" />
                 <div className="text-2xl font-black text-white font-mono tracking-tighter">10K+</div>
                 <div className="text-[10px] text-white/50 font-mono mt-0.5">ACTIVE COURSES</div>
               </div>
               
-              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-4 backdrop-blur-md group/card hover:bg-white/[0.05] transition-all relative overflow-hidden">
+              <div className="bg-white/3 border border-white/5 rounded-xl p-4 backdrop-blur-md group/card hover:bg-white/5 transition-all relative overflow-hidden">
                 <Globe className="h-5 w-5 text-pink-400 mb-2 opacity-70 group-hover/card:opacity-100 group-hover/card:text-pink-300 transition-all" />
                 <div className="text-2xl font-black text-white font-mono tracking-tighter">50K+</div>
                 <div className="text-[10px] text-white/50 font-mono mt-0.5">STUDENTS</div>
                 
                 {/* Embedded subtle grid */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:10px_10px] pointer-events-none opacity-20"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[10px_10px] pointer-events-none opacity-20"></div>
               </div>
             </div>
 
@@ -187,10 +187,10 @@ function LoginPage() {
 
              {/* Mobile logo variant */}
              <div className="lg:hidden flex items-center space-x-3 mb-8">
-               <div className="bg-gradient-to-br from-purple-500/40 to-indigo-500/40 p-2 rounded-xl border border-white/10 backdrop-blur-sm">
+               <div className="bg-linear-to-br from-purple-500/40 to-indigo-500/40 p-2 rounded-xl border border-white/10 backdrop-blur-sm">
                  <GraduationCap className="h-6 w-6 text-white" />
                </div>
-               <span className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
+               <span className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-linear-to-r from-white to-white/70">
                  Creoleap LMS
                </span>
              </div>
@@ -264,15 +264,15 @@ function LoginPage() {
                {/* Submission Node */}
                <div className="pt-4 relative">
                  {/* Glowing backdrop for button */}
-                 <div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 blur-xl rounded-2xl transition-opacity group-hover:opacity-40"></div>
+                 <div className="absolute inset-x-0 bottom-0 h-full bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 blur-xl rounded-2xl transition-opacity group-hover:opacity-40"></div>
                  
                  <button
                    type="submit"
                    disabled={loginMutation.isPending}
-                   className="relative w-full flex justify-center items-center space-x-2 py-3 px-4 border border-white/10 text-sm font-bold rounded-xl text-white bg-gradient-to-r from-indigo-600/80 via-purple-600/80 to-indigo-600/80 bg-[length:200%_auto] hover:border-purple-400/50 hover:bg-[position:right_center] focus:outline-none shadow-[0_0_20px_rgba(111,66,193,0.3)] transition-all duration-500 hover:shadow-[0_0_30px_rgba(111,66,193,0.5)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden"
+                   className="relative w-full flex justify-center items-center space-x-2 py-3 px-4 border border-white/10 text-sm font-bold rounded-xl text-white bg-linear-to-r from-indigo-600/80 via-purple-600/80 to-indigo-600/80 bg-size-[200%_auto] hover:border-purple-400/50 hover:bg-position-[right_center] focus:outline-none shadow-[0_0_20px_rgba(111,66,193,0.3)] transition-all duration-500 hover:shadow-[0_0_30px_rgba(111,66,193,0.5)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden"
                  >
                    {/* Cyber scanner line animation */}
-                   <div className="absolute top-0 left-0 w-full h-[2px] bg-white/60 -translate-y-[20px] group-hover:translate-y-[60px] transition-transform duration-1000 ease-in-out"></div>
+                   <div className="absolute top-0 left-0 w-full h-0.5 bg-white/60 -translate-y-5 group-hover:translate-y-[60px] transition-transform duration-1000 ease-in-out"></div>
                    
                    <div className="relative z-10 flex items-center justify-center space-x-2 font-mono uppercase tracking-widest">
                      {loginMutation.isPending ? (

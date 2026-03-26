@@ -290,8 +290,8 @@ export function StaffTable({ institutionId, institutionName }: Props) {
 
           {/* Filters Card */}
           <Card className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="relative">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="relative sm:col-span-2 md:col-span-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search name, email, mobile..."
@@ -337,7 +337,8 @@ export function StaffTable({ institutionId, institutionName }: Props) {
               </div>
 
               <div className="rounded-md border bg-card">
-                <Table>
+                <div className="overflow-x-auto">
+                <Table className="min-w-[900px]">
                   <TableHeader>
                     {table.getHeaderGroups().map(headerGroup => (
                       <TableRow key={headerGroup.id}>
@@ -369,6 +370,7 @@ export function StaffTable({ institutionId, institutionName }: Props) {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </div>
 
               {/* Pagination */}

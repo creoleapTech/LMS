@@ -137,11 +137,11 @@ export function CourseTable({ institutionId, institutionName }: Props) {
 
   return (
     <>
-      <div className="container mx-auto py-8 max-w-7xl">
-        <div className="flex justify-between items-start mb-8">
+      <div className="container mx-auto py-8 px-4 max-w-7xl">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <BookOpen className="h-8 w-8" /> Courses
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-3">
+              <BookOpen className="h-6 w-6 sm:h-8 sm:w-8" /> Courses
             </h1>
             <p className="text-muted-foreground">{institutionName}</p>
           </div>
@@ -151,8 +151,8 @@ export function CourseTable({ institutionId, institutionName }: Props) {
         </div>
 
         <Card className="p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="relative sm:col-span-2 md:col-span-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Search courses..." value={globalFilter} onChange={e => setGlobalFilter(e.target.value)} className="pl-10" />
             </div>
@@ -181,7 +181,8 @@ export function CourseTable({ institutionId, institutionName }: Props) {
         </Card>
 
         <div className="rounded-md border">
-          <Table>
+          <div className="overflow-x-auto">
+          <Table className="min-w-[700px]">
             <TableHeader>
               {table.getHeaderGroups().map(g => (
                 <TableRow key={g.id}>
@@ -209,6 +210,7 @@ export function CourseTable({ institutionId, institutionName }: Props) {
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       </div>
 

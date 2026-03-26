@@ -295,9 +295,9 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
         <div className="space-y-8">
           {curriculumAccess.map((access) => (
             <Card key={access.curriculumId._id}>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <CardTitle className="flex items-center gap-2 min-w-0">
+                  <BookOpen className="h-5 w-5 shrink-0" />
                   {access.curriculumId.name}
                 </CardTitle>
                 <Button

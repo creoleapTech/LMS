@@ -67,7 +67,7 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
         )}
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -91,7 +91,8 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
       </div>
 
       <div className="rounded-lg border bg-card">
-        <Table>
+        <div className="overflow-x-auto">
+        <Table className="min-w-[600px]">
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -137,6 +138,7 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
             ))}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <CurriculumFormDialog

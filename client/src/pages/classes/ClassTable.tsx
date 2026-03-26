@@ -218,7 +218,8 @@ export function ClassTable({ institutionId }: Props) {
                     <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
                 ) : (
                     <div className="rounded-md border bg-card">
-                        <Table>
+                        <div className="overflow-x-auto">
+                        <Table className="min-w-[600px]">
                             <TableHeader>
                                 {table.getHeaderGroups().map(headerGroup => (
                                     <TableRow key={headerGroup.id}>
@@ -250,6 +251,7 @@ export function ClassTable({ institutionId }: Props) {
                                 )}
                             </TableBody>
                         </Table>
+                        </div>
                     </div>
                 )}
             </div>

@@ -97,15 +97,15 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
 
       <div className="relative z-10 container mx-auto py-8 px-4 max-w-7xl">
         {/* Hero Header */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/30 dark:bg-slate-800/30 backdrop-blur-xl shadow-2xl mb-8 px-8 py-2 ">
-          <div className="absolute inset-0 bg-gradient-to-r from-brand-color/10 to-brand-color/5 opacity-30" />
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/30 dark:bg-slate-800/30 backdrop-blur-xl shadow-2xl mb-8 px-4 sm:px-8 py-2 ">
+          <div className="absolute inset-0 bg-linear-to-r from-brand-color/10 to-brand-color/5 opacity-30" />
           <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-6">
               <div>
-                <h1 className="text-3xl font-bold text-brand-color">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-brand-color wrap-break-word min-w-0">
                   {institution.name}
                 </h1>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                   <Badge variant="outline" className="text-md px-4 py-2 capitalize font-medium bg-white/20 dark:bg-slate-700/20 backdrop-blur-sm">
                     <School className="h-6 w-6 mr-2" />
                     {institution.type}
@@ -129,7 +129,7 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Institution ID</p>
-              <code className="text-xs bg-muted/30 px-3 py-2 rounded-lg font-mono backdrop-blur-sm">
+              <code className="text-xs bg-muted/30 px-3 py-2 rounded-lg font-mono backdrop-blur-sm break-all">
                 {institution._id}
               </code>
             </div>
@@ -138,7 +138,7 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
-          <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full max-w-3xl h-14 rounded-2xl p-2 bg-white/20 dark:bg-slate-700/30 backdrop-blur-md shadow-md">
+          <TabsList className="flex flex-wrap w-full max-w-3xl h-auto min-h-14 rounded-2xl p-2 gap-1 bg-white/20 dark:bg-slate-700/30 backdrop-blur-md shadow-md">
             <TabsTrigger value="overview" className="rounded-xl text-lg font-medium transition-colors duration-300 hover:bg-white/30 dark:hover:bg-slate-600">
               <Building2 className="h-5 w-5 mr-2" /> Overview
             </TabsTrigger>

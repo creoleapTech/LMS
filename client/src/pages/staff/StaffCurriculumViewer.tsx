@@ -145,8 +145,8 @@ export default function StaffCurriculumViewer() {
   };
 
   const Breadcrumb = () => (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-      <button onClick={resetToHome} className="hover:text-foreground flex items-center gap-1">
+    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6 overflow-x-auto whitespace-nowrap pb-1">
+      <button onClick={resetToHome} className="hover:text-foreground flex items-center gap-1 shrink-0">
         <Home className="h-4 w-4" />
         Home
       </button>
@@ -195,12 +195,12 @@ export default function StaffCurriculumViewer() {
     const fileUrl = getFileUrl(viewingContent);
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
         <div className="max-w-6xl mx-auto">
           <Breadcrumb />
 
           <Card className="overflow-hidden shadow-2xl">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white">
+            <div className="bg-linear-to-r from-blue-600 to-purple-600 p-8 text-white">
               <div className="flex items-center gap-4 mb-4">
                 {getContentTypeIcon(viewingContent.type)}
                 <Badge className="bg-white/20 text-white border-0 text-lg px-4 py-1">
@@ -240,12 +240,12 @@ export default function StaffCurriculumViewer() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
       <div className="max-w-7xl mx-auto">
         <Breadcrumb />
 
         <div className="mb-10">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
             My Teaching Resources
           </h1>
           <p className="text-lg text-muted-foreground">
@@ -308,7 +308,7 @@ export default function StaffCurriculumViewer() {
                   className="group hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden border-2 hover:border-blue-400"
                   onClick={() => setSelectedCurriculum(curriculum)}
                 >
-                  <div className="h-40 bg-gradient-to-br from-blue-500 to-purple-600 relative">
+                  <div className="h-40 bg-linear-to-br from-blue-500 to-purple-600 relative">
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all" />
                     <div className="absolute bottom-5 left-5 right-5 text-white">
                       <h3 className="text-2xl font-bold drop-shadow-lg">{curriculum.name}</h3>
@@ -337,7 +337,7 @@ export default function StaffCurriculumViewer() {
                 className="group hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden"
                 onClick={() => setSelectedGradeBook(book._id)}
               >
-                <div className="h-48 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 relative">
+                <div className="h-48 bg-linear-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 relative">
                   {book.coverImage ? (
                     <img
                       src={`${Config.imgUrl}${book.coverImage}`}
@@ -393,7 +393,7 @@ export default function StaffCurriculumViewer() {
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-5">
-                      <div className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <div className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                         <span className="text-2xl font-bold text-white">{chapter.chapterNumber}</span>
                       </div>
                       <div className="flex-1">

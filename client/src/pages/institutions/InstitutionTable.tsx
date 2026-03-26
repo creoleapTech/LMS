@@ -277,8 +277,8 @@ export function InstitutionTable() {
 
   return (
     <>
-      <div className="container mx-auto py-8 px-10 max-w-7xl">
-        <div className="flex justify-between items-center mb-8">
+      <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-10 max-w-7xl">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold">Institutions</h1>
             <p className="text-muted-foreground">Manage schools and colleges</p>
@@ -339,7 +339,8 @@ export function InstitutionTable() {
         {/* Table */}
         {!isLoading && !isFetching && !error && (
           <div className="rounded-lg border bg-card">
-            <Table>
+            <div className="overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 {table.getHeaderGroups().map((g) => (
                   <TableRow key={g.id}>
@@ -371,6 +372,7 @@ export function InstitutionTable() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
         )}
 

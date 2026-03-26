@@ -39,10 +39,10 @@ function Dashboard() {
   }
 
   return (
-    <div className="p-6  min-h-screen bg-gray-100">
+    <div className="p-4 sm:p-6 min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 wrap-break-word min-w-0">
           Welcome, {user.name} ({user.role})
         </h1>
         <button
@@ -98,7 +98,8 @@ function Dashboard() {
       <div className="mt-8">
         <h2 className="text-2xl font-bold mb-4">Courses</h2>
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[500px]">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Title</th>
@@ -124,15 +125,17 @@ function Dashboard() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
-      {/* Users Section (SuperAdmin and Admin only) */}
+      {/* Users Section (SuperAdmin and Admin only) */
       {(user.role === 'admin' || user.role === 'super_admin') && (
         <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">Users</h2>
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[500px]">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Name</th>
@@ -154,11 +157,12 @@ function Dashboard() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Analytics Section */}
+      {/* Analytics Section */
       <div className="mt-8">
         <h2 className="text-2xl font-bold mb-4">Analytics</h2>
         <div className="bg-white p-6 rounded-lg shadow-md">

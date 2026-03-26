@@ -64,7 +64,7 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                     {/* PROFILE CARD */}
                     <Card className="overflow-hidden border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl ring-1 ring-slate-200 dark:ring-slate-800">
                         <div className="absolute top-0 right-0 p-8 bg-brand-color/50 rounded-full blur-[100px] pointer-events-none" />
-                        <CardHeader className="relative border-b !pb-0 border-slate-100 dark:border-slate-800 ">
+                        <CardHeader className="relative border-b pb-0! border-slate-100 dark:border-slate-800 ">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-brand-color/10 rounded-xl">
@@ -82,11 +82,11 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                         </CardHeader>
                         <CardContent className="p-0">
                             <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-slate-800">
-                                <div className="px-6 space-y-6">
+                                <div className="p-4 sm:px-6 space-y-6">
                                     <DetailRow icon={MapPin} label="Address" value={institution.address} />
                                     <DetailRow icon={User} label="Incharge" value={institution.contactDetails.inchargePerson} />
                                 </div>
-                                <div className="px-6 space-y-6 bg-slate-50/50 dark:bg-slate-800/20">
+                                <div className="p-4 sm:px-6 space-y-6 bg-slate-50/50 dark:bg-slate-800/20">
                                     <div className="space-y-6">
                                         <DetailRow icon={PhoneCall} label="Mobile" value={institution.contactDetails.mobileNumber} />
                                         <DetailRow icon={MailIcon} label="Email" value={institution.contactDetails.email || "N/A"} />
@@ -216,7 +216,7 @@ function StatsWidget({ title, value, trend, icon: Icon, gradient, shadowColor }:
                         <Zap className="h-3 w-3 fill-current" /> {trend}
                     </p>
                 </div>
-                <div className={cn("p-4 rounded-2xl bg-gradient-to-br text-white shadow-lg", gradient)}>
+                <div className={cn("p-4 rounded-2xl bg-linear-to-br text-white shadow-lg", gradient)}>
                     <Icon className="h-6 w-6" />
                 </div>
             </div>

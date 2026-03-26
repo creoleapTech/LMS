@@ -36,15 +36,15 @@ export default function SettingsPage() {
     <>
       <div className="container mx-auto py-10 px-4 max-w-6xl">
         <div className="mb-10">
-          <h1 className="text-4xl font-bold flex items-center gap-3">
-            <Building2 className="h-10 w-10 text-brand-color" />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-3">
+            <Building2 className="h-8 w-8 sm:h-10 sm:w-10 text-brand-color" />
             Settings
           </h1>
           <p className="text-muted-foreground mt-2">Manage your institution preferences and configuration</p>
         </div>
 
         <Tabs defaultValue="general" className="space-y-8">
-          <TabsList className="grid grid-cols-3 lg:grid-cols-6 w-full max-w-4xl">
+          <TabsList className="flex flex-wrap w-full max-w-4xl h-auto gap-1">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="academic">Academic</TabsTrigger>
@@ -273,12 +273,15 @@ export default function SettingsPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
                       <Label>Passing Marks</Label>
                       <p className="text-sm text-muted-foreground">Minimum marks required to pass a subject</p>
                     </div>
-                    <Input type="number" defaultValue="40" className="w-24" /> %
+                    <div className="flex items-center gap-2">
+                      <Input type="number" defaultValue="40" className="w-24" />
+                      <span>%</span>
+                    </div>
                   </div>
                   <div className="flex justify-end">
                     <Button onClick={() => handleSave("Grading")} className="bg-brand-color">
