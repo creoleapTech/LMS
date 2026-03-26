@@ -280,7 +280,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                                 </>
                             )}
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label>Chapter Number *</Label>
                                     <Input
@@ -333,12 +333,12 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                             </div>
 
                             <div className="space-y-4">
-                                <div className="flex gap-4">
+                                <div className="flex flex-col sm:flex-row gap-4">
                                     <Select
                                         value={currentContentType}
                                         onValueChange={(v: any) => setCurrentContentType(v)}
                                     >
-                                        <SelectTrigger className="w-[200px]">
+                                        <SelectTrigger className="w-full sm:w-[200px]">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>

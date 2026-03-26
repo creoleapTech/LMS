@@ -214,7 +214,7 @@ export default function SettingsPage() {
                       <span>2025 - 2026</span>
                       <Badge>Active</Badge>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label>Start Date</Label>
                         <p className="text-sm">April 1, 2025</p>
@@ -265,7 +265,7 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   <div className="rounded-lg border p-6">
                     <h4 className="font-semibold mb-4">Current Grading Scale (10-Point)</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                       {["O (90-100)", "A+ (80-89)", "A (70-79)", "B+ (60-69)", "C (50-59)", "D (40-49)", "F (<40)"].map((grade) => (
                         <Badge key={grade} variant="secondary" className="justify-center py-3 text-sm">
                           {grade}
@@ -338,7 +338,7 @@ export default function SettingsPage() {
                   <div>
                     <Label>Session Timeout</Label>
                     <Select defaultValue="30">
-                      <SelectTrigger className="w-48">
+                      <SelectTrigger className="w-full sm:w-48">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

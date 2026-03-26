@@ -168,7 +168,7 @@ export function ChapterContentManager({ chapterId }: Props) {
               <div className="space-y-4">
                 <iframe
                   src={fileUrl}
-                  className="w-full h-[700px] border rounded-lg shadow-lg"
+                  className="w-full h-[50vh] sm:h-[500px] md:h-[700px] border rounded-lg shadow-lg"
                   title={viewingContent.title}
                 />
                 <p className="text-sm text-muted-foreground">
@@ -182,7 +182,7 @@ export function ChapterContentManager({ chapterId }: Props) {
               <div className="space-y-4">
                 <iframe
                   src={`https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`}
-                  className="w-full h-[700px] border rounded-lg shadow-lg"
+                  className="w-full h-[50vh] sm:h-[500px] md:h-[700px] border rounded-lg shadow-lg"
                   title={viewingContent.title}
                 />
                 <p className="text-sm text-muted-foreground">
@@ -196,7 +196,7 @@ export function ChapterContentManager({ chapterId }: Props) {
               <div className="space-y-4">
                 <iframe
                   src={`https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`}
-                  className="w-full h-[700px] border rounded-lg shadow-lg"
+                  className="w-full h-[50vh] sm:h-[500px] md:h-[700px] border rounded-lg shadow-lg"
                   title={viewingContent.title}
                 />
                 <p className="text-sm text-muted-foreground">

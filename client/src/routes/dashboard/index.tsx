@@ -47,7 +47,7 @@ function Dashboard() {
         </h1>
         <button
           onClick={handleLogout}
-          className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-150"
+          className="flex md:hidden items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-150"
         >
           <LogOut className="h-5 w-5" />
           <span>Logout</span>
@@ -129,7 +129,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Users Section (SuperAdmin and Admin only) */
+      {/* Users Section (SuperAdmin and Admin only) */}
       {(user.role === 'admin' || user.role === 'super_admin') && (
         <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">Users</h2>
@@ -162,7 +162,7 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Analytics Section */
+      {/* Analytics Section */}
       <div className="mt-8">
         <h2 className="text-2xl font-bold mb-4">Analytics</h2>
         <div className="bg-white p-6 rounded-lg shadow-md">

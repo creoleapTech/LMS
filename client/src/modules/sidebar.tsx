@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { Menu, X, LayoutDashboard, BookOpen, Building, BarChart, Settings, ChevronLeft, ChevronRight, LogOut, BookDashedIcon, BookIcon, BookOpenText, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/userAuthStore';
@@ -29,6 +29,11 @@ const Sidebar: React.FC = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location.pathname]);
+
   const toggleSidebar = () => setIsOpen(!isOpen); // Mobile toggle
   const toggleExpand = () => setIsExpanded(!isExpanded); // Desktop expand/minimize
 
@@ -47,7 +52,7 @@ const Sidebar: React.FC = () => {
       {/* Mobile menu button */}
       <button
         onClick={toggleSidebar}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#080028] text-white rounded-md"
+        className="md:hidden fixed top-3 left-3 z-50 p-2 bg-[#080028] text-white rounded-md shadow-lg"
         aria-label="Toggle sidebar"
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -56,7 +61,7 @@ const Sidebar: React.FC = () => {
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'
-          } md:translate-x-0 md:static md:inset-0 ${isExpanded ? 'w-64' : 'w-16'
+          } md:translate-x-0 md:static md:inset-0 w-64 ${!isExpanded ? 'md:w-16' : ''
           } bg-brand-color text-white flex flex-col transition-all duration-300 ease-in-out z-40`}
       >
         {/* Header with logo and expand/minimize button */}
@@ -64,7 +69,7 @@ const Sidebar: React.FC = () => {
           {isExpanded && <h1 className="text-2xl font-bold">LMS Portal</h1>}
           <button
             onClick={toggleExpand}
-            className="p-2 absolute top-4 -right-4 rounded-full bg-[#1A0C52] hover:bg-blue-900 md:block hidden"
+            className="p-2 absolute top-4 -right-3 rounded-full bg-[#1A0C52] hover:bg-blue-900 md:block hidden shadow-md"
             aria-label={isExpanded ? 'Minimize sidebar' : 'Expand sidebar'}
           >
             {isExpanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}

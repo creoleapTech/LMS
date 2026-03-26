@@ -103,7 +103,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Full Name *</Label>
               <Input {...register("name")} placeholder="John Doe" />
@@ -117,7 +117,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
             </div>
 
             {/* Password Field */}
-            <div className="space-y-2 col-span-2 md:col-span-1">
+            <div className="space-y-2 sm:col-span-2 md:col-span-1">
               <Label>{staff ? "New Password (Optional)" : "Password"}</Label>
               <div className="relative flex gap-2">
                 <div className="relative flex-1">
@@ -146,7 +146,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
               {staff && <p className="text-xs text-muted-foreground">Note: Existing password is hidden for security. Enter a new one to reset it.</p>}
             </div>
 
-            <div className="space-y-2 col-span-2 md:col-span-1">
+            <div className="space-y-2 sm:col-span-2 md:col-span-1">
               <Label>Mobile Number *</Label>
               <Input {...register("mobileNumber")} placeholder="+91 98765 43210" />
               {errors.mobileNumber && <p className="text-sm text-destructive">{errors.mobileNumber.message}</p>}

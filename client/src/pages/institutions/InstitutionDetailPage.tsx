@@ -139,20 +139,20 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
           <TabsList className="flex flex-wrap w-full max-w-3xl h-auto min-h-14 rounded-2xl p-2 gap-1 bg-white/20 dark:bg-slate-700/30 backdrop-blur-md shadow-md">
-            <TabsTrigger value="overview" className="rounded-xl text-lg font-medium transition-colors duration-300 hover:bg-white/30 dark:hover:bg-slate-600">
-              <Building2 className="h-5 w-5 mr-2" /> Overview
+            <TabsTrigger value="overview" className="rounded-xl text-sm sm:text-lg font-medium transition-colors duration-300 hover:bg-white/30 dark:hover:bg-slate-600">
+              <Building2 className="h-5 w-5 mr-2 hidden sm:block" /> Overview
             </TabsTrigger>
-            <TabsTrigger value="staff" className="rounded-xl text-lg font-medium">
-              <Users className="h-5 w-5 mr-2" /> Staff
+            <TabsTrigger value="staff" className="rounded-xl text-sm sm:text-lg font-medium">
+              <Users className="h-5 w-5 mr-2 hidden sm:block" /> Staff
             </TabsTrigger>
-            <TabsTrigger value="classes" className="rounded-xl text-lg font-medium">
-              <Shapes className="h-5 w-5 mr-2" /> Classes
+            <TabsTrigger value="classes" className="rounded-xl text-sm sm:text-lg font-medium">
+              <Shapes className="h-5 w-5 mr-2 hidden sm:block" /> Classes
             </TabsTrigger>
-            <TabsTrigger value="students" className="rounded-xl text-lg font-medium">
-              <GraduationCap className="h-5 w-5 mr-2" /> Students
+            <TabsTrigger value="students" className="rounded-xl text-sm sm:text-lg font-medium">
+              <GraduationCap className="h-5 w-5 mr-2 hidden sm:block" /> Students
             </TabsTrigger>
-           <TabsTrigger value="curriculum" className="flex items-center gap-2">
-  <BookOpen className="h-4 w-4" />
+           <TabsTrigger value="curriculum" className="flex items-center gap-2 text-sm sm:text-base">
+  <BookOpen className="h-4 w-4 hidden sm:block" />
   Curriculum & Books
 </TabsTrigger>
           </TabsList>
@@ -202,11 +202,11 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
 function InstitutionDetailSkeleton() {
   return (
     <div className="container mx-auto py-10 max-w-7xl">
-      <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-        <div className="flex items-center gap-6">
-          <Skeleton className="h-32 w-32 rounded-3xl" />
-          <div className="space-y-4">
-            <Skeleton className="h-12 w-96" />
+      <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 mb-8">
+        <div className="flex items-center gap-4 sm:gap-6">
+          <Skeleton className="h-24 w-24 sm:h-32 sm:w-32 rounded-3xl" />
+          <div className="space-y-4 min-w-0 flex-1">
+            <Skeleton className="h-12 w-full max-w-96" />
             <div className="flex gap-4">
               <Skeleton className="h-10 w-32" />
               <Skeleton className="h-10 w-32" />
