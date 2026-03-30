@@ -56,19 +56,14 @@ staffSchema.pre("save", async function (next) {
   }
 
   // Handle case where password might be undefined (though required)
-  if (staff.password) {
-      try {
-        // Check if password is already hashed (bcrypt hashes start with $2)
-        if (!staff.password.startsWith('$2')) {
-          staff.password = await Bun.password.hash(staff.password, {
-            algorithm: "bcrypt",
-            cost: 10
-          });
-        }
-      } catch (error) {
-        console.error("Password hashing error:", error);
-        throw error;
-      }
+  try {
+    staff.password = await Bun.password.hash(staff.password, {
+      algorithm: "bcrypt",
+      cost: 10,
+    });
+  } catch (error) {
+    console.error("Password hashing error:", error);
+    throw error;
   }
   next();
 });

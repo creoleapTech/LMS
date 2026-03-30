@@ -10,7 +10,7 @@ const ChapterContentSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["video", "ppt", "pdf", "activity", "quiz", "project", "note"],
+      enum: ["video", "youtube", "ppt", "pdf", "activity", "quiz", "project", "note", "text"],
       required: true,
     },
     title: { type: String, required: true },
@@ -20,13 +20,35 @@ const ChapterContentSchema = new mongoose.Schema(
     embedCode: String,
     durationMinutes: Number,
 
+    // YouTube
+    youtubeUrl: String,
+
+    // Rich Text
+    textContent: String,
+
     // Quiz
     questions: [
       {
-        question: String,
+        questionText: { type: String },
+        questionMedia: {
+          type: { type: String, enum: ["image", "video"] },
+          url: String,
+        },
+        answerType: {
+          type: String,
+          enum: ["multiple_choice", "fill_blank", "paragraph", "match_following"],
+        },
         options: [String],
         correctAnswer: Number,
+        correctTextAnswer: String,
+        matchPairs: [
+          {
+            left: String,
+            right: String,
+          },
+        ],
         explanation: String,
+        points: { type: Number, default: 1 },
       },
     ],
 

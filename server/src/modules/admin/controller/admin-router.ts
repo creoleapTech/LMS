@@ -14,6 +14,7 @@ import { institutionCurriculumController } from "./institution-curriculum-contro
 import { filteredCurriculumController } from "./filtered-curriculum-controller";
 import { gradeBookController } from "./gradeBook-controller";
 import { staffCurriculumController } from "./staff-curriculam-controller";
+import { curriculumReaderController } from "./curriculum-reader-controller";
 // import { userController } from "./user-controller";
 
 
@@ -33,5 +34,6 @@ export const adminBaseRouter = new Elysia({
 .use(institutionCurriculumController)
 .use(filteredCurriculumController)
 .use(gradeBookController)
+.use(curriculumReaderController)
 // .use(staffCurriculumController)
 // .use(userController)

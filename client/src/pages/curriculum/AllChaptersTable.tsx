@@ -39,6 +39,7 @@ export function AllChaptersTable() {
     const [page, setPage] = useState(1);
     const [openForm, setOpenForm] = useState(false);
     const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
+    const [selectedChapterNumber, setSelectedChapterNumber] = useState<number>(1);
     const debouncedSearch = useDebounce(search, 500);
     const queryClient = useQueryClient();
 
@@ -76,7 +77,7 @@ export function AllChaptersTable() {
                         <CardTitle>Chapter Content</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <ChapterContentManager chapterId={selectedChapterId} />
+                        <ChapterContentManager chapterId={selectedChapterId} chapterNumber={selectedChapterNumber} />
                     </CardContent>
                 </Card>
             </div>
@@ -131,7 +132,10 @@ export function AllChaptersTable() {
                             <PremiumChapterCard
                                 key={chapter._id}
                                 chapter={chapter}
-                                onView={() => setSelectedChapterId(chapter._id)}
+                                onView={() => {
+                                    setSelectedChapterId(chapter._id);
+                                    setSelectedChapterNumber(chapter.chapterNumber);
+                                }}
                                 curriculumName={curriculum?.name}
                                 bookTitle={book?.bookTitle}
                                 showActions={false}

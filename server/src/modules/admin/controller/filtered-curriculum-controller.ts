@@ -26,19 +26,38 @@ export const filteredCurriculumController = new Elysia({
   .get(
     "/",
     async ({ headers, set}) => {
- if (!headers.decoded || typeof headers.decoded === "string") {
-    throw new ForbiddenError("Invalid authentication token");
-  }
-  const decoded = headers.decoded as DecodedToken;
-  if (decoded.role !== "teacher") {
-    throw new ForbiddenError("Only teacherscan manage books");
-  }
+      const token = headers.authorization?.replace("Bearer ", "");
+      if (!token) {
+        throw new ForbiddenError("Unauthorized");
+      }
+
+      let decoded: any;
+      for (const role of ['super_admin', 'admin', 'teacher', 'staff']) {
+        try {
+          const result = await PasetoUtil.decodePaseto(token, role as any);
+          if (result && result.payload) {
+            decoded = result.payload;
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+
+      if (!decoded) {
+        throw new ForbiddenError("Invalid authentication token");
+      }
+
+      const allowedRoles = ["teacher", "admin", "staff", "super_admin"];
+      if (!allowedRoles.includes(decoded.role)) {
+        throw new ForbiddenError("Access denied");
+      }
 
       const userRole = decoded.role;
       const institutionId = decoded.institutionId;
       // SUPER ADMIN: Return all curriculums with all grade books
       if (userRole === 'super_admin') {
-        const curriculums = await CurriculumModel.find({ isDeleted: false })
+        const curriculums = await CurriculumModel.find({})
           .select('name level grades isPublished')
           .lean();
 
@@ -46,7 +65,6 @@ export const filteredCurriculumController = new Elysia({
           curriculums.map(async (curriculum: any) => {
             const gradeBooks = await GradeBookModel.find({
               curriculumId: curriculum._id,
-              isDeleted: false
             }).select('grade bookTitle subtitle coverImage isPublished').lean();
 
             return {
@@ -82,9 +100,7 @@ export const filteredCurriculumController = new Elysia({
             // Get only the grade books this institution has access to
             const gradeBooks = await GradeBookModel.find({
               _id: { $in: access.accessibleGradeBooks },
-              isDeleted: false
             }).select('grade bookTitle subtitle coverImage isPublished').lean();
-   console.log(gradeBooks)
             return {
               _id: curriculum._id,
               name: curriculum.name,
@@ -159,7 +175,6 @@ export const filteredCurriculumController = new Elysia({
       if (userRole === 'super_admin') {
         const gradeBooks = await GradeBookModel.find({
           curriculumId: params.curriculumId,
-          isDeleted: false
         }).select('grade bookTitle subtitle description coverImage isPublished').lean();
 
         return {
@@ -192,7 +207,6 @@ export const filteredCurriculumController = new Elysia({
         // Get only accessible grade books
         const gradeBooks = await GradeBookModel.find({
           _id: { $in: curriculumAccess.accessibleGradeBooks },
-          isDeleted: false
         }).select('grade bookTitle subtitle description coverImage isPublished').lean();
 
         return {

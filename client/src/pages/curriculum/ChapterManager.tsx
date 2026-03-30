@@ -25,8 +25,10 @@ interface Chapter {
 
 interface Props {
   gradeBookId: string;
-  onChapterSelect: (chapterId: string) => void;
+  onChapterSelect: (chapterId: string, chapterNumber?: number) => void;
 }
+
+const EMPTY_CHAPTERS: Chapter[] = [];
 
 
 function SortableChapter({
@@ -80,7 +82,7 @@ export function ChapterManager({ gradeBookId, onChapterSelect }: Props) {
     useSensor(KeyboardSensor)
   );
 
-  const { data: chaptersData = [], isLoading, error } = useQuery<Chapter[]>({
+  const { data: chaptersData = EMPTY_CHAPTERS, isLoading, error } = useQuery<Chapter[]>({
     queryKey: ["chapters", gradeBookId],
     queryFn: async () => {
       const res = await _axios.get(`/admin/curriculum/gradebook/${gradeBookId}/chapters`);
@@ -179,7 +181,7 @@ export function ChapterManager({ gradeBookId, onChapterSelect }: Props) {
               <SortableChapter
                 key={chapter._id}
                 chapter={chapter}
-                onView={() => onChapterSelect(chapter._id)}
+                onView={() => onChapterSelect(chapter._id, chapter.chapterNumber)}
                 onEdit={isSuperAdmin ? () => handleEdit(chapter) : undefined as any}
                 onDelete={isSuperAdmin ? () => handleDelete(chapter._id) : undefined as any}
               />

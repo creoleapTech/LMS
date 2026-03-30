@@ -234,13 +234,16 @@ export const adminAuthController = new Elysia({
         throw new BadRequestError("No token provided");
       }
 
-      // Verify token
-      const decodedData = await PasetoUtil.decodePaseto(token, "admin");
+      // Verify token - try admin key first, then super_admin
+      let decodedData = await PasetoUtil.decodePaseto(token, "admin");
+      if (!decodedData || !decodedData.payload) {
+        decodedData = await PasetoUtil.decodePaseto(token, "super_admin");
+      }
       if (!decodedData || !decodedData.payload) throw new BadRequestError("Invalid token");
       const decoded = decodedData.payload;
-      
+
       // Get admin data
-      const admin = await AdminModel.findOne({ 
+      const admin = await AdminModel.findOne({
         _id: decoded.id, 
         isDeleted: false,
         isActive: true 
@@ -282,11 +285,14 @@ export const adminAuthController = new Elysia({
         throw new BadRequestError("No token provided");
       }
 
-      // Verify token
-      const decodedData = await PasetoUtil.decodePaseto(token, "admin");
+      // Verify token - try admin key first, then super_admin
+      let decodedData = await PasetoUtil.decodePaseto(token, "admin");
+      if (!decodedData || !decodedData.payload) {
+        decodedData = await PasetoUtil.decodePaseto(token, "super_admin");
+      }
       if (!decodedData || !decodedData.payload) throw new BadRequestError("Invalid token");
       const decoded = decodedData.payload;
-      
+
       // Update admin profile
       const admin = await AdminModel.findOneAndUpdate(
         { 
@@ -345,11 +351,14 @@ export const adminAuthController = new Elysia({
         throw new BadRequestError("No token provided");
       }
 
-      // Verify token
-      const decodedData = await PasetoUtil.decodePaseto(token, "admin");
+      // Verify token - try admin key first, then super_admin
+      let decodedData = await PasetoUtil.decodePaseto(token, "admin");
+      if (!decodedData || !decodedData.payload) {
+        decodedData = await PasetoUtil.decodePaseto(token, "super_admin");
+      }
       if (!decodedData || !decodedData.payload) throw new BadRequestError("Invalid token");
       const decoded = decodedData.payload;
-      
+
       const { currentPassword, newPassword } = body;
 
       // Get admin with password

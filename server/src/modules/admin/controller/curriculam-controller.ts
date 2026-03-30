@@ -500,12 +500,25 @@ export const curriculumController = new Elysia({
     const contentData: any = {
       chapterId: params.chapterId,
       type: body.type,
-      title: body.title,
+      title: body.title || `${chapter.chapterNumber}.${count + 1}`,
       order: count + 1,
       isFree: body.isFree === 'true' || body.isFree === true,
     };
 
-    if (body.type === 'video') {
+    if (body.type === 'youtube') {
+      contentData.youtubeUrl = body.youtubeUrl;
+    } else if (body.type === 'text') {
+      contentData.textContent = body.textContent;
+    } else if (body.type === 'quiz') {
+      if (body.questions) {
+        try {
+          contentData.questions = typeof body.questions === 'string'
+            ? JSON.parse(body.questions)
+            : body.questions;
+        } catch { /* ignore parse errors */ }
+      }
+      if (fileFilename) contentData.fileUrl = fileFilename;
+    } else if (body.type === 'video') {
       contentData.videoUrl = fileFilename;
     } else {
       contentData.fileUrl = fileFilename;
@@ -520,15 +533,18 @@ export const curriculumController = new Elysia({
     params: t.Object({ chapterId: t.String() }),
     body: t.Object({
       type: t.String(),
-      title: t.String(),
+      title: t.Optional(t.String()),
       file: t.Optional(t.File()),
       isFree: t.Optional(t.Union([t.Boolean(), t.String()])),
+      youtubeUrl: t.Optional(t.String()),
+      textContent: t.Optional(t.String()),
+      questions: t.Optional(t.Any()),
     })
   })
 
   .delete("/content/:id", async ({ params, user }) => {
     if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
-    
+
     const content = await ChapterContentModel.findById(params.id);
     if (!content) throw new BadRequestError("Content not found");
 
@@ -538,6 +554,55 @@ export const curriculumController = new Elysia({
     await ChapterContentModel.findByIdAndDelete(params.id);
     return { success: true, message: "Content deleted" };
   }, { params: t.Object({ id: t.String() }) })
+
+  .patch("/content/:id", async ({ params, body, user }) => {
+    if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
+
+    const content = await ChapterContentModel.findByIdAndUpdate(
+      params.id,
+      { $set: { title: body.title } },
+      { new: true }
+    );
+    if (!content) throw new BadRequestError("Content not found");
+
+    return { success: true, data: content };
+  }, {
+    params: t.Object({ id: t.String() }),
+    body: t.Object({ title: t.String() })
+  })
+
+  .post("/chapter/:chapterId/content/reorder", async ({ params, body, user }) => {
+    if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
+
+    const { order } = body;
+
+    // Two-pass to avoid unique index conflicts on {chapterId, order}
+    const negOps = order.map((item: { contentId: string; order: number }, i: number) => ({
+      updateOne: {
+        filter: { _id: item.contentId, chapterId: params.chapterId },
+        update: { $set: { order: -(i + 1) } }
+      }
+    }));
+    if (negOps.length > 0) await ChapterContentModel.bulkWrite(negOps);
+
+    const finalOps = order.map((item: { contentId: string; order: number }) => ({
+      updateOne: {
+        filter: { _id: item.contentId, chapterId: params.chapterId },
+        update: { $set: { order: item.order } }
+      }
+    }));
+    if (finalOps.length > 0) await ChapterContentModel.bulkWrite(finalOps);
+
+    return { success: true, message: "Content reordered" };
+  }, {
+    params: t.Object({ chapterId: t.String() }),
+    body: t.Object({
+      order: t.Array(t.Object({
+        contentId: t.String(),
+        order: t.Number()
+      }))
+    })
+  })
 
   // ===================== GLOBAL LISTS (For Tabs) =====================
   .get("/all-gradebooks", async ({ query, user }) => {

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, Loader2, Plus, ArrowLeft } from "lucide-react";
 import { GradeBookFormDialogStandalone } from "./GradeBookFormDialogStandalone";
 import { PremiumGradeBookCard } from "./PremiumGradeBookCard";
+import { ChapterContentManager } from "./ChapterContentManager";
 import { ChapterManager } from "./ChapterManager";
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -39,6 +40,7 @@ export function AllGradeBooksTable() {
     const [selectedGradeBookId, setSelectedGradeBookId] = useState<string | null>(null);
     const [selectedGradeBook, setSelectedGradeBook] = useState<GradeBook | null>(null);
     const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
+    const [selectedChapterNumber, setSelectedChapterNumber] = useState<number>(1);
     const debouncedSearch = useDebounce(search, 500);
     const queryClient = useQueryClient();
 
@@ -99,7 +101,10 @@ export function AllGradeBooksTable() {
                     <CardContent>
                         <ChapterManager
                             gradeBookId={selectedGradeBookId}
-                            onChapterSelect={(chapterId) => setSelectedChapterId(chapterId)}
+                            onChapterSelect={(chapterId, chapterNum) => {
+                                setSelectedChapterId(chapterId);
+                                setSelectedChapterNumber(chapterNum || 1);
+                            }}
                         />
                     </CardContent>
                 </Card>
@@ -123,7 +128,10 @@ export function AllGradeBooksTable() {
                         <CardTitle>Chapter Content</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {/* This will be handled by ChapterManager's onChapterSelect */}
+                        <ChapterContentManager
+                            chapterId={selectedChapterId}
+                            chapterNumber={selectedChapterNumber}
+                        />
                     </CardContent>
                 </Card>
             </div>

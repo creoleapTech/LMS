@@ -17,6 +17,7 @@ export default function CurriculumManagementPage() {
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
   const [selectedGradeBookId, setSelectedGradeBookId] = useState<string | null>(null);
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
+  const [selectedChapterNumber, setSelectedChapterNumber] = useState<number>(1);
 
   const handleBack = () => {
     if (selectedChapterId) {
@@ -102,7 +103,10 @@ export default function CurriculumManagementPage() {
           <CardContent>
             <ChapterManager
               gradeBookId={selectedGradeBookId}
-              onChapterSelect={setSelectedChapterId}
+              onChapterSelect={(id, chapterNum) => {
+                setSelectedChapterId(id);
+                if (chapterNum) setSelectedChapterNumber(chapterNum);
+              }}
             />
           </CardContent>
         </Card>
@@ -115,7 +119,7 @@ export default function CurriculumManagementPage() {
             <CardTitle className="text-lg">Chapter Content Manager</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChapterContentManager chapterId={selectedChapterId} />
+            <ChapterContentManager chapterId={selectedChapterId} chapterNumber={selectedChapterNumber} />
           </CardContent>
         </Card>
       )}

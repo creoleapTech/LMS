@@ -205,8 +205,16 @@ export const staffController = new Elysia({
         };
       }
 
+      // Hash passwords before inserting (insertMany bypasses pre-save hooks)
+      const staffWithHashedPasswords = await Promise.all(
+        result.data.map(async (staffData: any) => ({
+          ...staffData,
+          password: await Bun.password.hash(staffData.password, { algorithm: "bcrypt", cost: 10 }),
+        }))
+      );
+
       // Insert valid staff members
-      const insertedStaff = await StaffModel.insertMany(result.data);
+      const insertedStaff = await StaffModel.insertMany(staffWithHashedPasswords);
 
       // Add staff IDs to institution
       await InstitutionModel.findByIdAndUpdate(body.institutionId, {
@@ -360,9 +368,14 @@ export const staffController = new Elysia({
         throw new ForbiddenError("Access denied");
       }
 
+      const updateData: any = { ...body };
+      if (updateData.password) {
+        updateData.password = await Bun.password.hash(updateData.password, { algorithm: "bcrypt", cost: 10 });
+      }
+
       const updated = await StaffModel.findByIdAndUpdate(
         params.id,
-        { $set: body },
+        { $set: updateData },
         { new: true, runValidators: true }
       );
 
