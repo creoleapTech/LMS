@@ -267,25 +267,28 @@ export function StudentTable({ institutionId }: Props) {
 
   return (
     <>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 p-5 sm:p-8 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <GraduationCap className="h-6 w-6" /> Student Management
+            <h2 className="text-2xl font-bold flex items-center gap-2.5 tracking-tight">
+              <div className="p-2 bg-linear-to-br from-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              Student Management
             </h2>
-            <p className="text-muted-foreground text-sm">Onboard, manage, and batch import students.</p>
+            <p className="text-muted-foreground text-sm mt-1">Onboard, manage, and batch import students.</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setOpenBulkUpload(true)}>
+            <Button variant="outline" onClick={() => setOpenBulkUpload(true)} className="rounded-xl">
               <Upload className="mr-2 h-4 w-4" /> Bulk Upload
             </Button>
-            <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90">
+            <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-purple-900/20">
               <Plus className="mr-2 h-4 w-4" /> Add Student
             </Button>
           </div>
         </div>
 
-        <Card className="p-4">
+        <Card className="p-4 rounded-2xl border-slate-200/80 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -293,16 +296,16 @@ export function StudentTable({ institutionId }: Props) {
                 placeholder="Search students..."
                 value={globalFilter ?? ""}
                 onChange={e => setGlobalFilter(e.target.value)}
-                className="pl-10"
+                className="pl-10 rounded-xl"
               />
             </div>
           </div>
         </Card>
 
         {isLoading ? (
-          <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
         ) : (
-          <div className="rounded-md border bg-card">
+          <div className="rounded-2xl border border-slate-200/80 bg-card shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
             <Table className="min-w-[700px]">
               <TableHeader>
@@ -416,7 +419,7 @@ export function StudentTable({ institutionId }: Props) {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[80px]">Row</TableHead>
+                        <TableHead className="w-20">Row</TableHead>
                         <TableHead>Error Details</TableHead>
                       </TableRow>
                     </TableHeader>

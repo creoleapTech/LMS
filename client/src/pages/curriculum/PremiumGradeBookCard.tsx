@@ -40,11 +40,11 @@ export function PremiumGradeBookCard({
 
     return (
         <Card
-            className="group relative overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white dark:bg-gray-900"
+            className="group relative overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white dark:bg-gray-900 rounded-2xl border-slate-200/80"
             onClick={onView}
         >
             {/* Large Cover Image Section */}
-            <div className="relative h-64 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+            <div className="relative h-64 overflow-hidden bg-linear-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
                 {gradeBook.coverImage ? (
                     <>
                         <img
@@ -53,7 +53,7 @@ export function PremiumGradeBookCard({
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                         {/* Subtle gradient overlay only at bottom */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                        <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent" />
                     </>
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center">

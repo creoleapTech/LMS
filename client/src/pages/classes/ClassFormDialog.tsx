@@ -69,7 +69,7 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] rounded-2xl">
                 <DialogHeader>
                     <DialogTitle>{cls ? "Edit Class" : "Add Class"}</DialogTitle>
                     <DialogDescription>
@@ -97,8 +97,8 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
                     </div>
 
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">Cancel</Button>
+                        <Button type="submit" disabled={isSubmitting} className="rounded-xl">
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {cls ? "Update Class" : "Create Class"}
                         </Button>

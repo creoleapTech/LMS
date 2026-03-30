@@ -277,11 +277,11 @@ export function InstitutionTable() {
 
   return (
     <>
-      <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-10 max-w-7xl">
+      <div className="py-8 px-5 sm:px-8 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Institutions</h1>
-            <p className="text-muted-foreground">Manage schools and colleges</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Institutions</h1>
+            <p className="text-muted-foreground mt-1">Manage schools and colleges</p>
           </div>
           <Button 
             onClick={() => { 
@@ -289,6 +289,7 @@ export function InstitutionTable() {
               setOpenForm(true); 
             }}
             disabled={saveMutation.isPending}
+            className="rounded-xl shadow-lg shadow-primary/20"
           >
             <Plus className="mr-2 h-4 w-4" /> Add Institution
           </Button>
@@ -301,7 +302,7 @@ export function InstitutionTable() {
             <Input
               placeholder="Search name, incharge, mobile..."
               onChange={(e) => debouncedSearch(e.target.value)}
-              className="pl-10"
+              className="pl-10 rounded-xl"
               disabled={isLoading}
             />
           </div>
@@ -310,7 +311,7 @@ export function InstitutionTable() {
             onValueChange={handleTypeFilterChange}
             disabled={isLoading}
           >
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-48 rounded-xl">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
@@ -338,7 +339,7 @@ export function InstitutionTable() {
 
         {/* Table */}
         {!isLoading && !isFetching && !error && (
-          <div className="rounded-lg border bg-card">
+          <div className="rounded-2xl border border-slate-200/80 bg-card shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
             <Table className="min-w-[800px]">
               <TableHeader>
@@ -381,7 +382,8 @@ export function InstitutionTable() {
           <div className="flex justify-end mt-6 gap-2">
             <Button 
               variant="outline" 
-              size="sm" 
+              size="sm"
+              className="rounded-xl" 
               onClick={() => table.previousPage()} 
               disabled={!table.getCanPreviousPage() || isFetching}
             >
@@ -389,7 +391,8 @@ export function InstitutionTable() {
             </Button>
             <Button 
               variant="outline" 
-              size="sm" 
+              size="sm"
+              className="rounded-xl"
               onClick={() => table.nextPage()} 
               disabled={!table.getCanNextPage() || isFetching}
             >

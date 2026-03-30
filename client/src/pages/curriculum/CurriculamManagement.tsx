@@ -41,22 +41,24 @@ export default function CurriculumManagementPage() {
       {/* Header for Drill-down */}
       <div className="flex items-center gap-4 mb-4">
         {(selectedCurriculumId || selectedGradeBookId || selectedChapterId) && (
-          <Button onClick={handleBack} variant="ghost" size="sm">
+          <Button onClick={handleBack} variant="ghost" size="sm" className="rounded-xl">
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back
           </Button>
         )}
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+        <h2 className="text-xl font-bold text-foreground">
           {breadcrumb()}
         </h2>
       </div>
 
       {/* Step 1: Curriculum List */}
       {!selectedCurriculumId && (
-        <Card className="border-2">
+        <Card className="border border-slate-200/80 rounded-2xl shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-3">
-              <BookOpen className="h-6 w-6 text-blue-600" />
+            <CardTitle className="text-lg flex items-center gap-3">
+              <div className="p-1.5 bg-blue-50 rounded-lg">
+                <BookOpen className="h-5 w-5 text-blue-600" />
+              </div>
               Curriculums
             </CardTitle>
           </CardHeader>
@@ -68,10 +70,12 @@ export default function CurriculumManagementPage() {
 
       {/* Step 2: Grade Books */}
       {selectedCurriculumId && !selectedGradeBookId && (
-        <Card className="border-2">
+        <Card className="border border-slate-200/80 rounded-2xl shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-3">
-              <GraduationCap className="h-6 w-6 text-blue-600" />
+            <CardTitle className="text-lg flex items-center gap-3">
+              <div className="p-1.5 bg-blue-50 rounded-lg">
+                <GraduationCap className="h-5 w-5 text-blue-600" />
+              </div>
               Grade Books
             </CardTitle>
           </CardHeader>
@@ -86,10 +90,12 @@ export default function CurriculumManagementPage() {
 
       {/* Step 3: Chapters */}
       {selectedGradeBookId && !selectedChapterId && (
-        <Card className="border-2">
+        <Card className="border border-slate-200/80 rounded-2xl shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-3">
-              <FileText className="h-6 w-6 text-blue-600" />
+            <CardTitle className="text-lg flex items-center gap-3">
+              <div className="p-1.5 bg-blue-50 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
               Chapters
             </CardTitle>
           </CardHeader>
@@ -104,9 +110,9 @@ export default function CurriculumManagementPage() {
 
       {/* Step 4: Content Manager */}
       {selectedChapterId && (
-        <Card className="border-2">
+        <Card className="border border-slate-200/80 rounded-2xl shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl">Chapter Content Manager</CardTitle>
+            <CardTitle className="text-lg">Chapter Content Manager</CardTitle>
           </CardHeader>
           <CardContent>
             <ChapterContentManager chapterId={selectedChapterId} />
@@ -117,26 +123,26 @@ export default function CurriculumManagementPage() {
   );
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-100/80">
+      <div className="py-8 px-5 sm:px-8 max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-1.5 tracking-tight">
             Curriculum Management
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground">
             Manage curriculums, books, chapters, and content.
           </p>
         </div>
 
         <Tabs defaultValue="curriculum" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[400px] h-auto">
-            <TabsTrigger value="curriculum" className="flex items-center gap-2 text-xs sm:text-sm">
+          <TabsList className="grid w-full grid-cols-3 lg:w-[420px] h-auto rounded-xl p-1">
+            <TabsTrigger value="curriculum" className="flex items-center gap-2 text-xs sm:text-sm rounded-lg">
               <Layers className="h-4 w-4" /> Curriculum
             </TabsTrigger>
-            <TabsTrigger value="books" className="flex items-center gap-2">
+            <TabsTrigger value="books" className="flex items-center gap-2 rounded-lg">
               <Book className="h-4 w-4" /> All Books
             </TabsTrigger>
-            <TabsTrigger value="chapters" className="flex items-center gap-2">
+            <TabsTrigger value="chapters" className="flex items-center gap-2 rounded-lg">
               <List className="h-4 w-4" /> All Chapters
             </TabsTrigger>
           </TabsList>

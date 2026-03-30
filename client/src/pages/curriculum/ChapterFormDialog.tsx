@@ -87,7 +87,7 @@ export function ChapterFormDialog({ open, onOpenChange, gradeBookId, chapter, on
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl">
             {chapter ? "Edit Chapter" : "Create New Chapter"}
@@ -134,10 +134,10 @@ export function ChapterFormDialog({ open, onOpenChange, gradeBookId, chapter, on
           </div>
 
           <div className="flex justify-end gap-4 pt-6 border-t">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="rounded-xl">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

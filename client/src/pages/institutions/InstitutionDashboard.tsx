@@ -62,21 +62,20 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                 {/* LEFT COLUMN (2/3) */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* PROFILE CARD */}
-                    <Card className="overflow-hidden border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl ring-1 ring-slate-200 dark:ring-slate-800">
-                        <div className="absolute top-0 right-0 p-8 bg-brand-color/50 rounded-full blur-[100px] pointer-events-none" />
-                        <CardHeader className="relative border-b pb-0! border-slate-100 dark:border-slate-800 ">
+                    <Card className="overflow-hidden border border-slate-200/80 shadow-sm bg-white rounded-2xl">
+                        <CardHeader className="relative border-b pb-0! border-slate-100">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-brand-color/10 rounded-xl">
-                                        <LayoutDashboard className="h-6 w-6 text-brand-color" />
+                                    <div className="p-2 bg-linear-to-br from-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+                                        <LayoutDashboard className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <CardTitle className="text-xl">Institution Details</CardTitle>
+                                        <CardTitle className="text-lg">Institution Details</CardTitle>
                                         <CardDescription>Core information and contact details</CardDescription>
                                     </div>
                                 </div>
-                                <Button variant="ghost" size="icon" onClick={onEdit} className="hover:bg-brand-color/10 hover:text-brand-color transition-colors">
-                                    <Pencil className="h-5 w-5" />
+                                <Button variant="ghost" size="icon" onClick={onEdit} className="hover:bg-indigo-50 hover:text-indigo-600 transition-colors rounded-xl">
+                                    <Pencil className="h-4 w-4" />
                                 </Button>
                             </div>
                         </CardHeader>
@@ -86,7 +85,7 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                                     <DetailRow icon={MapPin} label="Address" value={institution.address} />
                                     <DetailRow icon={User} label="Incharge" value={institution.contactDetails.inchargePerson} />
                                 </div>
-                                <div className="p-4 sm:px-6 space-y-6 bg-slate-50/50 dark:bg-slate-800/20">
+                                <div className="p-4 sm:px-6 space-y-6 bg-slate-50/50">
                                     <div className="space-y-6">
                                         <DetailRow icon={PhoneCall} label="Mobile" value={institution.contactDetails.mobileNumber} />
                                         <DetailRow icon={MailIcon} label="Email" value={institution.contactDetails.email || "N/A"} />
@@ -148,7 +147,7 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                                     <p className="text-slate-400 text-sm">Overall Health</p>
                                     <p className="text-3xl font-bold tracking-tight">98%</p>
                                 </div>
-                                <div className="h-10 w-24 bg-gradient-to-r from-green-500/10 to-green-500/20 rounded-lg border border-green-500/30 flex items-center justify-center">
+                                <div className="h-10 w-24 bg-linear-to-r from-green-500/10 to-green-500/20 rounded-lg border border-green-500/30 flex items-center justify-center">
                                     <span className="text-green-400 font-bold text-sm">Excellent</span>
                                 </div>
                             </div>
@@ -165,10 +164,10 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                     </Card> */}
 
                     {/* TIMELINE */}
-                    <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl ring-1 ring-slate-200 dark:ring-slate-800">
+                    <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <Clock className="h-5 w-5 text-muted-foreground" /> Activity
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Clock className="h-4 w-4 text-muted-foreground" /> Activity
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -198,26 +197,25 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
 function StatsWidget({ title, value, trend, icon: Icon, gradient, shadowColor }: any) {
     return (
         <div className={cn(
-            "group relative overflow-hidden rounded-3xl p-6 transition-all duration-300 hover:scale-[1.02] cursor-default",
-            "bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800",
-            "shadow-xl hover:shadow-2xl",
-            shadowColor
+            "group relative overflow-hidden rounded-2xl p-6 transition-all duration-200 hover:shadow-lg cursor-default",
+            "bg-white border border-slate-200/80",
+            "shadow-sm",
         )}>
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Icon className="h-32 w-32 -mr-8 -mt-8" />
+            <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
+                <Icon className="h-28 w-28 -mr-6 -mt-6" />
             </div>
             <div className="relative z-10 flex justify-between items-start">
                 <div>
-                    <p className="text-sm font-medium text-muted-foreground font-sans tracking-wide uppercase">{title}</p>
-                    <h3 className="text-4xl font-extrabold mt-2 tracking-tight text-slate-900 dark:text-white">
+                    <p className="text-sm font-medium text-muted-foreground tracking-wide">{title}</p>
+                    <h3 className="text-3xl font-bold mt-2 tracking-tight text-foreground">
                         {value}
                     </h3>
-                    <p className="text-xs font-semibold mt-3 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 py-1 px-3 rounded-full w-fit flex items-center gap-1">
+                    <p className="text-xs font-semibold mt-3 text-emerald-600 bg-emerald-50 py-1 px-2.5 rounded-lg w-fit flex items-center gap-1">
                         <Zap className="h-3 w-3 fill-current" /> {trend}
                     </p>
                 </div>
-                <div className={cn("p-4 rounded-2xl bg-linear-to-br text-white shadow-lg", gradient)}>
-                    <Icon className="h-6 w-6" />
+                <div className={cn("p-3.5 rounded-2xl bg-linear-to-br text-white shadow-lg", gradient)}>
+                    <Icon className="h-5 w-5" />
                 </div>
             </div>
         </div>
@@ -227,12 +225,12 @@ function StatsWidget({ title, value, trend, icon: Icon, gradient, shadowColor }:
 function DetailRow({ icon: Icon, label, value }: any) {
     return (
         <div className="group flex items-start gap-4">
-            <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl group-hover:bg-brand-color/10 group-hover:text-brand-color transition-colors">
-                <Icon className="h-5 w-5 text-slate-500 dark:text-slate-400 group-hover:text-brand-color transition-colors" />
+            <div className="p-2.5 bg-slate-100 rounded-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                <Icon className="h-4 w-4 text-slate-500 group-hover:text-indigo-600 transition-colors" />
             </div>
             <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
-                <p className="text-base font-semibold text-slate-900 dark:text-slate-100 mt-0.5 leading-snug">{value}</p>
+                <p className="text-sm font-semibold text-foreground mt-0.5 leading-snug">{value}</p>
             </div>
         </div>
     )
@@ -262,12 +260,12 @@ function TimelineItem({ date, title, desc, active }: any) {
     return (
         <div className="relative group">
             <div className={cn(
-                "absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ring-2",
-                active ? "bg-green-500 ring-green-500/20" : "bg-slate-300 dark:bg-slate-700 ring-slate-200"
+                "absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-white ring-2",
+                active ? "bg-green-500 ring-green-500/20" : "bg-slate-300 ring-slate-200"
             )} />
             <div>
                 <span className="text-xs font-mono text-muted-foreground">{date}</span>
-                <p className="font-semibold text-sm text-slate-900 dark:text-white mt-0.5">{title}</p>
+                <p className="font-semibold text-sm text-foreground mt-0.5">{title}</p>
                 <p className="text-xs text-muted-foreground mt-1">{desc}</p>
             </div>
         </div>

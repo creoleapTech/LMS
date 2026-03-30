@@ -222,7 +222,7 @@ export function ChapterContentManager({ chapterId }: Props) {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Content Type</label>
                 <Select value={type} onValueChange={(value: ContentType) => setType(value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-xl">
                     <SelectValue placeholder="Select content type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -238,7 +238,7 @@ export function ChapterContentManager({ chapterId }: Props) {
               <div className="space-y-2">
                 <label className="text-sm font-medium">File</label>
                 {!file ? (
-                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-2xl p-8 text-center">
                     <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-lg mb-2">Drop your file here or click to browse</p>
                     <p className="text-sm text-muted-foreground mb-4">
@@ -258,7 +258,7 @@ export function ChapterContentManager({ chapterId }: Props) {
                     </label>
                   </div>
                 ) : (
-                  <div className="border rounded-lg p-4 flex items-center justify-between">
+                  <div className="border rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <FileText className="h-8 w-8 text-blue-600" />
                       <div>
@@ -300,9 +300,9 @@ export function ChapterContentManager({ chapterId }: Props) {
           ) : (
             <div className="space-y-4">
               {contents.map((item) => (
-                <div key={item._id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                <div key={item._id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                   <div className="flex items-center gap-4">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-xl">
                       {getContentTypeIcon(item.type)}
                     </div>
                     <div>

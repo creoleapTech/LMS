@@ -273,23 +273,25 @@ export function StaffTable({ institutionId, institutionName }: Props) {
 
   return (
     <>
-      <div className="container mx-auto py-2 px-4 max-w-7xl">
+      <div className="py-5 px-4 sm:px-8 max-w-7xl mx-auto">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold flex items-center gap-3">
-                <User className="h-8 w-8" />
+              <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3 tracking-tight">
+                <div className="p-2 bg-linear-to-br from-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+                  <User className="h-5 w-5" />
+                </div>
                 Staff Members
               </h1>
-              <p className="text-muted-foreground">Managing staff for <strong>{institutionName}</strong></p>
+              <p className="text-muted-foreground mt-1">Managing staff for <strong>{institutionName}</strong></p>
             </div>
-            <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90">
+            <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-purple-900/20">
               <Plus className="mr-2 h-4 w-4" /> Add Staff
             </Button>
           </div>
 
           {/* Filters Card */}
-          <Card className="p-4">
+          <Card className="p-4 rounded-2xl border-slate-200/80 shadow-sm">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="relative sm:col-span-2 md:col-span-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -297,12 +299,12 @@ export function StaffTable({ institutionId, institutionName }: Props) {
                   placeholder="Search name, email, mobile..."
                   value={globalFilter ?? ""}
                   onChange={e => setGlobalFilter(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 rounded-xl"
                 />
               </div>
 
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl">
                   <SelectValue placeholder="All Roles" />
                 </SelectTrigger>
                 <SelectContent>
@@ -317,6 +319,7 @@ export function StaffTable({ institutionId, institutionName }: Props) {
 
               <Button
                 variant="outline"
+                className="rounded-xl"
                 onClick={() => {
                   setGlobalFilter("");
                   setTypeFilter("all");
@@ -329,14 +332,14 @@ export function StaffTable({ institutionId, institutionName }: Props) {
 
           {/* Results Count & Table */}
           {isLoading ? (
-            <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+            <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
           ) : (
             <div className="flex flex-col gap-4">
               <div className="text-sm text-muted-foreground">
                 Showing {table.getRowModel().rows.length} of {staffs.length} staff members
               </div>
 
-              <div className="rounded-md border bg-card">
+              <div className="rounded-2xl border border-slate-200/80 bg-card shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                 <Table className="min-w-[900px]">
                   <TableHeader>
@@ -376,10 +379,10 @@ export function StaffTable({ institutionId, institutionName }: Props) {
               {/* Pagination */}
               <div className="flex items-center justify-between">
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+                  <Button variant="outline" size="sm" className="rounded-xl" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
                     Previous
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+                  <Button variant="outline" size="sm" className="rounded-xl" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
                     Next
                   </Button>
                 </div>

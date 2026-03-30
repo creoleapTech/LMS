@@ -128,7 +128,7 @@ export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }:
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
                 <DialogHeader>
                     <DialogTitle className="text-2xl">Create New Grade Book</DialogTitle>
                 </DialogHeader>
@@ -239,6 +239,7 @@ export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }:
                             <input
                                 type="checkbox"
                                 id="published"
+                                aria-label="Publish immediately"
                                 className="h-4 w-4"
                                 onChange={(e) => setValue("isPublished", e.target.checked)}
                                 checked={watch("isPublished")}
@@ -248,10 +249,10 @@ export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }:
                     </div>
 
                     <div className="flex justify-end gap-4 pt-6 border-t">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button type="submit" disabled={isSubmitting} className="rounded-xl">
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

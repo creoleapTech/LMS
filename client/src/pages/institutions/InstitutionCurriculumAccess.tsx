@@ -153,7 +153,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
         {disabledBooks.map((book) => (
           <div
             key={book._id}
-            className="flex items-center justify-between p-4 border rounded-lg bg-gray-100 dark:bg-gray-900 opacity-70"
+            className="flex items-center justify-between p-4 border rounded-xl bg-gray-100 dark:bg-gray-900 opacity-70"
           >
             <div>
               <Badge variant="outline" className="mb-1">
@@ -204,7 +204,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
               Assign Curriculum
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto rounded-2xl">
             <DialogHeader>
               <DialogTitle>Assign Curriculum & Select Books</DialogTitle>
             </DialogHeader>
@@ -212,9 +212,11 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
             {/* Curriculum selector */}
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium">Curriculum</label>
+                <label htmlFor="curriculum-select" className="text-sm font-medium">Curriculum</label>
                 <select
-                  className="w-full mt-1 rounded-md border px-3 py-2"
+                  id="curriculum-select"
+                  aria-label="Select curriculum"
+                  className="w-full mt-1 rounded-xl border px-3 py-2"
                   value={selectedCurriculum || ""}
                   onChange={(e) => {
                     setSelectedCurriculum(e.target.value);
@@ -238,7 +240,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
                     {booksForSelectedCurriculum.map((book) => (
                       <label
                         key={book._id}
-                        className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                        className="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer"
                       >
                         <input
                           type="checkbox"
@@ -264,12 +266,13 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
               )}
 
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="rounded-xl">
                   Cancel
                 </Button>
                 <Button
                   onClick={() => addMutation.mutate()}
                   disabled={addMutation.isPending || !selectedCurriculum || selectedGradeBooks.length === 0}
+                  className="rounded-xl"
                 >
                   {addMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Access
@@ -282,7 +285,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
 
       {/* List of assigned curriculums */}
       {curriculumAccess.length === 0 ? (
-        <Card className="text-center py-12">
+        <Card className="text-center py-12 rounded-2xl border-slate-200/80">
           <CardContent>
             <p className="text-muted-foreground mb-4">No curriculum access assigned yet.</p>
             <Button onClick={() => setIsAddDialogOpen(true)}>
@@ -294,7 +297,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
       ) : (
         <div className="space-y-8">
           {curriculumAccess.map((access) => (
-            <Card key={access.curriculumId._id}>
+            <Card key={access.curriculumId._id} className="rounded-2xl border-slate-200/80">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <CardTitle className="flex items-center gap-2 min-w-0">
                   <BookOpen className="h-5 w-5 shrink-0" />
@@ -319,7 +322,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
                     {access.accessibleGradeBooks.map((book) => (
                       <div
                         key={book._id}
-                        className="flex items-center justify-between p-4 border rounded-lg bg-slate-50 dark:bg-slate-800"
+                        className="flex items-center justify-between p-4 border rounded-xl bg-slate-50 dark:bg-slate-800"
                       >
                         <div>
                           <Badge variant="secondary" className="mb-1">

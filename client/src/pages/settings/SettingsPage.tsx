@@ -34,23 +34,25 @@ export default function SettingsPage() {
 
   return (
     <>
-      <div className="container mx-auto py-10 px-4 max-w-6xl">
+      <div className="py-10 px-5 sm:px-8 max-w-6xl mx-auto">
         <div className="mb-10">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-3">
-            <Building2 className="h-8 w-8 sm:h-10 sm:w-10 text-brand-color" />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-3 tracking-tight">
+            <div className="p-2.5 bg-linear-to-br from-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+              <Building2 className="h-6 w-6" />
+            </div>
             Settings
           </h1>
           <p className="text-muted-foreground mt-2">Manage your institution preferences and configuration</p>
         </div>
 
         <Tabs defaultValue="general" className="space-y-8">
-          <TabsList className="flex flex-wrap w-full max-w-4xl h-auto gap-1">
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="academic">Academic</TabsTrigger>
-            <TabsTrigger value="grading">Grading</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsList className="flex flex-wrap w-full max-w-4xl h-auto gap-1 rounded-xl p-1">
+            <TabsTrigger value="general" className="rounded-lg">General</TabsTrigger>
+            <TabsTrigger value="profile" className="rounded-lg">Profile</TabsTrigger>
+            <TabsTrigger value="academic" className="rounded-lg">Academic</TabsTrigger>
+            <TabsTrigger value="grading" className="rounded-lg">Grading</TabsTrigger>
+            <TabsTrigger value="notifications" className="rounded-lg">Notifications</TabsTrigger>
+            <TabsTrigger value="security" className="rounded-lg">Security</TabsTrigger>
           </TabsList>
 
           {/* 1. General Settings */}
@@ -139,7 +141,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button onClick={() => handleSave("General")} className="bg-brand-color">
+                  <Button onClick={() => handleSave("General")} className="bg-brand-color rounded-xl shadow-lg shadow-purple-900/20">
                     <Save className="mr-2 h-4 w-4" /> Save Changes
                   </Button>
                 </div>
@@ -191,7 +193,7 @@ export default function SettingsPage() {
 
                 <div className="flex justify-end gap-3">
                   <Button variant="outline">Upload Logo</Button>
-                  <Button onClick={() => handleSave("Profile")} className="bg-brand-color">
+                  <Button onClick={() => handleSave("Profile")} className="bg-brand-color rounded-xl shadow-lg shadow-purple-900/20">
                     <Save className="mr-2 h-4 w-4" /> Update Profile
                   </Button>
                 </div>
@@ -284,7 +286,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <div className="flex justify-end">
-                    <Button onClick={() => handleSave("Grading")} className="bg-brand-color">
+                    <Button onClick={() => handleSave("Grading")} className="bg-brand-color rounded-xl shadow-lg shadow-purple-900/20">
                       Update Grading System
                     </Button>
                   </div>
@@ -312,7 +314,7 @@ export default function SettingsPage() {
                   </div>
                 ))}
                 <Separator />
-                <Button onClick={() => handleSave("Notifications")} className="bg-brand-color">
+                <Button onClick={() => handleSave("Notifications")} className="bg-brand-color rounded-xl shadow-lg shadow-purple-900/20">
                   Save Preferences
                 </Button>
               </CardContent>
@@ -350,7 +352,7 @@ export default function SettingsPage() {
                     </Select>
                   </div>
                   <div className="flex justify-end">
-                    <Button onClick={() => handleSave("Security")} className="bg-brand-color">
+                    <Button onClick={() => handleSave("Security")} className="bg-brand-color rounded-xl shadow-lg shadow-purple-900/20">
                       <Save className="mr-2 h-4 w-4" /> Save Security Settings
                     </Button>
                   </div>

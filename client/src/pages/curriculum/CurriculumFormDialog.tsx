@@ -206,7 +206,7 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl">
             {curriculum ? "Edit Curriculum" : "Create New Curriculum"}
@@ -341,6 +341,7 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
               <input
                 type="checkbox"
                 id="published"
+                aria-label="Publish immediately"
                 className="h-4 w-4 rounded border-gray-300"
                 onChange={(e) => setValue("isPublished", e.target.checked)}
                 defaultChecked={watch("isPublished")}
@@ -351,10 +352,10 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
 
           {/* Submit */}
           <div className="flex justify-end gap-4 pt-6 border-t">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="rounded-xl">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

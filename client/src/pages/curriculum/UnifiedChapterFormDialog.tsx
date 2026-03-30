@@ -213,7 +213,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
                 <DialogHeader>
                     <DialogTitle className="text-2xl">
                         {chapter ? "Edit Chapter" : "Create New Chapter"}
@@ -326,7 +326,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                         </TabsContent>
 
                         <TabsContent value="content" className="space-y-6 mt-6">
-                            <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <div className="bg-indigo-50 dark:bg-blue-950 p-4 rounded-xl border border-indigo-200 dark:border-blue-800">
                                 <p className="text-sm text-blue-800 dark:text-blue-200">
                                     <strong>Add Content Files:</strong> Upload videos, PDFs, PPTs, and other materials for this chapter. They will be uploaded after the chapter is created.
                                 </p>
@@ -363,7 +363,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                                 {contentFiles.length > 0 && (
                                     <div className="space-y-2">
                                         <Label>Files to Upload ({contentFiles.length})</Label>
-                                        <div className="border rounded-lg divide-y">
+                                        <div className="border rounded-xl divide-y">
                                             {contentFiles.map((content) => (
                                                 <div key={content.id} className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-800">
                                                     <div className="flex items-center gap-3">
@@ -391,10 +391,10 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                     </Tabs>
 
                     <div className="flex justify-end gap-4 pt-6 border-t">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button type="submit" disabled={isSubmitting} className="rounded-xl">
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

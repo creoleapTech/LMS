@@ -94,7 +94,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl rounded-2xl">
         <DialogHeader>
           <DialogTitle>{staff ? "Edit" : "Add New"} Staff</DialogTitle>
           <DialogDescription>
@@ -179,10 +179,10 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="rounded-xl">
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : staff ? "Update" : "Add Staff"}
             </Button>
           </div>

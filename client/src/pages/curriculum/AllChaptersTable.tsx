@@ -90,12 +90,12 @@ export function AllChaptersTable() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Search chapters..."
-                        className="pl-8"
+                        className="pl-8 rounded-xl"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
-                <Button onClick={() => setOpenForm(true)}>
+                <Button onClick={() => setOpenForm(true)} className="rounded-xl">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Chapter
                 </Button>
@@ -106,7 +106,7 @@ export function AllChaptersTable() {
                     <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                 </div>
             ) : data?.data?.length === 0 ? (
-                <Card className="text-center py-12">
+                <Card className="text-center py-12 rounded-2xl border-slate-200/80">
                     <CardContent>
                         <p className="text-muted-foreground mb-4">No chapters found.</p>
                         <Button onClick={() => setOpenForm(true)}>

@@ -102,7 +102,7 @@ export function ChapterFormDialogStandalone({ open, onOpenChange, onSuccess }: P
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
                 <DialogHeader>
                     <DialogTitle className="text-2xl">Create New Chapter</DialogTitle>
                 </DialogHeader>
@@ -191,7 +191,7 @@ export function ChapterFormDialogStandalone({ open, onOpenChange, onSuccess }: P
                             />
                         </div>
 
-                        <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="bg-indigo-50 dark:bg-blue-950 p-4 rounded-xl border border-indigo-200 dark:border-blue-800">
                             <p className="text-sm text-blue-800 dark:text-blue-200">
                                 <strong>Note:</strong> After creating the chapter, you can add content (videos, PDFs, PPTs) by navigating to the chapter in the Curriculum tab.
                             </p>
@@ -199,10 +199,10 @@ export function ChapterFormDialogStandalone({ open, onOpenChange, onSuccess }: P
                     </div>
 
                     <div className="flex justify-end gap-4 pt-6 border-t">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button type="submit" disabled={isSubmitting} className="rounded-xl">
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

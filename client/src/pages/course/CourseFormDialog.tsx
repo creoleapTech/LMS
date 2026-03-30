@@ -86,7 +86,7 @@ export function CourseFormDialog({ open, onOpenChange, course, onSave }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl rounded-2xl">
         <DialogHeader>
           <DialogTitle>{course ? "Edit" : "Create New"} Course</DialogTitle>
           <DialogDescription>
@@ -158,10 +158,10 @@ export function CourseFormDialog({ open, onOpenChange, course, onSave }: Props) 
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="rounded-xl">
               {isSubmitting ? (
                 <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving... </>
               ) : course ? "Update Course" : "Create Course"}

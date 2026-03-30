@@ -98,7 +98,7 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle>{student ? "Edit Student" : "Add Student"}</DialogTitle>
           <DialogDescription>
@@ -177,8 +177,8 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">Cancel</Button>
+            <Button type="submit" disabled={isSubmitting} className="rounded-xl">
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {student ? "Update Student" : "Add Student"}
             </Button>

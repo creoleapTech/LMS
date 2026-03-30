@@ -15,9 +15,9 @@ export const Route = createRootRoute({
         expand={false}
         closeButton
       />
-      <div className="flex min-h-screen overflow-x-hidden">
+      <div className="flex min-h-screen overflow-x-hidden bg-background">
         {showSidebar && <Sidebar />}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 page-enter" key={pathname}>
           <Outlet />
         </div>
       </div>

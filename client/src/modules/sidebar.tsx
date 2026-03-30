@@ -52,68 +52,86 @@ const Sidebar: React.FC = () => {
       {/* Mobile menu button */}
       <button
         onClick={toggleSidebar}
-        className="md:hidden fixed top-3 left-3 z-50 p-2 bg-[#080028] text-white rounded-md shadow-lg"
+        className="md:hidden fixed top-3 left-3 z-50 p-2.5 bg-[#0D0630] text-white rounded-xl shadow-lg shadow-purple-900/20 backdrop-blur-sm border border-white/10 active:scale-95 transition-transform"
         aria-label="Toggle sidebar"
       >
-        {isOpen ? <X size={24} /> : <Menu size={24} />}
+        {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'
-          } md:translate-x-0 md:static md:inset-0 w-64 ${!isExpanded ? 'md:w-16' : ''
+          } md:translate-x-0 md:static md:inset-0 w-64 ${!isExpanded ? 'md:w-[72px]' : ''
           } bg-brand-color text-white flex flex-col transition-all duration-300 ease-in-out z-40`}
       >
         {/* Header with logo and expand/minimize button */}
-        <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-          {isExpanded && <h1 className="text-2xl font-bold">LMS Portal</h1>}
+        <div className="px-5 py-5 border-b border-white/10 flex items-center justify-between">
+          {isExpanded && (
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-linear-to-br from-indigo-400 to-purple-500 flex items-center justify-center shadow-lg shadow-purple-500/25">
+                <BookOpenText className="h-4.5 w-4.5 text-white" />
+              </div>
+              <span className="text-lg font-bold tracking-tight">LMS Portal</span>
+            </div>
+          )}
           <button
             onClick={toggleExpand}
-            className="p-2 absolute top-4 -right-3 rounded-full bg-[#1A0C52] hover:bg-blue-900 md:block hidden shadow-md"
+            className="p-1.5 absolute top-5 -right-3.5 rounded-full bg-[#1A0C52] hover:bg-[#241266] border border-white/10 md:flex hidden shadow-lg shadow-purple-900/30 transition-colors"
             aria-label={isExpanded ? 'Minimize sidebar' : 'Expand sidebar'}
           >
-            {isExpanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+            {isExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4">
-          <ul className="space-y-2">
-            {filteredNavItems.map((item) => (
-              <li key={item.path}>
-                <Link
-                  to={item.path}
-                  className={`flex items-center ${isExpanded ? 'space-x-2' : ''
-                    } p-2 rounded-md hover:bg-blue-900 ${location.pathname === item.path ? 'bg-blue-900' : ''
-                    }`}
-                  activeProps={{ className: 'bg-blue-900' }}
-                >
-                  {item.icon}
-                  {isExpanded && <span>{item.name}</span>}
-                </Link>
-              </li>
-            ))}
+        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+          <ul className="space-y-1">
+            {filteredNavItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <li key={item.path}>
+                  <Link
+                    to={item.path}
+                    className={`flex items-center ${isExpanded ? 'gap-3 px-3' : 'justify-center px-2'
+                      } py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative
+                      ${isActive
+                        ? 'bg-white/15 text-white shadow-inner shadow-white/5'
+                        : 'text-white/70 hover:text-white hover:bg-white/8'
+                      }`}
+                    activeProps={{ className: 'bg-white/15 text-white' }}
+                  >
+                    {isActive && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-linear-to-b from-indigo-400 to-purple-400 rounded-r-full" />
+                    )}
+                    <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}>
+                      {item.icon}
+                    </span>
+                    {isExpanded && <span>{item.name}</span>}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
         {/* Footer with logout button */}
-        <div className="p-4 border-t border-gray-700">
+        <div className="px-3 py-4 border-t border-white/10">
           {isExpanded ? (
-            <>
+            <div className="space-y-3">
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 p-2 w-full rounded-md hover:bg-red-700 bg-red-600"
+                className="flex items-center gap-2.5 px-3 py-2.5 w-full rounded-xl text-sm font-medium text-red-200 hover:bg-red-500/20 hover:text-red-100 transition-colors"
                 aria-label="Logout"
               >
                 <LogOut className="w-5 h-5" />
                 <span>Logout</span>
               </button>
-              <p className="text-sm mt-2">© 2025 LMS Portal</p>
-            </>
+              <p className="text-[11px] text-white/30 text-center tracking-wide">© 2026 LMS Portal</p>
+            </div>
           ) : (
             <button
               onClick={handleLogout}
-              className="flex items-center justify-center p-2 w-full rounded-md hover:bg-red-700 bg-red-600"
+              className="flex items-center justify-center p-2.5 w-full rounded-xl text-red-200 hover:bg-red-500/20 hover:text-red-100 transition-colors"
               aria-label="Logout"
             >
               <LogOut className="w-5 h-5" />
@@ -125,7 +143,7 @@ const Sidebar: React.FC = () => {
       {/* Overlay for mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-[#1A0C52] bg-opacity-50 md:hidden z-30"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm md:hidden z-30 transition-opacity"
           onClick={toggleSidebar}
         ></div>
       )}

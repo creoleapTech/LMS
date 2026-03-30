@@ -137,27 +137,30 @@ export function CourseTable({ institutionId, institutionName }: Props) {
 
   return (
     <>
-      <div className="container mx-auto py-8 px-4 max-w-7xl">
+      <div className="py-8 px-5 sm:px-8 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-3">
-              <BookOpen className="h-6 w-6 sm:h-8 sm:w-8" /> Courses
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-3 tracking-tight">
+              <div className="p-2 bg-linear-to-br from-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              Courses
             </h1>
-            <p className="text-muted-foreground">{institutionName}</p>
+            <p className="text-muted-foreground mt-1">{institutionName}</p>
           </div>
-          <Button onClick={() => { setEditingCourse(null); setOpenForm(true); }}>
+          <Button onClick={() => { setEditingCourse(null); setOpenForm(true); }} className="rounded-xl shadow-lg shadow-primary/20">
             <Plus className="mr-2 h-4 w-4" /> Create Course
           </Button>
         </div>
 
-        <Card className="p-4 mb-6">
+        <Card className="p-4 mb-6 rounded-2xl border-slate-200/80 shadow-sm">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div className="relative sm:col-span-2 md:col-span-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search courses..." value={globalFilter} onChange={e => setGlobalFilter(e.target.value)} className="pl-10" />
+              <Input placeholder="Search courses..." value={globalFilter} onChange={e => setGlobalFilter(e.target.value)} className="pl-10 rounded-xl" />
             </div>
             <Select value={levelFilter} onValueChange={setLevelFilter}>
-              <SelectTrigger><SelectValue placeholder="All Levels" /></SelectTrigger>
+              <SelectTrigger className="rounded-xl"><SelectValue placeholder="All Levels" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Levels</SelectItem>
                 <SelectItem value="Beginner">Beginner</SelectItem>
@@ -166,7 +169,7 @@ export function CourseTable({ institutionId, institutionName }: Props) {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger><SelectValue placeholder="All Status" /></SelectTrigger>
+              <SelectTrigger className="rounded-xl"><SelectValue placeholder="All Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="Active">Active</SelectItem>
@@ -174,13 +177,13 @@ export function CourseTable({ institutionId, institutionName }: Props) {
                 <SelectItem value="Archived">Archived</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={() => { setGlobalFilter(""); setLevelFilter("all"); setStatusFilter("all"); }}>
+            <Button variant="outline" className="rounded-xl" onClick={() => { setGlobalFilter(""); setLevelFilter("all"); setStatusFilter("all"); }}>
               Clear Filters
             </Button>
           </div>
         </Card>
 
-        <div className="rounded-md border">
+        <div className="rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
           <Table className="min-w-[700px]">
             <TableHeader>

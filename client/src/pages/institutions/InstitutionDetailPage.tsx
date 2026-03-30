@@ -86,41 +86,37 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 relative selection:bg-brand-color/20">
-      {/* Abstract Background Pattern */}
-      {/* <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-3xl animate-blob" />
-        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/10 blur-3xl animate-blob animation-delay-2000" />
-        <div className="absolute bottom-[-20%] left-[20%] w-[40%] h-[40%] rounded-full bg-pink-500/10 blur-3xl animate-blob animation-delay-4000" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
-      </div> */}
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-100/80 relative selection:bg-brand-color/20">
 
-      <div className="relative z-10 container mx-auto py-8 px-4 max-w-7xl">
+      <div className="relative z-10 py-8 px-5 sm:px-8 max-w-7xl mx-auto">
         {/* Hero Header */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/30 dark:bg-slate-800/30 backdrop-blur-xl shadow-2xl mb-8 px-4 sm:px-8 py-2 ">
-          <div className="absolute inset-0 bg-linear-to-r from-brand-color/10 to-brand-color/5 opacity-30" />
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-xl shadow-sm mb-8 px-5 sm:px-8 py-5">
+          <div className="absolute inset-0 bg-linear-to-r from-indigo-500/5 to-purple-500/5" />
           <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-5">
+              <div className="p-3 bg-linear-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
+                <Building2 className="h-7 w-7" />
+              </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-brand-color wrap-break-word min-w-0">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
                   {institution.name}
                 </h1>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                  <Badge variant="outline" className="text-md px-4 py-2 capitalize font-medium bg-white/20 dark:bg-slate-700/20 backdrop-blur-sm">
-                    <School className="h-6 w-6 mr-2" />
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <Badge variant="outline" className="text-sm px-3 py-1 capitalize font-medium rounded-lg">
+                    <School className="h-4 w-4 mr-1.5" />
                     {institution.type}
                   </Badge>
                   <Badge
                     variant={institution.isActive ? "default" : "secondary"}
-                    className="text-md px-4 py-2 font-medium bg-white/20 dark:bg-slate-700/20 backdrop-blur-sm"
+                    className="text-sm px-3 py-1 font-medium rounded-lg"
                   >
                     {institution.isActive ? (
                       <>
-                        <CheckCircle className="h-5 w-5 mr-2" /> Active
+                        <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Active
                       </>
                     ) : (
                       <>
-                        <XCircle className="h-5 w-5 mr-2" /> Inactive
+                        <XCircle className="h-3.5 w-3.5 mr-1.5" /> Inactive
                       </>
                     )}
                   </Badge>
@@ -128,8 +124,8 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">Institution ID</p>
-              <code className="text-xs bg-muted/30 px-3 py-2 rounded-lg font-mono backdrop-blur-sm break-all">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Institution ID</p>
+              <code className="text-xs bg-slate-100 px-3 py-1.5 rounded-lg font-mono break-all mt-1 inline-block">
                 {institution._id}
               </code>
             </div>
@@ -137,24 +133,23 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3">
-          <TabsList className="flex flex-wrap w-full max-w-3xl h-auto min-h-14 rounded-2xl p-2 gap-1 bg-white/20 dark:bg-slate-700/30 backdrop-blur-md shadow-md">
-            <TabsTrigger value="overview" className="rounded-xl text-sm sm:text-lg font-medium transition-colors duration-300 hover:bg-white/30 dark:hover:bg-slate-600">
-              <Building2 className="h-5 w-5 mr-2 hidden sm:block" /> Overview
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="flex flex-wrap w-full max-w-3xl h-auto min-h-12 rounded-xl p-1 gap-1 bg-slate-100/80 shadow-sm">
+            <TabsTrigger value="overview" className="rounded-lg text-sm sm:text-base font-medium">
+              <Building2 className="h-4 w-4 mr-1.5 hidden sm:block" /> Overview
             </TabsTrigger>
-            <TabsTrigger value="staff" className="rounded-xl text-sm sm:text-lg font-medium">
-              <Users className="h-5 w-5 mr-2 hidden sm:block" /> Staff
+            <TabsTrigger value="staff" className="rounded-lg text-sm sm:text-base font-medium">
+              <Users className="h-4 w-4 mr-1.5 hidden sm:block" /> Staff
             </TabsTrigger>
-            <TabsTrigger value="classes" className="rounded-xl text-sm sm:text-lg font-medium">
-              <Shapes className="h-5 w-5 mr-2 hidden sm:block" /> Classes
+            <TabsTrigger value="classes" className="rounded-lg text-sm sm:text-base font-medium">
+              <Shapes className="h-4 w-4 mr-1.5 hidden sm:block" /> Classes
             </TabsTrigger>
-            <TabsTrigger value="students" className="rounded-xl text-sm sm:text-lg font-medium">
-              <GraduationCap className="h-5 w-5 mr-2 hidden sm:block" /> Students
+            <TabsTrigger value="students" className="rounded-lg text-sm sm:text-base font-medium">
+              <GraduationCap className="h-4 w-4 mr-1.5 hidden sm:block" /> Students
             </TabsTrigger>
-           <TabsTrigger value="curriculum" className="flex items-center gap-2 text-sm sm:text-base">
-  <BookOpen className="h-4 w-4 hidden sm:block" />
-  Curriculum & Books
-</TabsTrigger>
+            <TabsTrigger value="curriculum" className="rounded-lg text-sm sm:text-base font-medium">
+              <BookOpen className="h-4 w-4 mr-1.5 hidden sm:block" /> Curriculum
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -201,15 +196,15 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
 // Loading Skeleton
 function InstitutionDetailSkeleton() {
   return (
-    <div className="container mx-auto py-10 max-w-7xl">
-      <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 mb-8">
-        <div className="flex items-center gap-4 sm:gap-6">
-          <Skeleton className="h-24 w-24 sm:h-32 sm:w-32 rounded-3xl" />
-          <div className="space-y-4 min-w-0 flex-1">
-            <Skeleton className="h-12 w-full max-w-96" />
-            <div className="flex gap-4">
-              <Skeleton className="h-10 w-32" />
-              <Skeleton className="h-10 w-32" />
+    <div className="py-10 px-5 sm:px-8 max-w-7xl mx-auto">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 sm:p-8 mb-8">
+        <div className="flex items-center gap-5">
+          <Skeleton className="h-14 w-14 rounded-2xl" />
+          <div className="space-y-3 flex-1">
+            <Skeleton className="h-8 w-full max-w-80" />
+            <div className="flex gap-3">
+              <Skeleton className="h-7 w-24 rounded-lg" />
+              <Skeleton className="h-7 w-20 rounded-lg" />
             </div>
           </div>
         </div>

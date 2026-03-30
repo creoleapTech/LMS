@@ -43,7 +43,7 @@ export function PremiumChapterCard({
     return (
         <Card
             style={style}
-            className="group relative overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer bg-white dark:bg-gray-900"
+            className="group relative overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer bg-white dark:bg-gray-900 rounded-2xl border-slate-200/80"
             onClick={onView}
         >
             <div className="p-5">
@@ -60,8 +60,8 @@ export function PremiumChapterCard({
                     )}
 
                     {/* Chapter Number - Clean Circle */}
-                    <div className="flex-shrink-0">
-                        <div className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all">
+                    <div className="shrink-0">
+                        <div className="w-14 h-14 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all">
                             <div className="text-center">
                                 <div className="text-2xl font-bold text-white">{chapter.chapterNumber}</div>
                             </div>
@@ -94,8 +94,8 @@ export function PremiumChapterCard({
 
                         {/* Learning Objectives - Subtle */}
                         {chapter.learningObjectives && (
-                            <div className="flex items-start gap-2 mb-3 p-2.5 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-100 dark:border-blue-900">
-                                <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                            <div className="flex items-start gap-2 mb-3 p-2.5 bg-indigo-50 dark:bg-blue-950/20 rounded-xl border border-indigo-100 dark:border-blue-900">
+                                <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                                 <p className="text-xs text-blue-900 dark:text-blue-100 line-clamp-2">
                                     {chapter.learningObjectives}
                                 </p>

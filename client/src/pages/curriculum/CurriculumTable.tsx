@@ -74,11 +74,11 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
             placeholder="Search curriculum..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
+            className="pl-10 rounded-xl"
           />
         </div>
         <Select value={levelFilter} onValueChange={(v) => setLevelFilter(v as any)}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-48 rounded-xl">
             <SelectValue placeholder="All Levels" />
           </SelectTrigger>
           <SelectContent>
@@ -90,7 +90,7 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
         </Select>
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-2xl border border-slate-200/80 bg-card shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
         <Table className="min-w-[600px]">
           <TableHeader>

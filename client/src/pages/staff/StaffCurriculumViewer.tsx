@@ -195,12 +195,12 @@ export default function StaffCurriculumViewer() {
     const fileUrl = getFileUrl(viewingContent);
 
     return (
-      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-100/80 p-6">
         <div className="max-w-6xl mx-auto">
           <Breadcrumb />
 
-          <Card className="overflow-hidden shadow-2xl">
-            <div className="bg-linear-to-r from-blue-600 to-purple-600 p-8 text-white">
+          <Card className="overflow-hidden shadow-2xl rounded-2xl">
+            <div className="bg-linear-to-r from-indigo-600 to-purple-600 p-8 text-white">
               <div className="flex items-center gap-4 mb-4">
                 {getContentTypeIcon(viewingContent.type)}
                 <Badge className="bg-white/20 text-white border-0 text-lg px-4 py-1">
@@ -215,7 +215,7 @@ export default function StaffCurriculumViewer() {
 
             <CardContent className="p-8">
               {viewingContent.type === "video" && fileUrl && (
-                <video controls className="w-full max-w-5xl mx-auto rounded-xl shadow-2xl">
+                <video controls className="w-full max-w-5xl mx-auto rounded-2xl shadow-2xl">
                   <source src={fileUrl} type="video/mp4" />
                   Your browser does not support video.
                 </video>
@@ -228,7 +228,7 @@ export default function StaffCurriculumViewer() {
                       ? `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`
                       : fileUrl
                   }
-                  className="w-full h-[80vh] rounded-xl shadow-2xl border-0"
+                  className="w-full h-[80vh] rounded-2xl shadow-2xl border-0"
                   title={viewingContent.title}
                 />
               )}
@@ -240,12 +240,12 @@ export default function StaffCurriculumViewer() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-100/80 p-6">
       <div className="max-w-7xl mx-auto">
         <Breadcrumb />
 
         <div className="mb-10">
-          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
             My Teaching Resources
           </h1>
           <p className="text-lg text-muted-foreground">
@@ -297,7 +297,7 @@ export default function StaffCurriculumViewer() {
                 placeholder="Search curriculum..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-10 rounded-xl"
               />
             </div>
 
@@ -305,10 +305,10 @@ export default function StaffCurriculumViewer() {
               {filteredCurriculums.map((curriculum) => (
                 <Card
                   key={curriculum._id}
-                  className="group hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden border-2 hover:border-blue-400"
+                  className="group hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden border-2 hover:border-indigo-400 rounded-2xl"
                   onClick={() => setSelectedCurriculum(curriculum)}
                 >
-                  <div className="h-40 bg-linear-to-br from-blue-500 to-purple-600 relative">
+                  <div className="h-40 bg-linear-to-br from-indigo-500 to-purple-600 relative">
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all" />
                     <div className="absolute bottom-5 left-5 right-5 text-white">
                       <h3 className="text-2xl font-bold drop-shadow-lg">{curriculum.name}</h3>
@@ -334,7 +334,7 @@ export default function StaffCurriculumViewer() {
             {gradeBooks.map((book) => (
               <Card
                 key={book._id}
-                className="group hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden"
+                className="group hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden rounded-2xl border-slate-200/80"
                 onClick={() => setSelectedGradeBook(book._id)}
               >
                 <div className="h-48 bg-linear-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 relative">
@@ -388,12 +388,12 @@ export default function StaffCurriculumViewer() {
               chapters.map((chapter) => (
                 <Card
                   key={chapter._id}
-                  className="group hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  className="group hover:shadow-lg transition-all duration-300 cursor-pointer rounded-2xl border-slate-200/80"
                   onClick={() => setSelectedChapter(chapter._id)}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-5">
-                      <div className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <div className="w-14 h-14 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                         <span className="text-2xl font-bold text-white">{chapter.chapterNumber}</span>
                       </div>
                       <div className="flex-1">
@@ -430,12 +430,12 @@ export default function StaffCurriculumViewer() {
               contents.map((item) => (
                 <Card
                   key={item._id}
-                  className="group hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  className="group hover:shadow-lg transition-all duration-300 cursor-pointer rounded-2xl border-slate-200/80"
                   onClick={() => setViewingContent(item)}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-center gap-5">
-                      <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-xl group-hover:scale-110 transition-transform">
+                      <div className="p-4 bg-indigo-100 dark:bg-blue-900 rounded-xl group-hover:scale-110 transition-transform">
                         {getContentTypeIcon(item.type)}
                       </div>
                       <div className="flex-1">

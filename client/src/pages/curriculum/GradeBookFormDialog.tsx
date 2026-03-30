@@ -145,7 +145,7 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl">
             {gradeBook ? "Edit Grade Book" : "Create New Grade Book"}
@@ -246,10 +246,11 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              className="rounded-xl"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="rounded-xl">
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {gradeBook ? "Update" : "Create"} Grade Book
             </Button>

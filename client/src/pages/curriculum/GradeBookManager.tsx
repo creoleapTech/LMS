@@ -82,7 +82,7 @@ export function GradeBookManager({ curriculumId, onGradeSelect }: Props) {
       </div>
 
       {gradeBooks.length === 0 ? (
-        <Card className="text-center py-12">
+        <Card className="text-center py-12 rounded-2xl border-slate-200/80">
           <CardContent>
             <p className="text-muted-foreground mb-4">No grade books found</p>
             {isSuperAdmin && (

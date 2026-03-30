@@ -189,7 +189,7 @@ export function ChapterManager({ gradeBookId, onChapterSelect }: Props) {
       </DndContext>
 
       {chapters.length === 0 && (
-        <Card className="text-center py-12">
+        <Card className="text-center py-12 rounded-2xl border-slate-200/80">
           <p className="text-muted-foreground">No chapters found</p>
           {isSuperAdmin && (
             <Button
