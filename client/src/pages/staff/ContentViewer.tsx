@@ -1,10 +1,14 @@
+import { useRef, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Config } from "@/lib/config";
 import { ContentProtectionWrapper } from "@/components/protection/ContentProtectionWrapper";
 import { YouTubePlayer } from "@/components/viewers/YouTubePlayer";
 import { PdfFlipBook } from "@/components/viewers/PdfFlipBook";
 import { RichTextViewer } from "@/components/editors/RichTextViewer";
 import { QuizViewer } from "@/components/quiz/QuizViewer";
+import { useContentAutoSave } from "@/hooks/useContentAutoSave";
+import type { ContentProgressEntry } from "@/hooks/useTeachingProgress";
 import {
   Video,
   FileText,
@@ -13,6 +17,8 @@ import {
   HelpCircle,
   Youtube,
   Type,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
@@ -34,6 +40,16 @@ interface ContentViewerProps {
   content: ContentItem;
   chapterNumber: number;
   watermarkText?: string;
+  classId: string;
+  gradeBookId: string;
+  isCompleted: boolean;
+  contentProgress?: ContentProgressEntry;
+  onMarkComplete: (contentId: string) => Promise<void>;
+  onProgressUpdate: (
+    contentId: string,
+    data: { videoTimestamp?: number; pdfPage?: number }
+  ) => void;
+  isCompletingLoading?: boolean;
 }
 
 const typeLabels: Record<ContentType, string> = {
@@ -56,13 +72,60 @@ const typeIcons: Record<ContentType, any> = {
   text: Type,
 };
 
-export function ContentViewer({ content, chapterNumber, watermarkText }: ContentViewerProps) {
+export function ContentViewer({
+  content,
+  chapterNumber,
+  watermarkText,
+  classId,
+  gradeBookId,
+  isCompleted,
+  contentProgress,
+  onMarkComplete,
+  onProgressUpdate,
+  isCompletingLoading,
+}: ContentViewerProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hasSetInitialTime = useRef(false);
+
+  const { save: autoSave } = useContentAutoSave(classId, gradeBookId, content._id);
+
   const fileUrl = content.videoUrl || content.fileUrl
     ? `${Config.imgUrl}${content.videoUrl || content.fileUrl}`
     : "";
 
   const Icon = typeIcons[content.type] || FileText;
   const displayNum = `${chapterNumber}.${content.order}`;
+
+  // Video: set initial time from progress
+  useEffect(() => {
+    hasSetInitialTime.current = false;
+  }, [content._id]);
+
+  const handleVideoLoadedMetadata = useCallback(() => {
+    if (
+      !hasSetInitialTime.current &&
+      videoRef.current &&
+      contentProgress?.videoTimestamp
+    ) {
+      videoRef.current.currentTime = contentProgress.videoTimestamp;
+      hasSetInitialTime.current = true;
+    }
+  }, [contentProgress?.videoTimestamp]);
+
+  // Video: track time updates
+  const handleVideoTimeUpdate = useCallback(() => {
+    if (videoRef.current) {
+      autoSave({ videoTimestamp: Math.floor(videoRef.current.currentTime) });
+    }
+  }, [autoSave]);
+
+  // PDF: track page changes
+  const handlePdfPageChange = useCallback(
+    (page: number) => {
+      autoSave({ pdfPage: page });
+    },
+    [autoSave]
+  );
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -80,7 +143,29 @@ export function ContentViewer({ content, chapterNumber, watermarkText }: Content
             <Badge className="bg-green-500/80 text-white border-0">Free Preview</Badge>
           )}
         </div>
-        <h1 className="text-2xl lg:text-3xl font-bold">{content.title}</h1>
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-2xl lg:text-3xl font-bold">{content.title}</h1>
+
+          {/* Mark as Complete Button */}
+          <Button
+            onClick={() => onMarkComplete(content._id)}
+            disabled={isCompletingLoading}
+            variant={isCompleted ? "secondary" : "default"}
+            size="sm"
+            className={`shrink-0 gap-2 ${
+              isCompleted
+                ? "bg-green-500/20 text-green-100 hover:bg-green-500/30 border border-green-400/30"
+                : "bg-white/20 text-white hover:bg-white/30 border border-white/20"
+            }`}
+          >
+            {isCompletingLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
+            {isCompleted ? "Completed" : "Mark as Complete"}
+          </Button>
+        </div>
       </div>
 
       {/* Content area */}
@@ -89,11 +174,15 @@ export function ContentViewer({ content, chapterNumber, watermarkText }: Content
           {/* Video */}
           {content.type === "video" && fileUrl && (
             <video
+              ref={videoRef}
               controls
               controlsList="nodownload"
               disablePictureInPicture
               className="w-full max-w-5xl mx-auto rounded-2xl shadow-xl"
               onContextMenu={(e) => e.preventDefault()}
+              onLoadedMetadata={handleVideoLoadedMetadata}
+              onTimeUpdate={handleVideoTimeUpdate}
+              onPause={handleVideoTimeUpdate}
             >
               <source src={fileUrl} type="video/mp4" />
               Your browser does not support video.
@@ -110,7 +199,12 @@ export function ContentViewer({ content, chapterNumber, watermarkText }: Content
           {/* PDF — Flip Book */}
           {content.type === "pdf" && fileUrl && (
             <div className="max-w-5xl mx-auto">
-              <PdfFlipBook fileUrl={fileUrl} watermarkText={watermarkText} />
+              <PdfFlipBook
+                fileUrl={fileUrl}
+                watermarkText={watermarkText}
+                initialPage={contentProgress?.pdfPage}
+                onPageChange={handlePdfPageChange}
+              />
             </div>
           )}
 

@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 interface PdfFlipBookProps {
   fileUrl: string;
   watermarkText?: string;
+  initialPage?: number;
+  onPageChange?: (page: number) => void;
 }
 
-export function PdfFlipBook({ fileUrl, watermarkText }: PdfFlipBookProps) {
+export function PdfFlipBook({ fileUrl, watermarkText, initialPage, onPageChange }: PdfFlipBookProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -76,7 +78,7 @@ export function PdfFlipBook({ fileUrl, watermarkText }: PdfFlipBookProps) {
 
         pdfDocRef.current = doc;
         setTotalPages(doc.numPages);
-        setCurrentPage(1);
+        setCurrentPage(initialPage && initialPage >= 1 && initialPage <= doc.numPages ? initialPage : 1);
         setLoading(false);
       } catch (err: any) {
         if (!cancelled) {
@@ -95,6 +97,13 @@ export function PdfFlipBook({ fileUrl, watermarkText }: PdfFlipBookProps) {
       renderPage(currentPage);
     }
   }, [currentPage, renderPage]);
+
+  // Notify parent of page changes
+  useEffect(() => {
+    if (currentPage > 0 && onPageChange) {
+      onPageChange(currentPage);
+    }
+  }, [currentPage, onPageChange]);
 
   const goToPrev = () => {
     if (currentPage > 1) setCurrentPage((p) => p - 1);

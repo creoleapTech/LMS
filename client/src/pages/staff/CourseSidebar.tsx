@@ -13,10 +13,12 @@ import {
   Type,
   CheckCircle2,
   Play,
+  Circle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { ContentProgressEntry } from "@/hooks/useTeachingProgress";
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
 
@@ -48,6 +50,8 @@ interface CourseSidebarProps {
   onContentSelect: (content: ContentItem, chapter: ChapterWithContent) => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  completedContentIds: Set<string>;
+  progressByContentId: Map<string, ContentProgressEntry>;
 }
 
 const contentTypeIcons: Record<ContentType, any> = {
@@ -66,6 +70,8 @@ export function CourseSidebar({
   onContentSelect,
   collapsed = false,
   onToggleCollapse,
+  completedContentIds,
+  progressByContentId,
 }: CourseSidebarProps) {
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
 
@@ -144,6 +150,13 @@ export function CourseSidebar({
             const isExpanded = expandedChapters.has(chapter._id);
             const hasActiveContent = chapter.content.some((c) => c._id === activeContentId);
 
+            // Calculate chapter completion
+            const completedInChapter = chapter.content.filter(
+              (c) => completedContentIds.has(c._id)
+            ).length;
+            const totalInChapter = chapter.content.length;
+            const allComplete = totalInChapter > 0 && completedInChapter === totalInChapter;
+
             return (
               <div key={chapter._id} className="border-b last:border-b-0">
                 {/* Chapter header */}
@@ -153,15 +166,23 @@ export function CourseSidebar({
                     hasActiveContent ? "bg-indigo-50/50 dark:bg-indigo-900/20" : ""
                   }`}
                 >
-                  <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
-                      {chapter.chapterNumber}
-                    </span>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                    allComplete
+                      ? "bg-green-100 dark:bg-green-900"
+                      : "bg-indigo-100 dark:bg-indigo-900"
+                  }`}>
+                    {allComplete ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    ) : (
+                      <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
+                        {chapter.chapterNumber}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{chapter.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {chapter.content.length} item{chapter.content.length !== 1 ? "s" : ""}
+                      {completedInChapter}/{totalInChapter} completed
                     </p>
                   </div>
                   {isExpanded ? (
@@ -178,6 +199,8 @@ export function CourseSidebar({
                       const Icon = contentTypeIcons[item.type] || FileText;
                       const isActive = item._id === activeContentId;
                       const displayNum = `${chapter.chapterNumber}.${item.order}`;
+                      const isItemCompleted = completedContentIds.has(item._id);
+                      const hasPartialProgress = !isItemCompleted && progressByContentId.has(item._id);
 
                       return (
                         <button
@@ -189,17 +212,28 @@ export function CourseSidebar({
                               : "hover:bg-slate-50 dark:hover:bg-slate-800"
                           }`}
                         >
-                          <div className={`p-1.5 rounded-lg shrink-0 ${
-                            isActive
-                              ? "bg-indigo-200 dark:bg-indigo-800"
-                              : "bg-slate-100 dark:bg-slate-800"
-                          }`}>
-                            <Icon className="h-3.5 w-3.5" />
+                          {/* Completion indicator */}
+                          <div className="shrink-0">
+                            {isItemCompleted ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            ) : hasPartialProgress ? (
+                              <Circle className="h-4 w-4 text-amber-400 fill-amber-400/30" />
+                            ) : (
+                              <div className={`p-1.5 rounded-lg ${
+                                isActive
+                                  ? "bg-indigo-200 dark:bg-indigo-800"
+                                  : "bg-slate-100 dark:bg-slate-800"
+                              }`}>
+                                <Icon className="h-3.5 w-3.5" />
+                              </div>
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-muted-foreground font-mono">{displayNum}</span>
-                              <p className="text-sm truncate">{item.title}</p>
+                              <p className={`text-sm truncate ${isItemCompleted ? "text-muted-foreground line-through" : ""}`}>
+                                {item.title}
+                              </p>
                             </div>
                           </div>
                           {isActive && (
