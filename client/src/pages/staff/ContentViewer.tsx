@@ -19,6 +19,8 @@ import {
   Type,
   CheckCircle2,
   Loader2,
+  ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
@@ -50,6 +52,10 @@ interface ContentViewerProps {
     data: { videoTimestamp?: number; pdfPage?: number }
   ) => void;
   isCompletingLoading?: boolean;
+  isChapterComplete?: boolean;
+  hasNextChapter?: boolean;
+  onContinueToNextChapter?: () => void;
+  onBackToChapters?: () => void;
 }
 
 const typeLabels: Record<ContentType, string> = {
@@ -83,6 +89,10 @@ export function ContentViewer({
   onMarkComplete,
   onProgressUpdate,
   isCompletingLoading,
+  isChapterComplete,
+  hasNextChapter,
+  onContinueToNextChapter,
+  onBackToChapters,
 }: ContentViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasSetInitialTime = useRef(false);
@@ -247,6 +257,38 @@ export function ContentViewer({
             </div>
           )}
         </ContentProtectionWrapper>
+
+        {/* Chapter completion banner */}
+        {isChapterComplete && (
+          <div className="mt-8 max-w-4xl mx-auto">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-6 text-center">
+              <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+              <h3 className="text-xl font-bold text-green-800 dark:text-green-200 mb-2">
+                Chapter Complete!
+              </h3>
+              <p className="text-green-600 dark:text-green-400 mb-6">
+                You have completed all items in this chapter.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                {onBackToChapters && (
+                  <Button variant="outline" onClick={onBackToChapters} className="gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Chapters
+                  </Button>
+                )}
+                {hasNextChapter && onContinueToNextChapter && (
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                    onClick={onContinueToNextChapter}
+                  >
+                    Continue to Next Chapter
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,8 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { _axios } from "@/lib/axios";
 import {
-  ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Video,
   FileText,
@@ -15,9 +12,8 @@ import {
   Play,
   Circle,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import type { ContentProgressEntry } from "@/hooks/useTeachingProgress";
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
@@ -45,9 +41,12 @@ interface ChapterWithContent {
 }
 
 interface CourseSidebarProps {
-  gradeBookId: string;
+  chapter: ChapterWithContent;
+  chapterIndex: number;
+  totalChapters: number;
   activeContentId: string | null;
-  onContentSelect: (content: ContentItem, chapter: ChapterWithContent) => void;
+  onContentSelect: (content: ContentItem) => void;
+  onBackToChapters: () => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   completedContentIds: Set<string>;
@@ -65,44 +64,25 @@ const contentTypeIcons: Record<ContentType, any> = {
 };
 
 export function CourseSidebar({
-  gradeBookId,
+  chapter,
+  chapterIndex,
+  totalChapters,
   activeContentId,
   onContentSelect,
+  onBackToChapters,
   collapsed = false,
   onToggleCollapse,
   completedContentIds,
   progressByContentId,
 }: CourseSidebarProps) {
-  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
-
-  const {
-    data: chapters = [],
-    isLoading,
-  } = useQuery<ChapterWithContent[]>({
-    queryKey: ["gradebook-full", gradeBookId],
-    queryFn: async () => {
-      const res = await _axios.get(`/admin/curriculum-reader/gradebook/${gradeBookId}/full`);
-      return res.data.data || [];
-    },
-    enabled: !!gradeBookId,
-  });
-
-  // Auto-expand the chapter containing the active content
-  const toggleChapter = (chapterId: string) => {
-    setExpandedChapters((prev) => {
-      const next = new Set(prev);
-      if (next.has(chapterId)) next.delete(chapterId);
-      else next.add(chapterId);
-      return next;
-    });
-  };
-
-  // Auto-expand all chapters on first load
-  useEffect(() => {
-    if (chapters.length > 0 && expandedChapters.size === 0) {
-      setExpandedChapters(new Set(chapters.map((ch) => ch._id)));
-    }
-  }, [chapters]);
+  const completedInChapter = chapter.content.filter((c) =>
+    completedContentIds.has(c._id)
+  ).length;
+  const totalInChapter = chapter.content.length;
+  const progressPercent =
+    totalInChapter > 0
+      ? Math.round((completedInChapter / totalInChapter) * 100)
+      : 0;
 
   if (collapsed) {
     return (
@@ -110,15 +90,12 @@ export function CourseSidebar({
         <Button variant="ghost" size="sm" onClick={onToggleCollapse} className="mb-4">
           <ChevronRight className="h-4 w-4" />
         </Button>
-        {chapters.map((chapter) => (
-          <div
-            key={chapter._id}
-            className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-xs font-bold text-indigo-700 dark:text-indigo-300 mb-2"
-            title={`Chapter ${chapter.chapterNumber}: ${chapter.title}`}
-          >
-            {chapter.chapterNumber}
-          </div>
-        ))}
+        <div
+          className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-xs font-bold text-indigo-700 dark:text-indigo-300"
+          title={`Chapter ${chapter.chapterNumber}: ${chapter.title}`}
+        >
+          {chapter.chapterNumber}
+        </div>
       </div>
     );
   }
@@ -126,127 +103,102 @@ export function CourseSidebar({
   return (
     <div className="w-72 lg:w-80 bg-white dark:bg-slate-900 border-r flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between shrink-0">
-        <h3 className="font-semibold text-sm">Course Content</h3>
-        <Button variant="ghost" size="sm" onClick={onToggleCollapse}>
-          <ChevronDown className="h-4 w-4 rotate-90" />
-        </Button>
+      <div className="border-b shrink-0">
+        <div className="flex items-center justify-between px-3 pt-3 pb-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBackToChapters}
+            className="gap-1 text-xs text-muted-foreground hover:text-foreground -ml-1"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            All Chapters
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onToggleCollapse}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="px-4 pb-3">
+          <p className="text-xs text-muted-foreground mb-0.5">
+            Chapter {chapterIndex + 1} of {totalChapters}
+          </p>
+          <p className="font-semibold text-sm truncate">{chapter.title}</p>
+          <div className="flex items-center gap-2 mt-2">
+            <Progress value={progressPercent} className="flex-1 h-1.5" />
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {completedInChapter}/{totalInChapter}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Chapter list */}
+      {/* Content items */}
       <div className="flex-1 overflow-y-auto">
-        {isLoading ? (
-          <div className="p-4 space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : chapters.length === 0 ? (
+        {chapter.content.length === 0 ? (
           <div className="p-6 text-center text-muted-foreground text-sm">
-            No chapters available
+            No content in this chapter
           </div>
         ) : (
-          chapters.map((chapter) => {
-            const isExpanded = expandedChapters.has(chapter._id);
-            const hasActiveContent = chapter.content.some((c) => c._id === activeContentId);
+          <div className="py-1">
+            {chapter.content.map((item) => {
+              const Icon = contentTypeIcons[item.type] || FileText;
+              const isActive = item._id === activeContentId;
+              const displayNum = `${chapter.chapterNumber}.${item.order}`;
+              const isItemCompleted = completedContentIds.has(item._id);
+              const hasPartialProgress =
+                !isItemCompleted && progressByContentId.has(item._id);
 
-            // Calculate chapter completion
-            const completedInChapter = chapter.content.filter(
-              (c) => completedContentIds.has(c._id)
-            ).length;
-            const totalInChapter = chapter.content.length;
-            const allComplete = totalInChapter > 0 && completedInChapter === totalInChapter;
-
-            return (
-              <div key={chapter._id} className="border-b last:border-b-0">
-                {/* Chapter header */}
+              return (
                 <button
-                  onClick={() => toggleChapter(chapter._id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left ${
-                    hasActiveContent ? "bg-indigo-50/50 dark:bg-indigo-900/20" : ""
+                  key={item._id}
+                  onClick={() => onContentSelect(item)}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                    isActive
+                      ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border-l-2 border-indigo-500"
+                      : "hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                    allComplete
-                      ? "bg-green-100 dark:bg-green-900"
-                      : "bg-indigo-100 dark:bg-indigo-900"
-                  }`}>
-                    {allComplete ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  {/* Completion indicator */}
+                  <div className="shrink-0">
+                    {isItemCompleted ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : hasPartialProgress ? (
+                      <Circle className="h-4 w-4 text-amber-400 fill-amber-400/30" />
                     ) : (
-                      <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
-                        {chapter.chapterNumber}
-                      </span>
+                      <div
+                        className={`p-1.5 rounded-lg ${
+                          isActive
+                            ? "bg-indigo-200 dark:bg-indigo-800"
+                            : "bg-slate-100 dark:bg-slate-800"
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{chapter.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {completedInChapter}/{totalInChapter} completed
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {displayNum}
+                      </span>
+                      <p
+                        className={`text-sm truncate ${
+                          isItemCompleted
+                            ? "text-muted-foreground line-through"
+                            : ""
+                        }`}
+                      >
+                        {item.title}
+                      </p>
+                    </div>
                   </div>
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  {isActive && (
+                    <Play className="h-3 w-3 text-indigo-500 shrink-0" />
                   )}
                 </button>
-
-                {/* Content items */}
-                {isExpanded && (
-                  <div className="pb-1">
-                    {chapter.content.map((item) => {
-                      const Icon = contentTypeIcons[item.type] || FileText;
-                      const isActive = item._id === activeContentId;
-                      const displayNum = `${chapter.chapterNumber}.${item.order}`;
-                      const isItemCompleted = completedContentIds.has(item._id);
-                      const hasPartialProgress = !isItemCompleted && progressByContentId.has(item._id);
-
-                      return (
-                        <button
-                          key={item._id}
-                          onClick={() => onContentSelect(item, chapter)}
-                          className={`w-full flex items-center gap-3 px-4 py-2.5 pl-8 text-left transition-colors ${
-                            isActive
-                              ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border-l-2 border-indigo-500"
-                              : "hover:bg-slate-50 dark:hover:bg-slate-800"
-                          }`}
-                        >
-                          {/* Completion indicator */}
-                          <div className="shrink-0">
-                            {isItemCompleted ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            ) : hasPartialProgress ? (
-                              <Circle className="h-4 w-4 text-amber-400 fill-amber-400/30" />
-                            ) : (
-                              <div className={`p-1.5 rounded-lg ${
-                                isActive
-                                  ? "bg-indigo-200 dark:bg-indigo-800"
-                                  : "bg-slate-100 dark:bg-slate-800"
-                              }`}>
-                                <Icon className="h-3.5 w-3.5" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground font-mono">{displayNum}</span>
-                              <p className={`text-sm truncate ${isItemCompleted ? "text-muted-foreground line-through" : ""}`}>
-                                {item.title}
-                              </p>
-                            </div>
-                          </div>
-                          {isActive && (
-                            <Play className="h-3 w-3 text-indigo-500 shrink-0" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
