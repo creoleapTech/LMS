@@ -85,12 +85,10 @@ export function PptViewer({
     if (currentSlide > 0 && !isFlipping) {
       setFlipDirection("left");
       setIsFlipping(true);
+      setCurrentSlide((s) => s - 1);
       setTimeout(() => {
-        setCurrentSlide((s) => s - 1);
-        setTimeout(() => {
-          setIsFlipping(false);
-          setFlipDirection(null);
-        }, 300);
+        setIsFlipping(false);
+        setFlipDirection(null);
       }, 150);
     }
   }, [currentSlide, isFlipping]);
@@ -99,12 +97,10 @@ export function PptViewer({
     if (presentation && currentSlide < presentation.slides.length - 1 && !isFlipping) {
       setFlipDirection("right");
       setIsFlipping(true);
+      setCurrentSlide((s) => s + 1);
       setTimeout(() => {
-        setCurrentSlide((s) => s + 1);
-        setTimeout(() => {
-          setIsFlipping(false);
-          setFlipDirection(null);
-        }, 300);
+        setIsFlipping(false);
+        setFlipDirection(null);
       }, 150);
     }
   }, [currentSlide, presentation, isFlipping]);
@@ -197,7 +193,7 @@ export function PptViewer({
 
         {/* Slide */}
         <div
-          className="relative overflow-hidden w-full max-w-4xl perspective-[1500px]"
+          className="relative overflow-hidden w-full max-w-4xl"
         >
           <div
             className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
@@ -205,9 +201,8 @@ export function PptViewer({
             onContextMenu={(e) => e.preventDefault()}
           >
             <div
-              className={`transition-all duration-500 ease-in-out transform-3d
-                ${isFlipping && flipDirection === "right" ? "animate-slide-flip-right" : ""}
-                ${isFlipping && flipDirection === "left" ? "animate-slide-flip-left" : ""}`}
+              className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""}
+                ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}
             >
               <SlideRenderer
                 slide={slide}
@@ -266,23 +261,21 @@ export function PptViewer({
         </div>
       )}
 
-      {/* Flip animations */}
+      {/* Slide transition animations */}
       <style>{`
-        @keyframes slideFlipRight {
-          0% { transform: rotateY(0deg); }
-          40% { transform: rotateY(-6deg) scale(0.98); }
-          100% { transform: rotateY(0deg); }
+        @keyframes slideNext {
+          0%   { opacity: 0.6; transform: translateX(20px); }
+          100% { opacity: 1; transform: translateX(0); }
         }
-        @keyframes slideFlipLeft {
-          0% { transform: rotateY(0deg); }
-          40% { transform: rotateY(6deg) scale(0.98); }
-          100% { transform: rotateY(0deg); }
+        @keyframes slidePrev {
+          0%   { opacity: 0.6; transform: translateX(-20px); }
+          100% { opacity: 1; transform: translateX(0); }
         }
-        .animate-slide-flip-right {
-          animation: slideFlipRight 0.45s ease-in-out;
+        .animate-slide-next {
+          animation: slideNext 0.15s ease-out;
         }
-        .animate-slide-flip-left {
-          animation: slideFlipLeft 0.45s ease-in-out;
+        .animate-slide-prev {
+          animation: slidePrev 0.15s ease-out;
         }
       `}</style>
     </div>
