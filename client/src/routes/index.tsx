@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import { Eye, EyeOff, Cpu, Globe, GraduationCap, Zap, ChevronRight, Fingerprint, Activity } from 'lucide-react';
+import { Eye, EyeOff, Cpu, Globe, Zap, ChevronRight, Fingerprint, Activity } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { _axios } from '@/lib/axios';
 import { toast } from 'sonner';
@@ -118,27 +118,17 @@ function LoginPage() {
           <div className="hidden lg:flex flex-1 flex-col justify-between p-8 xl:p-12 relative">
             {/* Header */}
             <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-indigo-500 blur-lg opacity-40 animate-pulse"></div>
-                  <div className="bg-linear-to-br from-indigo-500/40 to-purple-500/40 p-2.5 rounded-xl border border-white/10 relative z-10 backdrop-blur-sm">
-                    <GraduationCap className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  {/* <img src="" alt="" /> */}
-                  <span className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-linear-to-r from-white to-white/80">
-                    Creoleap LMS
+              <div className="relative inline-flex items-center gap-4 bg-white/[0.04] border border-white/[0.08] rounded-2xl px-5 py-3 backdrop-blur-md group/logo">
+                {/* Subtle glow behind logo block */}
+                <div className="absolute -inset-1 bg-linear-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 rounded-2xl blur-xl opacity-0 group-hover/logo:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                <img src="/creo_white.png" alt="Creoleap" className="h-9 w-auto object-contain relative z-10 drop-shadow-[0_0_8px_rgba(139,92,246,0.3)]" />
+                <div className="h-8 w-px bg-linear-to-b from-transparent via-purple-400/50 to-transparent shrink-0" />
+                <div className="flex flex-col relative z-10">
+                  <span className="text-2xl font-black tracking-wide bg-clip-text text-transparent bg-linear-to-r from-white via-purple-100 to-white/80">
+                    LMS
                   </span>
-                  <span className="text-[10px] font-mono text-purple-300/80 tracking-widest uppercase mt-0.5">Advanced E-Learning Portal</span>
+                  <span className="text-[9px] font-medium text-purple-300/60 tracking-[0.2em] uppercase">E-Learning Portal</span>
                 </div>
-              </div>
-              <div className="inline-flex items-center space-x-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-3 py-1 mt-4 backdrop-blur-md">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                {/* <span className="text-[10px] font-bold text-purple-200 tracking-wider font-mono">PLATFORM_ONLINE_v2.0</span> */}
               </div>
             </div>
 
@@ -186,13 +176,15 @@ function LoginPage() {
              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(111,66,193,0.1),transparent_70%)] pointer-events-none"></div>
 
              {/* Mobile logo variant */}
-             <div className="lg:hidden flex items-center space-x-3 mb-8">
-               <div className="bg-linear-to-br from-purple-500/40 to-indigo-500/40 p-2 rounded-xl border border-white/10 backdrop-blur-sm">
-                 <GraduationCap className="h-6 w-6 text-white" />
+             <div className="lg:hidden flex items-center gap-3 mb-8 bg-white/[0.04] border border-white/[0.08] rounded-2xl px-4 py-2.5 backdrop-blur-md w-fit">
+               <img src="/creo_white.png" alt="Creoleap" className="h-7 w-auto object-contain drop-shadow-[0_0_6px_rgba(139,92,246,0.3)]" />
+               <div className="h-6 w-px bg-linear-to-b from-transparent via-purple-400/50 to-transparent shrink-0" />
+               <div className="flex flex-col">
+                 <span className="text-xl font-black tracking-wide bg-clip-text text-transparent bg-linear-to-r from-white via-purple-100 to-white/80">
+                   LMS
+                 </span>
+                 <span className="text-[8px] font-medium text-purple-300/60 tracking-[0.2em] uppercase">E-Learning Portal</span>
                </div>
-               <span className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-linear-to-r from-white to-white/70">
-                 Creoleap LMS
-               </span>
              </div>
 
              <div className="mb-8 text-center lg:text-left relative z-10">

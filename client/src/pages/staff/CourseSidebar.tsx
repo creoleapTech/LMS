@@ -184,7 +184,7 @@ export function CourseSidebar({
                       <p
                         className={`text-sm truncate ${
                           isItemCompleted
-                            ? "text-muted-foreground line-through"
+                            ? "text-muted-foreground"
                             : ""
                         }`}
                       >

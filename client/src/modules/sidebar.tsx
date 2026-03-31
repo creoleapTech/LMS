@@ -65,13 +65,12 @@ const Sidebar: React.FC = () => {
           } bg-brand-color text-white flex flex-col transition-all duration-300 ease-in-out z-40`}
       >
         {/* Header with logo and expand/minimize button */}
-        <div className="px-5 py-5 border-b border-white/10 flex items-center justify-between">
+        <div className="px-5 py-2 border-b border-white/10 flex items-center justify-between">
           {isExpanded && (
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-linear-to-br from-indigo-400 to-purple-500 flex items-center justify-center shadow-lg shadow-purple-500/25">
-                <BookOpenText className="h-4.5 w-4.5 text-white" />
-              </div>
-              <span className="text-lg font-bold tracking-tight">LMS Portal</span>
+            <div className="flex items-center gap-3">
+              <img src="/creo_white.png" alt="Creo" className="h-8 w-auto object-contain" />
+              <div className="h-5 w-px bg-white/20 shrink-0" />
+              <span className="text-lg font-semibold tracking-wide shrink-0">LMS</span>
             </div>
           )}
           <button
@@ -126,7 +125,7 @@ const Sidebar: React.FC = () => {
                 <LogOut className="w-5 h-5" />
                 <span>Logout</span>
               </button>
-              <p className="text-[11px] text-white/30 text-center tracking-wide">© 2026 LMS Portal</p>
+              <p className="text-[11px] text-white/30 text-center tracking-wide">© 2026 LMS</p>
             </div>
           ) : (
             <button
