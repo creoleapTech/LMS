@@ -4,7 +4,7 @@ import swagger from '@elysiajs/swagger'
 // import { connectToDatabase } from './lib/db.config'
 import { baseRouter } from './modules/router'
 import { cors } from '@elysiajs/cors'
-import { connect } from 'mongoose'
+import mongoose, { connect } from 'mongoose'
 
 
 
@@ -13,13 +13,25 @@ const app = new Elysia()
 // await connectToDatabase()
 app.use(cors());
 
-try {
-  await connect(process.env.MONGO_URI as string, {
-    dbName: "LMS",
-  });
-  console.log("Connected to MongoDB");
-} catch (e) {
-  console.log(e);
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+  console.error("❌ ERROR: MONGO_URI is not defined in environment variables.");
+} else {
+  // Add connection event listeners BEFORE calling connect
+  mongoose.connection.on("connected", () => console.log("✅ Mongoose connected to MongoDB"));
+  mongoose.connection.on("error", (err) => console.error("❌ Mongoose connection error:", err));
+  mongoose.connection.on("disconnected", () => console.log("⚠️ Mongoose disconnected"));
+
+  try {
+    await connect(MONGO_URI, {
+      dbName: "LMS",
+      serverSelectionTimeoutMS: 5000, // Fail fast if no server is available
+      socketTimeoutMS: 45000, // standard timeout
+    });
+  } catch (e) {
+    console.error("❌ Fatal error during initial MongoDB connection:", e);
+  }
 }
 
 

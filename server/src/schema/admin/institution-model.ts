@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from "mongoose";
+import mongoose, { Schema, model, Document, Types } from "mongoose";
 
 type InstitutionType = "school" | "college";
 
@@ -45,4 +45,4 @@ const institutionSchema = new Schema<IInstitution>(
   { timestamps: true }
 );
 
-export const InstitutionModel = model<IInstitution>("Institution", institutionSchema);
+export const InstitutionModel = mongoose.models.Institution || model<IInstitution>("Institution", institutionSchema);

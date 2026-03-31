@@ -172,7 +172,7 @@ export const userAuthController = new Elysia({
     }
 
     try {
-      const response = await axios.post('https://www.xopay.in/api/v2/otp/otp', {
+      const response = await axios.post('https://www.pay.in/api/v2/otp/otp', {
         phone: mobile,
         comapny_name: "NFC",
         ...(smsId !== "-" ? { sms_id: smsId } : {}),
@@ -240,7 +240,7 @@ export const userAuthController = new Elysia({
     }
 
     try {
-      const response = await axios.post('https://www.xopay.in/api/v2/otp/otpverify', {
+      const response = await axios.post('https://www.pay.in/api/v2/otp/otpverify', {
         id: otpId,
         otp_no: otpNo,
       });

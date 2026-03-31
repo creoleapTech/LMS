@@ -83,7 +83,7 @@ export const adminAuthController = new Elysia({
         const admin = await AdminModel.findOne({ 
           email: email.toLowerCase(), 
           isDeleted: false 
-        });
+        }).populate('institutionId', 'name logo').lean();
 
         if (admin) {
            user = admin;
@@ -154,6 +154,8 @@ export const adminAuthController = new Elysia({
 
         set.headers["Authorization"] = `Bearer ${token}`;
         set.status = 200;
+
+        await user.populate('institutionId', 'name');
 
         const responseData = {
           success: true,

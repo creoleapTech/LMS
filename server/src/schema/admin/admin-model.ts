@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from "mongoose";
+import mongoose, { Schema, model, Document, Types } from "mongoose";
 
 export type AdminRoles = 'super_admin' | 'admin';
 interface Admin extends Document {
@@ -103,4 +103,4 @@ adminSchema.pre("save", async function (next) {
 // };
 
   
-export const AdminModel = model<Admin>("Admin", adminSchema);
+export const AdminModel = mongoose.models.Admin || model<Admin>("Admin", adminSchema);

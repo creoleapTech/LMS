@@ -61,7 +61,7 @@ const Sidebar: React.FC = () => {
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'
-          } md:translate-x-0 md:static md:inset-0 w-64 ${!isExpanded ? 'md:w-[72px]' : ''
+          } md:translate-x-0 md:sticky md:top-0 h-screen w-64 ${!isExpanded ? 'md:w-[72px]' : ''
           } bg-brand-color text-white flex flex-col transition-all duration-300 ease-in-out z-40`}
       >
         {/* Header with logo and expand/minimize button */}

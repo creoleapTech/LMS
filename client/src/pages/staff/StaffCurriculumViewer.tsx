@@ -220,33 +220,44 @@ export default function StaffCurriculumViewer() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="flex flex-wrap  gap-8">
                 {filteredCurriculums.map((curriculum) => (
                   <Card
                     key={curriculum._id}
-                    className="group hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden border-2 hover:border-indigo-400 rounded-2xl"
+                    className="group w-64 p-0 m-0 relative hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden border-2 hover:border-indigo-400 rounded-2xl"
                     onClick={() => setSelectedCurriculum(curriculum)}
                   >
-                    <div className="h-40 bg-gradient-to-br from-indigo-500 to-purple-600 relative">
-                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all" />
-                      <div className="absolute bottom-5 left-5 right-5 text-white">
-                        <h3 className="text-2xl font-bold drop-shadow-lg">
+                    <Badge variant="secondary" className="right-0 absolute mb-2">
+                      {Array.isArray(curriculum.level)
+                        ? curriculum.level.join(", ")
+                        : curriculum.level}
+                    </Badge>
+                    {/* Image Section */}
+                    <div className="h-full relative overflow-hidden">
+
+                      {/* Book Cover Image */}
+                      <img
+                        src="/book-cover.jpeg" // 👉 place static image in public/images
+                        alt="Curriculum Cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+
+                      {/* Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+
+                      {/* Text */}
+                      <div className="absolute bottom-4 left-4 right-4 text-white">
+                        <h3 className="text-xl font-bold drop-shadow-lg">
                           {curriculum.name}
                         </h3>
-                        <p className="text-sm opacity-90 mt-1">
+                        <p className="text-xs opacity-90 mt-1">
                           {curriculum.gradeBooks.length} Book
-                          {curriculum.gradeBooks.length !== 1 ? "s" : ""}{" "}
-                          Available
+                          {curriculum.gradeBooks.length !== 1 ? "s" : ""} Available
                         </p>
                       </div>
                     </div>
-                    <CardContent className="p-6">
-                      <Badge variant="secondary" className="mb-2">
-                        {Array.isArray(curriculum.level)
-                          ? curriculum.level.join(", ")
-                          : curriculum.level}
-                      </Badge>
-                    </CardContent>
+
+
                   </Card>
                 ))}
               </div>
@@ -292,11 +303,11 @@ export default function StaffCurriculumViewer() {
                     </div>
 
                     {/* Section Cards */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    <div className="flex flex-wrap gap-4">
                       {group.sections.map((section) => (
                         <Card
                           key={section.classId}
-                          className="group hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden rounded-xl border-2 hover:border-indigo-400"
+                          className="group w-64 gap-0 p-0 m-0 overflow-hidden rounded-2xl cursor-pointer border-2 hover:border-indigo-400 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
                           onClick={() =>
                             setSelectedClassSection({
                               classId: section.classId,
@@ -307,19 +318,25 @@ export default function StaffCurriculumViewer() {
                             })
                           }
                         >
-                          <div className="p-4 text-center">
-                            {/* Section Letter */}
-                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                              <span className="text-2xl font-bold text-white">
-                                {section.section}
-                              </span>
-                            </div>
+                          {/* 📘 Book Cover Image ONLY */}
+                          <div className="h-full w-full overflow-hidden">
+                            <img
+                              src="/book-coverGrade3.jpeg"
+                              alt="Book Cover"
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            />
+                          </div>
 
-                            <h3 className="font-semibold text-sm mb-1">
+                          {/* 📄 Details Section */}
+                          <CardContent className=" text-center py-2  bg-white">
+
+
+                            {/* Title */}
+                            <h3 className="font-semibold text-sm text-slate-800 mb-1">
                               Section {section.section}
                             </h3>
 
-                            {/* Student count */}
+                            {/* Students */}
                             <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-3">
                               <Users className="h-3 w-3" />
                               <span>
@@ -328,17 +345,18 @@ export default function StaffCurriculumViewer() {
                               </span>
                             </div>
 
-                            {/* Progress bar */}
+                            {/* Progress */}
                             <div className="space-y-1">
                               <Progress
                                 value={section.progressPercentage}
-                                className="h-1.5"
+                                className="h-1.5 "
                               />
                               <p className="text-xs text-muted-foreground">
                                 {section.progressPercentage}% complete
                               </p>
                             </div>
-                          </div>
+
+                          </CardContent>
                         </Card>
                       ))}
                     </div>

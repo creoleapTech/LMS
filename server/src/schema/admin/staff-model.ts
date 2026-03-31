@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from "mongoose";
+import mongoose, { Schema, model, Document, Types } from "mongoose";
 
 type StaffType = "teacher" | "admin";
 
@@ -57,10 +57,12 @@ staffSchema.pre("save", async function (next) {
 
   // Handle case where password might be undefined (though required)
   try {
-    staff.password = await Bun.password.hash(staff.password, {
-      algorithm: "bcrypt",
-      cost: 10,
-    });
+    if (staff.password) {
+      staff.password = await Bun.password.hash(staff.password, {
+        algorithm: "bcrypt",
+        cost: 10,
+      });
+    }
   } catch (error) {
     console.error("Password hashing error:", error);
     throw error;
@@ -68,4 +70,4 @@ staffSchema.pre("save", async function (next) {
   next();
 });
 
-export const StaffModel = model<IStaff>("Staff", staffSchema);
+export const StaffModel = mongoose.models.Staff || model<IStaff>("Staff", staffSchema);
