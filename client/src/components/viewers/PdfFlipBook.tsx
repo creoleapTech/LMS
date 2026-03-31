@@ -291,10 +291,12 @@ export function PdfFlipBook({ fileUrl, initialPage, onPageChange }: PdfFlipBookP
         <div className={`flex justify-end w-full ${isFullscreen ? "absolute top-4 right-4 z-20" : "mb-2"}`}>
           <button
             onClick={toggleFullscreen}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg
-                       bg-amber-900/10 hover:bg-amber-900/20 dark:bg-amber-100/10 dark:hover:bg-amber-100/20
-                       text-amber-900 dark:text-amber-100 transition-all duration-200
-                       text-sm font-medium shadow-sm hover:shadow-md"
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg
+                       transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md
+                       ${isFullscreen
+                         ? "bg-white/15 hover:bg-white/25 text-white"
+                         : "bg-amber-900/10 hover:bg-amber-900/20 dark:bg-amber-100/10 dark:hover:bg-amber-100/20 text-amber-900 dark:text-amber-100"
+                       }`}
             aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           >
             {isFullscreen ? (
@@ -318,11 +320,13 @@ export function PdfFlipBook({ fileUrl, initialPage, onPageChange }: PdfFlipBookP
             onClick={goToPrev}
             disabled={currentSpread <= 0 || isFlipping}
             className={`group relative z-10 flex items-center justify-center rounded-full
-                       bg-amber-900/10 hover:bg-amber-900/20 dark:bg-amber-100/10 dark:hover:bg-amber-100/20
-                       text-amber-900 dark:text-amber-100 transition-all duration-200
-                       disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:bg-amber-900/10
+                       transition-all duration-200
+                       disabled:opacity-20 disabled:cursor-not-allowed
                        shadow-md hover:shadow-lg shrink-0
-                       ${isFullscreen ? "w-16 h-16 -mr-4" : "w-12 h-12 md:w-14 md:h-14 -mr-2 md:-mr-4"}`}
+                       ${isFullscreen
+                         ? "w-16 h-16 -mr-4 bg-white/15 hover:bg-white/25 text-white disabled:hover:bg-white/15"
+                         : "w-12 h-12 md:w-14 md:h-14 -mr-2 md:-mr-4 bg-amber-900/10 hover:bg-amber-900/20 dark:bg-amber-100/10 dark:hover:bg-amber-100/20 text-amber-900 dark:text-amber-100 disabled:hover:bg-amber-900/10"
+                       }`}
             aria-label="Previous page"
           >
             <ChevronLeft className={`group-hover:-translate-x-0.5 transition-transform ${isFullscreen ? "h-8 w-8" : "h-6 w-6 md:h-7 md:w-7"}`} />
@@ -476,11 +480,13 @@ export function PdfFlipBook({ fileUrl, initialPage, onPageChange }: PdfFlipBookP
           onClick={goToNext}
           disabled={currentSpread >= totalSpreads - 1 || isFlipping}
           className={`group relative z-10 flex items-center justify-center rounded-full
-                     bg-amber-900/10 hover:bg-amber-900/20 dark:bg-amber-100/10 dark:hover:bg-amber-100/20
-                     text-amber-900 dark:text-amber-100 transition-all duration-200
-                     disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:bg-amber-900/10
+                     transition-all duration-200
+                     disabled:opacity-20 disabled:cursor-not-allowed
                      shadow-md hover:shadow-lg shrink-0
-                     ${isFullscreen ? "w-16 h-16 -ml-4" : "w-12 h-12 md:w-14 md:h-14 -ml-2 md:-ml-4"}`}
+                     ${isFullscreen
+                       ? "w-16 h-16 -ml-4 bg-white/15 hover:bg-white/25 text-white disabled:hover:bg-white/15"
+                       : "w-12 h-12 md:w-14 md:h-14 -ml-2 md:-ml-4 bg-amber-900/10 hover:bg-amber-900/20 dark:bg-amber-100/10 dark:hover:bg-amber-100/20 text-amber-900 dark:text-amber-100 disabled:hover:bg-amber-900/10"
+                     }`}
           aria-label="Next page"
         >
           <ChevronRight className={`group-hover:translate-x-0.5 transition-transform ${isFullscreen ? "h-8 w-8" : "h-6 w-6 md:h-7 md:w-7"}`} />
@@ -489,10 +495,12 @@ export function PdfFlipBook({ fileUrl, initialPage, onPageChange }: PdfFlipBookP
 
       {/* Page info bar */}
       <div className={`flex items-center justify-center gap-3 mt-4 px-6 py-2.5 rounded-full
-                      bg-amber-900/5 dark:bg-amber-100/5 border border-amber-200/40 dark:border-stone-600/40
-                      ${isFullscreen ? "bg-stone-800/50 border-stone-600/50" : ""}`}>
-        <BookOpen className={`h-4 w-4 ${isFullscreen ? "text-amber-200/60" : "text-amber-800/60 dark:text-amber-200/60"}`} />
-        <span className={`text-sm font-medium tracking-wide ${isFullscreen ? "text-amber-100/70" : "text-amber-900/70 dark:text-amber-100/70"}`}>
+                      ${isFullscreen
+                        ? "bg-white/10 border border-white/20"
+                        : "bg-amber-900/5 dark:bg-amber-100/5 border border-amber-200/40 dark:border-stone-600/40"
+                      }`}>
+        <BookOpen className={`h-4 w-4 ${isFullscreen ? "text-white/70" : "text-amber-800/60 dark:text-amber-200/60"}`} />
+        <span className={`text-sm font-medium tracking-wide ${isFullscreen ? "text-white/80" : "text-amber-900/70 dark:text-amber-100/70"}`}>
           Pages {leftPage}{rightPage <= totalPages ? `-${rightPage}` : ""} of {totalPages}
         </span>
       </div>
