@@ -29,7 +29,7 @@ export function YouTubePlayer({ videoUrl, className = "" }: YouTubePlayerProps) 
 
   // youtube-nocookie for privacy; rel=0 hides related videos at end;
   // modestbranding=1 minimizes YT logo; iv_load_policy=3 hides annotations
-  const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&fs=1&playsinline=1&controls=1`;
+  const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&controls=1&showinfo=0`;
 
   return (
     <div className={`relative w-full aspect-video rounded-xl overflow-hidden shadow-lg ${className}`}>
@@ -37,8 +37,9 @@ export function YouTubePlayer({ videoUrl, className = "" }: YouTubePlayerProps) 
         src={embedUrl}
         className="absolute inset-0 w-full h-full"
         title="YouTube Video"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
+        sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
       />
     </div>
   );
