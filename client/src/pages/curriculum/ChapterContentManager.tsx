@@ -51,6 +51,7 @@ import { useAuthStore } from "@/store/userAuthStore";
 import { RichTextEditor } from "@/components/editors/RichTextEditor";
 import { RichTextViewer } from "@/components/editors/RichTextViewer";
 import { YouTubePlayer } from "@/components/viewers/YouTubePlayer";
+import { PptViewer } from "@/components/viewers/PptViewer";
 import type { Question } from "@/components/quiz/types";
 import { QuizBuilder } from "@/components/quiz/QuizBuilder";
 import { QuizViewer } from "@/components/quiz/QuizViewer";
@@ -567,15 +568,8 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
 
             {/* PPT */}
             {viewingContent.type === "ppt" && viewingContent.fileUrl && (
-              <div className="space-y-4">
-                <iframe
-                  src={`https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`}
-                  className="w-full h-[50vh] sm:h-[500px] md:h-[700px] border rounded-lg shadow-lg"
-                  title={viewingContent.title}
-                />
-                <p className="text-sm text-muted-foreground">
-                  PowerPoint presentation - Use navigation controls to view slides
-                </p>
+              <div className="space-y-2">
+                <PptViewer storageKey={viewingContent.fileUrl} title={viewingContent.title} />
               </div>
             )}
 

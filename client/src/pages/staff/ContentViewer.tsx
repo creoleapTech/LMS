@@ -5,6 +5,7 @@ import { Config } from "@/lib/config";
 import { ContentProtectionWrapper } from "@/components/protection/ContentProtectionWrapper";
 import { YouTubePlayer } from "@/components/viewers/YouTubePlayer";
 import { PdfFlipBook } from "@/components/viewers/PdfFlipBook";
+import { PptViewer } from "@/components/viewers/PptViewer";
 import { RichTextViewer } from "@/components/editors/RichTextViewer";
 import { QuizViewer } from "@/components/quiz/QuizViewer";
 import { useContentAutoSave } from "@/hooks/useContentAutoSave";
@@ -206,25 +207,22 @@ export function ContentViewer({
             </div>
           )}
 
-          {/* PDF — Flip Book */}
+          {/* PDF — Book Viewer */}
           {content.type === "pdf" && fileUrl && (
             <div className="max-w-5xl mx-auto">
               <PdfFlipBook
                 fileUrl={fileUrl}
-                watermarkText={watermarkText}
                 initialPage={contentProgress?.pdfPage}
                 onPageChange={handlePdfPageChange}
               />
             </div>
           )}
 
-          {/* PPT — Google Docs Viewer */}
-          {content.type === "ppt" && fileUrl && (
-            <iframe
-              src={`https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`}
-              className="w-full h-[75vh] rounded-2xl shadow-xl border-0"
-              title={content.title}
-            />
+          {/* PPT — Presentation Viewer */}
+          {content.type === "ppt" && (content.fileUrl || content.videoUrl) && (
+            <div className="max-w-5xl mx-auto">
+              <PptViewer storageKey={(content.fileUrl || content.videoUrl)!} title={content.title} />
+            </div>
           )}
 
           {/* Rich Text */}
