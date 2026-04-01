@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { CourseraLayout } from "./CourseraLayout";
 import { useAuthStore } from "@/store/userAuthStore";
+import { Config } from "@/lib/config";
 
 interface CurriculumWithBooks {
   _id: string;
@@ -26,6 +27,8 @@ interface CurriculumWithBooks {
   level: string | string[];
   grades: number[];
   isPublished: boolean;
+  thumbnail?: string;
+  banner?: string;
   gradeBooks: GradeBook[];
 }
 
@@ -50,6 +53,7 @@ interface GradeGroup {
   grade: string;
   gradeBookId: string;
   gradeBookTitle: string;
+  coverImage?: string;
   sections: SectionInfo[];
 }
 
@@ -236,11 +240,17 @@ export default function StaffCurriculumViewer() {
                     <div className="h-full relative overflow-hidden">
 
                       {/* Book Cover Image */}
-                      <img
-                        src="/book-cover.jpeg" // 👉 place static image in public/images
-                        alt="Curriculum Cover"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
+                      {curriculum.banner || curriculum.thumbnail ? (
+                        <img
+                          src={`${Config.imgUrl}${curriculum.banner || curriculum.thumbnail}`}
+                          alt="Curriculum Cover"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
+                          <BookOpen className="h-16 w-16 text-white/80" />
+                        </div>
+                      )}
 
                       {/* Gradient Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
@@ -320,11 +330,17 @@ export default function StaffCurriculumViewer() {
                         >
                           {/* 📘 Book Cover Image ONLY */}
                           <div className="h-full w-full overflow-hidden">
-                            <img
-                              src="/book-coverGrade3.jpeg"
-                              alt="Book Cover"
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
+                            {group.coverImage ? (
+                              <img
+                                src={`${Config.imgUrl}${group.coverImage}`}
+                                alt="Book Cover"
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+                                <BookOpen className="h-12 w-12 text-white/80" />
+                              </div>
+                            )}
                           </div>
 
                           {/* 📄 Details Section */}

@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Building2, MapPin, Phone, Mail, User, Smartphone } from "lucide-react";
 
 const institutionSchema = z.object({
   name: z.string().min(2, "Institution name is required"),
@@ -114,100 +114,122 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">
-            {institution ? "Edit Institution" : "Create New Institution"}
-          </DialogTitle>
-          <DialogDescription>
-            {institution ? "Update institution details" : "Add a new school or college"}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl p-0">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-white border-b px-6 pt-6 pb-4 rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 shrink-0">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-semibold leading-tight">
+                {institution ? "Edit Institution" : "Add Institution"}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-0.5">
+                {institution ? "Update the institution's details below." : "Fill in the details to onboard a new school or college."}
+              </DialogDescription>
+            </div>
+          </div>
+        </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 pt-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6 pt-4 space-y-5">
           {/* Basic Info */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Basic Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label>Institution Name *</Label>
-                <Input {...register("name")} placeholder="Creoleap Matric Hr Sec School" />
-                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+          <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Basic Information</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label htmlFor="inst-name" className="text-sm font-medium">Institution Name <span className="text-destructive">*</span></Label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="inst-name" {...register("name")} placeholder="Creoleap Matric Hr Sec School" className="pl-9" />
+                </div>
+                {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
               </div>
 
-              <div className="space-y-2">
-                <Label>Type *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Type <span className="text-destructive">*</span></Label>
                 <Select onValueChange={(v) => setValue("type", v as any)} defaultValue={institution?.type || "school"}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="school">School</SelectItem>
-                    <SelectItem value="college">College</SelectItem>
+                    <SelectItem value="school">🏫 School</SelectItem>
+                    <SelectItem value="college">🎓 College</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.type && <p className="text-sm text-destructive">{errors.type.message}</p>}
+                {errors.type && <p className="text-xs text-destructive mt-1">{errors.type.message}</p>}
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label>Address *</Label>
-                <Input {...register("address")} placeholder="Nagercoil, Tamil Nadu" />
-                {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
+              <div className="space-y-1.5">
+                <Label htmlFor="inst-address" className="text-sm font-medium">Address <span className="text-destructive">*</span></Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="inst-address" {...register("address")} placeholder="Nagercoil, Tamil Nadu" className="pl-9" />
+                </div>
+                {errors.address && <p className="text-xs text-destructive mt-1">{errors.address.message}</p>}
               </div>
             </div>
           </div>
 
           {/* Contact Details */}
-          <div className="space-y-6 pt-6 border-t">
-            <h3 className="text-lg font-semibold">Contact Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label>Incharge Person *</Label>
-                <Input {...register("contactDetails.inchargePerson")} placeholder="Mahendran" />
+          <div className="space-y-4 pt-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact Details</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="incharge" className="text-sm font-medium">Incharge Person <span className="text-destructive">*</span></Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="incharge" {...register("contactDetails.inchargePerson")} placeholder="Mahendran" className="pl-9" />
+                </div>
                 {errors.contactDetails?.inchargePerson && (
-                  <p className="text-sm text-destructive">{errors.contactDetails.inchargePerson.message}</p>
+                  <p className="text-xs text-destructive mt-1">{errors.contactDetails.inchargePerson.message}</p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label>Mobile Number *</Label>
-                <Input {...register("contactDetails.mobileNumber")} placeholder="9344676467" />
+              <div className="space-y-1.5">
+                <Label htmlFor="mobile" className="text-sm font-medium">Mobile Number <span className="text-destructive">*</span></Label>
+                <div className="relative">
+                  <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="mobile" {...register("contactDetails.mobileNumber")} placeholder="9344676467" className="pl-9" />
+                </div>
                 {errors.contactDetails?.mobileNumber && (
-                  <p className="text-sm text-destructive">{errors.contactDetails.mobileNumber.message}</p>
+                  <p className="text-xs text-destructive mt-1">{errors.contactDetails.mobileNumber.message}</p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label>Email (optional)</Label>
-                <Input type="email" {...register("contactDetails.email")} placeholder="test@gmail.com" />
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-sm font-medium">Email <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="email" type="email" {...register("contactDetails.email")} placeholder="school@example.com" className="pl-9" />
+                </div>
                 {errors.contactDetails?.email && (
-                  <p className="text-sm text-destructive">{errors.contactDetails.email.message}</p>
+                  <p className="text-xs text-destructive mt-1">{errors.contactDetails.email.message}</p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label>Office Phone (optional)</Label>
-                <Input {...register("contactDetails.officePhone")} placeholder="9344676467" />
+              <div className="space-y-1.5">
+                <Label htmlFor="office-phone" className="text-sm font-medium">Office Phone <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="office-phone" {...register("contactDetails.officePhone")} placeholder="0476-2223456" className="pl-9" />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Submit Buttons */}
-          <div className="flex justify-end gap-4 pt-6 border-t">
+          {/* Actions */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-purple-900/20">
+            <Button type="submit" disabled={isSubmitting} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
                 </>
-              ) : institution ? (
-                "Update Institution"
-              ) : (
-                "Create Institution"
-              )}
+              ) : institution ? "Update Institution" : "Create Institution"}
             </Button>
           </div>
         </form>

@@ -44,7 +44,7 @@ export const teachingProgressController = new Elysia({
       const gradeBooks = await GradeBookModel.find({
         _id: { $in: curriculumAccess.accessibleGradeBooks },
       })
-        .select("grade bookTitle")
+        .select("grade bookTitle coverImage")
         .lean();
 
       if (!gradeBooks.length) {
@@ -52,11 +52,12 @@ export const teachingProgressController = new Elysia({
       }
 
       // 3. Build a map: grade number -> gradeBook info
-      const gradeToBook = new Map<string, { gradeBookId: string; gradeBookTitle: string }>();
+      const gradeToBook = new Map<string, { gradeBookId: string; gradeBookTitle: string; coverImage?: string }>();
       for (const gb of gradeBooks) {
         gradeToBook.set(String(gb.grade), {
           gradeBookId: (gb as any)._id.toString(),
           gradeBookTitle: gb.bookTitle,
+          coverImage: (gb as any).coverImage || undefined,
         });
       }
 
@@ -104,6 +105,7 @@ export const teachingProgressController = new Elysia({
           grade: string;
           gradeBookId: string;
           gradeBookTitle: string;
+          coverImage?: string;
           sections: any[];
         }
       >();
@@ -118,6 +120,7 @@ export const teachingProgressController = new Elysia({
             grade,
             gradeBookId: bookInfo.gradeBookId,
             gradeBookTitle: bookInfo.gradeBookTitle,
+            coverImage: bookInfo.coverImage,
             sections: [],
           });
         }

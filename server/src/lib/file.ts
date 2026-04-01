@@ -44,9 +44,9 @@ export const deleteFile = async (filename: string, parentFolder: string) => {
   try {
     console.log(`Attempting to delete file: ${filename}`);
 
-    // Verify filename format
-    const parts = filename.split('/');
-    if (parts.length !== 3 || parts[0] !== 'uploads' || parts[1] !== parentFolder) {
+    // Verify the filename is within the expected folder
+    const expectedPrefix = `uploads/${parentFolder}/`;
+    if (!filename.startsWith(expectedPrefix)) {
       throw new Error(`Invalid filename format: ${filename}`);
     }
 

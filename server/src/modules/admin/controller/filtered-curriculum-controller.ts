@@ -58,7 +58,7 @@ export const filteredCurriculumController = new Elysia({
       // SUPER ADMIN: Return all curriculums with all grade books
       if (userRole === 'super_admin') {
         const curriculums = await CurriculumModel.find({})
-          .select('name level grades isPublished')
+          .select('name level grades isPublished thumbnail banner')
           .lean();
 
         const curriculumsWithBooks = await Promise.all(
@@ -83,7 +83,7 @@ export const filteredCurriculumController = new Elysia({
       // ADMIN & TEACHER: Return only curriculums assigned to their institution
       if ((userRole === 'admin' || userRole === 'teacher' || userRole === 'staff') && institutionId) {
         const institution = await InstitutionModel.findById(institutionId)
-          .populate('curriculumAccess.curriculumId', 'name level grades isPublished')
+          .populate('curriculumAccess.curriculumId', 'name level grades isPublished thumbnail banner')
           .lean();
 
         if (!institution || institution.isDeleted) {
@@ -107,6 +107,8 @@ export const filteredCurriculumController = new Elysia({
               level: curriculum.level,
               grades: curriculum.grades,
               isPublished: curriculum.isPublished,
+              thumbnail: curriculum.thumbnail,
+              banner: curriculum.banner,
               gradeBooks
             };
           })

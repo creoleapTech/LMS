@@ -5,13 +5,14 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, BookMarked, ImagePlus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 import { Config } from "@/lib/config";
@@ -145,23 +146,35 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">
-            {gradeBook ? "Edit Grade Book" : "Create New Grade Book"}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl p-0">
+        <div className="sticky top-0 z-10 bg-white border-b px-6 pt-6 pb-4 rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 shrink-0">
+              <BookMarked className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-semibold leading-tight">
+                {gradeBook ? "Edit Grade Book" : "Create Grade Book"}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-0.5">
+                {gradeBook ? "Update this grade book's details and cover image." : "Add a new grade-level book to this curriculum."}
+              </DialogDescription>
+            </div>
+          </div>
+        </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 gap-6">
-            <div className="space-y-2">
-              <Label>Grade *</Label>
+        <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6 pt-4 space-y-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Book Details</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Grade <span className="text-destructive">*</span></Label>
               <Select
                 onValueChange={(v) => setValue("grade", parseInt(v))}
-                defaultValue={watch("grade").toString()}
+                value={watch("grade").toString()}
               >
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent>
                   {gradeOptions.map((grade) => (
@@ -173,86 +186,68 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Book Title *</Label>
-              <Input
-                {...register("bookTitle")}
-                placeholder="Mathematics Grade 1"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Subtitle</Label>
-              <Input
-                {...register("subtitle")}
-                placeholder="An introduction to mathematics"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                {...register("description")}
-                rows={3}
-                placeholder="Description of this grade book..."
-              />
-            </div>
-
-            {/* Cover Image Upload */}
-            <div className="space-y-2">
-              <Label>Cover Image</Label>
-              <div className="flex items-center gap-4">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCoverImageChange}
-                  className="flex-1"
-                />
-                {coverImagePreview && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={removeCoverImage}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              {coverImagePreview && (
-                <div className="mt-2">
-                  <img
-                    src={coverImagePreview}
-                    alt="Cover preview"
-                    className="w-full h-48 object-cover rounded-md border"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Published Toggle */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register("isPublished")}
-                className="h-4 w-4"
-              />
-              <Label>Publish this grade book</Label>
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label className="text-sm font-medium">Book Title <span className="text-destructive">*</span></Label>
+              <Input {...register("bookTitle")} placeholder="Mathematics Grade 1" />
             </div>
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="rounded-xl"
-            >
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Subtitle</Label>
+            <Input {...register("subtitle")} placeholder="An introduction to mathematics" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Description</Label>
+            <Textarea {...register("description")} rows={3} placeholder="What this grade book covers..." className="resize-none" />
+          </div>
+
+          <div className="border-t pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Cover Image</p>
+            {coverImagePreview ? (
+              <div className="relative group">
+                <img src={coverImagePreview} alt="Cover preview" className="w-full h-48 object-cover rounded-xl border" />
+                <button
+                  type="button"
+                  onClick={removeCoverImage}
+                  aria-label="Remove cover image"
+                  className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center gap-2 w-full h-36 rounded-xl border-2 border-dashed border-muted-foreground/25 bg-muted/30 cursor-pointer hover:border-muted-foreground/40 hover:bg-muted/50 transition-all">
+                <ImagePlus className="h-7 w-7 text-muted-foreground/50" />
+                <span className="text-sm text-muted-foreground">Click to upload a cover image</span>
+                <span className="text-xs text-muted-foreground/60">PNG, JPG up to 5MB · Recommended: 400×600px</span>
+                <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
+              </label>
+            )}
+          </div>
+
+          <div className="border-t pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Visibility</p>
+            <div className="flex items-center justify-between rounded-xl border p-4">
+              <div>
+                <p className="text-sm font-medium">Publish this grade book</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Make it visible to assigned students and teachers</p>
+              </div>
+              <Switch
+                checked={watch("isPublished") ?? false}
+                onCheckedChange={(v) => setValue("isPublished", v)}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2 border-t">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="rounded-xl">
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {gradeBook ? "Update" : "Create"} Grade Book
+            <Button type="submit" disabled={isSubmitting} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+              {isSubmitting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+              ) : gradeBook ? "Update Grade Book" : "Create Grade Book"}
             </Button>
           </div>
         </form>

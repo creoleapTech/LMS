@@ -154,7 +154,10 @@ export const curriculumController = new Elysia({
 
     // Handle file uploads and deletions
     let updateData: any = { ...body };
-    
+    // Remove File objects — only re-add as string filename if successfully saved
+    delete updateData.thumbnail;
+    delete updateData.banner;
+
     if (body.thumbnail) {
       // Delete old thumbnail if exists
       if (existingCurriculum.thumbnail) {
@@ -197,10 +200,6 @@ export const curriculumController = new Elysia({
     if (typeof updateData.isPublished === 'string') {
       updateData.isPublished = updateData.isPublished === 'true';
     }
-
-    // Remove file objects from update data if they exist as properties
-    delete updateData.thumbnailFile;
-    delete updateData.bannerFile;
 
     const curriculum = await CurriculumModel.findByIdAndUpdate(
       params.id,
@@ -319,6 +318,8 @@ export const curriculumController = new Elysia({
     if (!existingGradeBook) throw new BadRequestError("Grade book not found");
 
     let updateData: any = { ...body };
+    // Remove File object — only re-add as string filename if successfully saved
+    delete updateData.coverImage;
     
     // Parse FormData values
     if (updateData.isPublished !== undefined) {

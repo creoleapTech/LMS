@@ -10,9 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Eye, EyeOff, Copy, RefreshCw } from "lucide-react";
+import { Loader2, Eye, EyeOff, Copy, RefreshCw, UserCircle, Mail, Smartphone, BookOpen, CalendarDays, ShieldCheck, KeyRound } from "lucide-react";
 import type { IStaff, CreateStaffDTO, StaffType } from "@/types/staff";
-import { toast } from "sonner"; // Add toast for copy feedback
+import { toast } from "sonner";
 
 const staffSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -94,37 +94,115 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl rounded-2xl">
-        <DialogHeader>
-          <DialogTitle>{staff ? "Edit" : "Add New"} Staff</DialogTitle>
-          <DialogDescription>
-            Manage staff members for this institution
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Full Name *</Label>
-              <Input {...register("name")} placeholder="John Doe" />
-              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl p-0">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-white border-b px-6 pt-6 pb-4 rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 shrink-0">
+              <UserCircle className="h-5 w-5" />
             </div>
-
-            <div className="space-y-2">
-              <Label>Email *</Label>
-              <Input type="email" {...register("email")} placeholder="john@example.com" />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+            <div>
+              <DialogTitle className="text-xl font-semibold leading-tight">
+                {staff ? "Edit Staff Member" : "Add Staff Member"}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-0.5">
+                {staff ? "Update the staff member's information." : "Onboard a new teacher or admin to this institution."}
+              </DialogDescription>
             </div>
+          </div>
+        </div>
 
-            {/* Password Field */}
-            <div className="space-y-2 sm:col-span-2 md:col-span-1">
-              <Label>{staff ? "New Password (Optional)" : "Password"}</Label>
-              <div className="relative flex gap-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6 pt-4 space-y-5">
+          {/* Personal Info */}
+          <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Personal Information</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="staff-name" className="text-sm font-medium">Full Name <span className="text-destructive">*</span></Label>
+                <div className="relative">
+                  <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="staff-name" {...register("name")} placeholder="John Doe" className="pl-9" />
+                </div>
+                {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="staff-email" className="text-sm font-medium">Email <span className="text-destructive">*</span></Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="staff-email" type="email" {...register("email")} placeholder="john@school.edu" className="pl-9" />
+                </div>
+                {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="staff-mobile" className="text-sm font-medium">Mobile Number <span className="text-destructive">*</span></Label>
+                <div className="relative">
+                  <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="staff-mobile" {...register("mobileNumber")} placeholder="+91 98765 43210" className="pl-9" />
+                </div>
+                {errors.mobileNumber && <p className="text-xs text-destructive">{errors.mobileNumber.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="staff-date" className="text-sm font-medium">Joining Date <span className="text-destructive">*</span></Label>
+                <div className="relative">
+                  <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="staff-date" type="date" {...register("joiningDate")} className="pl-9" />
+                </div>
+                {errors.joiningDate && <p className="text-xs text-destructive">Date required</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* Role & Subjects */}
+          <div className="space-y-4 pt-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role & Expertise</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Role <span className="text-destructive">*</span></Label>
+                <Select onValueChange={(v) => setValue("type", v as StaffType)} defaultValue={staff?.type || "teacher"}>
+                  <SelectTrigger className="w-full">
+                    <ShieldCheck className="h-4 w-4 text-muted-foreground mr-2" />
+                    <SelectValue placeholder="Select Role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="teacher">👩‍🏫 Teacher</SelectItem>
+                    <SelectItem value="admin">🛡️ Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="staff-subjects" className="text-sm font-medium">Subjects <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <div className="relative">
+                  <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="staff-subjects" {...register("subjects")} placeholder="Math, Science, English" className="pl-9" />
+                </div>
+                <p className="text-xs text-muted-foreground">Comma-separated</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Password */}
+          <div className="space-y-3 pt-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {staff ? "Reset Password" : "Account Password"}
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="staff-password" className="text-sm font-medium">
+                {staff ? "New Password" : "Password"} <span className="text-muted-foreground font-normal">{staff ? "(leave blank to keep current)" : "*"}</span>
+              </Label>
+              <div className="flex gap-2">
                 <div className="relative flex-1">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
+                    id="staff-password"
                     type={showPassword ? "text" : "password"}
                     {...register("password")}
-                    placeholder={staff ? "Leave blank to keep current" : "Enter or Generate Password"}
+                    placeholder={staff ? "Enter to reset password" : "Min. 8 characters"}
+                    className="pl-9 pr-10"
                   />
                   <Button
                     type="button"
@@ -136,54 +214,23 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
-                <Button type="button" variant="outline" size="icon" onClick={generatePassword} title="Generate Password">
+                <Button type="button" variant="outline" size="icon" onClick={generatePassword} title="Auto-generate password" className="shrink-0">
                   <RefreshCw className="h-4 w-4" />
                 </Button>
-                <Button type="button" variant="outline" size="icon" onClick={copyToClipboard} title="Copy Password" disabled={!passwordValue}>
+                <Button type="button" variant="outline" size="icon" onClick={copyToClipboard} title="Copy password" disabled={!passwordValue} className="shrink-0">
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
-              {staff && <p className="text-xs text-muted-foreground">Note: Existing password is hidden for security. Enter a new one to reset it.</p>}
-            </div>
-
-            <div className="space-y-2 sm:col-span-2 md:col-span-1">
-              <Label>Mobile Number *</Label>
-              <Input {...register("mobileNumber")} placeholder="+91 98765 43210" />
-              {errors.mobileNumber && <p className="text-sm text-destructive">{errors.mobileNumber.message}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label>One Role *</Label>
-              <Select onValueChange={(v) => setValue("type", v as StaffType)} defaultValue={staff?.type || "teacher"}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="teacher">Teacher</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.type && <p className="text-sm text-destructive">{errors.type.message}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Subjects (comma separated)</Label>
-              <Input {...register("subjects")} placeholder="Math, Science, English" />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Joining Date *</Label>
-              <Input type="date" {...register("joiningDate")} />
-              {errors.joiningDate && <p className="text-sm text-destructive">Date required</p>}
             </div>
           </div>
 
-          <div className="flex justify-end gap-3">
+          {/* Actions */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="rounded-xl">
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : staff ? "Update" : "Add Staff"}
+            <Button type="submit" disabled={isSubmitting} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : staff ? "Update Staff" : "Add Staff"}
             </Button>
           </div>
         </form>
