@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Config } from "@/lib/config";
 import { parsePptx, type PresentationData } from "@/lib/pptx-parser";
 import { SlideRenderer } from "./SlideRenderer";
@@ -8,6 +8,8 @@ import {
   ChevronRight,
   Presentation,
   AlertTriangle,
+  Maximize,
+  Minimize,
 } from "lucide-react";
 
 interface PptViewerProps {
@@ -30,6 +32,10 @@ export function PptViewer({
   const [error, setError] = useState<string | null>(null);
   const [isFlipping, setIsFlipping] = useState(false);
   const [flipDirection, setFlipDirection] = useState<"left" | "right" | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const viewerRef = useRef<HTMLDivElement>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch & parse PPTX
   useEffect(() => {
@@ -105,15 +111,77 @@ export function PptViewer({
     }
   }, [currentSlide, presentation, isFlipping]);
 
+  // ── Fullscreen ──────────────────────────────────────────────────
+  const enterFullscreen = useCallback(() => {
+    if (viewerRef.current?.requestFullscreen) {
+      viewerRef.current.requestFullscreen();
+    }
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (isFullscreen) exitFullscreen();
+    else enterFullscreen();
+  }, [isFullscreen, enterFullscreen, exitFullscreen]);
+
+  // Sync state with browser fullscreen changes (ESC key, etc.)
+  useEffect(() => {
+    const onChange = () => {
+      const fs = !!document.fullscreenElement;
+      setIsFullscreen(fs);
+      if (fs) {
+        setControlsVisible(true);
+        resetHideTimer();
+      }
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  // Auto-hide controls after 2.5s of no mouse movement in fullscreen
+  const resetHideTimer = useCallback(() => {
+    setControlsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setControlsVisible(false), 2500);
+  }, []);
+
+  const handleMouseMove = useCallback(() => {
+    if (isFullscreen) resetHideTimer();
+  }, [isFullscreen, resetHideTimer]);
+
+  // Cleanup timer
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, []);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") goToPrev();
-      if (e.key === "ArrowRight") goToNext();
+      if (e.key === "ArrowRight" || e.key === " ") {
+        e.preventDefault();
+        goToNext();
+      }
+      // F5 or F11 to enter presentation mode
+      if ((e.key === "F5" || e.key === "F11") && !isFullscreen) {
+        e.preventDefault();
+        enterFullscreen();
+      }
+      // Escape exits fullscreen (browser handles this natively, but reset controls)
+      if (e.key === "Escape" && isFullscreen) {
+        setControlsVisible(true);
+      }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [goToPrev, goToNext]);
+  }, [goToPrev, goToNext, isFullscreen, enterFullscreen]);
 
   // Block print
   useEffect(() => {
