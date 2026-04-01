@@ -70,7 +70,7 @@ function Dashboard() {
         ) : (
           <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 text-center">
             <p className="text-sm text-amber-600 font-medium">
-              {response?.message || 'No dashboard data available.'}
+              {(response as any)?.message || 'No dashboard data available.'}
             </p>
           </div>
         )}
