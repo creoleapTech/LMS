@@ -45,4 +45,4 @@ const institutionSchema = new Schema<IInstitution>(
   { timestamps: true }
 );
 
-export const InstitutionModel = mongoose.models.Institution || model<IInstitution>("Institution", institutionSchema);
+export const InstitutionModel = (mongoose.models.Institution || model<IInstitution>("Institution", institutionSchema)) as mongoose.Model<IInstitution>;

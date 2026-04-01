@@ -80,10 +80,10 @@ export const adminAuthController = new Elysia({
         let isStaff = false;
 
         // 1. Try finding Admin first
-        const admin = await AdminModel.findOne({ 
-          email: email.toLowerCase(), 
-          isDeleted: false 
-        }).populate('institutionId', 'name logo').lean();
+        const admin = await AdminModel.findOne({
+          email: email.toLowerCase(),
+          isDeleted: false
+        });
 
         if (admin) {
            user = admin;
