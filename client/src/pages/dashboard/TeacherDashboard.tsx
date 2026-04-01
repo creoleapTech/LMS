@@ -7,6 +7,7 @@ import {
   Timer,
   Layers,
 } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 import {
   StatCard,
   SectionHeader,
@@ -16,6 +17,8 @@ import {
 } from './components/DashboardComponents';
 
 export function TeacherDashboard({ data }: { data: any }) {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6">
       {/* KPI Grid */}
@@ -56,7 +59,17 @@ export function TeacherDashboard({ data }: { data: any }) {
             </div>
 
             <div className="shrink-0">
-              <button className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-200/50 active:scale-95 transition-transform">
+              <button
+                onClick={() => navigate({
+                  to: '/curriculum',
+                  search: {
+                    gradeBookId: data.continueTeaching.gradeBookId,
+                    classId: data.continueTeaching.classId,
+                    bookTitle: data.continueTeaching.bookTitle,
+                  },
+                })}
+                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-200/50 active:scale-95 transition-transform"
+              >
                 <Play size={16} />
                 Resume
               </button>

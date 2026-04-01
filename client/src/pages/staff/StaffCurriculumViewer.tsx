@@ -65,11 +65,28 @@ interface SelectedClassSection {
   grade: string;
 }
 
-export default function StaffCurriculumViewer() {
+interface StaffCurriculumViewerProps {
+  resumeGradeBookId?: string;
+  resumeClassId?: string;
+  resumeBookTitle?: string;
+}
+
+export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId, resumeBookTitle }: StaffCurriculumViewerProps) {
   const [selectedCurriculum, setSelectedCurriculum] =
     useState<CurriculumWithBooks | null>(null);
   const [selectedClassSection, setSelectedClassSection] =
-    useState<SelectedClassSection | null>(null);
+    useState<SelectedClassSection | null>(() => {
+      if (resumeGradeBookId && resumeClassId) {
+        return {
+          classId: resumeClassId,
+          gradeBookId: resumeGradeBookId,
+          gradeBookTitle: resumeBookTitle || '',
+          section: '',
+          grade: '',
+        };
+      }
+      return null;
+    });
   const [search, setSearch] = useState("");
   const { user } = useAuthStore();
 
@@ -111,14 +128,14 @@ export default function StaffCurriculumViewer() {
   );
 
   // Once a class section is selected, switch to Coursera layout
-  if (selectedClassSection && selectedCurriculum) {
+  if (selectedClassSection && (selectedCurriculum || resumeGradeBookId)) {
     return (
       <CourseraLayout
         gradeBookId={selectedClassSection.gradeBookId}
         gradeBookTitle={selectedClassSection.gradeBookTitle}
-        curriculumName={selectedCurriculum.name}
+        curriculumName={selectedCurriculum?.name || ''}
         classId={selectedClassSection.classId}
-        classLabel={`Class ${selectedClassSection.grade} - Section ${selectedClassSection.section}`}
+        classLabel={selectedClassSection.grade && selectedClassSection.section ? `Class ${selectedClassSection.grade} - Section ${selectedClassSection.section}` : ''}
         userEmail={user?.email}
         onBack={() => setSelectedClassSection(null)}
       />

@@ -405,6 +405,7 @@ async function teacherStats(staffId: string, institutionId: string) {
     const totalContent = latest.contentProgress?.length || 0;
     continueTeaching = {
       gradeBookId: gb?._id,
+      classId: cl?._id,
       bookTitle: gb?.bookTitle || "Unknown",
       grade: gb?.grade || 0,
       coverImage: gb?.coverImage || "",
