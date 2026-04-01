@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
-import { Menu, X, LayoutDashboard, BookOpen, Building, BarChart, Settings, ChevronLeft, ChevronRight, LogOut, BookDashedIcon, BookIcon, BookOpenText, Users } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, LogOut, BookOpenText, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/userAuthStore';
 import { toast } from 'sonner';
 

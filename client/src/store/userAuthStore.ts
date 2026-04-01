@@ -8,7 +8,7 @@ interface User {
   name: string;
   mobileNumber: string;
   role: 'admin' | 'super_admin' | 'staff' | 'teacher';
-  institutionId?: string;
+  institutionId?: string | { _id: string; name: string };
   profileImage?: string;
   isActive: boolean;
   lastLogin: Date;

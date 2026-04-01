@@ -8,7 +8,7 @@ export function useContentAutoSave(
   gradeBookId: string,
   contentId: string | undefined
 ) {
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const saveTimerRef = useRef<any>(null);
   const lastSavedRef = useRef<string>("");
   const pendingDataRef = useRef<any>(null);
 

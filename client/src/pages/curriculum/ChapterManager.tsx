@@ -9,8 +9,8 @@ import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-ki
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { GripVertical, Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { UnifiedChapterFormDialog } from "./UnifiedChapterFormDialog";
 import { PremiumChapterCard } from "./PremiumChapterCard";

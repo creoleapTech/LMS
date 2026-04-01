@@ -1,0 +1,137 @@
+﻿bun : $ vite build && tsc
+At line:1 char:1
++ bun run build > 
+build_output.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: ($ vite   
+  build && tsc:String) [],   
+  RemoteException
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+[36mvite v7.1.9 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 2809 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                                [39m[1m[2m    0.89 kB[22m[1m[22m[2m Γöé gzip:   0.50 kB[22m
+[2mdist/[22m[32massets/pdf.worker.min-FHbmGBN0.mjs        [39m[1m[2m1,244.25 kB[22m[1m[22m
+[2mdist/[22m[35massets/index-BVHdgLwI.css                 [39m[1m[2m  147.40 kB[22m[1m[22m[2m Γöé gzip:  22.48 kB[22m
+[2mdist/[22m[36massets/clock-BfjdFqPQ.js                  [39m[1m[2m    0.34 kB[22m[1m[22m[2m Γöé gzip:   0.27 kB[22m
+[2mdist/[22m[36massets/circle-check-Cd5v6dMi.js           [39m[1m[2m    0.35 kB[22m[1m[22m[2m Γöé gzip:   0.27 kB[22m
+[2mdist/[22m[36massets/user-C78eS5Q0.js                   [39m[1m[2m    0.36 kB[22m[1m[22m[2m Γöé gzip:   0.29 kB[22m
+[2mdist/[22m[36massets/clsx-B-dksMZM.js                   [39m[1m[2m    0.37 kB[22m[1m[22m[2m Γöé gzip:   0.24 kB[22m
+[2mdist/[22m[36massets/upload-Bb0jJYAu.js                 [39m[1m[2m    0.40 kB[22m[1m[22m[2m Γöé gzip:   0.30 kB[22m
+[2mdist/[22m[36massets/activity-DflI__TK.js               [39m[1m[2m    0.41 kB[22m[1m[22m[2m Γöé gzip:   0.31 kB[22m
+[2mdist/[22m[36massets/globe-Dbj6Qwt7.js                  [39m[1m[2m    0.41 kB[22m[1m[22m[2m Γöé gzip:   0.30 kB[22m
+[2mdist/[22m[36massets/arrow-up-down-DV8aIBso.js          [39m[1m[2m    0.42 kB[22m[1m[22m[2m Γöé gzip:   0.30 kB[22m
+[2mdist/[22m[36massets/eye-DTPDaYOG.js                    [39m[1m[2m    0.42 kB[22m[1m[22m[2m Γöé gzip:   0.30 kB[22m
+[2mdist/[22m[36massets/calendar-CCaFfsSl.js               [39m[1m[2m    0.43 kB[22m[1m[22m[2m Γöé gzip:   0.31 kB[22m
+[2mdist/[22m[36massets/zap-4gPyVYZ2.js                    [39m[1m[2m    0.44 kB[22m[1m[22m[2m Γöé gzip:   0.31 kB[22m
+[2mdist/[22m[36massets/book-open-CvYiSDr0.js              [39m[1m[2m    0.45 kB[22m[1m[22m[2m Γöé gzip:   0.32 kB[22m
+[2mdist/[22m[36massets/graduation-cap-Q5ezSYf9.js         [39m[1m[2m    0.51 kB[22m[1m[22m[2m Γöé gzip:   0.36 kB[22m
+[2mdist/[22m[36massets/index-BrLZP9_i.js                  [39m[1m[2m    0.54 kB[22m[1m[22m[2m Γöé gzip:   0.35 kB[22m
+[2mdist/[22m[36massets/index-DMIw-ivz.js                  [39m[1m[2m    0.56 kB[22m[1m[22m[2m Γöé gzip:   0.35 kB[22m
+[2mdist/[22m[36massets/skeleton-VD8xt4bk.js               [39m[1m[2m    0.57 kB[22m[1m[22m[2m Γöé gzip:   0.40 kB[22m
+[2mdist/[22m[36massets/eye-off-B8WEGRgS.js                [39m[1m[2m    0.60 kB[22m[1m[22m[2m Γöé gzip:   0.38 kB[22m
+[2mdist/[22m[36massets/building-2-CYHBJzy6.js             [39m[1m[2m    0.61 kB[22m[1m[22m[2m Γöé gzip:   0.36 kB[22m
+[2mdist/[22m[36massets/textarea-BHsd_c6C.js               [39m[1m[2m    0.65 kB[22m[1m[22m[2m Γöé gzip:   0.40 kB[22m
+[2mdist/[22m[36massets/card-bqxqIlKG.js                   [39m[1m[2m    0.93 kB[22m[1m[22m[2m Γöé gzip:   0.41 kB[22m
+[2mdist/[22m[36massets/phone-CQHJIDWj.js                  [39m[1m[2m    1.22 kB[22m[1m[22m[2m Γöé gzip:   0.55 kB[22m
+[2mdist/[22m[36massets/switch-Cv59svmV.js                 [39m[1m[2m    2.57 kB[22m[1m[22m[2m Γöé gzip:   1.29 kB[22m
+[2mdist/[22m[36massets/InstitutionFormDialog-BuZ-_9tm.js  [39m[1m[2m    4.49 kB[22m[1m[22m[2m Γöé gzip:   1.50 kB[22m
+[2mdist/[22m[36massets/tabs-Dtc6JE2_.js                   [39m[1m[2m    6.82 kB[22m[1m[22m[2m Γöé gzip:   2.83 kB[22m
+[2mdist/[22m[36massets/useQuery-BFmZndRG.js               [39m[1m[2m    8.70 kB[22m[1m[22m[2m Γöé gzip:   3.26 kB[22m
+[2mdist/[22m[36massets/index-BcgnKkT2.js                  [39m[1m[2m    9.54 kB[22m[1m[22m[2m Γöé gzip:   3.57 kB[22m
+[2mdist/[22m[36massets/index-bdj1LhHS.js                  [39m[1m[2m   10.14 kB[22m[1m[22m[2m Γöé gzip:   3.53 kB[22m
+[2mdist/[22m[36massets/index-Bo3ep5GW.js                  [39m[1m[2m   13.45 kB[22m[1m[22m[2m Γöé gzip:   4.28 kB[22m
+[2mdist/[22m[36massets/index-D2YDDvgj.js                  [39m[1m[2m   13.50 kB[22m[1m[22m[2m Γöé gzip:   3.85 kB[22m
+[2mdist/[22m[36massets/StaffTable-y7Aczq1c.js             [39m[1m[2m   14.51 kB[22m[1m[22m[2m Γöé gzip:   4.99 kB[22m
+[2mdist/[22m[36massets/StudentTable-DKN8-9AE.js           [39m[1m[2m   15.22 kB[22m[1m[22m[2m Γöé gzip:   4.95 kB[22m
+[2mdist/[22m[36massets/_id-DjGQ-EKW.js                    [39m[1m[2m   27.89 kB[22m[1m[22m[2m Γöé gzip:   8.01 kB[22m
+[2mdist/[22m[36massets/axios-WlIrePbx.js                  [39m[1m[2m   38.90 kB[22m[1m[22m[2m Γöé gzip:  16.17 kB[22m
+[2mdist/[22m[36massets/alert-dialog-BI9iJRGw.js           [39m[1m[2m   58.43 kB[22m[1m[22m[2m Γöé gzip:  16.93 kB[22m
+[2mdist/[22m[36massets/types-5Am_oZlL.js                  [39m[1m[2m   93.27 kB[22m[1m[22m[2m Γöé gzip:  27.36 kB[22m
+[2mdist/[22m[36massets/select-KQNV7hYZ.js                 [39m[1m[2m  113.50 kB[22m[1m[22m[2m Γöé gzip:  38.09 kB[22m
+[2mdist/[22m[36massets/index-Datfbkqj.js                  [39m[1m[2m  346.89 kB[22m[1m[22m[2m Γöé gzip: 112.60 kB[22m
+[2mdist/[22m[36massets/pdf-Bwj1DJhR.js                    [39m[1m[2m  411.03 kB[22m[1m[22m[2m Γöé gzip: 128.19 kB[22m
+[2mdist/[22m[36massets/index-BSu78fli.js                  [39m[1m[2m  435.87 kB[22m[1m[22m[2m Γöé gzip: 131.64 kB[22m
+[2mdist/[22m[36massets/index-BVxYmTi9.js                  [39m[1m[33m  764.62 kB[39m[22m[2m Γöé gzip: 243.26 kB[22m
+[33m
+(!) Some chunks are larger 
+than 500 kB after 
+minification. Consider:
+- Using dynamic import() to 
+code-split the application
+- Use build.rollupOptions.out
+put.manualChunks to improve 
+chunking: https://rollupjs.or
+g/configuration-options/#outp
+ut-manualchunks
+- Adjust chunk size limit 
+for this warning via build.ch
+unkSizeWarningLimit.[39m
+[32mΓ£ô built in 17.06s[39m
+src/components/viewers/PptViewer.tsx(23,3): error TS6133: 'title' is declared but its value is never read.
+src/components/viewers/SlideRenderer.tsx(9,3): error TS6196: 'TextBodyProps' is declared but never used.
+src/components/viewers/SlideRenderer.tsx(202,3): error TS6133: 'position' is declared but its value is never read.
+src/components/viewers/SlideRenderer.tsx(204,3): error TS6133: 'slideHeight' is declared but its value is never read.
+src/hooks/useContentAutoSave.ts(11,24): error TS2554: Expected 1 arguments, but got 0.
+src/hooks/useContentAutoSave.ts(50,17): error TS6133: 'blob' is declared but its value is never read.
+src/lib/pptx-parser.ts(175,10): error TS6133: 'qn' is declared but its value is never read.
+src/lib/pptx-parser.ts(278,11): error TS6133: 'a' is declared but its value is never read.
+src/lib/pptx-parser.ts(1268,9): error TS6133: 'lstStyle' is declared but its value is never read.
+src/modules/sidebar.tsx(3,36): error TS6133: 'BookOpen' is declared but its value is never read.
+src/modules/sidebar.tsx(3,111): error TS6133: 'BookDashedIcon' is declared but its value is never read.
+src/modules/sidebar.tsx(3,127): error TS6133: 'BookIcon' is declared but its value is never read.
+src/pages/classes/ClassTable.tsx(3,20): error TS6133: 'useMemo' is declared but its value is never read.
+src/pages/course/CourseTable.tsx(21,63): error TS6133: 'Calendar' is declared but its value is never read.
+src/pages/course/CourseTable.tsx(52,31): error TS6133: 'institutionId' is declared but its value is never read.
+src/pages/curriculum/AllChaptersTable.tsx(39,18): error TS6133: 'setPage' is declared but its value is never read.
+src/pages/curriculum/AllGradeBooksTable.tsx(38,18): error TS6133: 'setPage' is declared but its value is never read.
+src/pages/curriculum/ChapterFormDialog.tsx(38,5): error TS6133: 'setValue' is declared but its value is never read.
+src/pages/curriculum/ChapterFormDialog.tsx(39,5): error TS6133: 'watch' is declared but its value is never read.
+src/pages/curriculum/ChapterManager.tsx(12,16): error TS6133: 'CardContent' is declared but its value is never read.
+src/pages/curriculum/ChapterManager.tsx(13,10): error TS6133: 'GripVertical' is declared but its value is never read.
+src/pages/curriculum/ChapterManager.tsx(13,30): error TS6133: 'Edit' is declared but its value is never read.
+src/pages/curriculum/ChapterManager.tsx(13,36): error TS6133: 'Trash2' is declared but its value is never read.
+src/pages/curriculum/ChapterManager.tsx(13,44): error TS6133: 'Eye' is declared but its value is never read.
+src/pages/curriculum/CurriculumFormDialog.tsx(61,5): error TS2322: Type 'Resolver<{ name: string; level: string[]; grades: number[]; description?: string | undefined; tags?: string | undefined; isPublished?: boolean | undefined; }, any, { name: string; level: string[]; grades: number[]; isPublished: boolean; description?: string | undefined; tags?: string | undefined; }>' is not assignable to type 'Resolver<{ name: string; level: string[]; grades: number[]; isPublished: boolean; description?: string | undefined; tags?: string | undefined; }, any, { name: string; level: string[]; grades: number[]; isPublished: boolean; description?: string | undefined; tags?: string | undefined; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ name: string; level: string[]; grades: number[]; isPublished: boolean; description?: string | undefined; tags?: string | undefined; }>' is not assignable to type 'ResolverOptions<{ name: string; level: string[]; grades: number[]; description?: string | undefined; tags?: string | undefined; isPublished?: boolean | undefined; }>'.
+      Type 'boolean | undefined' is not assignable to type 'boolean'.
+        Type 'undefined' is not assignable to type 'boolean'.
+src/pages/curriculum/CurriculumFormDialog.tsx(216,38): error TS2345: Argument of type '(data: CurriculumFormData) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ name: string; level: string[]; grades: number[]; isPublished: boolean; description?: string | undefined; tags?: string | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ name: string; level: string[]; grades: number[]; isPublished: boolean; description?: string | undefined; tags?: string | undefined; }': name, level, grades, isPublished
+src/pages/curriculum/UnifiedChapterFormDialog.tsx(15,19): error TS6133: 'Upload' is declared but its value is never read.
+src/pages/curriculum/UnifiedChapterFormDialog.tsx(15,27): error TS6133: 'X' is declared but its value is never read.
+src/pages/curriculum/UnifiedChapterFormDialog.tsx(15,30): error TS6133: 'Plus' is declared but its value is never read.
+src/pages/institutions/InstitutionCurriculumAccess.tsx(11,34): error TS6133: 'Save' is declared but its value is never read.
+src/pages/institutions/InstitutionDashboard.tsx(5,114): error TS6133: 'Activity' is declared but its value is never read.
+src/pages/institutions/InstitutionDashboard.tsx(17,65): error TS6133: 'onTabChange' is declared but its value is never read.
+src/pages/institutions/InstitutionDashboard.tsx(197,67): error TS6133: 'shadowColor' is declared but its value is never read.
+src/pages/institutions/InstitutionDashboard.tsx(239,10): error TS6133: 'ActionCard' is declared but its value is never read.
+src/pages/settings/SettingsPage.tsx(26,3): error TS6133: 'Users' is declared but its value is never read.
+src/pages/staff/ContentViewer.tsx(91,3): error TS6133: 'onProgressUpdate' is declared but its value is never read.
+src/pages/staff/StaffFormDialog.tsx(13,32): error TS6133: 'KeyRound' is declared but its value is never read.
+src/routes/dashboard/index.tsx(3,3): error TS6133: 'Users' is declared but its value is never read.
+src/routes/dashboard/index.tsx(6,3): error TS6133: 'Target' is declared but its value is never read.
+src/routes/dashboard/index.tsx(9,3): error TS6133: 'Layers' is declared but its value is never read.
+src/routes/dashboard/index.tsx(13,3): error TS6133: 'TrendingUp' is declared but its value is never read.
+src/routes/dashboard/index.tsx(14,3): error TS6133: 'Clock' is declared but its value is never read.
+src/routes/dashboard/index.tsx(16,3): error TS6133: 'Wrench' is declared but its value is never read.
+src/routes/dashboard/index.tsx(21,3): error TS6133: 'AreaChart' is declared but its value is never read.
+src/routes/dashboard/index.tsx(27,15): error TS6133: 'RechartsBarChart' is declared but its value is never read.
+src/routes/dashboard/index.tsx(33,3): error TS6133: 'PolarRadiusAxis' is declared but its value is never read.
+src/routes/dashboard/index.tsx(39,3): error TS6133: 'Line' is declared but its value is never read.
+src/routes/dashboard/index.tsx(46,7): error TS6133: 'INSTITUTION' is declared but its value is never read.
+src/routes/dashboard/index.tsx(225,129): error TS2339: Property 'name' does not exist on type 'string'.
+src/routes/students/index.tsx(10,36): error TS2322: Type '{ institutionId: string; institutionName: string; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'institutionName' does not exist on type 'IntrinsicAttributes & Props'. Did you mean 'institutionId'?
+vite.config.ts(15,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'test' does not exist in type 'UserConfigExport'.

@@ -35,7 +35,7 @@ interface GradeBook {
 
 export function AllGradeBooksTable() {
     const [search, setSearch] = useState("");
-    const [page, setPage] = useState(1);
+    const [page] = useState(1);
     const [openForm, setOpenForm] = useState(false);
     const [selectedGradeBookId, setSelectedGradeBookId] = useState<string | null>(null);
     const [selectedGradeBook, setSelectedGradeBook] = useState<GradeBook | null>(null);

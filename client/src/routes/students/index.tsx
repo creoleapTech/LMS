@@ -7,6 +7,6 @@ export const Route = createFileRoute('/students/')({
 
 function RouteComponent() {
   return<>
-  <StudentTable institutionId={''} institutionName={''} />
+  <StudentTable institutionId={''} />
   </>
 }

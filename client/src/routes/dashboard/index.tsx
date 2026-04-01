@@ -1,53 +1,37 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import {
-  Users,
   Bot,
   Zap,
-  Target,
   Activity,
   BookOpen,
-  Layers,
   Radio,
   CheckCircle2,
   LogOut,
-  TrendingUp,
-  Clock,
   Calendar,
-  Wrench,
   Building2Icon
 } from 'lucide-react';
 import {
   ResponsiveContainer,
-  AreaChart,
   Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  BarChart as RechartsBarChart,
   Bar,
   Cell,
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
-  PolarRadiusAxis,
   Radar,
   PieChart,
   Pie,
   Legend,
-  ComposedChart,
-  Line
+  ComposedChart
 } from 'recharts';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../store/userAuthStore';
 
 // ─── Extended Mock Data ─────────────────────────────────────────────────────
-
-const INSTITUTION = {
-  name: 'Nexus Robotics Academy',
-  location: 'Main Campus',
-  tier: 'Diamond',
-};
 
 const COLORS = {
   indigo: '#6366f1',
@@ -71,7 +55,6 @@ const dummyData = {
     certIssued: 840,
   },
 
-  // Targeted Curriculum: Robotics (1-12) and Electronics (6-12)
   curriculum: [
     {
       grade: 'Grade 1',
@@ -127,13 +110,6 @@ const dummyData = {
     }
   ],
 
-  users: [
-    { id: '1', name: 'John Doe', role: 'student', status: 'active', avatar: 'JD' },
-    { id: '2', name: 'Jane Smith', role: 'staff', status: 'active', avatar: 'JS' },
-    { id: '3', name: 'Alice Johnson', role: 'admin', status: 'inactive', avatar: 'AJ' },
-    { id: '4', name: 'Bob Kumar', role: 'teacher', status: 'active', avatar: 'BK' },
-  ],
-
   monthlyActivity: [
     { name: 'Jan', completions: 12, simulations: 140, hwDeployments: 45, students: 380 },
     { name: 'Feb', completions: 18, simulations: 210, hwDeployments: 62, students: 420 },
@@ -157,14 +133,6 @@ const dummyData = {
     { id: 4, user: 'Bot #08', action: 'low battery', target: 'Lab Front', time: '45m ago', type: 'warning', avatar: '⚙' },
   ],
 
-  scoreDistribution: [
-    { range: '0–20', count: 5 },
-    { range: '21–40', count: 12 },
-    { range: '41–60', count: 45 },
-    { range: '61–80', count: 120 },
-    { range: '81–100', count: 98 },
-  ],
-
   skillRadar: [
     { skill: 'Logic', A: 82, fullMark: 100 },
     { skill: 'Circuits', A: 75, fullMark: 100 },
@@ -172,16 +140,6 @@ const dummyData = {
     { skill: 'Hardware', A: 70, fullMark: 100 },
     { skill: 'AI/ML', A: 45, fullMark: 100 },
     { skill: 'Design', A: 91, fullMark: 100 },
-  ],
-
-  weeklyEngagement: [
-    { day: 'Mon', sessions: 120 },
-    { day: 'Tue', sessions: 145 },
-    { day: 'Wed', sessions: 190 },
-    { day: 'Thu', sessions: 165 },
-    { day: 'Fri', sessions: 210 },
-    { day: 'Sat', sessions: 45 },
-    { day: 'Sun', sessions: 20 },
   ],
 };
 
@@ -222,13 +180,13 @@ function Dashboard() {
             <Building2Icon size={22} className="shrink-0" />
           </div>
           <div>
-            <h2 className="text-2xl capitalize font-bold tracking-normal text-slate-900 leading-none mb-1">{user.institutionId?.name}</h2>
-            {/* <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">{INSTITUTION.location} &nbsp;·&nbsp; {INSTITUTION.tier} Portal</p> */}
+            <h2 className="text-2xl capitalize font-bold tracking-normal text-slate-900 leading-none mb-1">
+              {typeof user.institutionId === 'object' ? user.institutionId.name : 'Institution Portal'}
+            </h2>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-
           <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg text-xs font-bold hover:bg-rose-100 transition-colors">
             <LogOut size={14} />
             <span>Logout</span>
@@ -241,8 +199,7 @@ function Dashboard() {
         {/* ── User Context ── */}
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-1">
-            {/* <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-[0.2em]">Dashboard Overview</p> */}
-            <h1 className="text-4xl capitalize font-medium text-slate-900 tracking-tighter leading-none mb-2">Hello, {user.name.split(' ')[0]}!</h1>
+            <h1 className="text-4xl capitalize font-medium text-slate-900 tracking-tighter leading-none mb-2">Hello, {user.name.split(" ")[0]}!</h1>
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-1 rounded-md uppercase tracking-wider">
                 {user.role.replace('_', ' ')}
@@ -290,10 +247,10 @@ function Dashboard() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', fontSize: '11px', fontWeight: 'bold' }} />
-                    <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '11px', fontWeight: 'bold' }} />
+                    <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: "20px", fontSize: "11px", fontWeight: "bold" }} />
                     <Area type="monotone" dataKey="simulations" name="Simulations" stroke="#6366f1" strokeWidth={3} fill="url(#gSim)" />
                     <Bar dataKey="hwDeployments" name="Hardware Deploys" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
                   </ComposedChart>
@@ -316,7 +273,7 @@ function Dashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart data={dummyData.skillRadar}>
                     <PolarGrid stroke="#f1f5f9" />
-                    <PolarAngleAxis dataKey="skill" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }} />
+                    <PolarAngleAxis dataKey="skill" tick={{ fill: "#64748b", fontSize: 10, fontWeight: 700 }} />
                     <Radar name="Skills" dataKey="A" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.15} strokeWidth={2} />
                   </RadarChart>
                 </ResponsiveContainer>

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Eye, EyeOff, KeyRound, Copy, RefreshCw } from "lucide-react";
+import { Loader2, Eye, EyeOff, Copy, RefreshCw } from "lucide-react";
 import type { IStaff, CreateStaffDTO, StaffType } from "@/types/staff";
 import { toast } from "sonner"; // Add toast for copy feedback
 
