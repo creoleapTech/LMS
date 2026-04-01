@@ -25,7 +25,7 @@ _axios.interceptors.response.use(
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
         localStorage.clear();
-        // window.location.href = "/login"; 
+        window.location.href = "/";
       }
       return Promise.reject(new Error("Session expired. Please login again."));
     }
