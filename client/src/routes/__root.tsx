@@ -16,23 +16,17 @@ export const Route = createRootRoute({
           closeButton
         />
 
-        <div className="flex h-screen overflow-hidden bg-background">
+        <div className="flex h-screen  overflow-hidden bg-background">
+          <div className='z-50'>
+            {showSidebar && <Sidebar />}
+          </div>
 
-          {showSidebar && (
-            <div className="w-64 fixed left-0 top-0 h-full">
-              <Sidebar />
-            </div>
-          )}
 
-          <div
-            className={`flex-1 overflow-y-auto ${showSidebar ? 'ml-64' : ''
-              }`}
-          >
+          <div className="z-10 flex-1 overflow-y-auto relative">
             <div className="min-h-full page-enter" key={pathname}>
               <Outlet />
             </div>
           </div>
-
         </div>
       </>
     );

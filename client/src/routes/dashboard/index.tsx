@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Clock,
   Calendar,
-  Wrench
+  Wrench,
+  Building2Icon
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -207,7 +208,7 @@ function Dashboard() {
   const isPrivileged = ['admin', 'super_admin', 'staff', 'teacher'].includes(user.role);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 leading-normal tracking-tight relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 leading-normal tracking-tight relative">
       {/* Background decoration */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 blur-3xl rounded-full -mr-48 -mt-48 animate-pulse" />
@@ -215,13 +216,13 @@ function Dashboard() {
       </div>
 
       {/* ── Institution Header ── */}
-      <header className="relative z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 shadow-sm/5">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm/5">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 bg-linear-to-tr from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-            <Bot size={22} className="shrink-0" />
+            <Building2Icon size={22} className="shrink-0" />
           </div>
           <div>
-            <h2 className="text-base capitalize font-black tracking-tight text-slate-900 leading-none mb-1">{user.institutionId?.name}</h2>
+            <h2 className="text-2xl capitalize font-bold tracking-normal text-slate-900 leading-none mb-1">{user.institutionId?.name}</h2>
             {/* <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">{INSTITUTION.location} &nbsp;·&nbsp; {INSTITUTION.tier} Portal</p> */}
           </div>
         </div>

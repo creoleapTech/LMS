@@ -22,9 +22,11 @@ const navItems: NavItem[] = [
   { name: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
 ];
 
+import { useSidebarStore } from '@/store/sidebarStore';
+
 const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false); // Mobile toggle
-  const [isExpanded, setIsExpanded] = useState<boolean>(true); // Desktop expand/minimize
+  const { isExpanded, toggleExpand } = useSidebarStore();
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
@@ -35,7 +37,6 @@ const Sidebar: React.FC = () => {
   }, [location.pathname]);
 
   const toggleSidebar = () => setIsOpen(!isOpen); // Mobile toggle
-  const toggleExpand = () => setIsExpanded(!isExpanded); // Desktop expand/minimize
 
   const handleLogout = () => {
     logout();
@@ -52,7 +53,7 @@ const Sidebar: React.FC = () => {
       {/* Mobile menu button */}
       <button
         onClick={toggleSidebar}
-        className="md:hidden fixed top-3 left-3 z-50 p-2.5 bg-[#0D0630] text-white rounded-xl shadow-lg shadow-purple-900/20 backdrop-blur-sm border border-white/10 active:scale-95 transition-transform"
+        className="md:hidden z-50 fixed top-3 left-3 z-50 p-2.5 bg-[#0D0630] text-white rounded-xl shadow-lg shadow-purple-900/20 backdrop-blur-sm border border-white/10 active:scale-95 transition-transform"
         aria-label="Toggle sidebar"
       >
         {isOpen ? <X size={20} /> : <Menu size={20} />}
@@ -60,22 +61,21 @@ const Sidebar: React.FC = () => {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'
-          } md:translate-x-0 md:sticky md:top-0 h-screen w-64 ${!isExpanded ? 'md:w-[72px]' : ''
-          } bg-brand-color text-white flex flex-col transition-all duration-300 ease-in-out z-40`}
+        className={`fixed z-50 inset-y-0 left-0 transform ${isOpen ? 'translate-x-0 transition-all duration-300' : '-translate-x-full  transition-all duration-300'
+          } md:translate-x-0 md:relative h-screen ${isExpanded ? 'w-64' : 'w-20'
+          } bg-brand-color text-white flex flex-col transition-all duration-300 ease-in-out shrink-0`}
       >
         {/* Header with logo and expand/minimize button */}
-        <div className="px-5 py-2 border-b border-white/10 flex items-center justify-between">
-          {isExpanded && (
-            <div className="flex items-center gap-3">
-              <img src="/creo_white.png" alt="Creo" className="h-8 w-auto object-contain" />
-              <div className="h-5 w-px bg-white/20 shrink-0" />
-              <span className="text-lg font-semibold tracking-wide shrink-0">LMS</span>
-            </div>
-          )}
+        <div className="px-5 py-4 border-b border-white/10 flex items-center h-16 min-h-[64px] relative">
+          <div className={`flex items-center gap-3 transition-all duration-300 ${isExpanded ? 'opacity-100 max-w-full' : 'opacity-0 max-w-0 overflow-hidden'}`}>
+            <img src="/creo_white.png" alt="Creo" className="h-8 w-auto object-contain" />
+            <div className="h-5 w-px bg-white/20 shrink-0" />
+            <span className="text-lg font-semibold tracking-wide shrink-0">LMS</span>
+          </div>
+
           <button
             onClick={toggleExpand}
-            className="p-1.5 absolute top-5 -right-3.5 rounded-full bg-[#1A0C52] hover:bg-[#241266] border border-white/10 md:flex hidden shadow-lg shadow-purple-900/30 transition-colors"
+            className="p-1.5 absolute top-1/2 -right-3.5 -translate-y-1/2 rounded-full bg-[#1A0C52] hover:bg-[#241266] border border-white/10 md:flex hidden shadow-lg shadow-black/50 z-50 transition-colors"
             aria-label={isExpanded ? 'Minimize sidebar' : 'Expand sidebar'}
           >
             {isExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
@@ -83,7 +83,7 @@ const Sidebar: React.FC = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        <nav className="flex-1 px-3  transition-all duration-300  py-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
           <ul className="space-y-1">
             {filteredNavItems.map((item) => {
               const isActive = location.pathname === item.path;
@@ -91,8 +91,7 @@ const Sidebar: React.FC = () => {
                 <li key={item.path}>
                   <Link
                     to={item.path}
-                    className={`flex items-center ${isExpanded ? 'gap-3 px-3' : 'justify-center px-2'
-                      } py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative
+                    className={`flex items-center ${isExpanded ? 'px-3' : 'justify-center'} py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
                       ${isActive
                         ? 'bg-white/15 text-white shadow-inner shadow-white/5'
                         : 'text-white/70 hover:text-white hover:bg-white/8'
@@ -102,10 +101,12 @@ const Sidebar: React.FC = () => {
                     {isActive && (
                       <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-linear-to-b from-indigo-400 to-purple-400 rounded-r-full" />
                     )}
-                    <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}>
+                    <span className={`!transition-all duration-200 shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}>
                       {item.icon}
                     </span>
-                    {isExpanded && <span>{item.name}</span>}
+                    <span className={`ml-3 !transition-all !duration-300 whitespace-nowrap overflow-hidden ${isExpanded ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0 ml-0'}`}>
+                      {item.name}
+                    </span>
                   </Link>
                 </li>
               );
@@ -115,27 +116,19 @@ const Sidebar: React.FC = () => {
 
         {/* Footer with logout button */}
         <div className="px-3 py-4 border-t border-white/10">
-          {isExpanded ? (
-            <div className="space-y-3">
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2.5 px-3 py-2.5 w-full rounded-xl text-sm font-medium text-red-200 hover:bg-red-500/20 hover:text-red-100 transition-colors"
-                aria-label="Logout"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>Logout</span>
-              </button>
-              <p className="text-[11px] text-white/30 text-center tracking-wide">© 2026 LMS</p>
-            </div>
-          ) : (
-            <button
-              onClick={handleLogout}
-              className="flex items-center justify-center p-2.5 w-full rounded-xl text-red-200 hover:bg-red-500/20 hover:text-red-100 transition-colors"
-              aria-label="Logout"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          )}
+          <button
+            onClick={handleLogout}
+            className={`flex items-center ${isExpanded ? 'px-3 justify-start' : 'justify-center'} py-2.5 w-full rounded-xl text-sm font-medium text-red-200 hover:bg-red-500/20 hover:text-red-100 transition-all duration-300 overflow-hidden`}
+            aria-label="Logout"
+          >
+            <LogOut className="w-5 h-5 shrink-0" />
+            <span className={`ml-3 transition-all duration-300 whitespace-nowrap overflow-hidden ${isExpanded ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0 ml-0'}`}>
+              Logout
+            </span>
+          </button>
+          <div className={`mt-3 transition-all duration-300 overflow-hidden ${isExpanded ? 'opacity-30 max-h-5' : 'opacity-0 max-h-0'}`}>
+            <p className="text-[11px] text-center tracking-wide">© 2026 LMS</p>
+          </div>
         </div>
       </div>
 
