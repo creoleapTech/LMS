@@ -8,8 +8,6 @@ import {
   ChevronRight,
   Presentation,
   AlertTriangle,
-  Maximize,
-  Minimize,
 } from "lucide-react";
 
 interface PptViewerProps {
@@ -22,7 +20,7 @@ interface PptViewerProps {
 
 export function PptViewer({
   storageKey,
-  title,
+  title: _title,
   onPageChange,
   initialPage,
 }: PptViewerProps) {
@@ -33,7 +31,7 @@ export function PptViewer({
   const [isFlipping, setIsFlipping] = useState(false);
   const [flipDirection, setFlipDirection] = useState<"left" | "right" | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [controlsVisible, setControlsVisible] = useState(true);
+  const [, setControlsVisible] = useState(true);
   const viewerRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -124,11 +122,6 @@ export function PptViewer({
     }
   }, []);
 
-  const toggleFullscreen = useCallback(() => {
-    if (isFullscreen) exitFullscreen();
-    else enterFullscreen();
-  }, [isFullscreen, enterFullscreen, exitFullscreen]);
-
   // Sync state with browser fullscreen changes (ESC key, etc.)
   useEffect(() => {
     const onChange = () => {
@@ -149,10 +142,6 @@ export function PptViewer({
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     hideTimerRef.current = setTimeout(() => setControlsVisible(false), 2500);
   }, []);
-
-  const handleMouseMove = useCallback(() => {
-    if (isFullscreen) resetHideTimer();
-  }, [isFullscreen, resetHideTimer]);
 
   // Cleanup timer
   useEffect(() => {
