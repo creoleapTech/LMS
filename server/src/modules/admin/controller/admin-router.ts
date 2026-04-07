@@ -20,6 +20,7 @@ import { dashboardController } from "./dashboard-controller";
 import { academicYearController } from "./academic-year-controller";
 import { periodConfigController } from "./period-config-controller";
 import { timetableController } from "./timetable-controller";
+import { settingsController } from "./settings-controller";
 // import { userController } from "./user-controller";
 
 
@@ -45,5 +46,6 @@ export const adminBaseRouter = new Elysia({
 .use(academicYearController)
 .use(periodConfigController)
 .use(timetableController)
+.use(settingsController)
 // .use(staffCurriculumController)
 // .use(userController)
