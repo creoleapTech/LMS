@@ -24,7 +24,7 @@ function getInstitutionInfo(user: any) {
   }
   return { name: "", logo: "" };
 }
-
+  
 function getInitials(name: string): string {
   return name
     .split(" ")

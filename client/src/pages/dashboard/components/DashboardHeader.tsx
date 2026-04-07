@@ -12,14 +12,14 @@ export function DashboardHeader() {
   const { user } = useAuthStore();
   if (!user) return null;
 
-  const firstName = user.name?.split(' ')[0] || '';
+  const fullName = user.name || '';
   const salutationPrefix = user.salutation ? `${user.salutation}. ` : '';
 
   return (
     <section className="space-y-2">
       {/* Greeting */}
       <p className="text-lg md:text-xl font-semibold text-slate-600">
-        {getGreeting()}, {salutationPrefix}{firstName}!
+        {getGreeting()}, {salutationPrefix}{fullName}!
       </p>
 
       {/* Role badge + date */}
