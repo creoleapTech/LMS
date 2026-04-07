@@ -1,8 +1,11 @@
 export type StaffType = "teacher" | "admin";
 
+export type Salutation = "Mr" | "Mrs" | "Ms" | "Dr";
+
 export interface IStaff {
   _id: string;
   name: string;
+  salutation?: Salutation;
   email: string;
   mobileNumber: string;
   type: StaffType;
@@ -19,6 +22,7 @@ export interface IStaff {
 
 export interface CreateStaffDTO {
   name: string;
+  salutation?: Salutation;
   email: string;
   mobileNumber: string;
   type: StaffType;

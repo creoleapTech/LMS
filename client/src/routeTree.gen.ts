@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentsIndexRouteImport } from './routes/students/index'
 import { Route as StaffIndexRouteImport } from './routes/staff/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as MyClassesIndexRouteImport } from './routes/my-classes/index'
 import { Route as InstitutionsIndexRouteImport } from './routes/institutions/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as CurriculumIndexRouteImport } from './routes/curriculum/index'
@@ -37,6 +38,11 @@ const StaffIndexRoute = StaffIndexRouteImport.update({
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyClassesIndexRoute = MyClassesIndexRouteImport.update({
+  id: '/my-classes/',
+  path: '/my-classes/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstitutionsIndexRoute = InstitutionsIndexRouteImport.update({
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/curriculum': typeof CurriculumIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/institutions': typeof InstitutionsIndexRoute
+  '/my-classes': typeof MyClassesIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/staff': typeof StaffIndexRoute
   '/students': typeof StudentsIndexRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/curriculum': typeof CurriculumIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/institutions': typeof InstitutionsIndexRoute
+  '/my-classes': typeof MyClassesIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/staff': typeof StaffIndexRoute
   '/students': typeof StudentsIndexRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/curriculum/': typeof CurriculumIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/institutions/': typeof InstitutionsIndexRoute
+  '/my-classes/': typeof MyClassesIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/students/': typeof StudentsIndexRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/curriculum'
     | '/dashboard'
     | '/institutions'
+    | '/my-classes'
     | '/settings'
     | '/staff'
     | '/students'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/curriculum'
     | '/dashboard'
     | '/institutions'
+    | '/my-classes'
     | '/settings'
     | '/staff'
     | '/students'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/curriculum/'
     | '/dashboard/'
     | '/institutions/'
+    | '/my-classes/'
     | '/settings/'
     | '/staff/'
     | '/students/'
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   CurriculumIndexRoute: typeof CurriculumIndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
   InstitutionsIndexRoute: typeof InstitutionsIndexRoute
+  MyClassesIndexRoute: typeof MyClassesIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   StaffIndexRoute: typeof StaffIndexRoute
   StudentsIndexRoute: typeof StudentsIndexRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-classes/': {
+      id: '/my-classes/'
+      path: '/my-classes'
+      fullPath: '/my-classes'
+      preLoaderRoute: typeof MyClassesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/institutions/': {
@@ -222,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   CurriculumIndexRoute: CurriculumIndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,
   InstitutionsIndexRoute: InstitutionsIndexRoute,
+  MyClassesIndexRoute: MyClassesIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   StaffIndexRoute: StaffIndexRoute,
   StudentsIndexRoute: StudentsIndexRoute,

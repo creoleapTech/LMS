@@ -164,6 +164,7 @@ export const adminAuthController = new Elysia({
             _id: user._id,
             email: user.email,
             name: user.name,
+            salutation: user.salutation,
             mobileNumber: user.mobileNumber,
             role: isStaff ? user.type : user.role,
             institutionId: user.institutionId,
@@ -329,6 +330,7 @@ export const adminAuthController = new Elysia({
   {
     body: t.Object({
       name: t.Optional(t.String({ maxLength: 100 })),
+      salutation: t.Optional(t.Union([t.Literal("Mr"), t.Literal("Mrs"), t.Literal("Ms"), t.Literal("Dr")])),
       mobileNumber: t.Optional(t.String({ maxLength: 10 })),
       profileImage: t.Optional(t.String()),
       fcmToken: t.Optional(t.String()),

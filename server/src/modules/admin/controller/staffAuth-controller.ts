@@ -72,6 +72,7 @@ export const staffAuthController = new Elysia({
           _id: staff._id,
           email: staff.email,
           name: staff.name,
+          salutation: staff.salutation,
           mobileNumber: staff.mobileNumber,
           role: staff.type,
           institutionId: staff.institutionId,

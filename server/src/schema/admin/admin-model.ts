@@ -1,6 +1,8 @@
 import mongoose, { Schema, model, Document, Types } from "mongoose";
 
 export type AdminRoles = 'super_admin' | 'admin';
+export type Salutation = "Mr" | "Mrs" | "Ms" | "Dr";
+
 interface Admin extends Document {
   email: string;
   mobileNumber?: string;
@@ -9,6 +11,7 @@ interface Admin extends Document {
   lastIp?: string;
   lastUserAgent?: string;
   name?: string;
+  salutation?: Salutation;
   role: AdminRoles;
   institutionId?: Types.ObjectId; // Reference to Institution document
   profileImage?: string;
@@ -49,9 +52,13 @@ const adminSchema = new Schema<Admin>(
       type: String, 
       maxlength: 255 
     },
-    name: { 
-      type: String, 
-      maxlength: 100 
+    name: {
+      type: String,
+      maxlength: 100
+    },
+    salutation: {
+      type: String,
+      enum: ["Mr", "Mrs", "Ms", "Dr"],
     },
     role: { 
       type: String, 

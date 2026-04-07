@@ -6,6 +6,7 @@ interface User {
   _id: string;
   email: string;
   name: string;
+  salutation?: 'Mr' | 'Mrs' | 'Ms' | 'Dr';
   mobileNumber: string;
   role: 'admin' | 'super_admin' | 'staff' | 'teacher';
   institutionId?: string | { _id: string; name: string };

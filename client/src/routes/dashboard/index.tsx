@@ -1,15 +1,21 @@
+import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Calendar } from 'lucide-react';
 import { useAuthStore } from '../../store/userAuthStore';
 import { useDashboardStats } from '../../pages/dashboard/useDashboardStats';
 import { SuperAdminDashboard } from '../../pages/dashboard/SuperAdminDashboard';
 import { AdminDashboard } from '../../pages/dashboard/AdminDashboard';
 import { TeacherDashboard } from '../../pages/dashboard/TeacherDashboard';
 import { DashboardSkeleton } from '../../pages/dashboard/components/DashboardComponents';
+import { DashboardHeader } from '../../pages/dashboard/components/DashboardHeader';
 
 function Dashboard() {
   const { user } = useAuthStore();
-  const { data: response, isLoading, isError, error } = useDashboardStats();
+  const [filters, setFilters] = useState<{ year?: number; month?: number; classId?: string }>({});
+
+  const role = user?.role;
+  const isAdmin = role === 'admin';
+
+  const { data: response, isLoading, isError, error } = useDashboardStats(isAdmin ? filters : undefined);
 
   if (!user) {
     return (
@@ -33,39 +39,23 @@ function Dashboard() {
     );
   }
 
-  const role = response?.role || user.role;
+  const effectiveRole = response?.role || user.role;
   const stats = response?.data;
 
   return (
     <div className="min-h-screen bg-slate-50/50">
       <main className="p-6 md:p-8 max-w-screen-2xl mx-auto space-y-6">
-        {/* Header */}
-        <section className="flex flex-col md:flex-row md:items-end justify-between gap-3">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-              Welcome back, {user.name.split(' ')[0]}
-            </h1>
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-1 rounded-md uppercase tracking-wider">
-                {user.role.replace('_', ' ')}
-              </span>
-              {typeof user.institutionId === 'object' && user.institutionId?.name && (
-                <span className="text-xs text-slate-400 font-medium">{user.institutionId.name}</span>
-              )}
-              <span className="text-slate-300 text-xs font-medium flex items-center gap-1.5">
-                <Calendar size={12} />
-                {new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </span>
-            </div>
-          </div>
-        </section>
+        {/* New Dashboard Header */}
+        <DashboardHeader />
 
         {/* Role-specific dashboard */}
         {stats ? (
           <>
-            {role === 'super_admin' && <SuperAdminDashboard data={stats} />}
-            {role === 'admin' && <AdminDashboard data={stats} />}
-            {(role === 'teacher' || role === 'staff') && <TeacherDashboard data={stats} />}
+            {effectiveRole === 'super_admin' && <SuperAdminDashboard data={stats} />}
+            {effectiveRole === 'admin' && (
+              <AdminDashboard data={stats} filters={filters} onFiltersChange={setFilters} />
+            )}
+            {(effectiveRole === 'teacher' || effectiveRole === 'staff') && <TeacherDashboard data={stats} />}
           </>
         ) : (
           <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 text-center">

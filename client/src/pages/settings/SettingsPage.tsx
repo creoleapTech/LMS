@@ -12,20 +12,20 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { 
-  Building2, 
-  Globe, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  Bell, 
-  Shield, 
+import {
+  Building2,
+  Globe,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Bell,
+  Shield,
   Save,
   GraduationCap,
-  Users,
   Clock
 } from "lucide-react";
+import { PeriodConfigSection } from "./components/PeriodConfigSection";
 
 export default function SettingsPage() {
   const handleSave = (section: string) => {
@@ -251,6 +251,9 @@ export default function SettingsPage() {
                   <Button className="w-full" variant="outline">Manage Terms</Button>
                 </CardContent>
               </Card>
+
+              {/* Period / Bell Schedule */}
+              <PeriodConfigSection />
             </div>
           </TabsContent>
 

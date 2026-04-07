@@ -1,4 +1,4 @@
-import Elysia from "elysia";
+import Elysia, { t } from "elysia";
 import { adminAuthMacro } from "../admin-macro";
 import { InstitutionModel } from "@/schema/admin/institution-model";
 import { StudentModel } from "@/schema/admin/student-model";
@@ -24,6 +24,19 @@ function sixMonthsAgo() {
   d.setDate(1);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+function buildDateFilter(year?: number, month?: number) {
+  if (!year && !month) return { $gte: sixMonthsAgo() };
+  const filter: any = {};
+  if (year && month) {
+    filter.$gte = new Date(year, month - 1, 1);
+    filter.$lt = new Date(year, month, 1);
+  } else if (year) {
+    filter.$gte = new Date(year, 0, 1);
+    filter.$lt = new Date(year + 1, 0, 1);
+  }
+  return filter;
 }
 
 function relativeTime(date: Date) {
@@ -200,8 +213,13 @@ async function superAdminStats() {
 
 // ── Admin stats (institution-scoped) ──
 
-async function adminStats(institutionId: string) {
+async function adminStats(institutionId: string, filters: { year?: number; month?: number; classId?: string }) {
   const instId = new Types.ObjectId(institutionId);
+  const dateFilter = buildDateFilter(filters.year, filters.month);
+
+  // Build class filter for optional class-specific queries
+  const classFilter: any = { institutionId: instId, isDeleted: { $ne: true } };
+  if (filters.classId) classFilter._id = new Types.ObjectId(filters.classId);
 
   const [
     totalStudents,
@@ -215,6 +233,9 @@ async function adminStats(institutionId: string) {
     progressByBookAgg,
     recentSessions,
     studentGrowthAgg,
+    genderAgg,
+    sessionsByMonthAgg,
+    classActivityAgg,
   ] = await Promise.all([
     StudentModel.countDocuments({ institutionId: instId, isDeleted: { $ne: true } }),
     StudentModel.countDocuments({ institutionId: instId, isActive: true, isDeleted: { $ne: true } }),
@@ -222,7 +243,7 @@ async function adminStats(institutionId: string) {
     StaffModel.countDocuments({ institutionId: instId, isActive: true, isDeleted: { $ne: true } }),
     ClassModel.countDocuments({ institutionId: instId, isDeleted: { $ne: true } }),
     InstitutionModel.findById(instId).select("name curriculumAccess").lean(),
-    ClassModel.find({ institutionId: instId, isDeleted: { $ne: true } })
+    ClassModel.find(classFilter)
       .select("grade section studentIds")
       .lean(),
     TeachingProgressModel.aggregate([
@@ -256,7 +277,7 @@ async function adminStats(institutionId: string) {
       {
         $match: {
           institutionId: instId,
-          createdAt: { $gte: sixMonthsAgo() },
+          createdAt: dateFilter,
           isDeleted: { $ne: true },
         },
       },
@@ -267,6 +288,44 @@ async function adminStats(institutionId: string) {
         },
       },
       { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]),
+    // Gender distribution
+    StudentModel.aggregate([
+      { $match: { institutionId: instId, isDeleted: { $ne: true } } },
+      { $group: { _id: "$gender", count: { $sum: 1 } } },
+    ]),
+    // Sessions by month
+    ClassSessionModel.aggregate([
+      {
+        $match: {
+          institutionId: instId,
+          startTime: dateFilter,
+        },
+      },
+      {
+        $group: {
+          _id: { year: { $year: "$startTime" }, month: { $month: "$startTime" } },
+          count: { $sum: 1 },
+          totalMinutes: { $sum: { $ifNull: ["$durationMinutes", 0] } },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]),
+    // Class activity (sessions per class)
+    ClassSessionModel.aggregate([
+      {
+        $match: {
+          institutionId: instId,
+          startTime: dateFilter,
+        },
+      },
+      {
+        $group: {
+          _id: "$classId",
+          sessions: { $sum: 1 },
+          totalMinutes: { $sum: { $ifNull: ["$durationMinutes", 0] } },
+        },
+      },
     ]),
   ]);
 
@@ -332,6 +391,57 @@ async function adminStats(institutionId: string) {
     time: relativeTime(s.startTime),
   }));
 
+  // Gender distribution
+  const genderDistribution = genderAgg.map((g: any) => ({
+    name: g._id || "Not specified",
+    value: g.count,
+  }));
+
+  // Sessions by month
+  const sessionsByMonth = sessionsByMonthAgg.map((r: any) => ({
+    month: getMonthLabel(r._id.month),
+    sessions: r.count,
+    minutes: r.totalMinutes,
+  }));
+
+  // Class activity — resolve class names
+  const classActivityIds = classActivityAgg.map((c: any) => c._id);
+  const classDocs = await ClassModel.find({ _id: { $in: classActivityIds } })
+    .select("grade section")
+    .lean();
+  const classNameMap: Record<string, string> = {};
+  for (const c of classDocs) classNameMap[(c._id as any).toString()] = `${(c as any).grade || "?"}–${c.section}`;
+
+  const classActivity = classActivityAgg.map((c: any) => ({
+    class: classNameMap[c._id?.toString()] || "Unknown",
+    sessions: c.sessions,
+    minutes: c.totalMinutes,
+  }));
+
+  // Course distribution — grade books per curriculum
+  const courseDistAgg = await GradeBookModel.aggregate([
+    {
+      $lookup: {
+        from: "curriculums",
+        localField: "curriculumId",
+        foreignField: "_id",
+        as: "curriculum",
+      },
+    },
+    { $unwind: "$curriculum" },
+    {
+      $group: {
+        _id: "$curriculumId",
+        name: { $first: "$curriculum.name" },
+        books: { $sum: 1 },
+      },
+    },
+  ]);
+  const courseDistribution = courseDistAgg.map((c: any) => ({
+    name: c.name,
+    value: c.books,
+  }));
+
   return {
     totalStudents,
     activeStudents,
@@ -346,6 +456,12 @@ async function adminStats(institutionId: string) {
     studentGrowth,
     recentSessions: formattedSessions,
     institutionName: institution?.name || "",
+    // New fields
+    genderDistribution,
+    sessionsByMonth,
+    classActivity,
+    courseDistribution,
+    schoolProgress: avgTeachingProgress,
   };
 }
 
@@ -353,7 +469,7 @@ async function adminStats(institutionId: string) {
 
 async function teacherStats(staffId: string, institutionId: string) {
   const sId = new Types.ObjectId(staffId);
-  const iId = new Types.ObjectId(institutionId);
+  const iId = institutionId ? new Types.ObjectId(institutionId) : null;
 
   const [
     myClasses,
@@ -361,6 +477,7 @@ async function teacherStats(staffId: string, institutionId: string) {
     sessionCount,
     totalMinutesAgg,
     recentSessions,
+    sessionsByMonthAgg,
   ] = await Promise.all([
     ClassModel.find({ teacherIds: sId, isDeleted: { $ne: true } })
       .select("grade section studentIds year")
@@ -380,6 +497,18 @@ async function teacherStats(staffId: string, institutionId: string) {
       .limit(5)
       .populate("classId", "grade section")
       .lean(),
+    // Sessions by month for teacher
+    ClassSessionModel.aggregate([
+      { $match: { staffId: sId, startTime: { $gte: sixMonthsAgo() } } },
+      {
+        $group: {
+          _id: { year: { $year: "$startTime" }, month: { $month: "$startTime" } },
+          count: { $sum: 1 },
+          totalMinutes: { $sum: { $ifNull: ["$durationMinutes", 0] } },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]),
   ]);
 
   const totalStudents = myClasses.reduce((sum, c: any) => sum + (c.studentIds?.length || 0), 0);
@@ -400,7 +529,6 @@ async function teacherStats(staffId: string, institutionId: string) {
     const latest: any = progressRecords[0];
     const gb: any = latest.gradeBookId;
     const cl: any = latest.classId;
-    // count completed content
     const completedContent = latest.contentProgress?.filter((c: any) => c.isCompleted).length || 0;
     const totalContent = latest.contentProgress?.length || 0;
     continueTeaching = {
@@ -436,9 +564,8 @@ async function teacherStats(staffId: string, institutionId: string) {
     };
   });
 
-  // format my classes
+  // format my classes with progress
   const myClassesFormatted = myClasses.map((c: any) => {
-    // find latest progress for this class
     const classProgress = progressRecords.filter(
       (p: any) => p.classId?._id?.toString() === c._id.toString()
     );
@@ -478,6 +605,19 @@ async function teacherStats(staffId: string, institutionId: string) {
     startTime: s.startTime,
   }));
 
+  // Progress by class (for RadarChart)
+  const progressByClass = myClassesFormatted.map((c) => ({
+    classLabel: `${c.grade || "?"}–${c.section}`,
+    avgProgress: c.avgProgress,
+  }));
+
+  // Sessions by month
+  const sessionsByMonth = sessionsByMonthAgg.map((r: any) => ({
+    month: getMonthLabel(r._id.month),
+    sessions: r.count,
+    minutes: r.totalMinutes,
+  }));
+
   return {
     myClasses: myClassesFormatted,
     totalStudents,
@@ -487,6 +627,9 @@ async function teacherStats(staffId: string, institutionId: string) {
     continueTeaching,
     progressByGradeBook,
     recentSessions: formattedSessions,
+    // New fields
+    progressByClass,
+    sessionsByMonth,
   };
 }
 
@@ -498,7 +641,7 @@ export const dashboardController = new Elysia({
 })
   .use(adminAuthMacro)
   .guard({ isAuth: true })
-  .get("/stats", async ({ user }) => {
+  .get("/stats", async ({ user, query }) => {
     const role = user.role;
 
     if (role === "super_admin") {
@@ -514,7 +657,12 @@ export const dashboardController = new Elysia({
       if (!institutionId) {
         return { success: false, message: "No institution assigned" };
       }
-      const data = await adminStats(institutionId);
+      const filters = {
+        year: query.year ? Number(query.year) : undefined,
+        month: query.month ? Number(query.month) : undefined,
+        classId: query.classId || undefined,
+      };
+      const data = await adminStats(institutionId, filters);
       return { success: true, role: "admin", data };
     }
 
@@ -532,4 +680,10 @@ export const dashboardController = new Elysia({
     }
 
     return { success: false, message: "Unknown role" };
+  }, {
+    query: t.Object({
+      year: t.Optional(t.String()),
+      month: t.Optional(t.String()),
+      classId: t.Optional(t.String()),
+    }),
   });

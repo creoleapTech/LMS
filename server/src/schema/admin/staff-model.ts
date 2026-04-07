@@ -2,8 +2,11 @@ import mongoose, { Schema, model, Document, Types } from "mongoose";
 
 type StaffType = "teacher" | "admin";
 
+export type Salutation = "Mr" | "Mrs" | "Ms" | "Dr";
+
 export interface IStaff extends Document {
   name: string;
+  salutation?: Salutation;
   email: string;
   mobileNumber: string;
   type: StaffType | string;
@@ -21,6 +24,7 @@ export interface IStaff extends Document {
 const staffSchema = new Schema<IStaff>(
   {
     name: { type: String, required: true, trim: true, maxlength: 100 },
+    salutation: { type: String, enum: ["Mr", "Mrs", "Ms", "Dr"] },
     email: { type: String, required: true, unique: true, lowercase: true, maxlength: 100 },
     mobileNumber: { type: String, required: true, trim: true, maxlength: 15 },
     password: { type: String, required: true },

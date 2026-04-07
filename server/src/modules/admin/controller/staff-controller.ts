@@ -64,6 +64,7 @@ export const staffController = new Elysia({
       isAuth: true,
       body: t.Object({
         name: t.String({ maxLength: 100 }),
+        salutation: t.Optional(t.Union([t.Literal("Mr"), t.Literal("Mrs"), t.Literal("Ms"), t.Literal("Dr")])),
         email: t.String({ format: "email" }),
         mobileNumber: t.String({ maxLength: 15 }),
         type: t.Optional(
@@ -77,7 +78,7 @@ export const staffController = new Elysia({
         joiningDate: t.Optional(t.String()),
         profileImage: t.Optional(t.String()),
         institutionId: t.String(),
-        password: t.Optional(t.String()), 
+        password: t.Optional(t.String()),
       }),
     }
   )
@@ -388,6 +389,7 @@ export const staffController = new Elysia({
       body: t.Partial(
         t.Object({
           name: t.String({ maxLength: 100 }),
+          salutation: t.Union([t.Literal("Mr"), t.Literal("Mrs"), t.Literal("Ms"), t.Literal("Dr")]),
           email: t.String({ format: "email" }),
           mobileNumber: t.String({ maxLength: 15 }),
           type: t.String(),
