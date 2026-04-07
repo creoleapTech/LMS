@@ -3,8 +3,7 @@ import { MonthCalendar } from "./components/MonthCalendar";
 import { DayView } from "./components/DayView";
 import { usePeriodConfig } from "./hooks/usePeriodConfig";
 import { useTimetableMonth } from "./hooks/useTimetableMonth";
-import { CalendarDays, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CalendarDays, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -86,38 +85,36 @@ export default function MyClassesPage() {
       {!noPeriodConfig && (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* LEFT: Calendar Panel */}
-          <div className="lg:col-span-2 lg:sticky lg:top-8 self-start">
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              {/* Month navigation header */}
-              <div className="flex items-center justify-between px-4 pt-4 pb-2">
-                <button
-                  onClick={handlePrevMonth}
-                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <div className="flex items-center gap-3">
-                  <h3 className="text-sm font-bold text-slate-800 tracking-wide">
-                    {MONTH_NAMES[currentMonth.month - 1]} {currentMonth.year}
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleToday}
-                    className="h-7 px-2.5 text-[11px] font-bold uppercase tracking-wider text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg gap-1"
+          <div className="lg:col-span-2 lg:sticky lg:top-8 self-start space-y-4">
+            {/* Calendar card */}
+            <div className="rounded-2xl border-2 border-indigo-300 shadow-md overflow-hidden bg-gradient-to-b from-white via-white to-indigo-50/40">
+              {/* Colorful header band */}
+              <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-4">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={handlePrevMonth}
+                    className="p-1.5 rounded-lg hover:bg-white/20 text-white/70 hover:text-white transition-colors"
                   >
-                    <Calendar size={12} />
-                    Today
-                  </Button>
+                    <ChevronLeft size={20} />
+                  </button>
+                  <div className="text-center">
+                    <h3 className="text-lg font-extrabold text-white tracking-wide">
+                      {MONTH_NAMES[currentMonth.month - 1]}
+                    </h3>
+                    <p className="text-xs font-medium text-white/60 tracking-widest">
+                      {currentMonth.year}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleNextMonth}
+                    className="p-1.5 rounded-lg hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
                 </div>
-                <button
-                  onClick={handleNextMonth}
-                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  <ChevronRight size={18} />
-                </button>
               </div>
 
+              {/* Calendar body */}
               <MonthCalendar
                 year={currentMonth.year}
                 month={currentMonth.month}
@@ -127,7 +124,23 @@ export default function MyClassesPage() {
                 onDateClick={handleDateClick}
                 isLoading={monthLoading}
               />
+
+              {/* Today button footer */}
+              <div className="px-4 pb-4 pt-1">
+                <button
+                  onClick={handleToday}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-gradient-to-r from-indigo-50 to-violet-50 border-2 border-indigo-300 text-indigo-600 text-sm font-bold hover:from-indigo-100 hover:to-violet-100 transition-all"
+                >
+                  <Sparkles size={14} />
+                  Jump to Today
+                </button>
+              </div>
             </div>
+
+            {/* Mini stats card */}
+            {monthData?.dates && (
+              <MiniMonthStats monthData={monthData.dates} />
+            )}
           </div>
 
           {/* RIGHT: Schedule Panel */}
@@ -136,6 +149,31 @@ export default function MyClassesPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── Mini Month Stats ─── */
+function MiniMonthStats({ monthData }: { monthData: Record<string, { entryCount: number; hasCompleted: boolean }> }) {
+  const dates = Object.values(monthData);
+  const totalClasses = dates.reduce((sum, d) => sum + d.entryCount, 0);
+  const completedDays = dates.filter((d) => d.hasCompleted).length;
+  const activeDays = dates.length;
+
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-xl border-2 border-indigo-300 p-3 text-center">
+        <p className="text-2xl font-extrabold text-indigo-600">{totalClasses}</p>
+        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mt-0.5">Classes</p>
+      </div>
+      <div className="bg-gradient-to-br from-emerald-50 to-cyan-50 rounded-xl border-2 border-emerald-400 p-3 text-center">
+        <p className="text-2xl font-extrabold text-emerald-600">{completedDays}</p>
+        <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mt-0.5">Done Days</p>
+      </div>
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-400 p-3 text-center">
+        <p className="text-2xl font-extrabold text-amber-600">{activeDays}</p>
+        <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mt-0.5">Active Days</p>
+      </div>
     </div>
   );
 }

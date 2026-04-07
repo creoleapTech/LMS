@@ -269,15 +269,15 @@ export function DayView({ date }: DayViewProps) {
 /* ─── Break Row ─── */
 function BreakRow({ period }: { period: IPeriodSlot }) {
   return (
-    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-100">
-      <TableCell colSpan={5} className="py-2.5 px-5">
+    <TableRow className="bg-amber-50/60 hover:bg-amber-50/60 border-b border-amber-100">
+      <TableCell colSpan={5} className="py-3 px-5">
         <div className="flex items-center justify-center gap-3">
-          <div className="h-px flex-1 bg-slate-200" />
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 shrink-0">
+          <div className="h-px flex-1 bg-amber-200" />
+          <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5 shrink-0 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
             <Coffee size={12} />
             {period.label || "Break"} &middot; {period.startTime}–{period.endTime}
           </span>
-          <div className="h-px flex-1 bg-slate-200" />
+          <div className="h-px flex-1 bg-amber-200" />
         </div>
       </TableCell>
     </TableRow>
@@ -307,8 +307,8 @@ function ScheduledRow({
 
   return (
     <TableRow
-      className={`border-l-[3px] ${borderColor} hover:bg-slate-50/50 transition-colors border-b border-slate-100 ${
-        isCompleted ? "bg-emerald-50/30" : ""
+      className={`border-l-[3px] ${borderColor} hover:bg-slate-50 transition-colors duration-150 border-b border-slate-100 ${
+        isCompleted ? "bg-emerald-50/40" : ""
       }`}
     >
       {/* Period badge */}
@@ -323,7 +323,7 @@ function ScheduledRow({
       {/* Time */}
       <TableCell>
         <span className="text-sm font-semibold text-slate-700">{period.startTime}</span>
-        <span className="text-xs text-slate-400 ml-0.5">– {period.endTime}</span>
+        <span className="text-xs text-slate-500 ml-0.5">– {period.endTime}</span>
       </TableCell>
 
       {/* Class / Subject */}
@@ -346,7 +346,7 @@ function ScheduledRow({
             )}
           </div>
           {entry.notes && (
-            <p className="text-xs text-slate-400 font-medium truncate max-w-[280px]">
+            <p className="text-xs text-slate-500 font-medium truncate max-w-[280px]">
               {entry.notes}
             </p>
           )}
@@ -383,7 +383,7 @@ function ScheduledRow({
         <div className="flex items-center justify-end gap-1">
           <button
             onClick={onEditClick}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition-colors"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer"
             title="Edit"
           >
             <Pencil size={14} />
@@ -391,7 +391,7 @@ function ScheduledRow({
           {!isCompleted && (
             <button
               onClick={onCompleteClick}
-              className="p-1.5 rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors"
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 transition-colors cursor-pointer"
               title="Mark done"
             >
               <Check size={14} />
@@ -412,39 +412,44 @@ function EmptyRow({
   onAddClick: () => void;
 }) {
   return (
-    <TableRow className="border-l-[3px] border-l-transparent hover:bg-indigo-50/30 transition-colors border-b border-slate-100 group">
+    <TableRow
+      className="border-l-[3px] border-l-slate-200 hover:border-l-indigo-300 hover:bg-indigo-50/40 transition-all duration-150 border-b border-slate-100 group cursor-pointer"
+      onClick={onAddClick}
+    >
       {/* Period badge */}
       <TableCell className="pl-4">
-        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-400 text-xs font-black">
+        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-xs font-black group-hover:bg-indigo-100 group-hover:text-indigo-700 transition-colors">
           P{period.periodNumber}
         </span>
       </TableCell>
 
       {/* Time */}
       <TableCell>
-        <span className="text-sm font-semibold text-slate-400">{period.startTime}</span>
-        <span className="text-xs text-slate-300 ml-0.5">– {period.endTime}</span>
+        <span className="text-sm font-semibold text-slate-600">{period.startTime}</span>
+        <span className="text-xs text-slate-500 ml-0.5">– {period.endTime}</span>
       </TableCell>
 
       {/* Empty label */}
       <TableCell>
-        <span className="text-sm text-slate-400 italic">No class scheduled</span>
+        <span className="inline-flex items-center gap-1.5 text-sm text-slate-400 group-hover:text-indigo-500 transition-colors">
+          <Plus size={13} className="opacity-50 group-hover:opacity-100" />
+          <span className="italic group-hover:not-italic">Add a class</span>
+        </span>
       </TableCell>
 
       {/* Status */}
       <TableCell className="hidden sm:table-cell">
-        <span className="text-[11px] text-slate-300 font-medium">&mdash;</span>
+        <span className="text-[11px] text-slate-400 font-medium">&mdash;</span>
       </TableCell>
 
       {/* Add button */}
       <TableCell className="text-right pr-4">
-        <button
-          onClick={onAddClick}
-          className="p-1.5 rounded-lg bg-indigo-50 text-indigo-500 hover:bg-indigo-100 hover:text-indigo-700 transition-colors opacity-0 group-hover:opacity-100"
-          title="Add class"
+        <div
+          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors opacity-60 group-hover:opacity-100"
+          aria-label="Add class"
         >
-          <Plus size={14} />
-        </button>
+          <Plus size={15} />
+        </div>
       </TableCell>
     </TableRow>
   );

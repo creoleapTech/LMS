@@ -1,7 +1,8 @@
 import type { IMonthSummary } from "@/types/timetable";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CheckCircle2 } from "lucide-react";
 
-const DAY_SHORT = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 interface MonthCalendarProps {
   year: number;
@@ -62,10 +63,10 @@ export function MonthCalendar({
 
   if (isLoading) {
     return (
-      <div className="p-3">
-        <div className="grid grid-cols-7 gap-1">
+      <div className="p-4">
+        <div className="grid grid-cols-7 gap-1.5">
           {Array.from({ length: 35 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 rounded-lg" />
+            <Skeleton key={i} className="h-12 rounded-xl" />
           ))}
         </div>
       </div>
@@ -73,14 +74,16 @@ export function MonthCalendar({
   }
 
   return (
-    <div>
-      {/* Day header */}
-      <div className="grid grid-cols-7 px-2">
+    <div className="px-4 pt-3 pb-2">
+      {/* Day header row */}
+      <div className="grid grid-cols-7 mb-2">
         {DAY_SHORT.map((day, i) => (
           <div
             key={day}
-            className={`py-2 text-center text-[11px] font-bold uppercase tracking-wider ${
-              workingDays.includes(i) ? "text-slate-500" : "text-slate-300"
+            className={`py-1.5 text-center text-[11px] font-extrabold uppercase tracking-widest ${
+              !workingDays.includes(i)
+                ? "text-slate-300"
+                : "text-indigo-900"
             }`}
           >
             {day}
@@ -89,13 +92,11 @@ export function MonthCalendar({
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 px-2 pb-3">
+      <div className="grid grid-cols-7 gap-1">
         {grid.flatMap((week, wi) =>
           week.map((date, di) => {
             if (!date) {
-              return (
-                <div key={`${wi}-${di}`} className="h-11" />
-              );
+              return <div key={`${wi}-${di}`} className="h-12" />;
             }
 
             const dow = date.getDay();
@@ -104,54 +105,79 @@ export function MonthCalendar({
             const isToday = dateKey === todayKey;
             const isSelected = dateKey === selectedKey;
             const summary = monthData[dateKey];
+            const hasEntries = summary && summary.entryCount > 0;
+            const hasCompleted = summary?.hasCompleted;
 
             return (
               <button
                 key={dateKey}
                 onClick={() => isWorking && onDateClick(date)}
                 disabled={!isWorking}
-                className={`h-11 flex flex-col items-center justify-center rounded-lg transition-all relative ${
-                  isWorking
-                    ? "hover:bg-indigo-50 cursor-pointer"
-                    : "cursor-default"
-                } ${
-                  isSelected
-                    ? "bg-indigo-50 ring-2 ring-indigo-500"
-                    : ""
-                }`}
-              >
-                <span
-                  className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
-                    isToday
-                      ? "bg-indigo-600 text-white"
+                className={`
+                  h-12 flex flex-col items-center justify-center rounded-xl transition-all relative
+                  ${isWorking ? "cursor-pointer" : "cursor-default"}
+                  ${
+                    isSelected && isToday
+                      ? "bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-300/40 scale-105"
                       : isSelected
-                        ? "text-indigo-700 font-extrabold"
-                        : isWorking
-                          ? "text-slate-700"
-                          : "text-slate-300"
+                        ? "bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-300/40 scale-105"
+                        : isToday
+                          ? "bg-gradient-to-br from-indigo-100 to-violet-100 ring-2 ring-indigo-400 ring-offset-1"
+                          : hasCompleted
+                            ? "bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-400 hover:from-emerald-100 hover:to-green-100"
+                            : hasEntries
+                              ? "bg-gradient-to-br from-indigo-50 to-violet-50 border-2 border-indigo-300 hover:from-indigo-100 hover:to-violet-100"
+                              : isWorking
+                                ? "border border-slate-300 hover:bg-slate-50 hover:border-indigo-300"
+                                : "opacity-40"
+                  }
+                `}
+              >
+                {/* Date number */}
+                <span
+                  className={`text-[15px] font-extrabold leading-none ${
+                    isSelected
+                      ? "text-white"
+                      : isToday
+                        ? "text-indigo-800"
+                        : hasCompleted
+                          ? "text-emerald-800"
+                          : hasEntries
+                            ? "text-indigo-800"
+                            : isWorking
+                              ? "text-slate-900"
+                              : "text-slate-300"
                   }`}
                 >
                   {date.getDate()}
                 </span>
 
-                {/* Dot indicators */}
-                {summary && (
-                  <div className="flex items-center gap-0.5 absolute bottom-0.5">
-                    <div
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        summary.hasCompleted ? "bg-emerald-500" : "bg-indigo-400"
-                      }`}
-                    />
-                    {summary.entryCount > 1 && (
-                      <div
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          summary.hasCompleted ? "bg-emerald-400" : "bg-indigo-300"
-                        }`}
-                      />
+                {/* Activity indicator */}
+                {hasEntries && !isSelected && (
+                  <div className="flex items-center gap-0.5 mt-0.5">
+                    {hasCompleted ? (
+                      <CheckCircle2 size={10} className="text-emerald-500" />
+                    ) : (
+                      <>
+                        {Array.from({ length: Math.min(summary.entryCount, 4) }).map((_, i) => (
+                          <div
+                            key={i}
+                            className={`w-1 h-1 rounded-full ${
+                              i === 0 ? "bg-indigo-500" : i === 1 ? "bg-violet-500" : i === 2 ? "bg-purple-400" : "bg-fuchsia-400"
+                            }`}
+                          />
+                        ))}
+                      </>
                     )}
-                    {summary.entryCount > 3 && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-violet-300" />
-                    )}
+                  </div>
+                )}
+
+                {/* Selected date indicator for entries */}
+                {isSelected && hasEntries && (
+                  <div className="flex items-center gap-0.5 mt-0.5">
+                    <div className="w-1 h-1 rounded-full bg-white/80" />
+                    <div className="w-1 h-1 rounded-full bg-white/60" />
+                    {summary!.entryCount > 2 && <div className="w-1 h-1 rounded-full bg-white/40" />}
                   </div>
                 )}
               </button>
