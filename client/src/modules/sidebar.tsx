@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from '@tanstack/react-router';
-import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, BookOpenText, Users } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, BookOpenText, Users, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/store/userAuthStore';
 
 // Define types for navigation items
@@ -60,12 +60,12 @@ const Sidebar: React.FC = () => {
         {/* Header with logo and expand/minimize button */}
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-center min-h-[72px] relative">
           {isExpanded ? (
-            <div className="flex flex-col items-center gap-0.5 transition-all duration-300">
-              <img src="/creo_white.png" alt="CreaLeap" className="h-8 w-auto object-contain" />
-              <span className="text-xs font-semibold tracking-widest text-white/60 uppercase">LMS</span>
+            <div className="flex flex-col items-center gap-1 transition-all duration-300">
+              <img src="/creo_white.png" alt="CreaLeap" className="h-11 w-auto object-contain" />
+              <span className="text-sm font-bold tracking-widest text-white/70 uppercase">LMS</span>
             </div>
           ) : (
-            <img src="/creo_white.png" alt="CreaLeap" className="h-7 w-auto object-contain" />
+            <img src="/creo_white.png" alt="CreaLeap" className="h-9 w-auto object-contain" />
           )}
 
           <button
@@ -110,7 +110,19 @@ const Sidebar: React.FC = () => {
         </nav>
 
         {/* Footer */}
-        <div className="px-3 py-4 border-t border-white/10">
+        <div className="px-3 py-4 border-t border-white/10 space-y-2">
+          <button
+            onClick={() => {
+              useAuthStore.getState().logout();
+              window.location.href = '/';
+            }}
+            className={`flex items-center ${isExpanded ? 'px-3' : 'justify-center'} py-2.5 rounded-xl text-sm font-medium transition-all duration-300 w-full text-white/70 hover:text-white hover:bg-white/8 group`}
+          >
+            <LogOut className="w-5 h-5 shrink-0" />
+            <span className={`ml-3 transition-all duration-300 whitespace-nowrap overflow-hidden ${isExpanded ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0 ml-0'}`}>
+              Logout
+            </span>
+          </button>
           <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'opacity-30 max-h-5' : 'opacity-0 max-h-0'}`}>
             <p className="text-[11px] text-center tracking-wide">© 2026 LMS</p>
           </div>

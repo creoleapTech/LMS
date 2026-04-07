@@ -27,9 +27,10 @@ export function DashboardHeader() {
         <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-1 rounded-md uppercase tracking-wider">
           {user.role.replace('_', ' ')}
         </span>
-        <span className="text-slate-300 text-xs font-medium flex items-center gap-1.5">
-          <Calendar size={12} />
+        <span className="text-slate-500 text-sm font-semibold flex items-center gap-1.5">
+          <Calendar size={14} />
           {new Date().toLocaleDateString('en-US', {
+            weekday: 'short',
             day: 'numeric',
             month: 'short',
             year: 'numeric',
