@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTimetableDay } from "../hooks/useTimetableDay";
+import { useStaffTimetableDay } from "../hooks/useStaffTimetableDay";
 import { ScheduleEntryDialog } from "./ScheduleEntryDialog";
 import { WorkDoneDialog } from "./WorkDoneDialog";
 import {
@@ -54,6 +55,9 @@ function getBookLabel(gradeBookId: ITimetableEntry["gradeBookId"]): string {
 
 interface DayViewProps {
   date: Date;
+  readOnly?: boolean;
+  staffId?: string | null;
+  institutionId?: string | null;
 }
 
 function formatDateString(date: Date): string {
@@ -63,9 +67,19 @@ function formatDateString(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function DayView({ date }: DayViewProps) {
+export function DayView({ date, readOnly = false, staffId, institutionId }: DayViewProps) {
   const dateStr = formatDateString(date);
-  const { data, isLoading } = useTimetableDay(dateStr);
+  const isAdminView = !!staffId && !!institutionId;
+
+  // Use the appropriate hook based on whether we're viewing own or staff timetable
+  const ownData = useTimetableDay(isAdminView ? null : dateStr);
+  const staffData = useStaffTimetableDay(
+    isAdminView ? staffId : null,
+    isAdminView ? institutionId : null,
+    isAdminView ? dateStr : null
+  );
+
+  const { data, isLoading } = isAdminView ? staffData : ownData;
 
   const [scheduleDialog, setScheduleDialog] = useState<{
     open: boolean;
@@ -203,7 +217,29 @@ export function DayView({ date }: DayViewProps) {
                 colorIdx++;
 
                 if (!entry) {
-                  return (
+                  return readOnly ? (
+                    <TableRow
+                      key={period.periodNumber}
+                      className="border-l-[3px] border-l-slate-200 border-b border-slate-100"
+                    >
+                      <TableCell className="pl-4">
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-xs font-black">
+                          P{period.periodNumber}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-semibold text-slate-600">{period.startTime}</span>
+                        <span className="text-xs text-slate-500 ml-0.5">– {period.endTime}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-slate-400 italic">No class scheduled</span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <span className="text-[11px] text-slate-400 font-medium">&mdash;</span>
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  ) : (
                     <EmptyRow
                       key={period.periodNumber}
                       period={period}
@@ -225,6 +261,7 @@ export function DayView({ date }: DayViewProps) {
                     entry={entry}
                     isCompleted={isCompleted}
                     colors={colors}
+                    readOnly={readOnly}
                     onEditClick={() =>
                       setScheduleDialog({
                         open: true,
@@ -290,6 +327,7 @@ function ScheduledRow({
   entry,
   isCompleted,
   colors,
+  readOnly,
   onEditClick,
   onCompleteClick,
 }: {
@@ -297,6 +335,7 @@ function ScheduledRow({
   entry: ITimetableEntry;
   isCompleted: boolean;
   colors: { border: string; badge: string };
+  readOnly?: boolean;
   onEditClick: () => void;
   onCompleteClick: () => void;
 }) {
@@ -380,8 +419,9 @@ function ScheduledRow({
 
       {/* Actions */}
       <TableCell className="text-right pr-4">
-        <div className="flex items-center justify-end gap-1">
-          <button
+        {!readOnly && (
+          <div className="flex items-center justify-end gap-1">
+            <button
             onClick={onEditClick}
             className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer"
             title="Edit"
@@ -398,6 +438,7 @@ function ScheduledRow({
             </button>
           )}
         </div>
+        )}
       </TableCell>
     </TableRow>
   );

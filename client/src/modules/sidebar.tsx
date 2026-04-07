@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from '@tanstack/react-router';
-import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, LogOut, BookOpenText, Users } from 'lucide-react';
+import { Link, useLocation } from '@tanstack/react-router';
+import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, BookOpenText, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/userAuthStore';
-import { toast } from 'sonner';
 
 // Define types for navigation items
 interface NavItem {
@@ -17,7 +16,7 @@ const navItems: NavItem[] = [
   { name: 'Curriculum', path: '/curriculum', icon: <BookOpenText className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   // { name: 'Courses', path: '/courses', icon: <BookIcon className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Institutions', path: '/institutions', icon: <Building className="w-5 h-5" />, roles: ['super_admin'] },
-  { name: 'My Classes', path: '/my-classes', icon: <Users className="w-5 h-5" />, roles: ['staff', 'teacher'] },
+  { name: 'My Classes', path: '/my-classes', icon: <Users className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Reports', path: '/reports', icon: <BarChart className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
 ];
@@ -28,8 +27,7 @@ const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false); // Mobile toggle
   const { isExpanded, toggleExpand } = useSidebarStore();
   const location = useLocation();
-  const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
+  const { user } = useAuthStore();
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -37,12 +35,6 @@ const Sidebar: React.FC = () => {
   }, [location.pathname]);
 
   const toggleSidebar = () => setIsOpen(!isOpen); // Mobile toggle
-
-  const handleLogout = () => {
-    logout();
-    toast.success('Logged out successfully');
-    navigate({ to: '/' });
-  };
 
   if (!user) return null;
 
@@ -66,12 +58,15 @@ const Sidebar: React.FC = () => {
           } bg-brand-color text-white flex flex-col transition-all duration-300 ease-in-out shrink-0`}
       >
         {/* Header with logo and expand/minimize button */}
-        <div className="px-5 py-4 border-b border-white/10 flex items-center h-16 min-h-[64px] relative">
-          <div className={`flex items-center gap-3 transition-all duration-300 ${isExpanded ? 'opacity-100 max-w-full' : 'opacity-0 max-w-0 overflow-hidden'}`}>
-            <img src="/creo_white.png" alt="Creo" className="h-8 w-auto object-contain" />
-            <div className="h-5 w-px bg-white/20 shrink-0" />
-            <span className="text-lg font-semibold tracking-wide shrink-0">LMS</span>
-          </div>
+        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-center min-h-[72px] relative">
+          {isExpanded ? (
+            <div className="flex flex-col items-center gap-0.5 transition-all duration-300">
+              <img src="/creo_white.png" alt="CreaLeap" className="h-8 w-auto object-contain" />
+              <span className="text-xs font-semibold tracking-widest text-white/60 uppercase">LMS</span>
+            </div>
+          ) : (
+            <img src="/creo_white.png" alt="CreaLeap" className="h-7 w-auto object-contain" />
+          )}
 
           <button
             onClick={toggleExpand}
@@ -114,19 +109,9 @@ const Sidebar: React.FC = () => {
           </ul>
         </nav>
 
-        {/* Footer with logout button */}
+        {/* Footer */}
         <div className="px-3 py-4 border-t border-white/10">
-          <button
-            onClick={handleLogout}
-            className={`flex items-center ${isExpanded ? 'px-3 justify-start' : 'justify-center'} py-2.5 w-full rounded-xl text-sm font-medium text-red-200 hover:bg-red-500/20 hover:text-red-100 transition-all duration-300 overflow-hidden`}
-            aria-label="Logout"
-          >
-            <LogOut className="w-5 h-5 shrink-0" />
-            <span className={`ml-3 transition-all duration-300 whitespace-nowrap overflow-hidden ${isExpanded ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0 ml-0'}`}>
-              Logout
-            </span>
-          </button>
-          <div className={`mt-3 transition-all duration-300 overflow-hidden ${isExpanded ? 'opacity-30 max-h-5' : 'opacity-0 max-h-0'}`}>
+          <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'opacity-30 max-h-5' : 'opacity-0 max-h-0'}`}>
             <p className="text-[11px] text-center tracking-wide">© 2026 LMS</p>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { StaffModel } from "@/schema/admin/staff-model";
 import { ClassModel } from "@/schema/admin/class-model";
 import { BadRequestError } from "@/lib/shared/bad-request";
 import { superAdminAuthMacro } from "@/modules/superAdmin/superAdmin-macro";
+import { saveFile } from "@/lib/file";
 
 // Define the type for the decoded token
 interface DecodedToken {
@@ -37,7 +38,23 @@ export const institutionController = new Elysia({
       throw new ForbiddenError("Only super_admin can create institutions");
     }
 
-    const institution = new InstitutionModel(body);
+    const institutionData: any = {
+      name: body.name,
+      type: body.type,
+      address: body.address,
+      contactDetails: typeof body.contactDetails === "string"
+        ? JSON.parse(body.contactDetails)
+        : body.contactDetails,
+    };
+
+    if (body.logo) {
+      const result = await saveFile(body.logo as unknown as Blob, "institutions");
+      if (result.ok) {
+        institutionData.logo = result.filename;
+      }
+    }
+
+    const institution = new InstitutionModel(institutionData);
     await institution.save();
 
     set.status = 201;
@@ -48,12 +65,16 @@ export const institutionController = new Elysia({
       name: t.String({ maxLength: 100 }),
       type: t.Union([t.Literal("school"), t.Literal("college")]),
       address: t.String({ maxLength: 255 }),
-      contactDetails: t.Object({
-        inchargePerson: t.String(),
-        mobileNumber: t.String(),
-        email: t.Optional(t.String({ format: "email" })),
-        officePhone: t.Optional(t.String()),
-      }),
+      contactDetails: t.Union([
+        t.Object({
+          inchargePerson: t.String(),
+          mobileNumber: t.String(),
+          email: t.Optional(t.String({ format: "email" })),
+          officePhone: t.Optional(t.String()),
+        }),
+        t.String(),
+      ]),
+      logo: t.Optional(t.File()),
     }),
     detail: { summary: "Create Institution (Super Admin Only)" },
   }
@@ -163,11 +184,24 @@ export const institutionController = new Elysia({
    if (user.role !== "super_admin") {
       throw new ForbiddenError("Only super_admin can create institutions");
     }
-  
-  
+
+  const updateData: any = { ...body };
+  delete updateData.logo;
+
+  if (updateData.contactDetails && typeof updateData.contactDetails === "string") {
+    updateData.contactDetails = JSON.parse(updateData.contactDetails);
+  }
+
+  if (body.logo) {
+    const result = await saveFile(body.logo as unknown as Blob, "institutions");
+    if (result.ok) {
+      updateData.logo = result.filename;
+    }
+  }
+
   const institution = await InstitutionModel.findByIdAndUpdate(
     params.id,
-    { $set: body },
+    { $set: updateData },
     { new: true, runValidators: true }
   );
 
@@ -183,13 +217,17 @@ export const institutionController = new Elysia({
     name: t.String(),
     type: t.Union([t.Literal("school"), t.Literal("college")]),
     address: t.String(),
-    contactDetails: t.Object({
-      inchargePerson: t.String(),
-      mobileNumber: t.String(),
-      email: t.Optional(t.String()),
-      officePhone: t.Optional(t.String()),
-    }),
+    contactDetails: t.Union([
+      t.Object({
+        inchargePerson: t.String(),
+        mobileNumber: t.String(),
+        email: t.Optional(t.String()),
+        officePhone: t.Optional(t.String()),
+      }),
+      t.String(),
+    ]),
     isActive: t.Boolean(),
+    logo: t.File(),
   })),
   detail: { summary: "Update Institution (Super Admin Only)" },
 })

@@ -21,15 +21,19 @@ import {
   XCircle,
   School,
   Shapes,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InstitutionCurriculumAccess } from "./InstitutionCurriculumAccess";
+import { PeriodConfigSection } from "../settings/components/PeriodConfigSection";
+import { Config } from "@/lib/config";
 
 type Institution = {
   _id: string;
   name: string;
   type: "school" | "college";
   address: string;
+  logo?: string;
   contactDetails: {
     inchargePerson: string;
     mobileNumber: string;
@@ -94,9 +98,17 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
           <div className="absolute inset-0 bg-linear-to-r from-indigo-500/5 to-purple-500/5" />
           <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
-              <div className="p-3 bg-linear-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
-                <Building2 className="h-7 w-7" />
-              </div>
+              {institution.logo ? (
+                <img
+                  src={`${Config.imgUrl}${institution.logo}`}
+                  alt={institution.name}
+                  className="h-14 w-14 rounded-2xl object-cover border border-slate-200 shadow-lg"
+                />
+              ) : (
+                <div className="p-3 bg-linear-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
+                  <Building2 className="h-7 w-7" />
+                </div>
+              )}
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
                   {institution.name}
@@ -150,6 +162,9 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
             <TabsTrigger value="curriculum" className="rounded-lg text-sm sm:text-base font-medium">
               <BookOpen className="h-4 w-4 mr-1.5 hidden sm:block" /> Curriculum
             </TabsTrigger>
+            <TabsTrigger value="periods" className="rounded-lg text-sm sm:text-base font-medium">
+              <Clock className="h-4 w-4 mr-1.5 hidden sm:block" /> Periods
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -179,6 +194,9 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
           <TabsContent value="curriculum">
   {institution && <InstitutionCurriculumAccess institutionId={institution._id} />}
 </TabsContent>
+          <TabsContent value="periods">
+            <PeriodConfigSection institutionId={id} />
+          </TabsContent>
         </Tabs>
 
         {/* Edit Dialog */}

@@ -5,7 +5,7 @@ import { PeriodConfigModel } from "@/schema/admin/period-config-model";
 import { ClassModel } from "@/schema/admin/class-model";
 import { GradeBookModel } from "@/schema/books/gradeBook-model";
 import { InstitutionModel } from "@/schema/admin/institution-model";
-import { BadRequestError } from "@/lib/shared/bad-request";
+import { StaffModel } from "@/schema/admin/staff-model";
 import { Types } from "mongoose";
 
 function resolveInstitutionId(user: any): string {
@@ -388,5 +388,181 @@ export const timetableController = new Elysia({
     },
     {
       params: t.Object({ id: t.String() }),
+    }
+  )
+
+  // ─── Admin endpoints to view teacher timetables ───
+
+  // GET staff list for an institution (admin/super_admin)
+  .get(
+    "/staff-list",
+    async ({ query, user }) => {
+      if (user.role !== "admin" && user.role !== "super_admin") {
+        throw new BadRequestError("Only admin/super_admin can access this");
+      }
+      let institutionId = query.institutionId;
+      if (!institutionId && user.role === "admin") {
+        institutionId =
+          typeof user.institutionId === "object"
+            ? (user.institutionId as any)._id?.toString()
+            : user.institutionId?.toString();
+      }
+      if (!institutionId) throw new BadRequestError("Institution ID is required");
+
+      const staff = await StaffModel.find({
+        institutionId: new Types.ObjectId(institutionId),
+        isDeleted: false,
+        isActive: true,
+      }).select("_id name email type subjects");
+
+      return { success: true, data: staff };
+    },
+    {
+      query: t.Object({
+        institutionId: t.Optional(t.String()),
+      }),
+    }
+  )
+
+  // GET month summary for a specific teacher (admin/super_admin)
+  .get(
+    "/staff-month",
+    async ({ query, user }) => {
+      if (user.role !== "admin" && user.role !== "super_admin") {
+        throw new BadRequestError("Only admin/super_admin can access this");
+      }
+      const { staffId, institutionId } = query;
+      if (!staffId || !institutionId) {
+        throw new BadRequestError("staffId and institutionId are required");
+      }
+
+      const year = Number(query.year);
+      const month = Number(query.month);
+
+      const instOid = new Types.ObjectId(institutionId);
+      const staffOid = new Types.ObjectId(staffId);
+
+      const periodConfig = await PeriodConfigModel.findOne({
+        institutionId: instOid,
+        isDeleted: false,
+      });
+      const workingDays = periodConfig?.workingDays || [1, 2, 3, 4, 5];
+
+      const recurringEntries = await TimetableEntryModel.find({
+        staffId: staffOid,
+        isRecurring: true,
+        isDeleted: false,
+      });
+
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0, 23, 59, 59);
+
+      const oneOffEntries = await TimetableEntryModel.find({
+        staffId: staffOid,
+        isRecurring: false,
+        specificDate: { $gte: startDate, $lte: endDate },
+        isDeleted: false,
+      });
+
+      const dates: Record<string, { entryCount: number; hasCompleted: boolean }> = {};
+      const daysInMonth = endDate.getDate();
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(year, month - 1, d);
+        const dow = date.getDay();
+        if (!workingDays.includes(dow)) continue;
+
+        const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const recurringForDay = recurringEntries.filter((e) => e.dayOfWeek === dow);
+        const oneOffForDate = oneOffEntries.filter((e) => {
+          const sd = e.specificDate!;
+          return sd.getFullYear() === year && sd.getMonth() === month - 1 && sd.getDate() === d;
+        });
+
+        const overriddenPeriods = new Set(oneOffForDate.map((e) => e.periodNumber));
+        const merged = [
+          ...recurringForDay.filter((e) => !overriddenPeriods.has(e.periodNumber)),
+          ...oneOffForDate,
+        ];
+
+        if (merged.length > 0) {
+          dates[dateStr] = {
+            entryCount: merged.length,
+            hasCompleted: merged.some((e) => e.status === "completed"),
+          };
+        }
+      }
+
+      return { success: true, data: { dates } };
+    },
+    {
+      query: t.Object({
+        staffId: t.String(),
+        institutionId: t.String(),
+        year: t.String(),
+        month: t.String(),
+      }),
+    }
+  )
+
+  // GET day entries for a specific teacher (admin/super_admin)
+  .get(
+    "/staff-day",
+    async ({ query, user }) => {
+      if (user.role !== "admin" && user.role !== "super_admin") {
+        throw new BadRequestError("Only admin/super_admin can access this");
+      }
+      const { staffId, institutionId } = query;
+      if (!staffId || !institutionId) {
+        throw new BadRequestError("staffId and institutionId are required");
+      }
+
+      const date = new Date(query.date);
+      const dow = date.getDay();
+      const instOid = new Types.ObjectId(institutionId);
+      const staffOid = new Types.ObjectId(staffId);
+
+      const periodConfig = await PeriodConfigModel.findOne({
+        institutionId: instOid,
+        isDeleted: false,
+      });
+
+      const recurringEntries = await TimetableEntryModel.find({
+        staffId: staffOid,
+        dayOfWeek: dow,
+        isRecurring: true,
+        isDeleted: false,
+      })
+        .populate("classId", "grade section year")
+        .populate("gradeBookId", "bookTitle grade");
+
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const oneOffEntries = await TimetableEntryModel.find({
+        staffId: staffOid,
+        specificDate: { $gte: dayStart, $lte: dayEnd },
+        isRecurring: false,
+        isDeleted: false,
+      })
+        .populate("classId", "grade section year")
+        .populate("gradeBookId", "bookTitle grade");
+
+      const overriddenPeriods = new Set(oneOffEntries.map((e) => e.periodNumber));
+      const merged = [
+        ...recurringEntries.filter((e) => !overriddenPeriods.has(e.periodNumber)),
+        ...oneOffEntries,
+      ].sort((a, b) => a.periodNumber - b.periodNumber);
+
+      return { success: true, data: { entries: merged, periodConfig } };
+    },
+    {
+      query: t.Object({
+        staffId: t.String(),
+        institutionId: t.String(),
+        date: t.String(),
+      }),
     }
   );

@@ -9,7 +9,7 @@ interface User {
   salutation?: 'Mr' | 'Mrs' | 'Ms' | 'Dr';
   mobileNumber: string;
   role: 'admin' | 'super_admin' | 'staff' | 'teacher';
-  institutionId?: string | { _id: string; name: string };
+  institutionId?: string | { _id: string; name: string; logo?: string };
   profileImage?: string;
   isActive: boolean;
   lastLogin: Date;

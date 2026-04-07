@@ -1,7 +1,7 @@
 // src/components/institution/InstitutionFormDialog.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Building2, MapPin, Phone, Mail, User, Smartphone } from "lucide-react";
+import { Loader2, Building2, MapPin, Phone, Mail, User, Smartphone, ImagePlus, X } from "lucide-react";
+import { Config } from "@/lib/config";
 
 const institutionSchema = z.object({
   name: z.string().min(2, "Institution name is required"),
@@ -42,7 +43,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   institution?: Institution | null;
-  onSave: (data: FormValues) => void;
+  onSave: (data: FormData | FormValues) => void;
 }
 
 type Institution = {
@@ -50,6 +51,7 @@ type Institution = {
   name: string;
   type: "school" | "college";
   address: string;
+  logo?: string;
   contactDetails: {
     inchargePerson: string;
     mobileNumber: string;
@@ -59,6 +61,10 @@ type Institution = {
 };
 
 export function InstitutionFormDialog({ open, onOpenChange, institution, onSave }: Props) {
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const {
     register,
     handleSubmit,
@@ -92,6 +98,8 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave 
           officePhone: institution.contactDetails.officePhone || "",
         },
       });
+      setLogoFile(null);
+      setLogoPreview(institution.logo ? `${Config.imgUrl}${institution.logo}` : null);
     } else if (open && !institution) {
       reset({
         name: "",
@@ -104,11 +112,37 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave 
           officePhone: "",
         },
       });
+      setLogoFile(null);
+      setLogoPreview(null);
     }
   }, [institution, open, reset]);
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const onSubmit = (data: FormValues) => {
-    onSave(data);
+    if (logoFile) {
+      const formData = new FormData();
+      formData.append("name", data.name);
+      formData.append("type", data.type);
+      formData.append("address", data.address);
+      formData.append("contactDetails", JSON.stringify(data.contactDetails));
+      formData.append("logo", logoFile);
+      onSave(formData);
+    } else {
+      onSave(data);
+    }
     onOpenChange(false);
   };
 
@@ -172,6 +206,46 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave 
           </div>
 
           {/* Contact Details */}
+          <div className="space-y-4 pt-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">School Photo</p>
+            <div className="flex items-center gap-4">
+              {logoPreview ? (
+                <div className="relative">
+                  <img src={logoPreview} alt="School logo" className="h-20 w-20 rounded-xl object-cover border border-slate-200 shadow-sm" />
+                  <button
+                    type="button"
+                    onClick={removeLogo}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600 transition-colors"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-20 w-20 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1 text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                >
+                  <ImagePlus size={20} />
+                  <span className="text-[10px] font-medium">Upload</span>
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleLogoChange}
+                className="hidden"
+              />
+              {logoPreview && (
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="rounded-lg">
+                  Change Photo
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Contact Info */}
           <div className="space-y-4 pt-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact Details</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

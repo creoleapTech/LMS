@@ -155,7 +155,7 @@ export const adminAuthController = new Elysia({
         set.headers["Authorization"] = `Bearer ${token}`;
         set.status = 200;
 
-        await user.populate('institutionId', 'name');
+        await user.populate('institutionId', 'name logo');
 
         const responseData = {
           success: true,

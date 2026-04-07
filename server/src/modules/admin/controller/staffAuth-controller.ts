@@ -65,6 +65,8 @@ export const staffAuthController = new Elysia({
       set.headers["Authorization"] = `Bearer ${token}`;
       set.status = 200;
 
+      await staff.populate('institutionId', 'name logo');
+
       return {
         success: true,
         message: "Login successful",

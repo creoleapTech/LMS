@@ -14,6 +14,7 @@ export interface IInstitution extends Document {
   };
   adminIds: Types.ObjectId[];
   staffIds: Types.ObjectId[];
+  logo?: string;
   curriculumAccess: Array<{
     curriculumId: Types.ObjectId;
     accessibleGradeBooks: Types.ObjectId[]; // Array of GradeBook IDs this institution can access
@@ -33,6 +34,7 @@ const institutionSchema = new Schema<IInstitution>(
       email: { type: String, lowercase: true },
       officePhone: { type: String, maxlength: 15 },
     },
+    logo: { type: String },
     adminIds: [{ type: Schema.Types.ObjectId, ref: "Admin" }],
     staffIds: [{ type: Schema.Types.ObjectId, ref: "Staff" }],
     curriculumAccess: [{

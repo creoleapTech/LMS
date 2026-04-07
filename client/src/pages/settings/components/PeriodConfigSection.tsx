@@ -30,16 +30,18 @@ function defaultPeriod(num: number): IPeriodSlot {
   };
 }
 
-export function PeriodConfigSection() {
+export function PeriodConfigSection({ institutionId }: { institutionId?: string } = {}) {
   const queryClient = useQueryClient();
 
   const { data: config, isLoading } = useQuery<IPeriodConfig | null>({
-    queryKey: ["period-config"],
+    queryKey: ["period-config", institutionId || "own"],
     queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (institutionId) params.institutionId = institutionId;
       const { data: res } = await _axios.get<{
         success: boolean;
         data: IPeriodConfig | null;
-      }>("/admin/period-config");
+      }>("/admin/period-config", { params });
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -60,14 +62,13 @@ export function PeriodConfigSection() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { data: res } = await _axios.post("/admin/period-config", {
-        periods,
-        workingDays,
-      });
+      const payload: any = { periods, workingDays };
+      if (institutionId) payload.institutionId = institutionId;
+      const { data: res } = await _axios.post("/admin/period-config", payload);
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["period-config"] });
+      queryClient.invalidateQueries({ queryKey: ["period-config", institutionId || "own"] });
       toast.success("Period schedule saved!");
     },
     onError: (err: any) => {

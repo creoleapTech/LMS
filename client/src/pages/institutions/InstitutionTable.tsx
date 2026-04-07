@@ -125,10 +125,12 @@ export function InstitutionTable() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      const isFormData = data instanceof FormData;
+      const config = isFormData ? { headers: { "Content-Type": "multipart/form-data" } } : {};
       if (editingInstitution) {
-        return _axios.patch(`/admin/institutions/${editingInstitution._id}`, data);
+        return _axios.patch(`/admin/institutions/${editingInstitution._id}`, data, config);
       } else {
-        return _axios.post("/admin/institutions", data);
+        return _axios.post("/admin/institutions", data, config);
       }
     },
     onSuccess: () => {
