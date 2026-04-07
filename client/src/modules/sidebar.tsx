@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from '@tanstack/react-router';
-import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, BookOpenText, Users, LogOut } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, BookOpenText, Users, LogOut, GraduationCap } from 'lucide-react';
 import { useAuthStore } from '@/store/userAuthStore';
 
 // Define types for navigation items
@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   // { name: 'Courses', path: '/courses', icon: <BookIcon className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Institutions', path: '/institutions', icon: <Building className="w-5 h-5" />, roles: ['super_admin'] },
   { name: 'My Classes', path: '/my-classes', icon: <Users className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
+  { name: 'Students', path: '/students', icon: <GraduationCap className="w-5 h-5" />, roles: ['admin', 'super_admin'] },
   { name: 'Reports', path: '/reports', icon: <BarChart className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
 ];
@@ -82,6 +83,8 @@ const Sidebar: React.FC = () => {
           <ul className="space-y-1">
             {filteredNavItems.map((item) => {
               const isActive = location.pathname === item.path;
+              const displayName = item.path === '/my-classes' && (user?.role === 'admin' || user?.role === 'super_admin')
+                ? 'Class Management' : item.name;
               return (
                 <li key={item.path}>
                   <Link
@@ -100,7 +103,7 @@ const Sidebar: React.FC = () => {
                       {item.icon}
                     </span>
                     <span className={`ml-3 !transition-all !duration-300 whitespace-nowrap overflow-hidden ${isExpanded ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0 ml-0'}`}>
-                      {item.name}
+                      {displayName}
                     </span>
                   </Link>
                 </li>

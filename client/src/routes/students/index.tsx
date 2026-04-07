@@ -1,12 +1,6 @@
-import { StudentTable } from '@/pages/students/StudentTable'
+import { StudentManagementPage } from '@/pages/students/StudentManagementPage'
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/students/')({
-  component: RouteComponent,
+  component: () => <StudentManagementPage />,
 })
-
-function RouteComponent() {
-  return<>
-  <StudentTable institutionId={''} />
-  </>
-}

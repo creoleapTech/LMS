@@ -63,27 +63,31 @@ export function GlobalHeader() {
   return (
     <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/60">
       <div className="flex items-center justify-between px-5 sm:px-8 py-3 max-w-screen-2xl mx-auto">
-        {/* Left: Institution logo + name */}
+        {/* Left: Institution logo + name (hidden for super_admin) */}
         <div className="flex items-center gap-3 min-w-0">
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={displayName}
-              className="h-10 w-10 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0"
-            />
-          ) : (
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
-              {displayName ? getInitials(displayName) : "LMS"}
-            </div>
+          {!isSuperAdmin && (
+            <>
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={displayName}
+                  className="h-10 w-10 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0"
+                />
+              ) : (
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
+                  {displayName ? getInitials(displayName) : "LMS"}
+                </div>
+              )}
+              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 truncate">
+                {displayName || "LMS"}
+              </h1>
+            </>
           )}
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 truncate">
-            {displayName || "LMS"}
-          </h1>
         </div>
 
         {/* Center/Right: Academic year + Profile */}
         <div className="flex items-center gap-3">
-          {academicYear && (
+          {academicYear && !isSuperAdmin && (
             <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-1 rounded-full">
               <GraduationCap size={13} />
               {academicYear.label}

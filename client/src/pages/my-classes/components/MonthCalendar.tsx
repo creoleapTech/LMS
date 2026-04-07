@@ -80,11 +80,7 @@ export function MonthCalendar({
         {DAY_SHORT.map((day, i) => (
           <div
             key={day}
-            className={`py-1.5 text-center text-[11px] font-extrabold uppercase tracking-widest ${
-              !workingDays.includes(i)
-                ? "text-slate-300"
-                : "text-indigo-900"
-            }`}
+            className="py-1.5 text-center text-[11px] font-extrabold uppercase tracking-widest text-indigo-900"
           >
             {day}
           </div>
@@ -111,11 +107,9 @@ export function MonthCalendar({
             return (
               <button
                 key={dateKey}
-                onClick={() => isWorking && onDateClick(date)}
-                disabled={!isWorking}
+                onClick={() => onDateClick(date)}
                 className={`
-                  h-12 flex flex-col items-center justify-center rounded-xl transition-all relative
-                  ${isWorking ? "cursor-pointer" : "cursor-default"}
+                  h-12 flex flex-col items-center justify-center rounded-xl transition-all relative cursor-pointer
                   ${
                     isSelected && isToday
                       ? "bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-300/40 scale-105"
@@ -127,9 +121,7 @@ export function MonthCalendar({
                             ? "bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-400 hover:from-emerald-100 hover:to-green-100"
                             : hasEntries
                               ? "bg-gradient-to-br from-indigo-50 to-violet-50 border-2 border-indigo-300 hover:from-indigo-100 hover:to-violet-100"
-                              : isWorking
-                                ? "border border-slate-300 hover:bg-slate-50 hover:border-indigo-300"
-                                : "opacity-40"
+                              : "border border-slate-300 hover:bg-slate-50 hover:border-indigo-300"
                   }
                 `}
               >
@@ -144,9 +136,7 @@ export function MonthCalendar({
                           ? "text-emerald-800"
                           : hasEntries
                             ? "text-indigo-800"
-                            : isWorking
-                              ? "text-slate-900"
-                              : "text-slate-300"
+                            : "text-slate-900"
                   }`}
                 >
                   {date.getDate()}

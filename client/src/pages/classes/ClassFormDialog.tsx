@@ -1,14 +1,24 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Loader2, LayoutGrid, Hash, Tag, CalendarDays } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { _axios } from "@/lib/axios";
+import { useAuthStore } from "@/store/userAuthStore";
 import type { IClass, CreateClassDTO } from "@/types/class";
 
 const formSchema = z.object({
@@ -28,7 +38,10 @@ interface Props {
 }
 
 export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave }: Props) {
-    const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormValues>({
+    const user = useAuthStore((s) => s.user);
+    const isSuperAdmin = user?.role === "super_admin";
+
+    const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             grade: "",
@@ -36,6 +49,45 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
             year: "",
         },
     });
+
+    // Fetch enabled grades from curriculum access
+    // Admin/teacher/staff: GET /admin/filtered-curriculum/ (auto-scoped to their institution)
+    // Super admin: GET /admin/institutions/:id/curriculum-access (scoped to selected institution)
+    const { data: gradesData } = useQuery({
+        queryKey: isSuperAdmin
+            ? ["institution-curriculum-access", institutionId]
+            : ["filtered-curriculum"],
+        queryFn: async () => {
+            if (isSuperAdmin) {
+                const res = await _axios.get(`/admin/institutions/${institutionId}/curriculum-access`);
+                return res.data?.data ?? [];
+            } else {
+                const res = await _axios.get("/admin/filtered-curriculum");
+                return res.data?.data ?? [];
+            }
+        },
+        enabled: !!institutionId && open,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const enabledGrades = useMemo(() => {
+        if (!gradesData || !Array.isArray(gradesData)) return [];
+
+        let grades: number[] = [];
+        if (isSuperAdmin) {
+            // curriculum-access response: array of { curriculumId, accessibleGradeBooks: [{ grade, bookTitle, ... }] }
+            grades = gradesData.flatMap((access: any) =>
+                (access.accessibleGradeBooks || []).map((book: any) => book.grade)
+            );
+        } else {
+            // filtered-curriculum response: array of { gradeBooks: [{ grade, ... }] }
+            grades = gradesData.flatMap((curriculum: any) =>
+                (curriculum.gradeBooks || []).map((book: any) => book.grade)
+            );
+        }
+
+        return [...new Set(grades)].filter(Boolean).sort((a, b) => a - b);
+    }, [gradesData, isSuperAdmin]);
 
     useEffect(() => {
         if (open) {
@@ -61,7 +113,6 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
                 ...values,
                 institutionId,
             });
-            // reset(); // handled by parent or useEffect
         } catch (error) {
             // Error handled in parent
         }
@@ -90,11 +141,32 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Class Details</p>
 
                     <div className="space-y-1.5">
-                        <Label htmlFor="grade" className="text-sm font-medium">Grade / Standard</Label>
-                        <div className="relative">
-                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input id="grade" className="pl-9" placeholder="e.g. 10, XII, 5" {...register("grade")} />
-                        </div>
+                        <Label className="text-sm font-medium">Grade / Standard</Label>
+                        {enabledGrades.length > 0 ? (
+                            <Controller
+                                name="grade"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select value={field.value || ""} onValueChange={field.onChange}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select grade" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {enabledGrades.map((g) => (
+                                                <SelectItem key={g} value={String(g)}>
+                                                    Grade {g}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                        ) : (
+                            <div className="relative">
+                                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input className="pl-9" placeholder="e.g. 10, XII, 5" {...register("grade")} />
+                            </div>
+                        )}
                         {errors.grade && <p className="text-xs text-destructive">{errors.grade.message}</p>}
                     </div>
 

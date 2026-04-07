@@ -4,6 +4,7 @@ import { ForbiddenError } from "@/lib/shared/errors/forbidden";
 import { ClassModel } from "@/schema/admin/class-model";
 import { InstitutionModel } from "@/schema/admin/institution-model";
 import { StudentModel } from "@/schema/admin/student-model";
+import { GradeBookModel } from "@/schema/books/gradeBook-model";
 import Elysia, { t } from "elysia";
 import { adminAuthMacro } from "../admin-macro";
 import { Types } from "mongoose";
@@ -33,6 +34,24 @@ export const classController = new Elysia({
 
       if (inst.type === "college" && !body.departmentId) {
         throw new BadRequestError("departmentId is required for colleges");
+      }
+
+      // Validate grade against enabled curriculum grades
+      if (body.grade) {
+        const gradeBookIds = (inst.curriculumAccess || []).flatMap(
+          (a: any) => a.accessibleGradeBooks || []
+        );
+        if (gradeBookIds.length > 0) {
+          const gradeBooks = await GradeBookModel.find({
+            _id: { $in: gradeBookIds },
+          }).select("grade").lean();
+          const allowedGrades = [...new Set(gradeBooks.map((b: any) => String(b.grade)))];
+          if (allowedGrades.length > 0 && !allowedGrades.includes(body.grade)) {
+            throw new BadRequestError(
+              `Grade "${body.grade}" is not enabled for this institution`
+            );
+          }
+        }
       }
 
       const newClass = new ClassModel(body);
