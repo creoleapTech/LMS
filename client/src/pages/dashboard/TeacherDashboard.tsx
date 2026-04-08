@@ -3,24 +3,16 @@ import {
   Clock,
   TrendingUp,
   BookOpen,
-  Play,
-  Timer,
   Layers,
   Activity,
   Target,
 } from 'lucide-react';
-import { useNavigate } from '@tanstack/react-router';
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -31,14 +23,13 @@ import {
   StatCard,
   SectionHeader,
   DashCard,
-  ProgressBar,
   ChartTooltip,
   EmptyState,
 } from './components/DashboardComponents';
 import { CHART_COLORS, CHART_PALETTE } from './constants/chart-colors';
+import { DayView } from '@/pages/my-classes/components/DayView';
 
 export function TeacherDashboard({ data }: { data: any }) {
-  const navigate = useNavigate();
 
   return (
     <div className="space-y-5">
@@ -47,50 +38,11 @@ export function TeacherDashboard({ data }: { data: any }) {
         <StatCard title="My Students" value={data.totalStudents} icon={GraduationCap} accent="indigo" delay={0} />
         <StatCard title="Overall Progress" value={data.overallProgress} suffix="%" icon={TrendingUp} accent="emerald" delay={40} />
         <StatCard title="Total Sessions" value={data.totalSessions} icon={Clock} accent="violet" delay={80} />
-        <StatCard title="Teaching Minutes" value={data.totalTeachingMinutes} icon={Timer} accent="amber" delay={120} />
+        <StatCard title="My Classes" value={data.myClasses?.length || 0} icon={Layers} accent="amber" delay={120} />
       </div>
 
-      {/* Continue Teaching Hero Card */}
-      {data.continueTeaching && (
-        <DashCard className="relative overflow-hidden border-indigo-100 bg-gradient-to-br from-indigo-50/80 via-white to-violet-50/60">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.08),_transparent_60%)]" />
-          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-5">
-            <div className="w-16 h-20 rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-300/50 shrink-0">
-              <BookOpen size={28} />
-            </div>
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  Continue Teaching
-                </span>
-                <span className="text-[11px] text-slate-400 font-medium">{data.continueTeaching.lastAccessedLabel}</span>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight truncate">{data.continueTeaching.bookTitle}</h3>
-              <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
-                <span>Grade {data.continueTeaching.grade}</span>
-                {data.continueTeaching.class && <span>Class {data.continueTeaching.class}</span>}
-                <span className="tabular-nums">{data.continueTeaching.completedContent}/{data.continueTeaching.totalContent} items</span>
-              </div>
-              <ProgressBar value={data.continueTeaching.progress} className="max-w-sm" />
-            </div>
-            <div className="shrink-0">
-              <button
-                onClick={() => navigate({
-                  to: '/curriculum',
-                  search: {
-                    gradeBookId: data.continueTeaching.gradeBookId,
-                    classId: data.continueTeaching.classId,
-                    bookTitle: data.continueTeaching.bookTitle,
-                  },
-                })}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold rounded-xl hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-300/40 active:scale-95"
-              >
-                <Play size={16} /> Resume
-              </button>
-            </div>
-          </div>
-        </DashCard>
-      )}
+      {/* Today's Schedule */}
+      <DayView date={new Date()} readOnly />
 
       {/* Charts Row: Teaching Activity + Class Progress Radar */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -99,29 +51,25 @@ export function TeacherDashboard({ data }: { data: any }) {
           <div className="h-[300px] mt-3">
             {data.sessionsByMonth?.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.sessionsByMonth} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
+                <BarChart data={data.sessionsByMonth} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="teachActivityGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={CHART_COLORS.rose} stopOpacity={0.55} />
-                      <stop offset="40%" stopColor={CHART_COLORS.pink} stopOpacity={0.3} />
-                      <stop offset="100%" stopColor={CHART_COLORS.rose} stopOpacity={0.03} />
-                    </linearGradient>
+                    {data.sessionsByMonth.map((_: any, i: number) => (
+                      <linearGradient key={`ag${i}`} id={`activityGrad${i}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={CHART_PALETTE[i % CHART_PALETTE.length]} />
+                        <stop offset="100%" stopColor={CHART_PALETTE[(i + 2) % CHART_PALETTE.length]} stopOpacity={0.7} />
+                      </linearGradient>
+                    ))}
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
                   <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="sessions"
-                    name="Sessions"
-                    stroke={CHART_COLORS.rose}
-                    strokeWidth={3}
-                    fill="url(#teachActivityGrad)"
-                    dot={{ r: 6, fill: '#fff', stroke: CHART_COLORS.rose, strokeWidth: 2.5 }}
-                    activeDot={{ r: 8, fill: CHART_COLORS.rose, stroke: '#fff', strokeWidth: 3 }}
-                  />
-                </AreaChart>
+                  <Bar dataKey="sessions" name="Sessions" radius={[8, 8, 0, 0]} barSize={36} background={{ fill: '#f1f5f9', radius: 8 }}>
+                    {data.sessionsByMonth.map((_: any, i: number) => (
+                      <Cell key={i} fill={`url(#activityGrad${i})`} />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             ) : (
               <EmptyState message="No session data available yet" />
@@ -134,26 +82,26 @@ export function TeacherDashboard({ data }: { data: any }) {
           <div className="h-[300px] mt-3">
             {data.progressByClass?.length > 1 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={data.progressByClass} cx="50%" cy="50%" outerRadius="80%">
-                  <defs>
-                    <linearGradient id="radarGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={CHART_COLORS.indigo} stopOpacity={0.5} />
-                      <stop offset="100%" stopColor={CHART_COLORS.violet} stopOpacity={0.15} />
-                    </linearGradient>
-                  </defs>
-                  <PolarGrid stroke="#c7d2fe" strokeWidth={1} />
-                  <PolarAngleAxis dataKey="classLabel" tick={{ fill: '#334155', fontSize: 12, fontWeight: 700 }} />
-                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                  <Radar
-                    name="Progress"
+                <PieChart>
+                  <Pie
+                    data={data.progressByClass}
                     dataKey="avgProgress"
-                    stroke={CHART_COLORS.indigo}
-                    fill="url(#radarGrad)"
-                    strokeWidth={2.5}
-                    dot={{ r: 5, fill: CHART_COLORS.indigo, stroke: '#fff', strokeWidth: 2 }}
-                  />
+                    nameKey="classLabel"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    innerRadius={0}
+                    strokeWidth={2}
+                    stroke="#fff"
+                    label={({ classLabel, avgProgress }: any) => `${classLabel}: ${avgProgress}%`}
+                    labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
+                  >
+                    {data.progressByClass.map((_: any, i: number) => (
+                      <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />
+                    ))}
+                  </Pie>
                   <Tooltip content={<ChartTooltip />} />
-                </RadarChart>
+                </PieChart>
               </ResponsiveContainer>
             ) : data.progressByClass?.length === 1 ? (
               <div className="flex flex-col items-center justify-center h-full space-y-4">
@@ -190,7 +138,7 @@ export function TeacherDashboard({ data }: { data: any }) {
       </div>
 
       {/* My Classes + Progress by Book */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
         <DashCard>
           <SectionHeader icon={Layers} title="My Classes" subtitle={`${data.myClasses?.length || 0} assigned classes`} accent="text-violet-600 bg-violet-50" />
           <div className="mt-3 space-y-2">

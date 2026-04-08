@@ -475,7 +475,6 @@ async function teacherStats(staffId: string, institutionId: string) {
     myClasses,
     progressRecords,
     sessionCount,
-    totalMinutesAgg,
     recentSessions,
     sessionsByMonthAgg,
   ] = await Promise.all([
@@ -488,10 +487,6 @@ async function teacherStats(staffId: string, institutionId: string) {
       .populate("classId", "grade section")
       .lean(),
     ClassSessionModel.countDocuments({ staffId: sId }),
-    ClassSessionModel.aggregate([
-      { $match: { staffId: sId, durationMinutes: { $exists: true } } },
-      { $group: { _id: null, total: { $sum: "$durationMinutes" } } },
-    ]),
     ClassSessionModel.find({ staffId: sId })
       .sort({ startTime: -1 })
       .limit(5)
@@ -512,7 +507,6 @@ async function teacherStats(staffId: string, institutionId: string) {
   ]);
 
   const totalStudents = myClasses.reduce((sum, c: any) => sum + (c.studentIds?.length || 0), 0);
-  const totalTeachingMinutes = totalMinutesAgg[0]?.total || 0;
 
   // overall progress
   const overallProgress =
@@ -623,7 +617,6 @@ async function teacherStats(staffId: string, institutionId: string) {
     totalStudents,
     overallProgress,
     totalSessions: sessionCount,
-    totalTeachingMinutes,
     continueTeaching,
     progressByGradeBook,
     recentSessions: formattedSessions,
