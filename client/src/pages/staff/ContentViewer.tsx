@@ -209,13 +209,11 @@ export function ContentViewer({
 
           {/* PDF — Book Viewer */}
           {content.type === "pdf" && fileUrl && (
-            <div className="max-w-5xl mx-auto">
-              <PdfFlipBook
-                fileUrl={fileUrl}
-                initialPage={contentProgress?.pdfPage}
-                onPageChange={handlePdfPageChange}
-              />
-            </div>
+            <PdfFlipBook
+              fileUrl={fileUrl}
+              initialPage={contentProgress?.pdfPage}
+              onPageChange={handlePdfPageChange}
+            />
           )}
 
           {/* PPT — Presentation Viewer */}

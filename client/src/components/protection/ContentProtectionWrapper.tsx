@@ -4,12 +4,15 @@ interface ContentProtectionWrapperProps {
   children: React.ReactNode;
   watermarkText?: string;
   enabled?: boolean;
+  /** When true, wrapper fills parent height (use for PDF/flipbook that needs constrained height) */
+  fillHeight?: boolean;
 }
 
 export function ContentProtectionWrapper({
   children,
   watermarkText,
   enabled = true,
+  fillHeight = false,
 }: ContentProtectionWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [tabHidden, setTabHidden] = useState(false);
@@ -49,7 +52,7 @@ export function ContentProtectionWrapper({
   return (
     <div
       ref={containerRef}
-      className="relative select-none"
+      className={`relative select-none ${fillHeight ? "h-full flex flex-col" : ""}`}
       onContextMenu={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
       style={{ WebkitUserSelect: "none", userSelect: "none" }}
@@ -57,7 +60,7 @@ export function ContentProtectionWrapper({
       {/* Print blocker */}
       <style>{`@media print { .content-protected { display: none !important; visibility: hidden !important; } }`}</style>
 
-      <div className="content-protected">
+      <div className={`content-protected ${fillHeight ? "flex-1 min-h-0 flex flex-col" : ""}`}>
         {children}
       </div>
 

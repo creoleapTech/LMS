@@ -3,8 +3,8 @@ import { useAuthStore } from '@/store/userAuthStore';
 
 function getGreeting() {
   const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
+  if (h < 12) return 'Good Morning';
+  if (h < 17) return 'Good Afternoon';
   return 'Good evening';
 }
 
@@ -12,8 +12,9 @@ export function DashboardHeader() {
   const { user } = useAuthStore();
   if (!user) return null;
 
-  const fullName = user.name || '';
-  const salutationPrefix = user.salutation ? `${user.salutation}. ` : '';
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const fullName = user.name ? capitalize(user.name) : '';
+  const salutationPrefix = user.salutation ? `${capitalize(user.salutation)}. ` : '';
 
   return (
     <section className="neo-card p-6 relative overflow-hidden">
