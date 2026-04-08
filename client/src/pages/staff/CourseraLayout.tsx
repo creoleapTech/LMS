@@ -135,7 +135,7 @@ export function CourseraLayout({
   return (
     <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
       {/* Top bar */}
-      <div className="h-14 bg-white dark:bg-slate-900 border-b flex items-center px-4 gap-3 shrink-0">
+      <div className="h-14 neo-glass border-b-0 flex items-center px-4 gap-3 shrink-0">
         <Button
           variant="ghost"
           size="sm"

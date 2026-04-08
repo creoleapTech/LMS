@@ -33,24 +33,24 @@ html {
   --neo-shadow-inset: inset 4px 4px 8px var(--neo-shadow-dark), inset -4px -4px 8px var(--neo-shadow-light);
   --neo-shadow-inset-sm: inset 2px 2px 5px var(--neo-shadow-dark), inset -2px -2px 5px var(--neo-shadow-light);
 
-  --background: oklch(1 0 0);
+  --background: #dfe6f0;
   --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
+  --card: #e8eef6;
   --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
+  --popover: #e8eef6;
   --popover-foreground: oklch(0.141 0.005 285.823);
   --primary: oklch(0.21 0.006 285.885);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
+  --secondary: #d4dae6;
   --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
+  --muted: #d4dae6;
   --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
+  --accent: #d4dae6;
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
+  --border: rgba(255,255,255,0.4);
+  --input: #d4dae6;
   --ring: oklch(0.871 0.006 286.286);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -245,6 +245,116 @@ html {
     animation: blob 7s infinite;
     will-change: transform;
   }
+
+  /* ─── Neo Buttons ─── */
+  .neo-btn {
+    background: linear-gradient(145deg, var(--neo-bg-alt), var(--neo-bg-dark));
+    box-shadow: var(--neo-shadow-sm);
+    border: 1px solid rgba(255,255,255,0.4);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .neo-btn:hover {
+    box-shadow: var(--neo-shadow-md);
+    transform: translateY(-1px);
+  }
+  .neo-btn:active {
+    box-shadow: var(--neo-shadow-inset-sm);
+    transform: translateY(0);
+  }
+
+  .neo-btn-primary {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #6366f1);
+    background-size: 200% 200%;
+    color: white;
+    box-shadow: 0 4px 15px rgba(99,102,241,0.4), 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .neo-btn-primary:hover {
+    box-shadow: 0 8px 25px rgba(99,102,241,0.5), 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+    background-position: 100% 0;
+  }
+
+  /* ─── Neo Table Wrapper ─── */
+  .neo-table-wrapper {
+    background: linear-gradient(145deg, var(--neo-bg-alt), var(--neo-bg-dark));
+    border-radius: 1.25rem;
+    box-shadow: var(--neo-shadow-md);
+    border: 1px solid rgba(255,255,255,0.5);
+    overflow: hidden;
+  }
+
+  /* ─── Neo Dialog ─── */
+  .neo-dialog {
+    background: rgba(232, 238, 246, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: 0 25px 60px rgba(0,0,0,0.15), var(--neo-shadow-lg);
+    border-radius: 1.5rem;
+  }
+
+  /* ─── Neo Input (pressed-in fields) ─── */
+  .neo-input {
+    box-shadow: var(--neo-shadow-inset-sm);
+    background: var(--neo-bg);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+  }
+  .neo-input:focus, .neo-input:focus-within {
+    box-shadow: var(--neo-shadow-inset-sm), 0 0 0 3px rgba(99,102,241,0.2);
+  }
+
+  /* ─── Neo Tabs — 3D Slab Nav (universal) ─── */
+  .neo-tab-list {
+    box-shadow: var(--neo-shadow-inset);
+    background: var(--neo-bg);
+    border-radius: 1rem;
+    padding: 6px;
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+
+  .neo-tab-trigger {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border-radius: 0.75rem !important;
+    position: relative;
+  }
+
+  /* Inactive: pressed into the surface */
+  .neo-tab-trigger[data-state="inactive"] {
+    background: transparent !important;
+    box-shadow: inset 2px 2px 5px var(--neo-shadow-dark), inset -2px -2px 5px var(--neo-shadow-light) !important;
+    border: 1px solid transparent !important;
+    transform: translateY(0) scale(1) !important;
+    color: var(--muted-foreground) !important;
+  }
+  .neo-tab-trigger[data-state="inactive"]:hover {
+    background: linear-gradient(145deg, var(--neo-bg-alt), var(--neo-bg-dark)) !important;
+    box-shadow: 5px 5px 12px var(--neo-shadow-dark), -5px -5px 12px var(--neo-shadow-light) !important;
+    border: 1px solid rgba(255,255,255,0.5) !important;
+    transform: translateY(-3px) scale(1.02) !important;
+    color: var(--foreground) !important;
+  }
+
+  /* Active: 3D slab protruding outward */
+  .neo-tab-trigger[data-state="active"] {
+    background: linear-gradient(145deg, #edf1f8, #d8dfe9) !important;
+    box-shadow:
+      6px 6px 14px var(--neo-shadow-dark),
+      -6px -6px 14px var(--neo-shadow-light),
+      0 0 18px rgba(99,102,241,0.15),
+      inset 0 1px 0 rgba(255,255,255,0.8) !important;
+    border: 1px solid rgba(255,255,255,0.7) !important;
+    transform: translateY(-3px) scale(1.03) !important;
+    font-weight: 700 !important;
+    color: var(--foreground) !important;
+    z-index: 2;
+  }
+
+  /* Keep old class names for backwards compat */
+  .neo-tab-active { /* no-op, handled by .neo-tab-trigger[data-state] */ }
 }
 
 /* Page transition */

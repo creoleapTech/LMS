@@ -273,7 +273,7 @@ export function StaffTable({ institutionId, institutionName }: Props) {
 
   return (
     <>
-      <div className="py-5 px-4 sm:px-8 max-w-7xl mx-auto">
+      <div className="py-5 px-4 sm:px-8 max-w-screen-2xl mx-auto">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -285,13 +285,13 @@ export function StaffTable({ institutionId, institutionName }: Props) {
               </h1>
               <p className="text-muted-foreground mt-1">Managing staff for <strong>{institutionName}</strong></p>
             </div>
-            <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-purple-900/20">
+            <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-indigo-500/30">
               <Plus className="mr-2 h-4 w-4" /> Add Staff
             </Button>
           </div>
 
           {/* Filters Card */}
-          <Card className="p-4 rounded-2xl border-slate-200/80 shadow-sm">
+          <Card className="p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="relative sm:col-span-2 md:col-span-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -339,7 +339,7 @@ export function StaffTable({ institutionId, institutionName }: Props) {
                 Showing {table.getRowModel().rows.length} of {staffs.length} staff members
               </div>
 
-              <div className="rounded-2xl border border-slate-200/80 bg-card shadow-sm overflow-hidden">
+              <div className="neo-table-wrapper overflow-hidden">
                 <div className="overflow-x-auto">
                 <Table className="min-w-[900px]">
                   <TableHeader>

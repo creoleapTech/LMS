@@ -170,8 +170,8 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/80 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-6">
+      <div className="max-w-screen-2xl mx-auto">
         <Breadcrumb />
 
         <div className="mb-10">
@@ -245,7 +245,7 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                 {filteredCurriculums.map((curriculum) => (
                   <Card
                     key={curriculum._id}
-                    className="group w-64 p-0 m-0 relative hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden border-2 hover:border-indigo-400 rounded-2xl"
+                    className="group w-64 p-0 m-0 relative neo-card-hover transition-all duration-300 cursor-pointer overflow-hidden border-2 hover:border-indigo-400 rounded-2xl"
                     onClick={() => setSelectedCurriculum(curriculum)}
                   >
                     <Badge variant="secondary" className="right-0 absolute mb-2">
@@ -334,7 +334,7 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                       {group.sections.map((section) => (
                         <Card
                           key={section.classId}
-                          className="group w-64 gap-0 p-0 m-0 overflow-hidden rounded-2xl cursor-pointer border-2 hover:border-indigo-400 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+                          className="group w-64 gap-0 p-0 m-0 overflow-hidden rounded-2xl cursor-pointer border-2 hover:border-indigo-400 transition-all duration-300 hover:-translate-y-1 neo-card-hover"
                           onClick={() =>
                             setSelectedClassSection({
                               classId: section.classId,
@@ -361,7 +361,7 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                           </div>
 
                           {/* 📄 Details Section */}
-                          <CardContent className=" text-center py-2  bg-white">
+                          <CardContent className="text-center py-2">
 
 
                             {/* Title */}

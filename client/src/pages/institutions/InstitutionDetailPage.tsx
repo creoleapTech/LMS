@@ -92,11 +92,11 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-100/80 relative selection:bg-brand-color/20">
+    <div className="min-h-screen relative selection:bg-brand-color/20">
 
-      <div className="relative z-10 py-8 px-5 sm:px-8 max-w-7xl mx-auto">
+      <div className="relative z-10 py-8 px-5 sm:px-8 max-w-screen-2xl mx-auto">
         {/* Hero Header */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-xl shadow-sm mb-8 px-5 sm:px-8 py-5">
+        <div className="relative overflow-hidden neo-card mb-8 px-5 sm:px-8 py-5">
           <div className="absolute inset-0 bg-linear-to-r from-indigo-500/5 to-purple-500/5" />
           <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
@@ -139,7 +139,7 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
             </div>
             <div className="text-right">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Institution ID</p>
-              <code className="text-xs bg-slate-100 px-3 py-1.5 rounded-lg font-mono break-all mt-1 inline-block">
+              <code className="text-xs neo-inset-rounded-lg px-3 py-1.5 font-mono break-all mt-1 inline-block">
                 {institution._id}
               </code>
             </div>
@@ -148,7 +148,7 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="flex flex-wrap w-full max-w-3xl h-auto min-h-12 rounded-xl p-1 gap-1 bg-slate-100/80 shadow-sm">
+          <TabsList className="flex flex-wrap w-full max-w-3xl h-auto min-h-12 rounded-xl p-1 gap-1">
             <TabsTrigger value="overview" className="rounded-lg text-sm sm:text-base font-medium">
               <Building2 className="h-4 w-4 mr-1.5 hidden sm:block" /> Overview
             </TabsTrigger>
@@ -222,8 +222,8 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
 // Loading Skeleton
 function InstitutionDetailSkeleton() {
   return (
-    <div className="py-10 px-5 sm:px-8 max-w-7xl mx-auto">
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 sm:p-8 mb-8">
+    <div className="py-10 px-5 sm:px-8 max-w-screen-2xl mx-auto">
+      <div className="neo-card p-5 sm:p-8 mb-8">
         <div className="flex items-center gap-5">
           <Skeleton className="h-14 w-14 rounded-2xl" />
           <div className="space-y-3 flex-1">

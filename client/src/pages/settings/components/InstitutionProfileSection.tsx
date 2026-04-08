@@ -151,7 +151,7 @@ export function InstitutionProfileSection() {
           <Button
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}
-            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 gap-1.5"
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 gap-1.5"
           >
             {saveMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />

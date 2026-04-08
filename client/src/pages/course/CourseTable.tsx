@@ -136,7 +136,7 @@ export function CourseTable({ institutionName }: Props) {
 
   return (
     <>
-      <div className="py-8 px-5 sm:px-8 max-w-7xl mx-auto">
+      <div className="py-8 px-5 sm:px-8 max-w-screen-2xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-3 tracking-tight">
@@ -147,12 +147,12 @@ export function CourseTable({ institutionName }: Props) {
             </h1>
             <p className="text-muted-foreground mt-1">{institutionName}</p>
           </div>
-          <Button onClick={() => { setEditingCourse(null); setOpenForm(true); }} className="rounded-xl shadow-lg shadow-primary/20">
+          <Button onClick={() => { setEditingCourse(null); setOpenForm(true); }} className="rounded-xl shadow-lg shadow-indigo-500/30">
             <Plus className="mr-2 h-4 w-4" /> Create Course
           </Button>
         </div>
 
-        <Card className="p-4 mb-6 rounded-2xl border-slate-200/80 shadow-sm">
+        <Card className="p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div className="relative sm:col-span-2 md:col-span-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -182,7 +182,7 @@ export function CourseTable({ institutionName }: Props) {
           </div>
         </Card>
 
-        <div className="rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="neo-table-wrapper overflow-hidden">
           <div className="overflow-x-auto">
           <Table className="min-w-[700px]">
             <TableHeader>

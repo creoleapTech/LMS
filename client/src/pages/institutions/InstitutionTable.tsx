@@ -279,7 +279,7 @@ export function InstitutionTable() {
 
   return (
     <>
-      <div className="py-8 px-5 sm:px-8 max-w-7xl mx-auto">
+      <div className="py-8 px-5 sm:px-8 max-w-screen-2xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Institutions</h1>
@@ -291,7 +291,7 @@ export function InstitutionTable() {
               setOpenForm(true); 
             }}
             disabled={saveMutation.isPending}
-            className="rounded-xl shadow-lg shadow-primary/20"
+            className="rounded-xl shadow-lg shadow-indigo-500/30"
           >
             <Plus className="mr-2 h-4 w-4" /> Add Institution
           </Button>
@@ -341,7 +341,7 @@ export function InstitutionTable() {
 
         {/* Table */}
         {!isLoading && !isFetching && !error && (
-          <div className="rounded-2xl border border-slate-200/80 bg-card shadow-sm overflow-hidden">
+          <div className="neo-table-wrapper overflow-hidden">
             <div className="overflow-x-auto">
             <Table className="min-w-[800px]">
               <TableHeader>

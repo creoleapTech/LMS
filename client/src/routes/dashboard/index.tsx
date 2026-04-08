@@ -43,7 +43,7 @@ function Dashboard() {
   const stats = response?.data;
 
   return (
-    <div className="min-h-screen neo-bg">
+    <div className="min-h-screen">
       <main className="p-6 md:p-8 max-w-screen-2xl mx-auto space-y-6">
         {/* New Dashboard Header */}
         <DashboardHeader />

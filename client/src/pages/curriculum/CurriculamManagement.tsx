@@ -54,7 +54,7 @@ export default function CurriculumManagementPage() {
 
       {/* Step 1: Curriculum List */}
       {!selectedCurriculumId && (
-        <Card className="border border-slate-200/80 rounded-2xl shadow-sm">
+        <Card className="neo-card neo-card-hover">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-3">
               <div className="p-1.5 bg-blue-50 rounded-lg">
@@ -71,7 +71,7 @@ export default function CurriculumManagementPage() {
 
       {/* Step 2: Grade Books */}
       {selectedCurriculumId && !selectedGradeBookId && (
-        <Card className="border border-slate-200/80 rounded-2xl shadow-sm">
+        <Card className="neo-card neo-card-hover">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-3">
               <div className="p-1.5 bg-blue-50 rounded-lg">
@@ -91,7 +91,7 @@ export default function CurriculumManagementPage() {
 
       {/* Step 3: Chapters */}
       {selectedGradeBookId && !selectedChapterId && (
-        <Card className="border border-slate-200/80 rounded-2xl shadow-sm">
+        <Card className="neo-card neo-card-hover">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-3">
               <div className="p-1.5 bg-blue-50 rounded-lg">
@@ -114,7 +114,7 @@ export default function CurriculumManagementPage() {
 
       {/* Step 4: Content Manager */}
       {selectedChapterId && (
-        <Card className="border border-slate-200/80 rounded-2xl shadow-sm">
+        <Card className="neo-card neo-card-hover">
           <CardHeader>
             <CardTitle className="text-lg">Chapter Content Manager</CardTitle>
           </CardHeader>
@@ -127,8 +127,8 @@ export default function CurriculumManagementPage() {
   );
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-100/80">
-      <div className="py-8 px-5 sm:px-8 max-w-7xl mx-auto">
+    <div className="min-h-screen ">
+      <div className="py-8 px-5 sm:px-8 max-w-screen-2xl mx-auto">
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-1.5 tracking-tight">
             Curriculum Management

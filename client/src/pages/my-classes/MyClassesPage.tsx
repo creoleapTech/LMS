@@ -209,7 +209,7 @@ export default function MyClassesPage() {
 
       {/* No period config warning (teacher mode) */}
       {noPeriodConfig && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+        <div className="neo-card-flat bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
           <p className="text-amber-800 font-semibold">Period schedule not configured</p>
           <p className="text-amber-600 text-sm mt-1">
             Ask your admin to set up the period/bell schedule in Settings &rarr; Academic.
@@ -219,7 +219,7 @@ export default function MyClassesPage() {
 
       {/* Admin mode: prompt to select teacher */}
       {isAdminRole && !selectedStaffId && (
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-12 text-center">
+        <div className="neo-card-flat rounded-2xl p-12 text-center">
           <Users className="h-12 w-12 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-500 font-semibold text-lg">
             {isSuperAdmin && !selectedInstitutionId
@@ -231,7 +231,7 @@ export default function MyClassesPage() {
 
       {/* Selected teacher info banner */}
       {isAdminRole && selectedTeacher && (
-        <div className="mb-6 flex items-center gap-3 px-4 py-3 bg-violet-50 border border-violet-200 rounded-xl">
+        <div className="mb-6 flex items-center gap-3 px-4 py-3 neo-card-flat bg-violet-50 border border-violet-200 rounded-xl">
           <div className="h-8 w-8 rounded-full bg-violet-200 flex items-center justify-center text-violet-700 font-bold text-sm">
             {selectedTeacher.name.charAt(0).toUpperCase()}
           </div>
@@ -247,7 +247,7 @@ export default function MyClassesPage() {
           {/* LEFT: Calendar Panel */}
           <div className="lg:col-span-2 lg:sticky lg:top-8 self-start space-y-4">
             {/* Calendar card */}
-            <div className="rounded-2xl border-2 border-indigo-300 shadow-md overflow-hidden bg-gradient-to-b from-white via-white to-indigo-50/40">
+            <div className="neo-card border-2 border-indigo-300 rounded-2xl overflow-hidden bg-gradient-to-b from-[var(--neo-bg-alt)] via-[var(--neo-bg-alt)] to-indigo-50/40">
               {/* Colorful header band */}
               <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-4">
                 <div className="flex items-center justify-between">
@@ -327,15 +327,15 @@ function MiniMonthStats({ monthData }: { monthData: Record<string, { entryCount:
 
   return (
     <div className="grid grid-cols-3 gap-3">
-      <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-xl border-2 border-indigo-300 p-3 text-center">
+      <div className="neo-card-flat bg-gradient-to-br from-indigo-50 to-violet-50 rounded-xl border-2 border-indigo-300 p-3 text-center">
         <p className="text-2xl font-extrabold text-indigo-600">{totalClasses}</p>
         <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mt-0.5">Classes</p>
       </div>
-      <div className="bg-gradient-to-br from-emerald-50 to-cyan-50 rounded-xl border-2 border-emerald-400 p-3 text-center">
+      <div className="neo-card-flat bg-gradient-to-br from-emerald-50 to-cyan-50 rounded-xl border-2 border-emerald-400 p-3 text-center">
         <p className="text-2xl font-extrabold text-emerald-600">{completedDays}</p>
         <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mt-0.5">Done Days</p>
       </div>
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-400 p-3 text-center">
+      <div className="neo-card-flat bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-400 p-3 text-center">
         <p className="text-2xl font-extrabold text-amber-600">{activeDays}</p>
         <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mt-0.5">Active Days</p>
       </div>

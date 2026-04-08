@@ -62,8 +62,8 @@ export function GlobalHeader() {
   };
 
   return (
-    <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/60">
-      <div className="flex items-center justify-between px-5 sm:px-8 py-3 max-w-screen-2xl mx-auto">
+    <div className="sticky top-0 z-40 neo-glass border-b-0">
+      <div className="flex items-center justify-between px-5 sm:px-8 py-3">
         {/* Left: Institution logo + name (hidden for super_admin) */}
         <div className="flex items-center gap-3 min-w-0">
           {!isSuperAdmin && (
@@ -72,10 +72,10 @@ export function GlobalHeader() {
                 <img
                   src={logoUrl}
                   alt={displayName}
-                  className="h-10 w-10 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0"
+                  className="h-10 w-10 rounded-xl object-cover border border-white/40 shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] shrink-0"
                 />
               ) : (
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-500/30 shrink-0">
                   {displayName ? getInitials(displayName) : "LMS"}
                 </div>
               )}
@@ -138,6 +138,8 @@ export function GlobalHeader() {
           </DropdownMenu>
         </div>
       </div>
+      {/* Gradient accent line */}
+      <div className="h-[2px] bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 opacity-60" />
     </div>
   );
 }

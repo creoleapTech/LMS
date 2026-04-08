@@ -90,7 +90,7 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
         </Select>
       </div>
 
-      <div className="rounded-2xl border border-slate-200/80 bg-card shadow-sm overflow-hidden">
+      <div className="neo-table-wrapper overflow-hidden">
         <div className="overflow-x-auto">
         <Table className="min-w-[600px]">
           <TableHeader>

@@ -62,8 +62,8 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                 {/* LEFT COLUMN (2/3) */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* PROFILE CARD */}
-                    <Card className="overflow-hidden border border-slate-200/80 shadow-sm bg-white rounded-2xl">
-                        <CardHeader className="relative border-b pb-0! border-slate-100">
+                    <Card className="overflow-hidden neo-card rounded-2xl">
+                        <CardHeader className="relative border-b pb-0! border-white/30">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-linear-to-br from-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
@@ -85,7 +85,7 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                                     <DetailRow icon={MapPin} label="Address" value={institution.address} />
                                     <DetailRow icon={User} label="Incharge" value={institution.contactDetails.inchargePerson} />
                                 </div>
-                                <div className="p-4 sm:px-6 space-y-6 bg-slate-50/50">
+                                <div className="p-4 sm:px-6 space-y-6 bg-[var(--neo-bg-dark)]/30">
                                     <div className="space-y-6">
                                         <DetailRow icon={PhoneCall} label="Mobile" value={institution.contactDetails.mobileNumber} />
                                         <DetailRow icon={MailIcon} label="Email" value={institution.contactDetails.email || "N/A"} />
@@ -164,14 +164,14 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                     </Card> */}
 
                     {/* TIMELINE */}
-                    <Card className="border border-slate-200/80 shadow-sm bg-white rounded-2xl">
+                    <Card className="neo-card rounded-2xl">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
                                 <Clock className="h-4 w-4 text-muted-foreground" /> Activity
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="relative pl-4 border-l-2 border-slate-100 dark:border-slate-800 space-y-8">
+                            <div className="relative pl-4 border-l-2 border-white/40 dark:border-slate-800 space-y-8">
                                 <TimelineItem
                                     date={new Date(institution.updatedAt).toLocaleDateString()}
                                     title="Last Updated"
@@ -197,9 +197,8 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
 function StatsWidget({ title, value, trend, icon: Icon, gradient, shadowColor }: any) {
     return (
         <div className={cn(
-            "group relative overflow-hidden rounded-2xl p-6 transition-all duration-200 hover:shadow-lg cursor-default",
-            "bg-white border border-slate-200/80",
-            "shadow-sm",
+            "group relative overflow-hidden rounded-2xl p-6 transition-all duration-200 cursor-default",
+            "neo-card neo-card-hover",
         )}>
             <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
                 <Icon className="h-28 w-28 -mr-6 -mt-6" />
@@ -225,7 +224,7 @@ function StatsWidget({ title, value, trend, icon: Icon, gradient, shadowColor }:
 function DetailRow({ icon: Icon, label, value }: any) {
     return (
         <div className="group flex items-start gap-4">
-            <div className="p-2.5 bg-slate-100 rounded-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+            <div className="p-2.5 bg-[var(--neo-bg)] neo-inset-rounded-lg rounded-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                 <Icon className="h-4 w-4 text-slate-500 group-hover:text-indigo-600 transition-colors" />
             </div>
             <div>

@@ -292,7 +292,7 @@ export function StudentTable({ institutionId }: Props) {
 
   return (
     <>
-      <div className="flex flex-col gap-6 p-5 sm:p-8 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-6 p-5 sm:p-8 max-w-screen-2xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-2xl font-bold flex items-center gap-2.5 tracking-tight">
@@ -307,14 +307,14 @@ export function StudentTable({ institutionId }: Props) {
             <Button variant="outline" onClick={() => setOpenBulkUpload(true)} className="rounded-xl">
               <Upload className="mr-2 h-4 w-4" /> Bulk Upload
             </Button>
-            <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-purple-900/20">
+            <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-indigo-500/30">
               <Plus className="mr-2 h-4 w-4" /> Add Student
             </Button>
           </div>
         </div>
 
         {/* Filters */}
-        <Card className="p-4 rounded-2xl border-slate-200/80 shadow-sm">
+        <Card className="p-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -347,7 +347,7 @@ export function StudentTable({ institutionId }: Props) {
         {isLoading ? (
           <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
         ) : (
-          <div className="rounded-2xl border border-slate-200/80 bg-card shadow-sm overflow-hidden">
+          <div className="neo-table-wrapper overflow-hidden">
             <div className="overflow-x-auto">
             <Table className="min-w-[700px]">
               <TableHeader>
@@ -494,7 +494,7 @@ export function StudentTable({ institutionId }: Props) {
                   </div>
                 )}
 
-                <div className="border rounded-md max-h-60 overflow-y-auto bg-slate-50 dark:bg-slate-900 p-2">
+                <div className="border rounded-md max-h-60 overflow-y-auto bg-[var(--neo-bg)] dark:bg-slate-900 p-2">
                   <Table>
                     <TableHeader>
                       <TableRow>

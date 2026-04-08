@@ -71,7 +71,7 @@ const Sidebar: React.FC = () => {
 
           <button
             onClick={toggleExpand}
-            className="p-1.5 absolute top-1/2 -right-3.5 -translate-y-1/2 rounded-full bg-[#1A0C52] hover:bg-[#241266] border border-white/10 md:flex hidden shadow-lg shadow-black/50 z-50 transition-colors"
+            className="p-1.5 absolute top-1/2 -right-3.5 -translate-y-1/2 rounded-full bg-[#1A0C52] hover:bg-[#241266] border border-white/20 md:flex hidden shadow-[3px_3px_8px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(99,102,241,0.15)] z-50 transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.3)]"
             aria-label={isExpanded ? 'Minimize sidebar' : 'Expand sidebar'}
           >
             {isExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
@@ -91,8 +91,8 @@ const Sidebar: React.FC = () => {
                     to={item.path}
                     className={`flex items-center ${isExpanded ? 'px-3' : 'justify-center'} py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
                       ${isActive
-                        ? 'bg-white/15 text-white shadow-inner shadow-white/5'
-                        : 'text-white/70 hover:text-white hover:bg-white/8'
+                        ? 'bg-gradient-to-br from-white/20 to-white/5 text-white shadow-[4px_4px_12px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(99,102,241,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/15 translate-x-[2px]'
+                        : 'text-white/70 hover:text-white hover:bg-white/10 hover:shadow-[3px_3px_8px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(99,102,241,0.15)] hover:translate-x-[1px] active:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-1px_-1px_4px_rgba(99,102,241,0.1)] active:translate-x-0'
                       }`}
                     activeProps={{ className: 'bg-white/15 text-white' }}
                   >

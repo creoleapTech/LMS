@@ -109,19 +109,17 @@ export function MonthCalendar({
                 key={dateKey}
                 onClick={() => onDateClick(date)}
                 className={`
-                  h-12 flex flex-col items-center justify-center rounded-xl transition-all relative cursor-pointer
+                  h-12 flex flex-col items-center justify-center rounded-xl transition-all duration-200 relative cursor-pointer
                   ${
-                    isSelected && isToday
-                      ? "bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-300/40 scale-105"
-                      : isSelected
-                        ? "bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-300/40 scale-105"
-                        : isToday
-                          ? "bg-gradient-to-br from-indigo-100 to-violet-100 ring-2 ring-indigo-400 ring-offset-1"
-                          : hasCompleted
-                            ? "bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-400 hover:from-emerald-100 hover:to-green-100"
-                            : hasEntries
-                              ? "bg-gradient-to-br from-indigo-50 to-violet-50 border-2 border-indigo-300 hover:from-indigo-100 hover:to-violet-100"
-                              : "border border-slate-300 hover:bg-slate-50 hover:border-indigo-300"
+                    isSelected
+                      ? "bg-gradient-to-br from-indigo-500 to-violet-600 shadow-[3px_3px_8px_rgba(0,0,0,0.15),-2px_-2px_6px_rgba(255,255,255,0.7),0_0_20px_rgba(99,102,241,0.3)] scale-110 border border-white/30 z-10"
+                      : isToday
+                        ? "bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] ring-2 ring-indigo-400 border border-white/40"
+                        : hasCompleted
+                          ? "bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] border border-emerald-300/60 hover:shadow-[4px_4px_12px_var(--neo-shadow-dark),-4px_-4px_12px_var(--neo-shadow-light),0_0_12px_rgba(16,185,129,0.2)] hover:scale-105"
+                          : hasEntries
+                            ? "bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] border border-indigo-300/60 hover:shadow-[4px_4px_12px_var(--neo-shadow-dark),-4px_-4px_12px_var(--neo-shadow-light),0_0_12px_rgba(99,102,241,0.2)] hover:scale-105"
+                            : "bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/30 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] hover:scale-[1.03] active:shadow-[inset_2px_2px_5px_var(--neo-shadow-dark),inset_-2px_-2px_5px_var(--neo-shadow-light)] active:scale-[0.97]"
                   }
                 `}
               >

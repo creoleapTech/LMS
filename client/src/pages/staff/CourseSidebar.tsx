@@ -86,7 +86,7 @@ export function CourseSidebar({
 
   if (collapsed) {
     return (
-      <div className="w-12 bg-white dark:bg-slate-900 border-r flex flex-col items-center py-4">
+      <div className="w-12 bg-[var(--neo-bg)] border-r border-white/30 flex flex-col items-center py-4">
         <Button variant="ghost" size="sm" onClick={onToggleCollapse} className="mb-4">
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -101,7 +101,7 @@ export function CourseSidebar({
   }
 
   return (
-    <div className="w-72 lg:w-80 bg-white dark:bg-slate-900 border-r flex flex-col h-full overflow-hidden">
+    <div className="w-72 lg:w-80 bg-[var(--neo-bg)] border-r border-white/30 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="border-b shrink-0">
         <div className="flex items-center justify-between px-3 pt-3 pb-1">
@@ -154,7 +154,7 @@ export function CourseSidebar({
                   onClick={() => onContentSelect(item)}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                     isActive
-                      ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border-l-2 border-indigo-500"
+                      ? "neo-card-flat bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border-l-2 border-indigo-500"
                       : "hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >

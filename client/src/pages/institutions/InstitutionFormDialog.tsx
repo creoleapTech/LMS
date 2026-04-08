@@ -150,7 +150,7 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl p-0">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b px-6 pt-6 pb-4 rounded-t-2xl">
+        <div className="sticky top-0 z-10 bg-[var(--neo-bg)] border-b border-white/30 px-6 pt-6 pb-4 rounded-t-2xl">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 shrink-0">
               <Building2 className="h-5 w-5" />
@@ -211,7 +211,7 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave 
             <div className="flex items-center gap-4">
               {logoPreview ? (
                 <div className="relative">
-                  <img src={logoPreview} alt="School logo" className="h-20 w-20 rounded-xl object-cover border border-slate-200 shadow-sm" />
+                  <img src={logoPreview} alt="School logo" className="h-20 w-20 rounded-xl object-cover border border-white/20 shadow-sm" />
                   <button
                     type="button"
                     onClick={removeLogo}
@@ -293,11 +293,11 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave 
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2 border-t">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2 border-t border-white/20">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+            <Button type="submit" disabled={isSubmitting} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

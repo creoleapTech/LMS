@@ -175,7 +175,7 @@ export function AcademicSection() {
               {academicYears.map((year) => (
                 <div
                   key={year._id}
-                  className="flex items-center justify-between p-3 rounded-xl border"
+                  className="flex items-center justify-between p-3 rounded-xl border neo-card-flat"
                 >
                   <div className="flex items-center gap-3">
                     <span className="font-medium">{year.label}</span>
@@ -238,7 +238,7 @@ export function AcademicSection() {
                 Terms ({newTerms.length})
               </Label>
               {newTerms.map((term, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-3 rounded-xl border">
+                <div key={idx} className="flex items-center gap-3 p-3 rounded-xl border neo-card-flat">
                   <Input
                     placeholder="Term label"
                     value={term.label}
@@ -277,7 +277,7 @@ export function AcademicSection() {
               <Button
                 onClick={() => createMutation.mutate()}
                 disabled={createMutation.isPending || !newLabel || !newStartDate || !newEndDate}
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 gap-1.5"
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 gap-1.5"
               >
                 {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Create

@@ -113,9 +113,9 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
 
   return (
     <>
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="neo-card overflow-hidden">
         {/* Day header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/30">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
               Schedule For
@@ -126,11 +126,11 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
           </div>
           {!isLoading && entries.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+              <span className="text-xs font-semibold text-slate-600 neo-inset-sm px-3 py-1.5">
                 {scheduledCount + completedCount} {scheduledCount + completedCount === 1 ? "class" : "classes"}
               </span>
               {completedCount > 0 && (
-                <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+                <span className="text-xs font-semibold text-emerald-700 bg-gradient-to-br from-emerald-100 to-emerald-50 shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-emerald-200/60 px-3 py-1.5 rounded-full">
                   {completedCount} done
                 </span>
               )}
@@ -143,7 +143,7 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
           <div className="p-4">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50/80 hover:bg-slate-50/80 border-b border-slate-200">
+                <TableRow className="bg-[var(--neo-bg-dark)]/40 hover:bg-[var(--neo-bg-dark)]/40 border-b border-white/30">
                   <TableHead className="w-[64px]"><Skeleton className="h-4 w-8" /></TableHead>
                   <TableHead className="w-[100px]"><Skeleton className="h-4 w-16" /></TableHead>
                   <TableHead><Skeleton className="h-4 w-32" /></TableHead>
@@ -180,7 +180,7 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
         {!isLoading && sortedPeriods.length > 0 && (
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50/80 hover:bg-slate-50/80 border-b border-slate-200">
+              <TableRow className="bg-[var(--neo-bg-dark)]/40 hover:bg-[var(--neo-bg-dark)]/40 border-b border-white/30">
                 <TableHead className="w-[64px] text-[11px] font-black uppercase tracking-wider text-slate-400 pl-5">
                   Period
                 </TableHead>
@@ -220,10 +220,10 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
                   return readOnly ? (
                     <TableRow
                       key={period.periodNumber}
-                      className="border-l-[3px] border-l-slate-200 border-b border-slate-100"
+                      className="border-l-[3px] border-l-slate-200 border-b border-white/20"
                     >
                       <TableCell className="pl-4">
-                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-xs font-black">
+                        <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] bg-[var(--neo-bg)] text-slate-500 text-xs font-black">
                           P{period.periodNumber}
                         </span>
                       </TableCell>
@@ -306,15 +306,15 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
 /* ─── Break Row ─── */
 function BreakRow({ period }: { period: IPeriodSlot }) {
   return (
-    <TableRow className="bg-amber-50/60 hover:bg-amber-50/60 border-b border-amber-100">
+    <TableRow className="bg-amber-50/30 hover:bg-amber-50/30 border-b border-amber-100/40">
       <TableCell colSpan={5} className="py-3 px-5">
         <div className="flex items-center justify-center gap-3">
-          <div className="h-px flex-1 bg-amber-200" />
-          <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5 shrink-0 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-300/50 to-transparent" />
+          <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5 shrink-0 bg-gradient-to-br from-amber-100 to-amber-50 px-4 py-1.5 rounded-full shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-amber-200/60">
             <Coffee size={12} />
             {period.label || "Break"} &middot; {period.startTime}–{period.endTime}
           </span>
-          <div className="h-px flex-1 bg-amber-200" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-300/50 to-transparent" />
         </div>
       </TableCell>
     </TableRow>
@@ -346,14 +346,14 @@ function ScheduledRow({
 
   return (
     <TableRow
-      className={`border-l-[3px] ${borderColor} hover:bg-slate-50 transition-colors duration-150 border-b border-slate-100 ${
-        isCompleted ? "bg-emerald-50/40" : ""
+      className={`border-l-[3px] ${borderColor} hover:bg-white/20 transition-all duration-200 border-b border-white/20 ${
+        isCompleted ? "bg-emerald-50/20" : ""
       }`}
     >
       {/* Period badge */}
       <TableCell className="pl-4">
         <span
-          className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-black ${badgeColor}`}
+          className={`inline-flex items-center justify-center w-9 h-9 rounded-xl text-xs font-black shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 ${badgeColor}`}
         >
           P{period.periodNumber}
         </span>
@@ -373,7 +373,7 @@ function ScheduledRow({
               {classLabel || "Class"}
             </span>
             {bookLabel && (
-              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span className="text-[11px] font-semibold text-slate-600 neo-inset-sm px-2.5 py-1 flex items-center gap-1">
                 <BookOpen size={10} />
                 {bookLabel}
               </span>
@@ -394,7 +394,7 @@ function ScheduledRow({
               {entry.topicsCovered.map((t, i) => (
                 <span
                   key={i}
-                  className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full font-semibold"
+                  className="text-[10px] bg-[var(--neo-bg)] shadow-[inset_1px_1px_3px_var(--neo-shadow-dark),inset_-1px_-1px_3px_var(--neo-shadow-light)] text-slate-600 px-2 py-0.5 rounded-full font-semibold"
                 >
                   {t}
                 </span>
@@ -407,11 +407,11 @@ function ScheduledRow({
       {/* Status */}
       <TableCell className="hidden sm:table-cell">
         {isCompleted ? (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60 px-2.5 py-1.5 rounded-full shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)]">
             <CheckCircle2 size={12} /> Done
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-full">
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60 px-2.5 py-1.5 rounded-full shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)]">
             <Clock size={12} /> Sched
           </span>
         )}
@@ -423,7 +423,7 @@ function ScheduledRow({
           <div className="flex items-center justify-end gap-1">
             <button
             onClick={onEditClick}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-indigo-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(99,102,241,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
             title="Edit"
           >
             <Pencil size={14} />
@@ -431,7 +431,7 @@ function ScheduledRow({
           {!isCompleted && (
             <button
               onClick={onCompleteClick}
-              className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-emerald-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(16,185,129,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
               title="Mark done"
             >
               <Check size={14} />
@@ -454,12 +454,12 @@ function EmptyRow({
 }) {
   return (
     <TableRow
-      className="border-l-[3px] border-l-slate-200 hover:border-l-indigo-300 hover:bg-indigo-50/40 transition-all duration-150 border-b border-slate-100 group cursor-pointer"
+      className="border-l-[3px] border-l-slate-200 hover:border-l-indigo-300 hover:bg-white/20 transition-all duration-200 border-b border-white/20 group cursor-pointer"
       onClick={onAddClick}
     >
       {/* Period badge */}
       <TableCell className="pl-4">
-        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-xs font-black group-hover:bg-indigo-100 group-hover:text-indigo-700 transition-colors">
+        <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] bg-[var(--neo-bg)] text-slate-500 text-xs font-black group-hover:shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] group-hover:bg-gradient-to-br group-hover:from-indigo-100 group-hover:to-indigo-50 group-hover:text-indigo-700 transition-all">
           P{period.periodNumber}
         </span>
       </TableCell>
@@ -486,7 +486,7 @@ function EmptyRow({
       {/* Add button */}
       <TableCell className="text-right pr-4">
         <div
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors opacity-60 group-hover:opacity-100"
+          className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-indigo-400 group-hover:text-indigo-600 group-hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(99,102,241,0.15)] transition-all opacity-60 group-hover:opacity-100"
           aria-label="Add class"
         >
           <Plus size={15} />
