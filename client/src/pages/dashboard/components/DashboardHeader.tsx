@@ -16,26 +16,32 @@ export function DashboardHeader() {
   const salutationPrefix = user.salutation ? `${user.salutation}. ` : '';
 
   return (
-    <section className="space-y-2">
-      {/* Greeting */}
-      <p className="text-lg md:text-xl font-semibold text-slate-600">
-        {getGreeting()}, {salutationPrefix}{fullName}!
-      </p>
+    <section className="neo-card p-6 relative overflow-hidden">
+      {/* Decorative gradient blobs */}
+      <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-indigo-400 to-violet-500 neo-gradient-blob" />
+      <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-gradient-to-br from-emerald-400 to-cyan-500 neo-gradient-blob animation-delay-2000" />
 
-      {/* Role badge + date */}
-      <div className="flex items-center gap-3">
-        <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-1 rounded-md uppercase tracking-wider">
-          {user.role.replace('_', ' ')}
-        </span>
-        <span className="text-slate-500 text-sm font-semibold flex items-center gap-1.5">
-          <Calendar size={14} />
-          {new Date().toLocaleDateString('en-US', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-          })}
-        </span>
+      <div className="relative z-10 space-y-2">
+        {/* Greeting with gradient text */}
+        <p className="text-xl md:text-2xl font-bold bg-gradient-to-r from-slate-800 via-indigo-700 to-violet-700 bg-clip-text text-transparent">
+          {getGreeting()}, {salutationPrefix}{fullName}!
+        </p>
+
+        {/* Role badge + date */}
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-bold bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-3 py-1 rounded-full uppercase tracking-wider shadow-md shadow-indigo-500/20">
+            {user.role.replace('_', ' ')}
+          </span>
+          <span className="text-slate-500 text-sm font-semibold flex items-center gap-1.5">
+            <Calendar size={14} />
+            {new Date().toLocaleDateString('en-US', {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </span>
+        </div>
       </div>
     </section>
   );

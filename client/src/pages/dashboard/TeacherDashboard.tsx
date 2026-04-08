@@ -64,11 +64,11 @@ export function TeacherDashboard({ data }: { data: any }) {
                       </linearGradient>
                     ))}
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccd3df" strokeOpacity={0.5} />
                   <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="sessions" name="Sessions" radius={[8, 8, 0, 0]} barSize={36} background={{ fill: '#f1f5f9', radius: 8 }}>
+                  <Bar dataKey="sessions" name="Sessions" radius={[8, 8, 0, 0]} barSize={36} background={{ fill: '#d4dae6', radius: 8 }}>
                     {data.sessionsByMonth.map((_: any, i: number) => (
                       <Cell key={i} fill={`url(#activityGrad${i})`} />
                     ))}
@@ -111,7 +111,7 @@ export function TeacherDashboard({ data }: { data: any }) {
               <div className="flex flex-col items-center justify-center h-full space-y-4">
                 <div className="relative w-36 h-36">
                   <svg className="w-36 h-36 -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" strokeWidth="10" />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="#d4dae6" strokeWidth="10" />
                     <circle
                       cx="50" cy="50" r="42" fill="none"
                       stroke="url(#ringGrad)"
@@ -151,19 +151,19 @@ export function TeacherDashboard({ data }: { data: any }) {
               {data.myClasses?.length > 0 ? (
                 data.myClasses.map((cls: any, idx: number) => {
                   const gradients = [
-                    'bg-gradient-to-r from-indigo-50 to-violet-50 border-indigo-100',
-                    'bg-gradient-to-r from-emerald-50 to-cyan-50 border-emerald-100',
-                    'bg-gradient-to-r from-rose-50 to-pink-50 border-rose-100',
-                    'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100',
-                    'bg-gradient-to-r from-sky-50 to-blue-50 border-sky-100',
+                    'bg-gradient-to-r from-indigo-50/80 to-violet-50/80',
+                    'bg-gradient-to-r from-emerald-50/80 to-cyan-50/80',
+                    'bg-gradient-to-r from-rose-50/80 to-pink-50/80',
+                    'bg-gradient-to-r from-amber-50/80 to-orange-50/80',
+                    'bg-gradient-to-r from-sky-50/80 to-blue-50/80',
                   ];
                   const ringColors = [CHART_COLORS.indigo, CHART_COLORS.emerald, CHART_COLORS.rose, CHART_COLORS.amber, CHART_COLORS.sky];
                   const color = ringColors[idx % ringColors.length];
                   return (
-                    <div key={cls._id} className={`flex items-center gap-4 p-3 rounded-xl border ${gradients[idx % gradients.length]} transition-all hover:scale-[1.01] group`}>
+                    <div key={cls._id} className={`flex items-center gap-4 p-3.5 neo-card-flat ${gradients[idx % gradients.length]} transition-all hover:scale-[1.01] group`}>
                       <div className="relative w-12 h-12 shrink-0">
                         <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
-                          <circle cx="24" cy="24" r="20" fill="none" stroke="#e2e8f0" strokeWidth="5" />
+                          <circle cx="24" cy="24" r="20" fill="none" stroke="#d4dae6" strokeWidth="5" />
                           <circle
                             cx="24" cy="24" r="20" fill="none"
                             stroke={color}
@@ -200,7 +200,7 @@ export function TeacherDashboard({ data }: { data: any }) {
             <div className="mt-3 space-y-2.5">
               {data.continueTeaching ? (
                 <>
-                  <div className="p-4 rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 via-white to-violet-50/60 space-y-3">
+                  <div className="p-4 neo-card-flat bg-gradient-to-br from-indigo-100/60 via-indigo-50/30 to-violet-100/40 space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h4 className="text-sm font-bold text-slate-900 truncate">{data.continueTeaching.bookTitle}</h4>
@@ -226,17 +226,17 @@ export function TeacherDashboard({ data }: { data: any }) {
                             bookTitle: data.continueTeaching.bookTitle,
                           },
                         })}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-xs font-bold rounded-lg hover:from-indigo-700 hover:to-violet-700 transition-all shadow-sm active:scale-95"
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-xs font-bold rounded-lg hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/25 active:scale-95"
                       >
                         <Play size={12} /> Resume
                       </button>
                     </div>
                   </div>
                   {data.progressByGradeBook?.filter((p: any) => p.progress > 0 && p.progress < 100 && p.gradeBookId !== data.continueTeaching?.gradeBookId).slice(0, 3).map((p: any, idx: number) => {
-                    const bgs = ['bg-gradient-to-r from-emerald-50 to-cyan-50 border-emerald-100', 'bg-gradient-to-r from-rose-50 to-pink-50 border-rose-100', 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100'];
+                    const bgs = ['bg-gradient-to-r from-emerald-50/80 to-cyan-50/80', 'bg-gradient-to-r from-rose-50/80 to-pink-50/80', 'bg-gradient-to-r from-amber-50/80 to-orange-50/80'];
                     const colors = ['from-emerald-500 to-cyan-500', 'from-rose-500 to-pink-500', 'from-amber-500 to-orange-500'];
                     return (
-                      <div key={p._id} className={`p-3 rounded-xl border space-y-2 ${bgs[idx % bgs.length]}`}>
+                      <div key={p._id} className={`p-3 neo-card-flat space-y-2 ${bgs[idx % bgs.length]}`}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-slate-800 truncate">{p.bookTitle}</p>
@@ -276,11 +276,11 @@ export function TeacherDashboard({ data }: { data: any }) {
                         </linearGradient>
                       ))}
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccd3df" strokeOpacity={0.5} />
                     <XAxis dataKey="bookTitle" tick={{ fill: '#64748b', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} />
                     <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Bar dataKey="progress" name="Progress %" radius={[8, 8, 0, 0]} barSize={30} background={{ fill: '#f1f5f9', radius: 8 }}>
+                    <Bar dataKey="progress" name="Progress %" radius={[8, 8, 0, 0]} barSize={30} background={{ fill: '#d4dae6', radius: 8 }}>
                       {data.progressByGradeBook.map((_: any, i: number) => (
                         <Cell key={i} fill={`url(#bookGrad${i})`} />
                       ))}
@@ -293,9 +293,9 @@ export function TeacherDashboard({ data }: { data: any }) {
               {data.progressByGradeBook?.length > 0 ? (
                 data.progressByGradeBook.map((p: any, idx: number) => {
                   const colors = ['from-indigo-500 to-violet-500', 'from-emerald-500 to-cyan-500', 'from-rose-500 to-pink-500', 'from-amber-500 to-orange-500', 'from-sky-500 to-blue-500'];
-                  const bgs = ['bg-gradient-to-r from-indigo-50 to-violet-50 border-indigo-100', 'bg-gradient-to-r from-emerald-50 to-cyan-50 border-emerald-100', 'bg-gradient-to-r from-rose-50 to-pink-50 border-rose-100', 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100', 'bg-gradient-to-r from-sky-50 to-blue-50 border-sky-100'];
+                  const bgs = ['bg-gradient-to-r from-indigo-50/80 to-violet-50/80', 'bg-gradient-to-r from-emerald-50/80 to-cyan-50/80', 'bg-gradient-to-r from-rose-50/80 to-pink-50/80', 'bg-gradient-to-r from-amber-50/80 to-orange-50/80', 'bg-gradient-to-r from-sky-50/80 to-blue-50/80'];
                   return (
-                    <div key={p._id} className={`p-3 rounded-xl border space-y-2 ${bgs[idx % bgs.length]} transition-all hover:scale-[1.01]`}>
+                    <div key={p._id} className={`p-3 neo-card-flat space-y-2 ${bgs[idx % bgs.length]} transition-all hover:scale-[1.01]`}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-slate-800 truncate">{p.bookTitle}</p>
@@ -325,9 +325,9 @@ export function TeacherDashboard({ data }: { data: any }) {
             <div className="mt-3 max-h-[400px] overflow-y-auto pr-1 space-y-2.5">
               {data.recentSessions?.length > 0 ? (
                 data.recentSessions.map((s: any, idx: number) => {
-                  const gradients = ['bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-100', 'bg-gradient-to-br from-emerald-50 to-cyan-50 border-emerald-100', 'bg-gradient-to-br from-rose-50 to-pink-50 border-rose-100', 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100', 'bg-gradient-to-br from-sky-50 to-blue-50 border-sky-100', 'bg-gradient-to-br from-purple-50 to-fuchsia-50 border-purple-100'];
+                  const gradients = ['bg-gradient-to-br from-indigo-50/80 to-violet-50/80', 'bg-gradient-to-br from-emerald-50/80 to-cyan-50/80', 'bg-gradient-to-br from-rose-50/80 to-pink-50/80', 'bg-gradient-to-br from-amber-50/80 to-orange-50/80', 'bg-gradient-to-br from-sky-50/80 to-blue-50/80', 'bg-gradient-to-br from-purple-50/80 to-fuchsia-50/80'];
                   return (
-                    <div key={s._id} className={`p-3.5 rounded-xl border ${gradients[idx % gradients.length]} space-y-2 transition-all hover:scale-[1.01]`}>
+                    <div key={s._id} className={`p-3.5 neo-card-flat ${gradients[idx % gradients.length]} space-y-2 transition-all hover:scale-[1.01]`}>
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-bold text-slate-800">Class {s.class}</span>
                         <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${s.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>

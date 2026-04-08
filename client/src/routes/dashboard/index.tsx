@@ -30,7 +30,7 @@ function Dashboard() {
   if (isError) {
     return (
       <div className="p-8 max-w-screen-2xl mx-auto">
-        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 text-center">
+        <div className="neo-card bg-gradient-to-br from-rose-50 to-rose-100/50 p-6 text-center">
           <p className="text-sm text-rose-600 font-medium">
             {(error as any)?.message || 'Failed to load dashboard data'}
           </p>
@@ -43,7 +43,7 @@ function Dashboard() {
   const stats = response?.data;
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="min-h-screen neo-bg">
       <main className="p-6 md:p-8 max-w-screen-2xl mx-auto space-y-6">
         {/* New Dashboard Header */}
         <DashboardHeader />
@@ -58,7 +58,7 @@ function Dashboard() {
             {(effectiveRole === 'teacher' || effectiveRole === 'staff') && <TeacherDashboard data={stats} />}
           </>
         ) : (
-          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 text-center">
+          <div className="neo-card bg-gradient-to-br from-amber-50 to-amber-100/50 p-6 text-center">
             <p className="text-sm text-amber-600 font-medium">
               {(response as any)?.message || 'No dashboard data available.'}
             </p>

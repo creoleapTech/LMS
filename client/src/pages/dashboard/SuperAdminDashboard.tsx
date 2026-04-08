@@ -88,7 +88,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
                       <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccd3df" />
                   <XAxis dataKey="month" tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<ChartTooltip />} />
@@ -158,7 +158,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
             {data.institutionOverview?.length > 0 ? (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                  <tr className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-b border-white/40">
                     <th className="text-left pb-3 pr-4">Institution</th>
                     <th className="text-center pb-3 px-3">Students</th>
                     <th className="text-center pb-3 px-3">Staff</th>
@@ -168,7 +168,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
                 </thead>
                 <tbody>
                   {data.institutionOverview.map((inst: any) => (
-                    <tr key={inst._id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                    <tr key={inst._id} className="border-b border-white/30 hover:bg-white/20 transition-colors">
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-2.5">
                           <div className={`w-2 h-2 rounded-full ${inst.isActive ? 'bg-emerald-400' : 'bg-slate-300'}`} />
@@ -205,7 +205,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
           <div className="mt-4 space-y-4">
             {data.recentActivity?.length > 0 ? (
               data.recentActivity.map((item: any, i: number) => (
-                <div key={i} className="flex gap-3 items-start group">
+                <div key={i} className="flex gap-3 items-start group hover:bg-white/20 rounded-xl p-2 -mx-2 transition-all">
                   <ActivityDot type={item.type} />
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] text-slate-800 font-semibold leading-snug group-hover:text-indigo-600 transition-colors truncate">

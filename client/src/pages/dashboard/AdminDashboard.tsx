@@ -63,15 +63,15 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-3">
-        <div className="flex items-center gap-2 text-slate-400">
+      <div className="flex flex-wrap items-center gap-3 neo-card px-5 py-3">
+        <div className="flex items-center gap-2 text-slate-500">
           <Filter size={16} />
           <span className="text-xs font-semibold uppercase tracking-wider">Filters</span>
         </div>
         <select
           value={filters.year || ''}
           onChange={(e) => onFiltersChange({ ...filters, year: e.target.value ? Number(e.target.value) : undefined })}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          className="text-sm rounded-lg px-3 py-1.5 text-slate-700 font-medium neo-inset-rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
         >
           <option value="">All Years</option>
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
@@ -79,7 +79,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
         <select
           value={filters.month || ''}
           onChange={(e) => onFiltersChange({ ...filters, month: e.target.value ? Number(e.target.value) : undefined })}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          className="text-sm rounded-lg px-3 py-1.5 text-slate-700 font-medium neo-inset-rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
         >
           <option value="">All Months</option>
           {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
@@ -87,7 +87,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
         <select
           value={filters.classId || ''}
           onChange={(e) => onFiltersChange({ ...filters, classId: e.target.value || undefined })}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          className="text-sm rounded-lg px-3 py-1.5 text-slate-700 font-medium neo-inset-rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
         >
           <option value="">All Classes</option>
           {data.classSizeDistribution?.map((c: any, i: number) => (
@@ -95,7 +95,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
           ))}
         </select>
         {hasFilters && (
-          <button onClick={() => onFiltersChange({})} className="flex items-center gap-1.5 text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors ml-1">
+          <button onClick={() => onFiltersChange({})} className="flex items-center gap-1.5 text-xs font-bold text-rose-500 hover:text-rose-600 transition-colors ml-1 neo-card-flat px-2.5 py-1">
             <RotateCcw size={12} /> Reset
           </button>
         )}
@@ -120,7 +120,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
                       <stop offset="100%" stopColor={CHART_COLORS.indigo} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccd3df" strokeOpacity={0.5} />
                   <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
                   <YAxis yAxisId="left" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -183,7 +183,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
                 </ResponsiveContainer>
                 <div className="flex flex-wrap justify-center gap-4 mt-1">
                   {data.genderDistribution.map((entry: any, i: number) => (
-                    <div key={entry.name} className="flex items-center gap-2 bg-slate-50 rounded-full px-3 py-1.5">
+                    <div key={entry.name} className="flex items-center gap-2 neo-card-flat rounded-full px-3 py-1.5">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: (GENDER_COLORS as any)[entry.name] || CHART_PALETTE[i % CHART_PALETTE.length] }} />
                       <span className="text-xs font-bold text-slate-600 capitalize">{entry.name}</span>
                       <span className="text-xs font-extrabold text-slate-900">{entry.value}</span>
@@ -216,7 +216,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
                       <stop offset="100%" stopColor="#10b981" />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccd3df" strokeOpacity={0.5} />
                   <XAxis dataKey="class" tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<ChartTooltip />} />
@@ -244,11 +244,11 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
                       <stop offset="100%" stopColor="#a78bfa" />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#ccd3df" strokeOpacity={0.5} />
                   <XAxis type="number" domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
                   <YAxis dataKey="bookTitle" type="category" tick={{ fill: '#334155', fontSize: 12, fontWeight: 700 }} axisLine={false} tickLine={false} width={130} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="avgProgress" name="Progress %" fill="url(#progressGrad)" radius={[0, 8, 8, 0]} barSize={22} background={{ fill: '#f1f5f9', radius: 8 }} />
+                  <Bar dataKey="avgProgress" name="Progress %" fill="url(#progressGrad)" radius={[0, 8, 8, 0]} barSize={22} background={{ fill: '#d4dae6', radius: 8 }} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -284,7 +284,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
                 <RadialBar
                   dataKey="value"
                   cornerRadius={12}
-                  background={{ fill: '#f1f5f9' }}
+                  background={{ fill: '#d4dae6' }}
                 />
               </RadialBarChart>
             </ResponsiveContainer>
@@ -302,10 +302,10 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
           <div className="mt-3 space-y-2 max-h-[280px] overflow-y-auto pr-1">
             {data.recentSessions?.length > 0 ? (
               data.recentSessions.map((s: any, idx: number) => {
-                const colors = ['bg-gradient-to-r from-indigo-50 to-violet-50 border-indigo-100', 'bg-gradient-to-r from-emerald-50 to-cyan-50 border-emerald-100', 'bg-gradient-to-r from-rose-50 to-pink-50 border-rose-100', 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100', 'bg-gradient-to-r from-sky-50 to-blue-50 border-sky-100'];
+                const colors = ['bg-gradient-to-r from-indigo-50/80 to-violet-50/80', 'bg-gradient-to-r from-emerald-50/80 to-cyan-50/80', 'bg-gradient-to-r from-rose-50/80 to-pink-50/80', 'bg-gradient-to-r from-amber-50/80 to-orange-50/80', 'bg-gradient-to-r from-sky-50/80 to-blue-50/80'];
                 return (
-                  <div key={s._id} className={`flex items-start gap-3 p-3 rounded-xl border ${colors[idx % colors.length]} transition-all hover:scale-[1.01]`}>
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs font-black shrink-0 ${s.status === 'completed' ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-amber-400 to-amber-600'}`}>
+                  <div key={s._id} className={`flex items-start gap-3 p-3 neo-card-flat ${colors[idx % colors.length]} transition-all hover:scale-[1.01]`}>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs font-black shrink-0 shadow-lg ${s.status === 'completed' ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-500/30' : 'bg-gradient-to-br from-amber-400 to-amber-600 shadow-amber-500/30'}`}>
                       {s.duration}m
                     </div>
                     <div className="min-w-0 flex-1">
@@ -381,7 +381,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
                         <stop offset="100%" stopColor={CHART_COLORS.rose} stopOpacity={0.05} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.5} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccd3df" strokeOpacity={0.5} />
                     <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip content={<ChartTooltip />} />

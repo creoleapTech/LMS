@@ -21,6 +21,18 @@ html {
 }
 
 :root {
+  /* Neomorphic Dashboard System */
+  --neo-bg: #dfe6f0;
+  --neo-bg-alt: #e8eef6;
+  --neo-bg-dark: #d4dae6;
+  --neo-shadow-light: #ffffff;
+  --neo-shadow-dark: #b8c0cc;
+  --neo-shadow-sm: 4px 4px 10px var(--neo-shadow-dark), -4px -4px 10px var(--neo-shadow-light);
+  --neo-shadow-md: 6px 6px 16px var(--neo-shadow-dark), -6px -6px 16px var(--neo-shadow-light);
+  --neo-shadow-lg: 10px 10px 24px var(--neo-shadow-dark), -10px -10px 24px var(--neo-shadow-light);
+  --neo-shadow-inset: inset 4px 4px 8px var(--neo-shadow-dark), inset -4px -4px 8px var(--neo-shadow-light);
+  --neo-shadow-inset-sm: inset 2px 2px 5px var(--neo-shadow-dark), inset -2px -2px 5px var(--neo-shadow-light);
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
@@ -162,6 +174,76 @@ html {
 @layer utilities {
   .bg-brand-color {
     background: var(--bg-brand-color);
+  }
+
+  /* ─── Neomorphic Dashboard Utilities ─── */
+  .neo-bg { background: var(--neo-bg); }
+
+  .neo-card {
+    background: linear-gradient(145deg, var(--neo-bg-alt), var(--neo-bg-dark));
+    border-radius: 1.25rem;
+    box-shadow: var(--neo-shadow-md);
+    border: 1px solid rgba(255,255,255,0.5);
+  }
+
+  .neo-card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .neo-card-hover:hover {
+    box-shadow: var(--neo-shadow-lg);
+    transform: translateY(-2px);
+  }
+
+  .neo-card-flat {
+    background: var(--neo-bg);
+    border-radius: 1rem;
+    box-shadow: var(--neo-shadow-sm);
+    border: 1px solid rgba(255,255,255,0.4);
+  }
+
+  .neo-inset {
+    box-shadow: var(--neo-shadow-inset);
+    background: var(--neo-bg);
+    border-radius: 9999px;
+  }
+
+  .neo-inset-sm {
+    box-shadow: var(--neo-shadow-inset-sm);
+    background: var(--neo-bg);
+    border-radius: 9999px;
+  }
+
+  .neo-inset-rounded-lg {
+    box-shadow: var(--neo-shadow-inset-sm);
+    background: var(--neo-bg);
+    border-radius: 0.5rem;
+  }
+
+  .neo-glass {
+    background: rgba(223, 230, 240, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    border-radius: 0.75rem;
+  }
+
+  /* Colored glow shadows for stat cards */
+  .neo-glow-indigo:hover { box-shadow: 0 8px 32px rgba(99,102,241,0.35), var(--neo-shadow-md); }
+  .neo-glow-emerald:hover { box-shadow: 0 8px 32px rgba(16,185,129,0.35), var(--neo-shadow-md); }
+  .neo-glow-violet:hover { box-shadow: 0 8px 32px rgba(139,92,246,0.35), var(--neo-shadow-md); }
+  .neo-glow-amber:hover { box-shadow: 0 8px 32px rgba(245,158,11,0.35), var(--neo-shadow-md); }
+  .neo-glow-rose:hover { box-shadow: 0 8px 32px rgba(244,63,94,0.35), var(--neo-shadow-md); }
+  .neo-glow-cyan:hover { box-shadow: 0 8px 32px rgba(6,182,212,0.35), var(--neo-shadow-md); }
+  .neo-glow-sky:hover { box-shadow: 0 8px 32px rgba(14,165,233,0.35), var(--neo-shadow-md); }
+
+  .neo-gradient-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.15;
+    animation: blob 7s infinite;
+    will-change: transform;
   }
 }
 

@@ -16,7 +16,6 @@ function useCountUp(target: number, duration = 800) {
     function tick(now: number) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.round(start + diff * eased);
       setValue(current);
@@ -44,46 +43,46 @@ interface StatCardProps {
 
 const accentConfig = {
   indigo: {
-    iconBg: 'bg-indigo-50',
-    iconText: 'text-indigo-600',
-    ring: 'ring-indigo-100',
-    gradient: 'from-indigo-500/5 to-transparent',
+    iconGradient: 'from-indigo-500 to-indigo-600',
+    gradient: 'from-indigo-500/10 to-transparent',
+    glow: 'neo-glow-indigo',
+    shadow: 'shadow-indigo-500/20',
   },
   emerald: {
-    iconBg: 'bg-emerald-50',
-    iconText: 'text-emerald-600',
-    ring: 'ring-emerald-100',
-    gradient: 'from-emerald-500/5 to-transparent',
+    iconGradient: 'from-emerald-500 to-emerald-600',
+    gradient: 'from-emerald-500/10 to-transparent',
+    glow: 'neo-glow-emerald',
+    shadow: 'shadow-emerald-500/20',
   },
   violet: {
-    iconBg: 'bg-violet-50',
-    iconText: 'text-violet-600',
-    ring: 'ring-violet-100',
-    gradient: 'from-violet-500/5 to-transparent',
+    iconGradient: 'from-violet-500 to-violet-600',
+    gradient: 'from-violet-500/10 to-transparent',
+    glow: 'neo-glow-violet',
+    shadow: 'shadow-violet-500/20',
   },
   amber: {
-    iconBg: 'bg-amber-50',
-    iconText: 'text-amber-600',
-    ring: 'ring-amber-100',
-    gradient: 'from-amber-500/5 to-transparent',
+    iconGradient: 'from-amber-500 to-amber-600',
+    gradient: 'from-amber-500/10 to-transparent',
+    glow: 'neo-glow-amber',
+    shadow: 'shadow-amber-500/20',
   },
   rose: {
-    iconBg: 'bg-rose-50',
-    iconText: 'text-rose-600',
-    ring: 'ring-rose-100',
-    gradient: 'from-rose-500/5 to-transparent',
+    iconGradient: 'from-rose-500 to-rose-600',
+    gradient: 'from-rose-500/10 to-transparent',
+    glow: 'neo-glow-rose',
+    shadow: 'shadow-rose-500/20',
   },
   cyan: {
-    iconBg: 'bg-cyan-50',
-    iconText: 'text-cyan-600',
-    ring: 'ring-cyan-100',
-    gradient: 'from-cyan-500/5 to-transparent',
+    iconGradient: 'from-cyan-500 to-cyan-600',
+    gradient: 'from-cyan-500/10 to-transparent',
+    glow: 'neo-glow-cyan',
+    shadow: 'shadow-cyan-500/20',
   },
   sky: {
-    iconBg: 'bg-sky-50',
-    iconText: 'text-sky-600',
-    ring: 'ring-sky-100',
-    gradient: 'from-sky-500/5 to-transparent',
+    iconGradient: 'from-sky-500 to-sky-600',
+    gradient: 'from-sky-500/10 to-transparent',
+    glow: 'neo-glow-sky',
+    shadow: 'shadow-sky-500/20',
   },
 };
 
@@ -99,28 +98,28 @@ export function StatCard({ title, value, suffix, prefix, subtitle, icon: Icon, a
 
   return (
     <div
-      className={`bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group relative overflow-hidden ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+      className={`neo-card neo-card-hover ${cfg.glow} p-6 group relative overflow-hidden ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
-      {/* Subtle gradient bg */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${cfg.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+      {/* Colorful gradient overlay */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${cfg.gradient} opacity-40 group-hover:opacity-70 transition-opacity duration-500`} />
 
       <div className="relative z-10 flex items-start justify-between">
         <div className="space-y-3">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{title}</p>
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{title}</p>
           <div className="flex items-baseline gap-1">
             {prefix && <span className="text-sm font-medium text-slate-400">{prefix}</span>}
-            <h4 className="text-3xl font-bold text-slate-900 tracking-tight tabular-nums">
+            <h4 className="text-3xl font-bold text-slate-800 tracking-tight tabular-nums">
               {displayValue.toLocaleString()}
             </h4>
             {suffix && <span className="text-sm font-medium text-slate-400">{suffix}</span>}
           </div>
           {subtitle && (
-            <p className="text-xs text-slate-400 font-medium">{subtitle}</p>
+            <p className="text-xs text-slate-500 font-medium">{subtitle}</p>
           )}
         </div>
 
-        <div className={`w-11 h-11 rounded-xl flex items-center justify-center ring-4 ${cfg.iconBg} ${cfg.iconText} ${cfg.ring} shrink-0`}>
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br ${cfg.iconGradient} text-white shadow-lg ${cfg.shadow} shrink-0`}>
           <Icon size={20} strokeWidth={2} />
         </div>
       </div>
@@ -140,18 +139,21 @@ interface SectionHeaderProps {
 
 export function SectionHeader({ icon: Icon, title, subtitle, accent = 'text-indigo-600 bg-indigo-50', action }: SectionHeaderProps) {
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${accent}`}>
-          <Icon size={18} strokeWidth={2} />
+    <>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`p-2.5 rounded-xl shadow-md ${accent}`}>
+            <Icon size={18} strokeWidth={2} />
+          </div>
+          <div>
+            <h3 className="text-[15px] font-bold text-slate-800 tracking-tight">{title}</h3>
+            {subtitle && <p className="text-[11px] font-medium text-slate-500 mt-0.5">{subtitle}</p>}
+          </div>
         </div>
-        <div>
-          <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">{title}</h3>
-          {subtitle && <p className="text-[11px] font-medium text-slate-400 mt-0.5">{subtitle}</p>}
-        </div>
+        {action}
       </div>
-      {action}
-    </div>
+      <div className="mt-3 h-[2px] bg-gradient-to-r from-transparent via-slate-300/50 to-transparent" />
+    </>
   );
 }
 
@@ -159,7 +161,7 @@ export function SectionHeader({ icon: Icon, title, subtitle, accent = 'text-indi
 
 export function DashCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm p-6 ${className}`}>
+    <div className={`neo-card neo-card-hover p-6 ${className}`}>
       {children}
     </div>
   );
@@ -169,7 +171,7 @@ export function DashCard({ children, className = '' }: { children: React.ReactNo
 
 export function ProgressBar({ value, className = '' }: { value: number; className?: string }) {
   return (
-    <div className={`h-2 bg-slate-100 rounded-full overflow-hidden ${className}`}>
+    <div className={`h-2.5 neo-inset-sm overflow-hidden ${className}`}>
       <div
         className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-700 ease-out"
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
@@ -183,7 +185,7 @@ export function ProgressBar({ value, className = '' }: { value: number; classNam
 export function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-slate-100 shadow-lg px-4 py-3 text-xs">
+    <div className="neo-glass px-4 py-3 text-xs">
       <p className="font-semibold text-slate-900 mb-1.5">{label}</p>
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2 text-slate-600">
@@ -208,7 +210,7 @@ export function ActivityDot({ type }: { type: 'student' | 'staff' }) {
 
 export function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex items-center justify-center py-12 text-sm text-slate-400 font-medium">
+    <div className="flex items-center justify-center py-12 text-sm text-slate-500 font-medium neo-card-flat mx-2 my-2">
       {message}
     </div>
   );
@@ -218,25 +220,25 @@ export function EmptyState({ message }: { message: string }) {
 
 export function DashboardSkeleton() {
   return (
-    <div className="p-6 md:p-8 max-w-screen-2xl mx-auto space-y-6 animate-pulse">
+    <div className="p-6 md:p-8 max-w-screen-2xl mx-auto space-y-6 animate-pulse neo-bg">
       {/* Header skeleton */}
-      <div className="space-y-2">
-        <div className="h-8 w-64 bg-slate-200 rounded-lg" />
-        <div className="h-4 w-40 bg-slate-100 rounded-lg" />
+      <div className="neo-card p-6 space-y-2">
+        <div className="h-8 w-64 neo-inset-sm rounded-lg" />
+        <div className="h-4 w-40 neo-inset-sm rounded-lg" />
       </div>
       {/* KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-slate-100 p-6 space-y-3">
-            <div className="h-3 w-20 bg-slate-100 rounded" />
-            <div className="h-8 w-24 bg-slate-200 rounded" />
+          <div key={i} className="neo-card p-6 space-y-3">
+            <div className="h-3 w-20 neo-inset-sm rounded" />
+            <div className="h-8 w-24 neo-inset-sm rounded" />
           </div>
         ))}
       </div>
       {/* Chart skeletons */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-6 h-80" />
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 h-80" />
+        <div className="lg:col-span-2 neo-card p-6 h-80" />
+        <div className="neo-card p-6 h-80" />
       </div>
     </div>
   );
