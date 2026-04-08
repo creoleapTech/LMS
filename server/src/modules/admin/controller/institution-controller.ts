@@ -160,11 +160,20 @@ export const institutionController = new Elysia({
     const studentCount = await StudentModel.countDocuments({ institutionId: params.id, isDeleted: false });
     const staffCount = await StaffModel.countDocuments({ institutionId: params.id, isDeleted: false });
     const classCount = await ClassModel.countDocuments({ institutionId: params.id, isDeleted: false });
-    
+
     // Active counts
     const activeStudentCount = await StudentModel.countDocuments({ institutionId: params.id, isActive: true, isDeleted: false });
     const activeStaffCount = await StaffModel.countDocuments({ institutionId: params.id, isActive: true, isDeleted: false });
-    
+
+    // This month's new additions for trend display
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const [newStudentsThisMonth, newStaffThisMonth, newClassesThisMonth] = await Promise.all([
+      StudentModel.countDocuments({ institutionId: params.id, isDeleted: false, createdAt: { $gte: startOfMonth } }),
+      StaffModel.countDocuments({ institutionId: params.id, isDeleted: false, createdAt: { $gte: startOfMonth } }),
+      ClassModel.countDocuments({ institutionId: params.id, isDeleted: false, createdAt: { $gte: startOfMonth } }),
+    ]);
+
     return {
         success: true,
         data: {
@@ -172,7 +181,10 @@ export const institutionController = new Elysia({
             activeStudents: activeStudentCount,
             totalStaff: staffCount,
             activeStaff: activeStaffCount,
-            totalClasses: classCount
+            totalClasses: classCount,
+            studentTrend: newStudentsThisMonth > 0 ? `+${newStudentsThisMonth} this month` : "No new this month",
+            staffTrend: newStaffThisMonth > 0 ? `+${newStaffThisMonth} new joined` : "No new this month",
+            classTrend: newClassesThisMonth > 0 ? `+${newClassesThisMonth} this month` : `${classCount} total`,
         }
     };
 }, {

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Bell, Save, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/userAuthStore";
 import type { IInstitutionSettings, IUserPreferences } from "@/types/settings";
+import { useSettingsInstitution } from "../context/SettingsInstitutionContext";
 
 const INSTITUTION_NOTIFICATION_ITEMS = [
   { key: "newStudentRegistration" as const, label: "New Student Registration", desc: "Send notification when a new student is registered" },
@@ -35,16 +36,21 @@ export function NotificationSection() {
 
 function AdminNotifications() {
   const queryClient = useQueryClient();
+  const { institutionId: contextInstitutionId } = useSettingsInstitution();
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === "super_admin";
+  const qsParam = contextInstitutionId ? `?institutionId=${contextInstitutionId}` : "";
 
   const { data: settings, isLoading } = useQuery<IInstitutionSettings | null>({
-    queryKey: ["settings", "institution-settings"],
+    queryKey: ["settings", "institution-settings", contextInstitutionId],
     queryFn: async () => {
       const { data: res } = await _axios.get<{ success: boolean; data: IInstitutionSettings | null }>(
-        "/admin/settings/institution"
+        `/admin/settings/institution${qsParam}`
       );
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
+    enabled: !isSuperAdmin || !!contextInstitutionId,
   });
 
   const [prefs, setPrefs] = useState({
@@ -63,13 +69,13 @@ function AdminNotifications() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { data: res } = await _axios.put("/admin/settings/institution", {
+      const { data: res } = await _axios.put(`/admin/settings/institution${qsParam}`, {
         notificationPreferences: prefs,
       });
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings", "institution-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["settings", "institution-settings", contextInstitutionId] });
       toast.success("Notification preferences saved!");
     },
     onError: (err: any) => {

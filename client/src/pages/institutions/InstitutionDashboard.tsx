@@ -33,7 +33,7 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                 <StatsWidget
                     title="Total Students"
                     value={stats?.totalStudents || 0}
-                    trend="+12% this month"
+                    trend={stats?.studentTrend || "No data"}
                     icon={GraduationCap}
                     gradient="from-blue-500 to-indigo-500"
                     shadowColor="shadow-blue-500/20"
@@ -41,7 +41,7 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                 <StatsWidget
                     title="Total Staff"
                     value={stats?.totalStaff || 0}
-                    trend="+5 new joined"
+                    trend={stats?.staffTrend || "No data"}
                     icon={Users}
                     gradient="from-emerald-500 to-teal-500"
                     shadowColor="shadow-emerald-500/20"
@@ -49,7 +49,7 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                 <StatsWidget
                     title="Active Classes"
                     value={stats?.totalClasses || 0}
-                    trend="Currently running"
+                    trend={stats?.classTrend || "No data"}
                     icon={BookOpen}
                     gradient="from-purple-500 to-pink-500"
                     shadowColor="shadow-purple-500/20"

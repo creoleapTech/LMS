@@ -10,19 +10,26 @@ import { toast } from "sonner";
 import { Calendar, Clock, Plus, Loader2 } from "lucide-react";
 import type { IAcademicYear, IAcademicYearTerm } from "@/types/academic-year";
 import { PeriodConfigSection } from "./PeriodConfigSection";
+import { useSettingsInstitution } from "../context/SettingsInstitutionContext";
+import { useAuthStore } from "@/store/userAuthStore";
 
 export function AcademicSection() {
   const queryClient = useQueryClient();
+  const { institutionId: contextInstitutionId } = useSettingsInstitution();
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === "super_admin";
+  const qsParam = contextInstitutionId ? `?institutionId=${contextInstitutionId}` : "";
 
   const { data: academicYears, isLoading } = useQuery<IAcademicYear[]>({
-    queryKey: ["academic-years"],
+    queryKey: ["academic-years", contextInstitutionId],
     queryFn: async () => {
       const { data: res } = await _axios.get<{ success: boolean; data: IAcademicYear[] }>(
-        "/admin/academic-year"
+        `/admin/academic-year${qsParam}`
       );
       return res.data || [];
     },
     staleTime: 5 * 60 * 1000,
+    enabled: !isSuperAdmin || !!contextInstitutionId,
   });
 
   const activeYear = academicYears?.find((y) => y.isActive);
@@ -45,7 +52,7 @@ export function AcademicSection() {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["academic-years"] });
+      queryClient.invalidateQueries({ queryKey: ["academic-years", contextInstitutionId] });
       toast.success("Academic year created!");
       setShowCreate(false);
       setNewLabel("");
@@ -64,7 +71,7 @@ export function AcademicSection() {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["academic-years"] });
+      queryClient.invalidateQueries({ queryKey: ["academic-years", contextInstitutionId] });
       toast.success("Academic year activated!");
     },
     onError: (err: any) => {
@@ -281,7 +288,7 @@ export function AcademicSection() {
       )}
 
       {/* Period / Bell Schedule */}
-      <PeriodConfigSection />
+      <PeriodConfigSection institutionId={contextInstitutionId || undefined} />
     </div>
   );
 }

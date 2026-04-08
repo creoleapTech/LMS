@@ -11,13 +11,15 @@ import {
   useReactTable,
   getSortedRowModel,
   type SortingState,
+  type ColumnFiltersState,
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Pencil, Trash2, Plus, GraduationCap, Search, ArrowUpDown, Loader2, Upload } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pencil, Trash2, Plus, GraduationCap, Search, ArrowUpDown, Loader2, Upload, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -41,10 +43,11 @@ export function StudentTable({ institutionId }: Props) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const queryClient = useQueryClient();
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadErrors, setUploadErrors] = useState<any[]>([]); // Array of error objects
+  const [uploadErrors, setUploadErrors] = useState<any[]>([]);
   const [uploadSummary, setUploadSummary] = useState<any>(null);
 
   // Fetch Classes for logic and mapping
@@ -79,7 +82,7 @@ export function StudentTable({ institutionId }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["students", institutionId] });
-      queryClient.invalidateQueries({ queryKey: ["classes", institutionId] }); // Updates counts
+      queryClient.invalidateQueries({ queryKey: ["classes", institutionId] });
       toast.success("Student added successfully");
       setOpenForm(false);
     },
@@ -147,7 +150,6 @@ export function StudentTable({ institutionId }: Props) {
       const formData = new FormData();
       formData.append("file", bulkFile);
       formData.append("institutionId", institutionId);
-      // We are not sending classId, so backend will look up grade/section in file.
 
       const res = await _axios.post("/admin/students/bulk-upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -155,11 +157,9 @@ export function StudentTable({ institutionId }: Props) {
 
       const responseData = res.data;
 
-      // Determine if there are errors despite success = true (partial success)
       if (responseData.errors && responseData.errors.length > 0) {
         setUploadErrors(responseData.errors);
         setUploadSummary(responseData.summary || null);
-        // Keep dialog open to show errors
         toast.warning(`Imported with issues: ${responseData.errors.length} errors found.`);
       } else {
         toast.success("All students imported successfully");
@@ -172,7 +172,6 @@ export function StudentTable({ institutionId }: Props) {
 
     } catch (error: any) {
       if (error?.response?.data?.errors) {
-        // Handle case where status is 400 but we have structured errors
         setUploadErrors(error.response.data.errors);
         setUploadSummary(error.response.data.summary || null);
         toast.error("Upload failed with content errors.");
@@ -200,6 +199,12 @@ export function StudentTable({ institutionId }: Props) {
     }
   };
 
+  // Build unique class options for filter
+  const classOptions = classes
+    .filter((c) => c.isActive)
+    .map((c) => ({ value: c._id, label: `${c.grade}-${c.section}` }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
   const columns = [
     columnHelper.accessor("name", {
       header: ({ column }) => (
@@ -210,12 +215,18 @@ export function StudentTable({ institutionId }: Props) {
       cell: info => <span className="font-semibold">{info.getValue()}</span>,
     }),
     columnHelper.accessor("classId", {
+      id: "classId",
       header: "Class",
       cell: info => {
-        const classData = info.getValue() as any; // Populated
+        const classData = info.getValue() as any;
         return classData ? (
           <Badge variant="outline">{classData.grade?.toString() || ""}-{classData.section}</Badge>
         ) : "-";
+      },
+      filterFn: (row, columnId, filterValue) => {
+        if (!filterValue) return true;
+        const classData = row.getValue(columnId) as any;
+        return classData?._id === filterValue;
       },
     }),
     columnHelper.accessor("parentName", { header: "Parent" }),
@@ -259,11 +270,25 @@ export function StudentTable({ institutionId }: Props) {
     state: {
       globalFilter,
       sorting,
+      columnFilters,
     },
     onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
     globalFilterFn: "includesString",
+    initialState: {
+      pagination: { pageSize: 25 },
+    },
   });
+
+  const classFilterValue = columnFilters.find((f) => f.id === "classId")?.value as string | undefined;
+  const setClassFilter = (value: string) => {
+    setColumnFilters((prev) => {
+      const without = prev.filter((f) => f.id !== "classId");
+      if (!value) return without;
+      return [...without, { id: "classId", value }];
+    });
+  };
 
   return (
     <>
@@ -288,8 +313,9 @@ export function StudentTable({ institutionId }: Props) {
           </div>
         </div>
 
+        {/* Filters */}
         <Card className="p-4 rounded-2xl border-slate-200/80 shadow-sm">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -299,6 +325,22 @@ export function StudentTable({ institutionId }: Props) {
                 className="pl-10 rounded-xl"
               />
             </div>
+            <Select value={classFilterValue || "all"} onValueChange={(v) => setClassFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="w-44 rounded-xl">
+                <SelectValue placeholder="All Classes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Classes</SelectItem>
+                {classOptions.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!isLoading && (
+              <span className="text-sm text-muted-foreground whitespace-nowrap ml-auto">
+                {table.getFilteredRowModel().rows.length} of {students.length} students
+              </span>
+            )}
           </div>
         </Card>
 
@@ -339,6 +381,43 @@ export function StudentTable({ institutionId }: Props) {
                 )}
               </TableBody>
             </Table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Rows per page</span>
+                <Select
+                  value={String(table.getState().pagination.pageSize)}
+                  onValueChange={(v) => table.setPageSize(Number(v))}
+                >
+                  <SelectTrigger className="w-[70px] h-8 rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50, 100].map((size) => (
+                      <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-muted-foreground">
+                  Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+                </span>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}>
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()}>
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -444,8 +523,6 @@ export function StudentTable({ institutionId }: Props) {
                 setUploadErrors([]);
                 setUploadSummary(null);
                 setBulkFile(null);
-                // If all failed, maybe keep open? usage preference. 
-                // Let's allow retry by resetting state but keeping dialog open if they want to upload new file.
               }}>
                 Upload New File
               </Button>

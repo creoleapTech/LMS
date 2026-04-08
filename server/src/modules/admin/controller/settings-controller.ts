@@ -26,7 +26,12 @@ async function findUserByToken(user: any) {
   return null;
 }
 
-function resolveInstitutionId(user: any): string {
+function resolveInstitutionId(user: any, queryInstitutionId?: string): string {
+  // Super admin can specify institutionId explicitly via query param
+  if (user.role === "super_admin" && queryInstitutionId) {
+    return queryInstitutionId;
+  }
+
   const instId =
     typeof user.institutionId === "object"
       ? (user.institutionId as any)._id?.toString()
@@ -123,28 +128,30 @@ export const settingsController = new Elysia({
 
   // ── Institution Profile ──────────────────────────────────
 
-  .get("/institution-profile", async ({ user }) => {
+  .get("/institution-profile", async ({ user, query }) => {
     if (user.role !== "admin" && user.role !== "super_admin") {
       throw new BadRequestError("Access denied");
     }
 
-    const institutionId = resolveInstitutionId(user);
+    const institutionId = resolveInstitutionId(user, query.institutionId);
     const institution = await InstitutionModel.findOne({
       _id: new Types.ObjectId(institutionId),
       isDeleted: false,
     });
 
     return { success: true, data: institution };
+  }, {
+    query: t.Object({ institutionId: t.Optional(t.String()) }),
   })
 
   .patch(
     "/institution-profile",
-    async ({ user, body }) => {
+    async ({ user, body, query }) => {
       if (user.role !== "admin" && user.role !== "super_admin") {
         throw new BadRequestError("Access denied");
       }
 
-      const institutionId = resolveInstitutionId(user);
+      const institutionId = resolveInstitutionId(user, query.institutionId);
       const updated = await InstitutionModel.findByIdAndUpdate(
         institutionId,
         {
@@ -167,6 +174,7 @@ export const settingsController = new Elysia({
       };
     },
     {
+      query: t.Object({ institutionId: t.Optional(t.String()) }),
       body: t.Object({
         name: t.Optional(t.String({ maxLength: 100 })),
         type: t.Optional(t.Union([t.Literal("school"), t.Literal("college")])),
@@ -185,28 +193,30 @@ export const settingsController = new Elysia({
 
   // ── Institution Settings ─────────────────────────────────
 
-  .get("/institution", async ({ user }) => {
+  .get("/institution", async ({ user, query }) => {
     if (user.role !== "admin" && user.role !== "super_admin") {
       throw new BadRequestError("Access denied");
     }
 
-    const institutionId = resolveInstitutionId(user);
+    const institutionId = resolveInstitutionId(user, query.institutionId);
     const settings = await InstitutionSettingsModel.findOne({
       institutionId: new Types.ObjectId(institutionId),
       isDeleted: false,
     });
 
     return { success: true, data: settings };
+  }, {
+    query: t.Object({ institutionId: t.Optional(t.String()) }),
   })
 
   .put(
     "/institution",
-    async ({ user, body }) => {
+    async ({ user, body, query }) => {
       if (user.role !== "admin" && user.role !== "super_admin") {
         throw new BadRequestError("Access denied");
       }
 
-      const institutionId = resolveInstitutionId(user);
+      const institutionId = resolveInstitutionId(user, query.institutionId);
       const instOid = new Types.ObjectId(institutionId);
 
       const settings = await InstitutionSettingsModel.findOneAndUpdate(
@@ -218,6 +228,7 @@ export const settingsController = new Elysia({
       return { success: true, message: "Settings saved", data: settings };
     },
     {
+      query: t.Object({ institutionId: t.Optional(t.String()) }),
       body: t.Object({
         language: t.Optional(t.String()),
         timezone: t.Optional(t.String()),

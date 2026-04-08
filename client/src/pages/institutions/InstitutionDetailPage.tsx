@@ -22,10 +22,12 @@ import {
   School,
   Shapes,
   Clock,
+  Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InstitutionCurriculumAccess } from "./InstitutionCurriculumAccess";
 import { PeriodConfigSection } from "../settings/components/PeriodConfigSection";
+import { InstitutionSettingsTab } from "./InstitutionSettingsTab";
 import { Config } from "@/lib/config";
 
 type Institution = {
@@ -165,6 +167,9 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
             <TabsTrigger value="periods" className="rounded-lg text-sm sm:text-base font-medium">
               <Clock className="h-4 w-4 mr-1.5 hidden sm:block" /> Periods
             </TabsTrigger>
+            <TabsTrigger value="settings" className="rounded-lg text-sm sm:text-base font-medium">
+              <Settings className="h-4 w-4 mr-1.5 hidden sm:block" /> Settings
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -196,6 +201,9 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
 </TabsContent>
           <TabsContent value="periods">
             <PeriodConfigSection institutionId={id} />
+          </TabsContent>
+          <TabsContent value="settings">
+            <InstitutionSettingsTab institutionId={institution._id} />
           </TabsContent>
         </Tabs>
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MonthCalendar } from "./components/MonthCalendar";
 import { DayView } from "./components/DayView";
 import { usePeriodConfig } from "./hooks/usePeriodConfig";
@@ -63,6 +63,20 @@ export default function MyClassesPage() {
   const { data: staffList = [], isLoading: staffLoading } = useStaffList(
     isAdminRole ? effectiveInstitutionId || null : null
   );
+
+  // Auto-select first institution for super admin
+  useEffect(() => {
+    if (isSuperAdmin && institutions.length > 0 && !selectedInstitutionId) {
+      setSelectedInstitutionId(institutions[0]._id);
+    }
+  }, [isSuperAdmin, institutions, selectedInstitutionId]);
+
+  // Auto-select first teacher for admin/super admin
+  useEffect(() => {
+    if (isAdminRole && staffList.length > 0 && !selectedStaffId) {
+      setSelectedStaffId(staffList[0]._id);
+    }
+  }, [isAdminRole, staffList, selectedStaffId]);
 
   // Teacher mode hooks
   const { data: periodConfig, isLoading: configLoading } = usePeriodConfig();

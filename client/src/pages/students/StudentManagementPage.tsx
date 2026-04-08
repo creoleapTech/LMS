@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/userAuthStore";
 import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
@@ -44,6 +44,13 @@ export function StudentManagementPage() {
     enabled: isSuperAdmin,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Auto-select first institution for super admin
+  useEffect(() => {
+    if (isSuperAdmin && institutions.length > 0 && !selectedInstitutionId) {
+      setSelectedInstitutionId(institutions[0]._id);
+    }
+  }, [isSuperAdmin, institutions, selectedInstitutionId]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-screen-2xl mx-auto space-y-6">

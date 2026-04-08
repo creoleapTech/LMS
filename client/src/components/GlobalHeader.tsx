@@ -39,20 +39,21 @@ export function GlobalHeader() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
+  const institutionId = user
+    ? typeof user.institutionId === "object" && user.institutionId
+      ? user.institutionId._id
+      : typeof user.institutionId === "string"
+        ? user.institutionId
+        : undefined
+    : undefined;
+  const { data: academicYear } = useActiveAcademicYear(institutionId);
+
   if (!user) return null;
 
   const { name: institutionName, logo: institutionLogo } = getInstitutionInfo(user);
   const isSuperAdmin = user.role === "super_admin";
   const displayName = isSuperAdmin && !institutionName ? "CreaLeap LMS" : institutionName;
   const logoUrl = institutionLogo ? `${Config.imgUrl}${institutionLogo}` : "";
-
-  const institutionId =
-    typeof user.institutionId === "object" && user.institutionId
-      ? user.institutionId._id
-      : typeof user.institutionId === "string"
-        ? user.institutionId
-        : undefined;
-  const { data: academicYear } = useActiveAcademicYear(institutionId);
 
   const handleLogout = () => {
     logout();

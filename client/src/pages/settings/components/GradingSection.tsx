@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { GraduationCap, Save, Loader2, Plus, Trash2 } from "lucide-react";
 import type { IInstitutionSettings, IGradeScaleEntry } from "@/types/settings";
+import { useSettingsInstitution } from "../context/SettingsInstitutionContext";
+import { useAuthStore } from "@/store/userAuthStore";
 
 const DEFAULT_GRADES: IGradeScaleEntry[] = [
   { grade: "O", label: "Outstanding", minPercentage: 90, maxPercentage: 100 },
@@ -22,16 +24,21 @@ const DEFAULT_GRADES: IGradeScaleEntry[] = [
 
 export function GradingSection() {
   const queryClient = useQueryClient();
+  const { institutionId: contextInstitutionId } = useSettingsInstitution();
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === "super_admin";
+  const qsParam = contextInstitutionId ? `?institutionId=${contextInstitutionId}` : "";
 
   const { data: settings, isLoading } = useQuery<IInstitutionSettings | null>({
-    queryKey: ["settings", "institution-settings"],
+    queryKey: ["settings", "institution-settings", contextInstitutionId],
     queryFn: async () => {
       const { data: res } = await _axios.get<{ success: boolean; data: IInstitutionSettings | null }>(
-        "/admin/settings/institution"
+        `/admin/settings/institution${qsParam}`
       );
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
+    enabled: !isSuperAdmin || !!contextInstitutionId,
   });
 
   const [gradingScale, setGradingScale] = useState<IGradeScaleEntry[]>(DEFAULT_GRADES);
@@ -48,14 +55,14 @@ export function GradingSection() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { data: res } = await _axios.put("/admin/settings/institution", {
+      const { data: res } = await _axios.put(`/admin/settings/institution${qsParam}`, {
         gradingScale,
         passingMarks,
       });
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings", "institution-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["settings", "institution-settings", contextInstitutionId] });
       toast.success("Grading system saved!");
     },
     onError: (err: any) => {

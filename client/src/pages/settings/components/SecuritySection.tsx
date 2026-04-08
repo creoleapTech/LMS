@@ -11,22 +11,26 @@ import { toast } from "sonner";
 import { Shield, Save, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/userAuthStore";
 import type { IInstitutionSettings } from "@/types/settings";
+import { useSettingsInstitution } from "../context/SettingsInstitutionContext";
 
 export function SecuritySection() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
   const queryClient = useQueryClient();
+  const { institutionId: contextInstitutionId } = useSettingsInstitution();
+  const isSuperAdmin = user?.role === "super_admin";
+  const qsParam = contextInstitutionId ? `?institutionId=${contextInstitutionId}` : "";
 
   const { data: settings, isLoading } = useQuery<IInstitutionSettings | null>({
-    queryKey: ["settings", "institution-settings"],
+    queryKey: ["settings", "institution-settings", contextInstitutionId],
     queryFn: async () => {
       const { data: res } = await _axios.get<{ success: boolean; data: IInstitutionSettings | null }>(
-        "/admin/settings/institution"
+        `/admin/settings/institution${qsParam}`
       );
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
-    enabled: isAdmin,
+    enabled: isAdmin && (!isSuperAdmin || !!contextInstitutionId),
   });
 
   const [sessionTimeout, setSessionTimeout] = useState("30");
@@ -39,13 +43,13 @@ export function SecuritySection() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { data: res } = await _axios.put("/admin/settings/institution", {
+      const { data: res } = await _axios.put(`/admin/settings/institution${qsParam}`, {
         sessionTimeout: Number(sessionTimeout),
       });
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings", "institution-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["settings", "institution-settings", contextInstitutionId] });
       toast.success("Security settings saved!");
     },
     onError: (err: any) => {

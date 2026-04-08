@@ -10,19 +10,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Building2, Mail, Phone, MapPin, Save, Loader2 } from "lucide-react";
 import type { IInstitutionProfile } from "@/types/settings";
+import { useSettingsInstitution } from "../context/SettingsInstitutionContext";
+import { useAuthStore } from "@/store/userAuthStore";
 
 export function InstitutionProfileSection() {
   const queryClient = useQueryClient();
+  const { institutionId: contextInstitutionId } = useSettingsInstitution();
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === "super_admin";
+  const qsParam = contextInstitutionId ? `?institutionId=${contextInstitutionId}` : "";
 
   const { data: institution, isLoading } = useQuery<IInstitutionProfile | null>({
-    queryKey: ["settings", "institution-profile"],
+    queryKey: ["settings", "institution-profile", contextInstitutionId],
     queryFn: async () => {
       const { data: res } = await _axios.get<{ success: boolean; data: IInstitutionProfile | null }>(
-        "/admin/settings/institution-profile"
+        `/admin/settings/institution-profile${qsParam}`
       );
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
+    enabled: !isSuperAdmin || !!contextInstitutionId,
   });
 
   const [name, setName] = useState("");
@@ -47,7 +54,7 @@ export function InstitutionProfileSection() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { data: res } = await _axios.patch("/admin/settings/institution-profile", {
+      const { data: res } = await _axios.patch(`/admin/settings/institution-profile${qsParam}`, {
         name,
         type,
         address,
@@ -61,7 +68,7 @@ export function InstitutionProfileSection() {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings", "institution-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["settings", "institution-profile", contextInstitutionId] });
       toast.success("Institution profile updated!");
     },
     onError: (err: any) => {

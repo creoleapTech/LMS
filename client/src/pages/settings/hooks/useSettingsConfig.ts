@@ -39,14 +39,14 @@ const ALL_TABS: Record<string, TabDefinition> = {
 };
 
 const TABS_BY_ROLE: Record<string, string[]> = {
-  super_admin: ["profile", "security"],
+  super_admin: ["profile", "preferences"],
   admin: ["profile", "institution-profile", "general", "academic", "grading", "notifications", "security"],
   teacher: ["profile", "preferences", "notifications"],
   staff: ["profile", "preferences", "notifications"],
 };
 
 const SUBTITLES: Record<string, string> = {
-  super_admin: "Manage your account and platform settings",
+  super_admin: "Manage your account and preferences",
   admin: "Manage your institution preferences and configuration",
   teacher: "Manage your account and teaching preferences",
   staff: "Manage your account and preferences",
