@@ -47,6 +47,13 @@ const TITLE_COLOR = "660000";
 const HEADER_BLUE = "4FA3D1";
 const BORDER_SINGLE = { style: BorderStyle.SINGLE, size: 1, color: "999999" };
 const ALL_BORDERS = { top: BORDER_SINGLE, bottom: BORDER_SINGLE, left: BORDER_SINGLE, right: BORDER_SINGLE };
+const COMPACT_CELL_MARGINS = {
+  top: 40,
+  bottom: 40,
+  left: 80,
+  right: 80,
+  marginUnitType: WidthType.DXA,
+};
 const PAGE_MARGINS = { top: 1440, bottom: 1440, left: 1440, right: 1440 };
 const PORTRAIT_LOGO_OFFSET = 3750000;
 const LANDSCAPE_LOGO_OFFSET = 6220000;
@@ -237,24 +244,32 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
   );
 
   const columns = ["Date", "Class", "Section", "Chapter Name", "Topic Name", "Remarks"];
-  const widths = [12, 10, 10, 23, 30, 15];
+  const widths = [
+    { size: 0, type: WidthType.AUTO },
+    { size: 0, type: WidthType.AUTO },
+    { size: 0, type: WidthType.AUTO },
+    { size: 23, type: WidthType.PERCENTAGE },
+    { size: 37, type: WidthType.PERCENTAGE },
+    { size: 25, type: WidthType.PERCENTAGE },
+  ] as const;
 
   // Header row
   const headerCells = columns.map((col, i) =>
     new TableCell({
-      width: { size: widths[i], type: WidthType.PERCENTAGE },
+      width: widths[i],
+      margins: COMPACT_CELL_MARGINS,
       shading: { type: ShadingType.SOLID, color: HEADER_BLUE, fill: HEADER_BLUE },
       verticalAlign: VerticalAlign.CENTER,
       borders: ALL_BORDERS,
       children: [
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          spacing: { before: 40, after: 40 },
+          spacing: { before: 0, after: 0 },
           children: [
             new TextRun({
               text: col,
               bold: true,
-              size: 18,
+              size: 28,
               font: "Times New Roman",
               color: "FFFFFF",
             }),
@@ -279,14 +294,16 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
 
     const cells = values.map((val, i) =>
       new TableCell({
-        width: { size: widths[i], type: WidthType.PERCENTAGE },
+        width: widths[i],
+        margins: COMPACT_CELL_MARGINS,
         verticalAlign: VerticalAlign.CENTER,
         borders: ALL_BORDERS,
         children: [
           new Paragraph({
-            spacing: { before: 30, after: 30 },
+            alignment: i < 3 ? AlignmentType.CENTER : AlignmentType.LEFT,
+            spacing: { before: 0, after: 0 },
             children: [
-              new TextRun({ text: val || "", size: 18, font: "Times New Roman" }),
+              new TextRun({ text: val || "", size: 28, font: "Times New Roman" }),
             ],
           }),
         ],
@@ -298,7 +315,8 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
 
   const table = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
-    layout: TableLayoutType.FIXED,
+    margins: COMPACT_CELL_MARGINS,
+    layout: TableLayoutType.AUTOFIT,
     rows: [headerRow, ...dataRows],
   });
 
