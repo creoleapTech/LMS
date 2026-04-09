@@ -140,7 +140,7 @@ export default function CurriculumManagementPage() {
 
         <Tabs defaultValue="curriculum" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 lg:w-[420px] h-auto rounded-xl p-1">
-            <TabsTrigger value="curriculum" className="flex items-center gap-2 text-xs sm:text-sm rounded-lg">
+            <TabsTrigger value="curriculum" className="flex items-center gap-2 text-sm sm:text-sm rounded-lg">
               <Layers className="h-4 w-4" /> Curriculum
             </TabsTrigger>
             <TabsTrigger value="books" className="flex items-center gap-2 rounded-lg">

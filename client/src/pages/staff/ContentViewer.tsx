@@ -152,10 +152,10 @@ export function ContentViewer({
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 lg:p-8 text-white">
         <div className="flex items-center gap-3 mb-3">
           <Icon className="h-5 w-5" />
-          <Badge className="bg-white/20 text-white border-0 px-3 py-0.5">
+          <Badge className="bg-white/30 text-white border-0 px-3 py-0.5">
             {typeLabels[content.type] || content.type.toUpperCase()}
           </Badge>
-          <Badge className="bg-white/10 text-white border-0 px-2 py-0.5 font-mono text-xs">
+          <Badge className="bg-white/25 text-white border-0 px-2 py-0.5 font-mono text-sm">
             {displayNum}
           </Badge>
           {content.isFree && (
@@ -174,8 +174,8 @@ export function ContentViewer({
               size="sm"
               className={`shrink-0 gap-2 ${
                 isCompleted
-                  ? "bg-green-500/20 text-green-100 hover:bg-green-500/30 border border-green-400/30"
-                  : "bg-white/20 text-white hover:bg-white/30 border border-white/20"
+                  ? "bg-green-500/30 text-white hover:bg-green-500/40 border border-green-400/40"
+                  : "bg-white/25 text-white hover:bg-white/35 border border-white/30"
               }`}
             >
               {isCompletingLoading ? (

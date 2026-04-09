@@ -87,7 +87,7 @@ export function ChapterListView({
                       className={`text-sm font-bold ${
                         hasStarted
                           ? "text-indigo-700 dark:text-indigo-300"
-                          : "text-slate-500 dark:text-slate-400"
+                          : "text-slate-600 dark:text-slate-400"
                       }`}
                     >
                       {chapter.chapterNumber}
@@ -98,11 +98,11 @@ export function ChapterListView({
                 {/* Chapter info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                       Chapter {chapter.chapterNumber}
                     </span>
                     {allComplete && (
-                      <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                        <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                         Completed
                       </span>
                     )}
@@ -116,8 +116,8 @@ export function ChapterListView({
                     </p>
                   )}
                   <div className="flex items-center gap-3">
-                    <Progress value={progressPercent} className="flex-1 h-1.5" />
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    <Progress value={progressPercent} className="flex-1 h-2" />
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">
                       {completedInChapter}/{totalInChapter}
                     </span>
                   </div>

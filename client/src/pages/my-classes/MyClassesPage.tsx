@@ -220,8 +220,8 @@ export default function MyClassesPage() {
       {/* Admin mode: prompt to select teacher */}
       {isAdminRole && !selectedStaffId && (
         <div className="neo-card-flat rounded-2xl p-12 text-center">
-          <Users className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 font-semibold text-lg">
+          <Users className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+          <p className="text-slate-600 font-semibold text-lg">
             {isSuperAdmin && !selectedInstitutionId
               ? "Select an institution to get started"
               : "Select a teacher to view their timetable"}
@@ -253,7 +253,7 @@ export default function MyClassesPage() {
                 <div className="flex items-center justify-between">
                   <button
                     onClick={handlePrevMonth}
-                    className="p-1.5 rounded-lg hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-white/20 text-white/90 hover:text-white transition-colors"
                   >
                     <ChevronLeft size={20} />
                   </button>
@@ -261,13 +261,13 @@ export default function MyClassesPage() {
                     <h3 className="text-lg font-extrabold text-white tracking-wide">
                       {MONTH_NAMES[currentMonth.month - 1]}
                     </h3>
-                    <p className="text-xs font-medium text-white/60 tracking-widest">
+                    <p className="text-sm font-medium text-white/90 tracking-widest">
                       {currentMonth.year}
                     </p>
                   </div>
                   <button
                     onClick={handleNextMonth}
-                    className="p-1.5 rounded-lg hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-white/20 text-white/90 hover:text-white transition-colors"
                   >
                     <ChevronRight size={20} />
                   </button>
@@ -329,15 +329,15 @@ function MiniMonthStats({ monthData }: { monthData: Record<string, { entryCount:
     <div className="grid grid-cols-3 gap-3">
       <div className="neo-card-flat bg-gradient-to-br from-indigo-50 to-violet-50 rounded-xl border-2 border-indigo-300 p-3 text-center">
         <p className="text-2xl font-extrabold text-indigo-600">{totalClasses}</p>
-        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mt-0.5">Classes</p>
+        <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mt-0.5">Classes</p>
       </div>
       <div className="neo-card-flat bg-gradient-to-br from-emerald-50 to-cyan-50 rounded-xl border-2 border-emerald-400 p-3 text-center">
         <p className="text-2xl font-extrabold text-emerald-600">{completedDays}</p>
-        <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mt-0.5">Done Days</p>
+        <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mt-0.5">Done Days</p>
       </div>
       <div className="neo-card-flat bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-400 p-3 text-center">
         <p className="text-2xl font-extrabold text-amber-600">{activeDays}</p>
-        <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mt-0.5">Active Days</p>
+        <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mt-0.5">Active Days</p>
       </div>
     </div>
   );

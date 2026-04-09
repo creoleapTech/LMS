@@ -234,7 +234,7 @@ export function AcademicSection() {
 
             {/* Terms */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                 Terms ({newTerms.length})
               </Label>
               {newTerms.map((term, idx) => (

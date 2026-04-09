@@ -94,7 +94,7 @@ export function CourseSidebar({
           <ChevronRight className="h-4 w-4" />
         </Button>
         <div
-          className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-xs font-bold text-indigo-700 dark:text-indigo-300"
+          className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-sm font-bold text-indigo-700 dark:text-indigo-300"
           title={`Chapter ${chapter.chapterNumber}: ${chapter.title}`}
         >
           {chapter.chapterNumber}
@@ -112,7 +112,7 @@ export function CourseSidebar({
             variant="ghost"
             size="sm"
             onClick={onBackToChapters}
-            className="gap-1 text-xs text-muted-foreground hover:text-foreground -ml-1"
+            className="gap-1 text-sm text-muted-foreground hover:text-foreground -ml-1"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             All Chapters
@@ -122,13 +122,13 @@ export function CourseSidebar({
           </Button>
         </div>
         <div className="px-4 pb-3">
-          <p className="text-xs text-muted-foreground mb-0.5">
+          <p className="text-sm text-muted-foreground mb-0.5">
             Chapter {chapterIndex + 1} of {totalChapters}
           </p>
           <p className="font-semibold text-sm truncate">{chapter.title}</p>
           <div className="flex items-center gap-2 mt-2">
-            <Progress value={progressPercent} className="flex-1 h-1.5" />
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
+            <Progress value={progressPercent} className="flex-1 h-2" />
+            <span className="text-sm text-muted-foreground whitespace-nowrap">
               {completedInChapter}/{totalInChapter}
             </span>
           </div>
@@ -181,7 +181,7 @@ export function CourseSidebar({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground font-mono">
+                      <span className="text-sm text-muted-foreground font-mono">
                         {displayNum}
                       </span>
                       <p
@@ -196,7 +196,7 @@ export function CourseSidebar({
                     </div>
                   </div>
                   {isActive && (
-                    <Play className="h-3 w-3 text-indigo-500 shrink-0" />
+                    <Play className="h-4 w-4 text-indigo-500 shrink-0" />
                   )}
                 </button>
               );

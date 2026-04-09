@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useTimetableDay } from "../hooks/useTimetableDay";
 import { useStaffTimetableDay } from "../hooks/useStaffTimetableDay";
 import { ScheduleEntryDialog } from "./ScheduleEntryDialog";
-import { WorkDoneDialog } from "./WorkDoneDialog";
 import {
   Table,
   TableBody,
@@ -14,8 +13,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plus,
-  Pencil,
-  Check,
   BookOpen,
   Coffee,
   CheckCircle2,
@@ -88,11 +85,6 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
     entry?: ITimetableEntry;
   }>({ open: false, periodNumber: 0, dayOfWeek: 0 });
 
-  const [workDoneDialog, setWorkDoneDialog] = useState<{
-    open: boolean;
-    entry?: ITimetableEntry;
-  }>({ open: false });
-
   const periodConfig = data?.periodConfig;
   const entries = data?.entries || [];
   const sortedPeriods = periodConfig
@@ -148,7 +140,6 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
                   <TableHead className="w-[100px]"><Skeleton className="h-4 w-16" /></TableHead>
                   <TableHead><Skeleton className="h-4 w-32" /></TableHead>
                   <TableHead className="w-[90px] hidden sm:table-cell"><Skeleton className="h-4 w-14" /></TableHead>
-                  <TableHead className="w-[72px]"><Skeleton className="h-4 w-8" /></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -158,7 +149,6 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-6" /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -192,9 +182,6 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
                 </TableHead>
                 <TableHead className="w-[90px] text-[11px] font-black uppercase tracking-wider text-slate-400 hidden sm:table-cell">
                   Status
-                </TableHead>
-                <TableHead className="w-[72px] text-[11px] font-black uppercase tracking-wider text-slate-400 text-right pr-5">
-                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -237,7 +224,6 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
                       <TableCell className="hidden sm:table-cell">
                         <span className="text-[11px] text-slate-400 font-medium">&mdash;</span>
                       </TableCell>
-                      <TableCell />
                     </TableRow>
                   ) : (
                     <EmptyRow
@@ -261,18 +247,6 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
                     entry={entry}
                     isCompleted={isCompleted}
                     colors={colors}
-                    readOnly={readOnly}
-                    onEditClick={() =>
-                      setScheduleDialog({
-                        open: true,
-                        periodNumber: period.periodNumber,
-                        dayOfWeek: dow,
-                        entry,
-                      })
-                    }
-                    onCompleteClick={() =>
-                      setWorkDoneDialog({ open: true, entry })
-                    }
                   />
                 );
               })}
@@ -291,14 +265,6 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
         specificDate={dateStr}
         entry={scheduleDialog.entry}
       />
-
-      <WorkDoneDialog
-        open={workDoneDialog.open}
-        onOpenChange={(open) =>
-          setWorkDoneDialog((prev) => ({ ...prev, open }))
-        }
-        entry={workDoneDialog.entry}
-      />
     </>
   );
 }
@@ -307,7 +273,7 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
 function BreakRow({ period }: { period: IPeriodSlot }) {
   return (
     <TableRow className="bg-amber-50/30 hover:bg-amber-50/30 border-b border-amber-100/40">
-      <TableCell colSpan={5} className="py-3 px-5">
+      <TableCell colSpan={4} className="py-3 px-5">
         <div className="flex items-center justify-center gap-3">
           <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-300/50 to-transparent" />
           <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5 shrink-0 bg-gradient-to-br from-amber-100 to-amber-50 px-4 py-1.5 rounded-full shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-amber-200/60">
@@ -327,17 +293,11 @@ function ScheduledRow({
   entry,
   isCompleted,
   colors,
-  readOnly,
-  onEditClick,
-  onCompleteClick,
 }: {
   period: IPeriodSlot;
   entry: ITimetableEntry;
   isCompleted: boolean;
   colors: { border: string; badge: string };
-  readOnly?: boolean;
-  onEditClick: () => void;
-  onCompleteClick: () => void;
 }) {
   const borderColor = isCompleted ? COMPLETED_BORDER : colors.border;
   const badgeColor = isCompleted ? "bg-emerald-100 text-emerald-700" : colors.badge;
@@ -417,29 +377,6 @@ function ScheduledRow({
         )}
       </TableCell>
 
-      {/* Actions */}
-      <TableCell className="text-right pr-4">
-        {!readOnly && (
-          <div className="flex items-center justify-end gap-1">
-            <button
-            onClick={onEditClick}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-indigo-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(99,102,241,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
-            title="Edit"
-          >
-            <Pencil size={14} />
-          </button>
-          {!isCompleted && (
-            <button
-              onClick={onCompleteClick}
-              className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-emerald-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(16,185,129,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
-              title="Mark done"
-            >
-              <Check size={14} />
-            </button>
-          )}
-        </div>
-        )}
-      </TableCell>
     </TableRow>
   );
 }
@@ -481,16 +418,6 @@ function EmptyRow({
       {/* Status */}
       <TableCell className="hidden sm:table-cell">
         <span className="text-[11px] text-slate-400 font-medium">&mdash;</span>
-      </TableCell>
-
-      {/* Add button */}
-      <TableCell className="text-right pr-4">
-        <div
-          className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-indigo-400 group-hover:text-indigo-600 group-hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(99,102,241,0.15)] transition-all opacity-60 group-hover:opacity-100"
-          aria-label="Add class"
-        >
-          <Plus size={15} />
-        </div>
       </TableCell>
     </TableRow>
   );

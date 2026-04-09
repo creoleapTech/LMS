@@ -30,10 +30,10 @@ export function DashboardHeader() {
 
         {/* Role badge + date */}
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-3 py-1 rounded-full uppercase tracking-wider shadow-md shadow-indigo-500/20">
+          <span className="text-xs font-bold bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-3 py-1 rounded-full uppercase tracking-wider shadow-md shadow-indigo-500/20">
             {user.role.replace('_', ' ')}
           </span>
-          <span className="text-slate-500 text-sm font-semibold flex items-center gap-1.5">
+          <span className="text-slate-600 text-sm font-semibold flex items-center gap-1.5">
             <Calendar size={14} />
             {new Date().toLocaleDateString('en-US', {
               weekday: 'short',

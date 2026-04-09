@@ -64,9 +64,9 @@ export function TeacherDashboard({ data }: { data: any }) {
                       </linearGradient>
                     ))}
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccd3df" strokeOpacity={0.5} />
-                  <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccd3df" strokeOpacity={0.7} />
+                  <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<ChartTooltip />} />
                   <Bar dataKey="sessions" name="Sessions" radius={[8, 8, 0, 0]} barSize={36} background={{ fill: '#d4dae6', radius: 8 }}>
                     {data.sessionsByMonth.map((_: any, i: number) => (
@@ -173,7 +173,7 @@ export function TeacherDashboard({ data }: { data: any }) {
                             className="transition-all duration-700"
                           />
                         </svg>
-                        <span className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-slate-700 tabular-nums">
+                        <span className="absolute inset-0 flex items-center justify-center text-sm font-black text-slate-700 tabular-nums">
                           {cls.avgProgress}%
                         </span>
                       </div>
@@ -182,7 +182,7 @@ export function TeacherDashboard({ data }: { data: any }) {
                           {cls.grade ? `Grade ${cls.grade}` : ''}{cls.section ? `–${cls.section}` : ''}
                           {cls.year ? ` (${cls.year})` : ''}
                         </p>
-                        <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                        <p className="text-sm text-slate-600 font-semibold mt-0.5">
                           {cls.students} students &middot; Last: {cls.lastAccessed}
                         </p>
                       </div>
@@ -204,7 +204,7 @@ export function TeacherDashboard({ data }: { data: any }) {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h4 className="text-sm font-bold text-slate-900 truncate">{data.continueTeaching.bookTitle}</h4>
-                        <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                        <p className="text-sm text-slate-600 font-semibold mt-0.5">
                           Grade {data.continueTeaching.grade}
                           {data.continueTeaching.class && ` · Class ${data.continueTeaching.class}`}
                           {' · '}{data.continueTeaching.completedContent}/{data.continueTeaching.totalContent} items
@@ -216,7 +216,7 @@ export function TeacherDashboard({ data }: { data: any }) {
                     </div>
                     <ProgressBar value={data.continueTeaching.progress} />
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-slate-400 font-medium">{data.continueTeaching.lastAccessedLabel}</span>
+                      <span className="text-sm text-slate-600 font-medium">{data.continueTeaching.lastAccessedLabel}</span>
                       <button
                         onClick={() => navigate({
                           to: '/curriculum',
@@ -226,9 +226,9 @@ export function TeacherDashboard({ data }: { data: any }) {
                             bookTitle: data.continueTeaching.bookTitle,
                           },
                         })}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-xs font-bold rounded-lg hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/25 active:scale-95"
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold rounded-lg hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/25 active:scale-95"
                       >
-                        <Play size={12} /> Resume
+                        <Play size={16} /> Resume
                       </button>
                     </div>
                   </div>
@@ -240,13 +240,13 @@ export function TeacherDashboard({ data }: { data: any }) {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-slate-800 truncate">{p.bookTitle}</p>
-                            <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                            <p className="text-sm text-slate-600 font-semibold mt-0.5">
                               Grade {p.grade} {p.class ? `· Class ${p.class}` : ''} · {p.completedContent}/{p.totalContent} items
                             </p>
                           </div>
                           <span className="text-sm font-black text-slate-900 tabular-nums shrink-0">{Math.round(p.progress)}%</span>
                         </div>
-                        <div className="h-2 bg-white/60 rounded-full overflow-hidden">
+                        <div className="h-2 bg-white/80 rounded-full overflow-hidden">
                           <div className={`h-full bg-gradient-to-r ${colors[idx % colors.length]} rounded-full transition-all duration-700`} style={{ width: `${Math.min(100, Math.max(0, p.progress))}%` }} />
                         </div>
                       </div>
@@ -276,9 +276,9 @@ export function TeacherDashboard({ data }: { data: any }) {
                         </linearGradient>
                       ))}
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccd3df" strokeOpacity={0.5} />
-                    <XAxis dataKey="bookTitle" tick={{ fill: '#64748b', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccd3df" strokeOpacity={0.7} />
+                    <XAxis dataKey="bookTitle" tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
                     <Tooltip content={<ChartTooltip />} />
                     <Bar dataKey="progress" name="Progress %" radius={[8, 8, 0, 0]} barSize={30} background={{ fill: '#d4dae6', radius: 8 }}>
                       {data.progressByGradeBook.map((_: any, i: number) => (
@@ -299,13 +299,13 @@ export function TeacherDashboard({ data }: { data: any }) {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-slate-800 truncate">{p.bookTitle}</p>
-                          <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                          <p className="text-sm text-slate-600 font-semibold mt-0.5">
                             Grade {p.grade} {p.class ? `· Class ${p.class}` : ''} · {p.completedContent}/{p.totalContent} items
                           </p>
                         </div>
                         <span className="text-sm font-black text-slate-900 tabular-nums shrink-0 bg-white/70 px-2 py-0.5 rounded-lg">{Math.round(p.progress)}%</span>
                       </div>
-                      <div className="h-2.5 bg-white/60 rounded-full overflow-hidden">
+                      <div className="h-2.5 bg-white/80 rounded-full overflow-hidden">
                         <div
                           className={`h-full bg-gradient-to-r ${colors[idx % colors.length]} rounded-full transition-all duration-700`}
                           style={{ width: `${Math.min(100, Math.max(0, p.progress))}%` }}
@@ -330,7 +330,7 @@ export function TeacherDashboard({ data }: { data: any }) {
                     <div key={s._id} className={`p-3.5 neo-card-flat ${gradients[idx % gradients.length]} space-y-2 transition-all hover:scale-[1.01]`}>
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-bold text-slate-800">Class {s.class}</span>
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${s.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${s.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                           {s.status}
                         </span>
                       </div>
@@ -338,12 +338,12 @@ export function TeacherDashboard({ data }: { data: any }) {
                         <span className={`text-xs font-black text-white px-2 py-0.5 rounded-md ${s.status === 'completed' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : 'bg-gradient-to-r from-amber-500 to-amber-600'}`}>
                           {s.duration}min
                         </span>
-                        <span className="text-[11px] text-slate-500 font-semibold">{s.time}</span>
+                        <span className="text-sm text-slate-600 font-semibold">{s.time}</span>
                       </div>
                       {s.topics?.length > 0 && (
                         <div className="flex flex-wrap gap-1">
                           {s.topics.map((topic: string, i: number) => (
-                            <span key={i} className="text-[10px] bg-white/80 text-slate-600 px-2 py-0.5 rounded-full font-semibold border border-white">{topic}</span>
+                            <span key={i} className="text-xs bg-white/90 text-slate-600 px-2 py-0.5 rounded-full font-semibold border border-white">{topic}</span>
                           ))}
                         </div>
                       )}

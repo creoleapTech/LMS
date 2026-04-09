@@ -121,7 +121,7 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
       <CardContent className="space-y-6">
         {/* Working Days */}
         <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             Working Days
           </Label>
           <div className="flex flex-wrap gap-2">
@@ -132,7 +132,7 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
                 className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
                   workingDays.includes(day.value)
                     ? "bg-indigo-600 text-white shadow-md"
-                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
                 {day.label}
@@ -143,7 +143,7 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
 
         {/* Period Rows */}
         <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             Periods ({periods.length})
           </Label>
 
@@ -158,9 +158,9 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
                 }`}
               >
                 {/* Period number badge */}
-                <span className={`text-xs font-black min-w-[32px] text-center py-1 rounded-lg ${
+                <span className={`text-sm font-black min-w-[32px] text-center py-1 rounded-lg ${
                   period.isBreak
-                    ? "bg-slate-200 text-slate-500"
+                    ? "bg-slate-200 text-slate-600"
                     : "bg-indigo-100 text-indigo-700"
                 }`}>
                   {period.isBreak ? "B" : period.periodNumber}
@@ -182,7 +182,7 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
                   className="max-w-[110px] h-8 text-sm rounded-lg"
                 />
 
-                <span className="text-slate-400 font-bold">→</span>
+                <span className="text-slate-600 font-bold">→</span>
 
                 {/* End time */}
                 <Input
@@ -200,13 +200,13 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
                       updatePeriod(idx, "isBreak", !!checked)
                     }
                   />
-                  <span className="text-xs text-slate-500 font-medium">Break</span>
+                  <span className="text-sm text-slate-600 font-medium">Break</span>
                 </div>
 
                 {/* Delete */}
                 <button
                   onClick={() => removePeriod(idx)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-slate-600 hover:text-red-500 transition-colors"
                 >
                   <Trash2 size={14} />
                 </button>

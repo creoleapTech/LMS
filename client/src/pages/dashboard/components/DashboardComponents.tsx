@@ -106,16 +106,16 @@ export function StatCard({ title, value, suffix, prefix, subtitle, icon: Icon, a
 
       <div className="relative z-10 flex items-start justify-between">
         <div className="space-y-3">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{title}</p>
+          <p className="text-sm font-semibold text-slate-600 uppercase tracking-wider">{title}</p>
           <div className="flex items-baseline gap-1">
-            {prefix && <span className="text-sm font-medium text-slate-400">{prefix}</span>}
+            {prefix && <span className="text-sm font-medium text-slate-600">{prefix}</span>}
             <h4 className="text-3xl font-bold text-slate-800 tracking-tight tabular-nums">
               {displayValue.toLocaleString()}
             </h4>
-            {suffix && <span className="text-sm font-medium text-slate-400">{suffix}</span>}
+            {suffix && <span className="text-sm font-medium text-slate-600">{suffix}</span>}
           </div>
           {subtitle && (
-            <p className="text-xs text-slate-500 font-medium">{subtitle}</p>
+            <p className="text-sm text-slate-600 font-medium">{subtitle}</p>
           )}
         </div>
 
@@ -147,7 +147,7 @@ export function SectionHeader({ icon: Icon, title, subtitle, accent = 'text-indi
           </div>
           <div>
             <h3 className="text-[15px] font-bold text-slate-800 tracking-tight">{title}</h3>
-            {subtitle && <p className="text-[11px] font-medium text-slate-500 mt-0.5">{subtitle}</p>}
+            {subtitle && <p className="text-sm font-medium text-slate-600 mt-0.5">{subtitle}</p>}
           </div>
         </div>
         {action}
@@ -185,11 +185,11 @@ export function ProgressBar({ value, className = '' }: { value: number; classNam
 export function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="neo-glass px-4 py-3 text-xs">
+    <div className="neo-glass px-4 py-3 text-sm">
       <p className="font-semibold text-slate-900 mb-1.5">{label}</p>
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2 text-slate-600">
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
           <span className="font-medium">{p.name}:</span>
           <span className="font-bold text-slate-900">{p.value?.toLocaleString()}</span>
         </div>
@@ -202,7 +202,7 @@ export function ChartTooltip({ active, payload, label }: any) {
 
 export function ActivityDot({ type }: { type: 'student' | 'staff' }) {
   return (
-    <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${type === 'student' ? 'bg-indigo-400' : 'bg-emerald-400'}`} />
+    <div className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 ${type === 'student' ? 'bg-indigo-400' : 'bg-emerald-400'}`} />
   );
 }
 
@@ -210,7 +210,7 @@ export function ActivityDot({ type }: { type: 'student' | 'staff' }) {
 
 export function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex items-center justify-center py-12 text-sm text-slate-500 font-medium neo-card-flat mx-2 my-2">
+    <div className="flex items-center justify-center py-12 text-sm text-slate-600 font-medium neo-card-flat mx-2 my-2">
       {message}
     </div>
   );

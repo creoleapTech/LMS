@@ -72,7 +72,7 @@ export function GlobalHeader() {
                 <img
                   src={logoUrl}
                   alt={displayName}
-                  className="h-10 w-10 rounded-xl object-cover border border-white/40 shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] shrink-0"
+                  className="h-10 w-10 rounded-xl object-cover border border-white/60 shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] shrink-0"
                 />
               ) : (
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-500/30 shrink-0">
@@ -89,8 +89,8 @@ export function GlobalHeader() {
         {/* Center/Right: Academic year + Profile */}
         <div className="flex items-center gap-3">
           {academicYear && !isSuperAdmin && (
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-1 rounded-full">
-              <GraduationCap size={13} />
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-1 rounded-full">
+              <GraduationCap size={16} />
               {academicYear.label}
             </span>
           )}
@@ -114,7 +114,7 @@ export function GlobalHeader() {
                 <p className="text-sm font-semibold text-slate-800 truncate">
                   {user.name || user.email}
                 </p>
-                <p className="text-xs text-slate-500 capitalize">
+                <p className="text-sm text-slate-600 capitalize">
                   {user.role?.replace("_", " ")}
                 </p>
               </DropdownMenuLabel>

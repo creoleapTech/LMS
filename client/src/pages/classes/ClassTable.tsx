@@ -146,7 +146,7 @@ export function ClassTable({ institutionId }: Props) {
                         checked={row.original.isActive}
                         onCheckedChange={(val) => updateMutation.mutate({ id: row.original._id, data: { isActive: val } })}
                     />
-                    <span className="text-xs text-muted-foreground w-12">{row.original.isActive ? "Active" : "Archived"}</span>
+                    <span className="text-sm text-muted-foreground w-12">{row.original.isActive ? "Active" : "Archived"}</span>
                 </div>
             ),
         }),

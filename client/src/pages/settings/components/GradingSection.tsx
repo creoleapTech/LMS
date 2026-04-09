@@ -148,7 +148,7 @@ export function GradingSection() {
                 </Badge>
                 <button
                   onClick={() => removeGrade(idx)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-slate-600 hover:text-red-500 transition-colors"
                 >
                   <Trash2 size={14} />
                 </button>

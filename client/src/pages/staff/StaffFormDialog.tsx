@@ -115,7 +115,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
         <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6 pt-4 space-y-5">
           {/* Personal Info */}
           <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Personal Information</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Personal Information</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="staff-name" className="text-sm font-medium">Full Name <span className="text-destructive">*</span></Label>
@@ -123,7 +123,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                   <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="staff-name" {...register("name")} placeholder="John Doe" className="pl-9" />
                 </div>
-                {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -132,7 +132,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="staff-email" type="email" {...register("email")} placeholder="john@school.edu" className="pl-9" />
                 </div>
-                {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -141,7 +141,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                   <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="staff-mobile" {...register("mobileNumber")} placeholder="+91 98765 43210" className="pl-9" />
                 </div>
-                {errors.mobileNumber && <p className="text-xs text-destructive">{errors.mobileNumber.message}</p>}
+                {errors.mobileNumber && <p className="text-sm text-destructive">{errors.mobileNumber.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -150,14 +150,14 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                   <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="staff-date" type="date" {...register("joiningDate")} className="pl-9" />
                 </div>
-                {errors.joiningDate && <p className="text-xs text-destructive">Date required</p>}
+                {errors.joiningDate && <p className="text-sm text-destructive">Date required</p>}
               </div>
             </div>
           </div>
 
           {/* Role & Subjects */}
           <div className="space-y-4 pt-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role & Expertise</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Role & Expertise</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Role <span className="text-destructive">*</span></Label>
@@ -171,7 +171,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                     <SelectItem value="admin">🛡️ Admin</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
+                {errors.type && <p className="text-sm text-destructive">{errors.type.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -180,14 +180,14 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                   <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="staff-subjects" {...register("subjects")} placeholder="Math, Science, English" className="pl-9" />
                 </div>
-                <p className="text-xs text-muted-foreground">Comma-separated</p>
+                <p className="text-sm text-muted-foreground">Comma-separated</p>
               </div>
             </div>
           </div>
 
           {/* Password */}
           <div className="space-y-3 pt-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               {staff ? "Reset Password" : "Account Password"}
             </p>
             <div className="space-y-1.5">

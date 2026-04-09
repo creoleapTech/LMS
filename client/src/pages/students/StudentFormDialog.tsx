@@ -119,7 +119,7 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
         <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6 pt-4 space-y-5">
           {/* Student Info */}
           <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Student Details</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Student Details</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="name" className="text-sm font-medium">Full Name <span className="text-destructive">*</span></Label>
@@ -127,7 +127,7 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="name" placeholder="Student Full Name" {...register("name")} className="pl-9" />
                 </div>
-                {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -146,7 +146,7 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                       ))}
                   </SelectContent>
                 </Select>
-                {errors.classId && <p className="text-xs text-destructive">{errors.classId.message}</p>}
+                {errors.classId && <p className="text-sm text-destructive">{errors.classId.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -169,14 +169,14 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="email" type="email" placeholder="student@example.com" {...register("email")} className="pl-9" />
                 </div>
-                {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
               </div>
             </div>
           </div>
 
           {/* Parent / Guardian */}
           <div className="space-y-4 pt-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Parent / Guardian</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Parent / Guardian</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="parentName" className="text-sm font-medium">Guardian Name <span className="text-destructive">*</span></Label>
@@ -184,7 +184,7 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                   <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="parentName" placeholder="Parent / Guardian" {...register("parentName")} className="pl-9" />
                 </div>
-                {errors.parentName && <p className="text-xs text-destructive">{errors.parentName.message}</p>}
+                {errors.parentName && <p className="text-sm text-destructive">{errors.parentName.message}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -193,14 +193,14 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                   <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="parentMobile" placeholder="Mobile Number" {...register("parentMobile")} className="pl-9" />
                 </div>
-                {errors.parentMobile && <p className="text-xs text-destructive">{errors.parentMobile.message}</p>}
+                {errors.parentMobile && <p className="text-sm text-destructive">{errors.parentMobile.message}</p>}
               </div>
             </div>
           </div>
 
           {/* Academic IDs */}
           <div className="space-y-4 pt-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Academic IDs <span className="font-normal normal-case text-muted-foreground/70">(optional)</span></p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Academic IDs <span className="font-normal normal-case text-muted-foreground">(optional)</span></p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="admissionNumber" className="text-sm font-medium">Admission Number</Label>

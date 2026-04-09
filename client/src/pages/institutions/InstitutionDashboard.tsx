@@ -225,10 +225,10 @@ function DetailRow({ icon: Icon, label, value }: any) {
     return (
         <div className="group flex items-start gap-4">
             <div className="p-2.5 bg-[var(--neo-bg)] neo-inset-rounded-lg rounded-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                <Icon className="h-4 w-4 text-slate-500 group-hover:text-indigo-600 transition-colors" />
+                <Icon className="h-4 w-4 text-slate-600 group-hover:text-indigo-600 transition-colors" />
             </div>
             <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
                 <p className="text-sm font-semibold text-foreground mt-0.5 leading-snug">{value}</p>
             </div>
         </div>
@@ -263,9 +263,9 @@ function TimelineItem({ date, title, desc, active }: any) {
                 active ? "bg-green-500 ring-green-500/20" : "bg-slate-300 ring-slate-200"
             )} />
             <div>
-                <span className="text-xs font-mono text-muted-foreground">{date}</span>
+                <span className="text-sm font-mono text-muted-foreground">{date}</span>
                 <p className="font-semibold text-sm text-foreground mt-0.5">{title}</p>
-                <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+                <p className="text-sm text-muted-foreground mt-1">{desc}</p>
             </div>
         </div>
     )

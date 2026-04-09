@@ -278,14 +278,14 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                       )}
 
                       {/* Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
                       {/* Text */}
                       <div className="absolute bottom-4 left-4 right-4 text-white">
                         <h3 className="text-xl font-bold drop-shadow-lg">
                           {curriculum.name}
                         </h3>
-                        <p className="text-xs opacity-90 mt-1">
+                        <p className="text-sm font-medium mt-1">
                           {curriculum.gradeBooks.length} Book
                           {curriculum.gradeBooks.length !== 1 ? "s" : ""} Available
                         </p>
@@ -376,7 +376,7 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                               title="View Only (no progress tracking)"
                             >
                               <Eye className="h-5 w-5" />
-                              <span className="text-xs font-semibold">View</span>
+                              <span className="text-sm font-semibold">View</span>
                             </button>
                             <button
                               onClick={() => {
@@ -393,18 +393,18 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                               title="Teach (progress will be tracked)"
                             >
                               <GraduationCap className="h-5 w-5" />
-                              <span className="text-xs font-semibold">Teach</span>
+                              <span className="text-sm font-semibold">Teach</span>
                             </button>
                           </div>
 
                           {/* Details Section */}
                           <CardContent className="text-center py-2">
-                            <h3 className="font-semibold text-sm text-slate-800 mb-1">
+                            <h3 className="font-semibold text-sm text-foreground mb-1">
                               Section {section.section}
                             </h3>
 
-                            <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-3">
-                              <Users className="h-3 w-3" />
+                            <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground mb-3">
+                              <Users className="h-4 w-4" />
                               <span>
                                 {section.studentCount} Student
                                 {section.studentCount !== 1 ? "s" : ""}
@@ -414,9 +414,9 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                             <div className="space-y-1">
                               <Progress
                                 value={section.progressPercentage}
-                                className="h-1.5 "
+                                className="h-2"
                               />
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-sm text-muted-foreground">
                                 {section.progressPercentage}% complete
                               </p>
                             </div>

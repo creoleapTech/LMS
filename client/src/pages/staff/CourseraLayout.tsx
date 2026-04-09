@@ -177,13 +177,13 @@ export function CourseraLayout({
                 {classLabel}
               </button>
               <Badge className={isViewMode
-                ? "bg-blue-100 text-blue-700 border-blue-200 text-xs gap-1"
-                : "bg-green-100 text-green-700 border-green-200 text-xs gap-1"
+                ? "bg-blue-100 text-blue-700 border-blue-200 gap-1.5"
+                : "bg-green-100 text-green-700 border-green-200 gap-1.5"
               }>
                 {isViewMode ? (
-                  <><Eye className="h-3 w-3" /> View Only</>
+                  <><Eye className="h-4 w-4" /> View Only</>
                 ) : (
-                  <><GraduationCap className="h-3 w-3" /> Teaching</>
+                  <><GraduationCap className="h-4 w-4" /> Teaching</>
                 )}
               </Badge>
               <span className="text-muted-foreground">/</span>
@@ -195,13 +195,13 @@ export function CourseraLayout({
             <>
               <span className="text-sm font-semibold text-indigo-600 truncate">{classLabel}</span>
               <Badge className={isViewMode
-                ? "bg-blue-100 text-blue-700 border-blue-200 text-xs gap-1"
-                : "bg-green-100 text-green-700 border-green-200 text-xs gap-1"
+                ? "bg-blue-100 text-blue-700 border-blue-200 gap-1.5"
+                : "bg-green-100 text-green-700 border-green-200 gap-1.5"
               }>
                 {isViewMode ? (
-                  <><Eye className="h-3 w-3" /> View Only</>
+                  <><Eye className="h-4 w-4" /> View Only</>
                 ) : (
-                  <><GraduationCap className="h-3 w-3" /> Teaching</>
+                  <><GraduationCap className="h-4 w-4" /> Teaching</>
                 )}
               </Badge>
             </>
@@ -258,7 +258,7 @@ export function CourseraLayout({
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <BookOpen className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+                <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-muted-foreground mb-2">
                   Select a lesson to get started
                 </h3>

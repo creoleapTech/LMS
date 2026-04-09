@@ -46,7 +46,7 @@ const Sidebar: React.FC = () => {
       {/* Mobile menu button */}
       <button
         onClick={toggleSidebar}
-        className="md:hidden z-50 fixed top-3 left-3 z-50 p-2.5 bg-[#0D0630] text-white rounded-xl shadow-lg shadow-purple-900/20 backdrop-blur-sm border border-white/10 active:scale-95 transition-transform"
+        className="md:hidden z-50 fixed top-3 left-3 z-50 p-2.5 bg-[#0D0630] text-white rounded-xl shadow-lg shadow-purple-900/20 backdrop-blur-sm border border-white/20 active:scale-95 transition-transform"
         aria-label="Toggle sidebar"
       >
         {isOpen ? <X size={20} /> : <Menu size={20} />}
@@ -59,11 +59,11 @@ const Sidebar: React.FC = () => {
           } bg-brand-color text-white flex flex-col transition-all duration-300 ease-in-out shrink-0`}
       >
         {/* Header with logo and expand/minimize button */}
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-center min-h-[72px] relative">
+        <div className="px-5 py-4 border-b border-white/20 flex items-center justify-center min-h-[72px] relative">
           {isExpanded ? (
             <div className="flex flex-col items-center gap-1 transition-all duration-300">
               <img src="/creo_white.png" alt="CreaLeap" className="h-11 w-auto object-contain" />
-              <span className="text-sm font-bold tracking-widest text-white/70 uppercase">LMS</span>
+              <span className="text-sm font-bold tracking-widest text-white/90 uppercase">LMS</span>
             </div>
           ) : (
             <img src="/creo_white.png" alt="CreaLeap" className="h-9 w-auto object-contain" />
@@ -71,7 +71,7 @@ const Sidebar: React.FC = () => {
 
           <button
             onClick={toggleExpand}
-            className="p-1.5 absolute top-1/2 -right-3.5 -translate-y-1/2 rounded-full bg-[#1A0C52] hover:bg-[#241266] border border-white/20 md:flex hidden shadow-[3px_3px_8px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(99,102,241,0.15)] z-50 transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+            className="p-1.5 absolute top-1/2 -right-3.5 -translate-y-1/2 rounded-full bg-[#1A0C52] hover:bg-[#241266] border border-white/30 md:flex hidden shadow-[3px_3px_8px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(99,102,241,0.15)] z-50 transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.3)]"
             aria-label={isExpanded ? 'Minimize sidebar' : 'Expand sidebar'}
           >
             {isExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
@@ -91,8 +91,8 @@ const Sidebar: React.FC = () => {
                     to={item.path}
                     className={`flex items-center ${isExpanded ? 'px-3' : 'justify-center'} py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
                       ${isActive
-                        ? 'bg-gradient-to-br from-white/20 to-white/5 text-white shadow-[4px_4px_12px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(99,102,241,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/15 translate-x-[2px]'
-                        : 'text-white/70 hover:text-white hover:bg-white/10 hover:shadow-[3px_3px_8px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(99,102,241,0.15)] hover:translate-x-[1px] active:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-1px_-1px_4px_rgba(99,102,241,0.1)] active:translate-x-0'
+                        ? 'bg-gradient-to-br from-white/20 to-white/5 text-white shadow-[4px_4px_12px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(99,102,241,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/30 translate-x-[2px]'
+                        : 'text-white/90 hover:text-white hover:bg-white/10 hover:shadow-[3px_3px_8px_rgba(0,0,0,0.3),-2px_-2px_6px_rgba(99,102,241,0.15)] hover:translate-x-[1px] active:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.3),inset_-1px_-1px_4px_rgba(99,102,241,0.1)] active:translate-x-0'
                       }`}
                     activeProps={{ className: 'bg-white/15 text-white' }}
                   >
@@ -113,21 +113,21 @@ const Sidebar: React.FC = () => {
         </nav>
 
         {/* Footer */}
-        <div className="px-3 py-4 border-t border-white/10 space-y-2">
+        <div className="px-3 py-4 border-t border-white/20 space-y-2">
           <button
             onClick={() => {
               useAuthStore.getState().logout();
               window.location.href = '/';
             }}
-            className={`flex items-center ${isExpanded ? 'px-3' : 'justify-center'} py-2.5 rounded-xl text-sm font-medium transition-all duration-300 w-full text-white/70 hover:text-white hover:bg-white/8 group`}
+            className={`flex items-center ${isExpanded ? 'px-3' : 'justify-center'} py-2.5 rounded-xl text-sm font-medium transition-all duration-300 w-full text-white/90 hover:text-white hover:bg-white/15 group`}
           >
             <LogOut className="w-5 h-5 shrink-0" />
             <span className={`ml-3 transition-all duration-300 whitespace-nowrap overflow-hidden ${isExpanded ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0 ml-0'}`}>
               Logout
             </span>
           </button>
-          <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'opacity-30 max-h-5' : 'opacity-0 max-h-0'}`}>
-            <p className="text-[11px] text-center tracking-wide">© 2026 LMS</p>
+          <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'opacity-70 max-h-5' : 'opacity-0 max-h-0'}`}>
+            <p className="text-sm text-center tracking-wide">© 2026 LMS</p>
           </div>
         </div>
       </div>
