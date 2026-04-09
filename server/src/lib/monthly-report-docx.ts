@@ -22,10 +22,8 @@ import { join } from "path";
 
 export interface ReportRow {
   date: string;
-  trainerName: string;
   className: string;
   section: string;
-  period: string;
   chapterName: string;
   topicName: string;
   remarks: string;
@@ -58,12 +56,6 @@ try {
 try {
   logoData = readFileSync(join(import.meta.dir, "creoleap-logo-final.png"));
 } catch { /* logo image missing */ }
-
-function toOrdinal(n: number): string {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
 
 /** Cover page info field: bold label + normal value, sz=32 (16pt) */
 function infoRow(label: string, value: string): Paragraph {
@@ -243,8 +235,8 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
     })
   );
 
-  const columns = ["Date", "Trainer Name", "Class", "Section", "Period", "Chapter Name", "Topic Name", "Remarks"];
-  const widths = [10, 14, 7, 7, 7, 20, 25, 10];
+  const columns = ["Date", "Class", "Section", "Chapter Name", "Topic Name", "Remarks"];
+  const widths = [12, 10, 10, 23, 30, 15];
 
   // Header row
   const headerCells = columns.map((col, i) =>
@@ -280,8 +272,8 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
   // Data rows
   const dataRows = rows.map((row) => {
     const values = [
-      row.date, row.trainerName, row.className, row.section,
-      row.period, row.chapterName, row.topicName, row.remarks,
+      row.date, row.className, row.section,
+      row.chapterName, row.topicName, row.remarks,
     ];
 
     const cells = values.map((val, i) =>
@@ -367,5 +359,3 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<B
   const buffer = await Packer.toBuffer(doc);
   return Buffer.from(buffer);
 }
-
-export { toOrdinal };

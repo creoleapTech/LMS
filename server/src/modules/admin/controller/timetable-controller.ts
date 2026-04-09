@@ -9,7 +9,6 @@ import { StaffModel } from "@/schema/admin/staff-model";
 import { Types } from "mongoose";
 import {
   generateMonthlyReportDocx,
-  toOrdinal,
   type ReportRow,
 } from "@/lib/monthly-report-docx";
 
@@ -735,10 +734,8 @@ async function buildMonthlyReport(
 
       rows.push({
         date: `${d} ${monthName} ${year}`,
-        trainerName,
         className: grade,
         section,
-        period: toOrdinal(entry.periodNumber),
         chapterName: bookTitle,
         topicName: entry.topicsCovered?.join(", ") || "",
         remarks: "",
