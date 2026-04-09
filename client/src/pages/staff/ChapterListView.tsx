@@ -1,5 +1,6 @@
 import { CheckCircle2, ChevronRight, BookOpen, PlayCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import type { TeachingMode } from "./types";
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
 
@@ -29,12 +30,14 @@ interface ChapterListViewProps {
   chapters: ChapterWithContent[];
   completedContentIds: Set<string>;
   onSelectChapter: (chapterIndex: number) => void;
+  mode: TeachingMode;
 }
 
 export function ChapterListView({
   chapters,
   completedContentIds,
   onSelectChapter,
+  mode: _mode,
 }: ChapterListViewProps) {
   return (
     <div className="flex-1 overflow-y-auto p-6 lg:p-8">

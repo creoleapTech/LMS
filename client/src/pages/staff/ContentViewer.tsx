@@ -10,6 +10,7 @@ import { RichTextViewer } from "@/components/editors/RichTextViewer";
 import { QuizViewer } from "@/components/quiz/QuizViewer";
 import { useContentAutoSave } from "@/hooks/useContentAutoSave";
 import type { ContentProgressEntry } from "@/hooks/useTeachingProgress";
+import type { TeachingMode } from "./types";
 import {
   Video,
   FileText,
@@ -57,6 +58,7 @@ interface ContentViewerProps {
   hasNextChapter?: boolean;
   onContinueToNextChapter?: () => void;
   onBackToChapters?: () => void;
+  mode: TeachingMode;
 }
 
 const typeLabels: Record<ContentType, string> = {
@@ -94,11 +96,17 @@ export function ContentViewer({
   hasNextChapter,
   onContinueToNextChapter,
   onBackToChapters,
+  mode,
 }: ContentViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasSetInitialTime = useRef(false);
+  const isViewMode = mode === "view";
 
-  const { save: autoSave } = useContentAutoSave(classId, gradeBookId, content._id);
+  const { save: autoSave } = useContentAutoSave(
+    isViewMode ? "" : classId,
+    isViewMode ? "" : gradeBookId,
+    isViewMode ? undefined : content._id
+  );
 
   const fileUrl = content.videoUrl || content.fileUrl
     ? `${Config.imgUrl}${content.videoUrl || content.fileUrl}`
@@ -158,24 +166,26 @@ export function ContentViewer({
           <h1 className="text-2xl lg:text-3xl font-bold">{content.title}</h1>
 
           {/* Mark as Complete Button */}
-          <Button
-            onClick={() => onMarkComplete(content._id)}
-            disabled={isCompletingLoading}
-            variant={isCompleted ? "secondary" : "default"}
-            size="sm"
-            className={`shrink-0 gap-2 ${
-              isCompleted
-                ? "bg-green-500/20 text-green-100 hover:bg-green-500/30 border border-green-400/30"
-                : "bg-white/20 text-white hover:bg-white/30 border border-white/20"
-            }`}
-          >
-            {isCompletingLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4" />
-            )}
-            {isCompleted ? "Completed" : "Mark as Complete"}
-          </Button>
+          {!isViewMode && (
+            <Button
+              onClick={() => onMarkComplete(content._id)}
+              disabled={isCompletingLoading}
+              variant={isCompleted ? "secondary" : "default"}
+              size="sm"
+              className={`shrink-0 gap-2 ${
+                isCompleted
+                  ? "bg-green-500/20 text-green-100 hover:bg-green-500/30 border border-green-400/30"
+                  : "bg-white/20 text-white hover:bg-white/30 border border-white/20"
+              }`}
+            >
+              {isCompletingLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" />
+              )}
+              {isCompleted ? "Completed" : "Mark as Complete"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -255,7 +265,7 @@ export function ContentViewer({
         </ContentProtectionWrapper>
 
         {/* Chapter completion banner */}
-        {isChapterComplete && (
+        {!isViewMode && isChapterComplete && (
           <div className="mt-8 max-w-4xl mx-auto">
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-6 text-center">
               <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />

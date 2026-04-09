@@ -16,10 +16,12 @@ import {
   Search,
   Users,
   GraduationCap,
+  Eye,
 } from "lucide-react";
 import { CourseraLayout } from "./CourseraLayout";
 import { useAuthStore } from "@/store/userAuthStore";
 import { Config } from "@/lib/config";
+import type { TeachingMode } from "./types";
 
 interface CurriculumWithBooks {
   _id: string;
@@ -88,6 +90,7 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
       return null;
     });
   const [search, setSearch] = useState("");
+  const [teachingMode, setTeachingMode] = useState<TeachingMode>("teach");
   const { user } = useAuthStore();
 
   // Fetch curricula
@@ -137,7 +140,12 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
         classId={selectedClassSection.classId}
         classLabel={selectedClassSection.grade && selectedClassSection.section ? `Class ${selectedClassSection.grade} - Section ${selectedClassSection.section}` : ''}
         userEmail={user?.email}
+        mode={teachingMode}
         onBack={() => setSelectedClassSection(null)}
+        onBackToCurriculumList={() => {
+          setSelectedClassSection(null);
+          setSelectedCurriculum(null);
+        }}
       />
     );
   }
@@ -334,18 +342,9 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                       {group.sections.map((section) => (
                         <Card
                           key={section.classId}
-                          className="group w-64 gap-0 p-0 m-0 overflow-hidden rounded-2xl cursor-pointer border-2 hover:border-indigo-400 transition-all duration-300 hover:-translate-y-1 neo-card-hover"
-                          onClick={() =>
-                            setSelectedClassSection({
-                              classId: section.classId,
-                              section: section.section,
-                              gradeBookId: group.gradeBookId,
-                              gradeBookTitle: group.gradeBookTitle,
-                              grade: group.grade,
-                            })
-                          }
+                          className="group relative w-64 gap-0 p-0 m-0 overflow-hidden rounded-2xl border-2 hover:border-indigo-400 transition-all duration-300 hover:-translate-y-1 neo-card-hover"
                         >
-                          {/* 📘 Book Cover Image ONLY */}
+                          {/* Book Cover Image */}
                           <div className="h-full w-full overflow-hidden">
                             {group.coverImage ? (
                               <img
@@ -360,16 +359,50 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                             )}
                           </div>
 
-                          {/* 📄 Details Section */}
+                          {/* Hover overlay with View / Teach buttons */}
+                          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-4 z-10">
+                            <button
+                              onClick={() => {
+                                setTeachingMode("view");
+                                setSelectedClassSection({
+                                  classId: section.classId,
+                                  section: section.section,
+                                  gradeBookId: group.gradeBookId,
+                                  gradeBookTitle: group.gradeBookTitle,
+                                  grade: group.grade,
+                                });
+                              }}
+                              className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl bg-white/90 hover:bg-white text-slate-700 hover:text-blue-700 transition-all shadow-lg hover:shadow-xl hover:scale-105"
+                              title="View Only (no progress tracking)"
+                            >
+                              <Eye className="h-5 w-5" />
+                              <span className="text-xs font-semibold">View</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setTeachingMode("teach");
+                                setSelectedClassSection({
+                                  classId: section.classId,
+                                  section: section.section,
+                                  gradeBookId: group.gradeBookId,
+                                  gradeBookTitle: group.gradeBookTitle,
+                                  grade: group.grade,
+                                });
+                              }}
+                              className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-lg hover:shadow-xl hover:scale-105"
+                              title="Teach (progress will be tracked)"
+                            >
+                              <GraduationCap className="h-5 w-5" />
+                              <span className="text-xs font-semibold">Teach</span>
+                            </button>
+                          </div>
+
+                          {/* Details Section */}
                           <CardContent className="text-center py-2">
-
-
-                            {/* Title */}
                             <h3 className="font-semibold text-sm text-slate-800 mb-1">
                               Section {section.section}
                             </h3>
 
-                            {/* Students */}
                             <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-3">
                               <Users className="h-3 w-3" />
                               <span>
@@ -378,7 +411,6 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                               </span>
                             </div>
 
-                            {/* Progress */}
                             <div className="space-y-1">
                               <Progress
                                 value={section.progressPercentage}
@@ -388,7 +420,6 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                                 {section.progressPercentage}% complete
                               </p>
                             </div>
-
                           </CardContent>
                         </Card>
                       ))}

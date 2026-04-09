@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { ContentProgressEntry } from "@/hooks/useTeachingProgress";
+import type { TeachingMode } from "./types";
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
 
@@ -51,6 +52,7 @@ interface CourseSidebarProps {
   onToggleCollapse?: () => void;
   completedContentIds: Set<string>;
   progressByContentId: Map<string, ContentProgressEntry>;
+  mode: TeachingMode;
 }
 
 const contentTypeIcons: Record<ContentType, any> = {
@@ -74,6 +76,7 @@ export function CourseSidebar({
   onToggleCollapse,
   completedContentIds,
   progressByContentId,
+  mode: _mode,
 }: CourseSidebarProps) {
   const completedInChapter = chapter.content.filter((c) =>
     completedContentIds.has(c._id)

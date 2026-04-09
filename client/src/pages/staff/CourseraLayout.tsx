@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { ChapterListView } from "./ChapterListView";
 import { CourseSidebar } from "./CourseSidebar";
 import { ContentViewer } from "./ContentViewer";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, BookOpen, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, BookOpen, Loader2, Eye, GraduationCap } from "lucide-react";
 import { useTeachingProgress } from "@/hooks/useTeachingProgress";
 import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
+import type { TeachingMode } from "./types";
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
 
@@ -39,7 +40,9 @@ interface CourseraLayoutProps {
   classId: string;
   classLabel: string;
   userEmail?: string;
+  mode: TeachingMode;
   onBack: () => void;
+  onBackToCurriculumList: () => void;
 }
 
 export function CourseraLayout({
@@ -49,7 +52,9 @@ export function CourseraLayout({
   classId,
   classLabel,
   userEmail,
+  mode,
   onBack,
+  onBackToCurriculumList,
 }: CourseraLayoutProps) {
   const [currentView, setCurrentView] = useState<"chapter-list" | "chapter-detail">("chapter-list");
   const [selectedChapterIndex, setSelectedChapterIndex] = useState<number | null>(null);
@@ -81,10 +86,11 @@ export function CourseraLayout({
       selectedChapter.content.every((c) => completedContentIds.has(c._id))
     : false;
   const hasNextChapter = selectedChapterIndex !== null && selectedChapterIndex < chapters.length - 1;
+  const isViewMode = mode === "view";
 
-  // Auto-select last accessed content on mount
+  // Auto-select last accessed content on mount (teach mode only)
   useEffect(() => {
-    if (hasAutoSelected || !lastAccessedContentId || chapters.length === 0) return;
+    if (isViewMode || hasAutoSelected || !lastAccessedContentId || chapters.length === 0) return;
 
     for (let i = 0; i < chapters.length; i++) {
       const content = chapters[i].content.find((c) => c._id === lastAccessedContentId);
@@ -96,7 +102,7 @@ export function CourseraLayout({
         break;
       }
     }
-  }, [lastAccessedContentId, chapters, hasAutoSelected]);
+  }, [lastAccessedContentId, chapters, hasAutoSelected, isViewMode]);
 
   const handleSelectChapter = (chapterIndex: number) => {
     setSelectedChapterIndex(chapterIndex);
@@ -122,6 +128,7 @@ export function CourseraLayout({
   };
 
   const handleMarkComplete = async (contentId: string) => {
+    if (isViewMode) return;
     await completeMutation.mutateAsync(contentId);
   };
 
@@ -129,6 +136,7 @@ export function CourseraLayout({
     contentId: string,
     data: { videoTimestamp?: number; pdfPage?: number }
   ) => {
+    if (isViewMode) return;
     updateMutation.mutate({ contentId, data });
   };
 
@@ -136,29 +144,66 @@ export function CourseraLayout({
     <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
       {/* Top bar */}
       <div className="h-14 neo-glass border-b-0 flex items-center px-4 gap-3 shrink-0">
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
           onClick={currentView === "chapter-list" ? onBack : handleBackToChapters}
-          className="gap-1.5"
+          className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all shrink-0"
+          title="Go back"
         >
-          <ChevronLeft className="h-4 w-4" />
-          Back
-        </Button>
+          <ChevronLeft className="h-5 w-5" />
+        </button>
         <div className="w-px h-6 bg-border" />
         <div className="flex items-center gap-2 min-w-0">
           <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span className="text-sm text-muted-foreground truncate">{curriculumName}</span>
+          <button
+            onClick={onBackToCurriculumList}
+            className="text-sm text-muted-foreground truncate hover:text-foreground hover:underline transition-colors"
+          >
+            {curriculumName}
+          </button>
           <span className="text-muted-foreground">/</span>
-          <span className="text-sm font-medium truncate">{gradeBookTitle}</span>
+          <button
+            onClick={onBack}
+            className="text-sm font-medium truncate hover:text-indigo-600 hover:underline transition-colors"
+          >
+            {gradeBookTitle}
+          </button>
           <span className="text-muted-foreground">/</span>
-          <span className="text-sm font-semibold text-indigo-600 truncate">{classLabel}</span>
-          {currentView === "chapter-detail" && selectedChapter && (
+          {currentView === "chapter-detail" && selectedChapter ? (
             <>
+              <button
+                onClick={handleBackToChapters}
+                className="text-sm font-semibold text-indigo-600 truncate hover:text-indigo-800 hover:underline transition-colors"
+              >
+                {classLabel}
+              </button>
+              <Badge className={isViewMode
+                ? "bg-blue-100 text-blue-700 border-blue-200 text-xs gap-1"
+                : "bg-green-100 text-green-700 border-green-200 text-xs gap-1"
+              }>
+                {isViewMode ? (
+                  <><Eye className="h-3 w-3" /> View Only</>
+                ) : (
+                  <><GraduationCap className="h-3 w-3" /> Teaching</>
+                )}
+              </Badge>
               <span className="text-muted-foreground">/</span>
               <span className="text-sm font-medium text-purple-600 truncate">
                 Ch. {selectedChapter.chapterNumber}: {selectedChapter.title}
               </span>
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-semibold text-indigo-600 truncate">{classLabel}</span>
+              <Badge className={isViewMode
+                ? "bg-blue-100 text-blue-700 border-blue-200 text-xs gap-1"
+                : "bg-green-100 text-green-700 border-green-200 text-xs gap-1"
+              }>
+                {isViewMode ? (
+                  <><Eye className="h-3 w-3" /> View Only</>
+                ) : (
+                  <><GraduationCap className="h-3 w-3" /> Teaching</>
+                )}
+              </Badge>
             </>
           )}
         </div>
@@ -174,6 +219,7 @@ export function CourseraLayout({
           chapters={chapters}
           completedContentIds={completedContentIds}
           onSelectChapter={handleSelectChapter}
+          mode={mode}
         />
       ) : selectedChapter && selectedChapterIndex !== null ? (
         <div className="flex-1 flex overflow-hidden">
@@ -188,6 +234,7 @@ export function CourseraLayout({
             onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
             completedContentIds={completedContentIds}
             progressByContentId={progressByContentId}
+            mode={mode}
           />
 
           {activeContent ? (
@@ -206,6 +253,7 @@ export function CourseraLayout({
               hasNextChapter={hasNextChapter}
               onContinueToNextChapter={handleContinueToNextChapter}
               onBackToChapters={handleBackToChapters}
+              mode={mode}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">
