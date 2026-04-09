@@ -8,7 +8,6 @@ import {
   TableCell,
   WidthType,
   AlignmentType,
-  PageBreak,
   ShadingType,
   VerticalAlign,
   BorderStyle,
@@ -16,6 +15,8 @@ import {
   TableLayoutType,
   ImageRun,
   Header,
+  PageOrientation,
+  SectionType,
 } from "docx";
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -46,6 +47,9 @@ const TITLE_COLOR = "660000";
 const HEADER_BLUE = "4FA3D1";
 const BORDER_SINGLE = { style: BorderStyle.SINGLE, size: 1, color: "999999" };
 const ALL_BORDERS = { top: BORDER_SINGLE, bottom: BORDER_SINGLE, left: BORDER_SINGLE, right: BORDER_SINGLE };
+const PAGE_MARGINS = { top: 1440, bottom: 1440, left: 1440, right: 1440 };
+const PORTRAIT_LOGO_OFFSET = 3750000;
+const LANDSCAPE_LOGO_OFFSET = 6220000;
 
 // Load assets (pre-processed images)
 let blueStripeData: Buffer | null = null;
@@ -210,9 +214,6 @@ function buildCoverPage(params: ReportParams): (Paragraph | Table)[] {
   elements.push(infoRow("No. of Sessions/Periods Planned", String(params.sessionsPlanned)));
   elements.push(infoRow("No. of Sessions/Periods Completed", String(params.sessionsCompleted)));
 
-  // Page break
-  elements.push(new Paragraph({ children: [new PageBreak()] }));
-
   return elements;
 }
 
@@ -305,7 +306,7 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
   return elements;
 }
 
-function buildHeader(): Header {
+function buildHeader(horizontalOffset: number): Header {
   const children: (TextRun | ImageRun)[] = [];
 
   if (logoData) {
@@ -317,7 +318,7 @@ function buildHeader(): Header {
         transformation: { width: 380, height: 100 },
         type: "png",
         floating: {
-          horizontalPosition: { relative: "page" as any, offset: 3750000 },
+          horizontalPosition: { relative: "page" as any, offset: horizontalOffset },
           verticalPosition: { relative: "page" as any, offset: 0 },
           wrap: { type: "square" as any, side: "bothSides" as any },
           allowOverlap: true,
@@ -340,18 +341,31 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<B
   const coverElements = buildCoverPage(params);
   const tableElements = buildSessionTable(params.rows);
 
-  const header = buildHeader();
+  const portraitHeader = buildHeader(PORTRAIT_LOGO_OFFSET);
+  const landscapeHeader = buildHeader(LANDSCAPE_LOGO_OFFSET);
 
   const doc = new Document({
     sections: [
       {
         properties: {
           page: {
-            margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 },
+            size: { orientation: PageOrientation.PORTRAIT },
+            margin: PAGE_MARGINS,
           },
         },
-        headers: { default: header },
-        children: [...coverElements, ...tableElements],
+        headers: { default: portraitHeader },
+        children: coverElements,
+      },
+      {
+        properties: {
+          type: SectionType.NEXT_PAGE,
+          page: {
+            size: { orientation: PageOrientation.LANDSCAPE },
+            margin: PAGE_MARGINS,
+          },
+        },
+        headers: { default: landscapeHeader },
+        children: tableElements,
       },
     ],
   });
