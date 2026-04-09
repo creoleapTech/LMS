@@ -7,6 +7,11 @@ import { GradeBookModel } from "@/schema/books/gradeBook-model";
 import { InstitutionModel } from "@/schema/admin/institution-model";
 import { StaffModel } from "@/schema/admin/staff-model";
 import { Types } from "mongoose";
+import {
+  generateMonthlyReportDocx,
+  toOrdinal,
+  type ReportRow,
+} from "@/lib/monthly-report-docx";
 
 function resolveInstitutionId(user: any): string {
   const institutionId =
@@ -565,4 +570,193 @@ export const timetableController = new Elysia({
         date: t.String(),
       }),
     }
+  )
+
+  // ─── Monthly Report endpoints ───
+
+  // GET monthly report DOCX for the logged-in teacher
+  .get(
+    "/my-monthly-report",
+    async ({ query, user, set }) => {
+      try {
+        const staffId = user.id;
+        const institutionId = resolveInstitutionId(user);
+        const year = Number(query.year);
+        const month = Number(query.month);
+
+        const buffer = await buildMonthlyReport(staffId, institutionId, year, month);
+        const monthName = MONTH_NAMES[month - 1];
+
+        set.headers["Content-Type"] =
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        set.headers["Content-Disposition"] =
+          `attachment; filename="Monthly_Report_${monthName}_${year}.docx"`;
+
+        return new Uint8Array(buffer);
+      } catch (err) {
+        console.error("Monthly report error:", err);
+        set.status = 500;
+        return { success: false, message: "Failed to generate report" };
+      }
+    },
+    {
+      query: t.Object({
+        year: t.String(),
+        month: t.String(),
+      }),
+    }
+  )
+
+  // GET monthly report DOCX for a specific teacher (admin/super_admin)
+  .get(
+    "/staff-monthly-report",
+    async ({ query, user, set }) => {
+      if (user.role !== "admin" && user.role !== "super_admin") {
+        throw new BadRequestError("Only admin/super_admin can access this");
+      }
+      const { staffId, institutionId } = query;
+      if (!staffId || !institutionId) {
+        throw new BadRequestError("staffId and institutionId are required");
+      }
+
+      const year = Number(query.year);
+      const month = Number(query.month);
+
+      const buffer = await buildMonthlyReport(staffId, institutionId, year, month);
+      const monthName = MONTH_NAMES[month - 1];
+
+      set.headers["Content-Type"] =
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      set.headers["Content-Disposition"] =
+        `attachment; filename="Monthly_Report_${monthName}_${year}.docx"`;
+
+      return new Uint8Array(buffer);
+    },
+    {
+      query: t.Object({
+        staffId: t.String(),
+        institutionId: t.String(),
+        year: t.String(),
+        month: t.String(),
+      }),
+    }
   );
+
+// ─── Helpers ───
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+async function buildMonthlyReport(
+  staffId: string,
+  institutionId: string,
+  year: number,
+  month: number
+): Promise<Buffer> {
+  const instOid = new Types.ObjectId(institutionId);
+  const staffOid = new Types.ObjectId(staffId);
+
+  // Fetch all needed data in parallel
+  const [periodConfig, staff, institution, recurringEntries, oneOffEntries] =
+    await Promise.all([
+      PeriodConfigModel.findOne({ institutionId: instOid, isDeleted: false }),
+      StaffModel.findById(staffId).select("name salutation"),
+      InstitutionModel.findById(institutionId).select("name"),
+      TimetableEntryModel.find({
+        staffId: staffOid,
+        isRecurring: true,
+        isDeleted: false,
+      })
+        .populate("classId", "grade section year")
+        .populate("gradeBookId", "bookTitle grade"),
+      TimetableEntryModel.find({
+        staffId: staffOid,
+        isRecurring: false,
+        specificDate: {
+          $gte: new Date(year, month - 1, 1),
+          $lte: new Date(year, month, 0, 23, 59, 59),
+        },
+        isDeleted: false,
+      })
+        .populate("classId", "grade section year")
+        .populate("gradeBookId", "bookTitle grade"),
+    ]);
+
+  const workingDays = periodConfig?.workingDays || [1, 2, 3, 4, 5];
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const monthName = MONTH_NAMES[month - 1];
+  const trainerName = staff
+    ? `${staff.salutation || ""}${staff.salutation ? "." : ""}${staff.name || ""}`
+    : "";
+
+  const rows: ReportRow[] = [];
+  const classSet = new Set<string>();
+  const subjectSet = new Set<string>();
+  let completedCount = 0;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month - 1, d);
+    const dow = date.getDay();
+    if (!workingDays.includes(dow)) continue;
+
+    // Recurring for this day of week
+    const recurringForDay = recurringEntries.filter((e) => e.dayOfWeek === dow);
+
+    // One-off for this specific date
+    const oneOffForDate = oneOffEntries.filter((e) => {
+      const sd = e.specificDate!;
+      return (
+        sd.getFullYear() === year &&
+        sd.getMonth() === month - 1 &&
+        sd.getDate() === d
+      );
+    });
+
+    // Merge: one-off overrides recurring
+    const overriddenPeriods = new Set(oneOffForDate.map((e) => e.periodNumber));
+    const merged = [
+      ...recurringForDay.filter((e) => !overriddenPeriods.has(e.periodNumber)),
+      ...oneOffForDate,
+    ].sort((a, b) => a.periodNumber - b.periodNumber);
+
+    for (const entry of merged) {
+      const classObj = entry.classId as any;
+      const bookObj = entry.gradeBookId as any;
+
+      const grade = classObj?.grade || "";
+      const section = classObj?.section || "";
+      const bookTitle = bookObj?.bookTitle || "";
+
+      if (grade) classSet.add(`${grade}${section ? "," + section : ""}`);
+      if (bookTitle) subjectSet.add(bookTitle);
+      if (entry.status === "completed") completedCount++;
+
+      rows.push({
+        date: `${d} ${monthName} ${year}`,
+        trainerName,
+        className: grade,
+        section,
+        period: toOrdinal(entry.periodNumber),
+        chapterName: bookTitle,
+        topicName: entry.topicsCovered?.join(", ") || "",
+        remarks: "",
+      });
+    }
+  }
+
+  const buffer = await generateMonthlyReportDocx({
+    monthName,
+    year,
+    staffNames: [trainerName],
+    schoolName: institution?.name || "",
+    classesLabel: Array.from(classSet).join(", ") || "—",
+    subjectLabel: Array.from(subjectSet).join(", ") || "—",
+    sessionsPlanned: rows.length,
+    sessionsCompleted: completedCount,
+    rows,
+  });
+
+  return buffer;
+}

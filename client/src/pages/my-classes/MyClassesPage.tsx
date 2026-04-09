@@ -8,7 +8,7 @@ import { useStaffList } from "./hooks/useStaffList";
 import { useAuthStore } from "@/store/userAuthStore";
 import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
-import { CalendarDays, ChevronLeft, ChevronRight, Sparkles, Building2, Users } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Sparkles, Building2, Users, Download, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useMonthlyReportDownload } from "./hooks/useMonthlyReportDownload";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -129,6 +130,7 @@ export default function MyClassesPage() {
 
   const noPeriodConfig = !isAdminRole && !configLoading && !periodConfig;
   const selectedTeacher = staffList.find((s) => s._id === selectedStaffId);
+  const { downloadReport, isDownloading } = useMonthlyReportDownload();
 
   // For admin roles, show timetable only when a teacher is selected
   const showTimetable = isAdminRole ? !!selectedStaffId : !noPeriodConfig;
@@ -301,6 +303,27 @@ export default function MyClassesPage() {
             {monthData?.dates && (
               <MiniMonthStats monthData={monthData.dates} />
             )}
+
+            {/* Download Report button */}
+            <button
+              onClick={() =>
+                downloadReport({
+                  year: currentMonth.year,
+                  month: currentMonth.month,
+                  staffId: isAdminRole ? selectedStaffId : null,
+                  institutionId: isAdminRole ? effectiveInstitutionId : null,
+                })
+              }
+              disabled={isDownloading}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-300/30 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isDownloading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+              {isDownloading ? "Generating Report..." : "Download Monthly Report"}
+            </button>
           </div>
 
           {/* RIGHT: Schedule Panel */}
