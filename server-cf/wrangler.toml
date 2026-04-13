@@ -1,0 +1,22 @@
+name = "lms-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lms"
+database_id = "placeholder-replace-with-actual-id"
+migrations_dir = "drizzle"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "lms-uploads"
+
+[vars]
+# Non-secret env vars here
+
+# Secrets (set via `wrangler secret put`):
+# JWT_TEACHER_SECRET
+# JWT_ADMIN_SECRET
+# JWT_SUPERADMIN_SECRET
