@@ -3,7 +3,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, BookOpen } from "lucide-react";
+import { Edit, Eye, Trash2, BookOpen } from "lucide-react";
 import { Config } from "@/lib/config";
 
 interface GradeBook {
@@ -21,6 +21,7 @@ interface GradeBook {
 interface Props {
     gradeBook: GradeBook;
     onView: () => void;
+    onViewDetails?: () => void;
     onEdit?: () => void;
     onDelete?: () => void;
     showActions?: boolean;
@@ -30,6 +31,7 @@ interface Props {
 export function PremiumGradeBookCard({
     gradeBook,
     onView,
+    onViewDetails,
     onEdit,
     onDelete,
     showActions = true,
@@ -62,40 +64,59 @@ export function PremiumGradeBookCard({
                     </div>
                 )}
 
-                {showActions && (onEdit || onDelete) && (
+                {showActions && (onViewDetails || onEdit || onDelete) && (
                     <div
-                        className="absolute inset-x-0 bottom-0 flex items-center justify-end gap-2 bg-linear-to-t from-black/65 to-transparent p-2 opacity-100 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100"
+                        className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-100 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {onEdit && (
-                            <Button
-                                size="icon"
-                                variant="secondary"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onEdit();
-                                }}
-                                aria-label="Edit book"
-                                className="h-8 w-8 bg-white/90 text-slate-900 hover:bg-white"
-                            >
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                        )}
+                        <div className="flex items-center gap-2 rounded-full border border-white/35 bg-black/45 p-2 backdrop-blur-xs shadow-lg">
+                            {onViewDetails && (
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onViewDetails();
+                                    }}
+                                    aria-label="View details"
+                                    className="h-8 bg-white/90 text-slate-900 hover:bg-white"
+                                >
+                                    <Eye className="mr-1.5 h-3.5 w-3.5" />
+                                    View Details
+                                </Button>
+                            )}
 
-                        {onDelete && (
-                            <Button
-                                size="icon"
-                                variant="outline"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDelete();
-                                }}
-                                aria-label="Delete book"
-                                className="h-8 w-8 border-red-200 bg-white/90 text-red-600 hover:bg-red-50"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        )}
+                            {onEdit && (
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onEdit();
+                                    }}
+                                    aria-label="Edit book"
+                                    className="h-8 bg-white/90 text-slate-900 hover:bg-white"
+                                >
+                                    <Edit className="mr-1.5 h-3.5 w-3.5" />
+                                    Edit
+                                </Button>
+                            )}
+
+                            {onDelete && (
+                                <Button
+                                    size="icon"
+                                    variant="outline"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDelete();
+                                    }}
+                                    aria-label="Delete book"
+                                    className="h-8 w-8 border-red-200 bg-white/90 text-red-600 hover:bg-red-50"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

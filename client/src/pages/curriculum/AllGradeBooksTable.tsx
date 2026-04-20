@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, Loader2, Plus, ArrowLeft } from "lucide-react";
 import { GradeBookFormDialogStandalone } from "./GradeBookFormDialogStandalone";
 import { PremiumGradeBookCard } from "./PremiumGradeBookCard";
@@ -34,12 +35,20 @@ interface GradeBook {
     createdAt: string;
 }
 
+interface ChapterDetails {
+    id: string;
+    chapterNumber: number;
+    title?: string;
+    learningObjectives?: string;
+}
+
 export function AllGradeBooksTable() {
     const [search, setSearch] = useState("");
     const [page] = useState(1);
     const [openForm, setOpenForm] = useState(false);
     const [selectedGradeBookId, setSelectedGradeBookId] = useState<string | null>(null);
     const [selectedGradeBook, setSelectedGradeBook] = useState<GradeBook | null>(null);
+    const [detailsGradeBook, setDetailsGradeBook] = useState<GradeBook | null>(null);
     const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
     const [selectedChapterNumber, setSelectedChapterNumber] = useState<number>(1);
     const debouncedSearch = useDebounce(search, 500);
@@ -55,11 +64,31 @@ export function AllGradeBooksTable() {
         },
     });
 
+    const { data: detailsChapters = [], isLoading: isLoadingDetailsChapters } = useQuery<ChapterDetails[]>({
+        queryKey: ["gradebook-details-chapters", detailsGradeBook?.id],
+        enabled: !!detailsGradeBook?.id,
+        queryFn: async () => {
+            const res = await _axios.get(`/admin/curriculum/gradebook/${detailsGradeBook?.id}/chapters`);
+            return res.data.data || [];
+        },
+    });
+
+    const chapterObjectives = useMemo(() => {
+        return detailsChapters
+            .filter((chapter) => typeof chapter.learningObjectives === "string" && chapter.learningObjectives.trim().length > 0)
+            .map((chapter) => ({
+                id: chapter.id,
+                chapterLabel: chapter.title?.trim() || `Chapter ${chapter.chapterNumber}`,
+                learningObjectives: chapter.learningObjectives!.trim(),
+            }));
+    }, [detailsChapters]);
+
     const handleSuccess = () => {
         queryClient.invalidateQueries({ queryKey: ["all-gradebooks"] });
     };
 
     const handleViewBook = (book: GradeBook) => {
+        setDetailsGradeBook(null);
         setSelectedGradeBook(book);
         setSelectedGradeBookId(book.id);
     };
@@ -180,13 +209,54 @@ export function AllGradeBooksTable() {
                                 key={book.id}
                                 gradeBook={book}
                                 onView={() => handleViewBook(book)}
+                                onViewDetails={() => setDetailsGradeBook(book)}
+                                onEdit={() => handleViewBook(book)}
                                 curriculumName={curriculumName}
-                                showActions={false}
+                                showActions
                             />
                         );
                     })}
                 </div>
             )}
+
+            <Dialog open={!!detailsGradeBook} onOpenChange={(open) => !open && setDetailsGradeBook(null)}>
+                <DialogContent className="max-w-2xl rounded-2xl" aria-describedby={undefined}>
+                    <DialogHeader>
+                        <DialogTitle className="text-xl">{detailsGradeBook?.bookTitle}</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-5">
+                        <div>
+                            <h4 className="mb-1 text-sm font-semibold text-slate-700">Description</h4>
+                            <p className="text-sm text-muted-foreground">
+                                {detailsGradeBook?.description?.trim() || "No description available for this grade book."}
+                            </p>
+                        </div>
+
+                        <div>
+                            <h4 className="mb-2 text-sm font-semibold text-slate-700">Learning Objectives</h4>
+                            {isLoadingDetailsChapters ? (
+                                <p className="text-sm text-muted-foreground">Loading learning objectives...</p>
+                            ) : chapterObjectives.length > 0 ? (
+                                <div className="max-h-[45vh] space-y-2 overflow-y-auto pr-1">
+                                    {chapterObjectives.map((objective) => (
+                                        <div key={objective.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                                {objective.chapterLabel}
+                                            </p>
+                                            <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap">
+                                                {objective.learningObjectives}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No learning objectives have been added yet.</p>
+                            )}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <GradeBookFormDialogStandalone
                 open={openForm}
