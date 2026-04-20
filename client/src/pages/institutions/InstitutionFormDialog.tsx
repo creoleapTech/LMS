@@ -43,6 +43,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   institution?: Institution | null;
   onSave: (data: FormData) => void;
+  isPending?: boolean;
 }
 
 type Institution = {
@@ -60,7 +61,7 @@ type Institution = {
   };
 };
 
-export function InstitutionFormDialog({ open, onOpenChange, institution, onSave }: Props) {
+export function InstitutionFormDialog({ open, onOpenChange, institution, onSave, isPending }: Props) {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,7 +144,6 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave 
     }
 
     onSave(formData);
-    onOpenChange(false);
   };
 
   return (
@@ -297,8 +297,8 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave 
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30">
-              {isSubmitting ? (
+            <Button type="submit" disabled={isSubmitting || isPending} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30">
+              {(isSubmitting || isPending) ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...

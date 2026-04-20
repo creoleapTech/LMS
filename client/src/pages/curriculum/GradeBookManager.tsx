@@ -12,7 +12,7 @@ import { GradeBookFormDialog } from "./GradeBookFormDialog";
 import { PremiumGradeBookCard } from "./PremiumGradeBookCard";
 
 interface GradeBook {
-  _id: string;
+  id: string;
   grade: number;
   bookTitle: string;
   subtitle?: string;
@@ -96,11 +96,11 @@ export function GradeBookManager({ curriculumId, onGradeSelect }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {gradeBooks.map((gradeBook) => (
             <PremiumGradeBookCard
-              key={gradeBook._id}
+              key={gradeBook.id}
               gradeBook={gradeBook}
-              onView={() => onGradeSelect(gradeBook._id)}
+              onView={() => onGradeSelect(gradeBook.id)}
               onEdit={isSuperAdmin ? () => handleEdit(gradeBook) : undefined}
-              onDelete={isSuperAdmin ? () => handleDelete(gradeBook._id) : undefined}
+              onDelete={isSuperAdmin ? () => handleDelete(gradeBook.id) : undefined}
             />
           ))}
         </div>

@@ -166,9 +166,9 @@ export function InstitutionTable() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      if (editingInstitution) {
-        return _axios.patch(`/admin/institutions/${editingInstitution.id}`, data);
+    mutationFn: async ({ data, institutionId }: { data: FormData; institutionId?: string }) => {
+      if (institutionId) {
+        return _axios.patch(`/admin/institutions/${institutionId}`, data);
       } else {
         return _axios.post("/admin/institutions", data);
       }
@@ -449,7 +449,8 @@ export function InstitutionTable() {
         open={openForm}
         onOpenChange={handleFormOpenChange}
         institution={editingInstitution}
-        onSave={(data) => saveMutation.mutate(data)}
+        onSave={(data) => saveMutation.mutate({ data, institutionId: editingInstitution?.id })}
+        isPending={saveMutation.isPending}
       />
 
       <AlertDialog open={!!deletingId} onOpenChange={() => !deleteMutation.isPending && setDeletingId(null)}>

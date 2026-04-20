@@ -120,7 +120,7 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
 
       if (gradeBook) {
         // Update existing grade book
-        await _axios.patch(`/admin/curriculum/gradebook/${gradeBook._id}`, formData, {
+        await _axios.patch(`/admin/curriculum/gradebook/${gradeBook.id}`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },

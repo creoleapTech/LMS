@@ -17,6 +17,7 @@ import {
 } from "../../lib/excel-parser";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
+import { saveFile, deleteFile } from "../../lib/file";
 import * as XLSX from "xlsx";
 
 const studentController = new Hono<{
@@ -27,11 +28,45 @@ const studentController = new Hono<{
 // Apply auth to all routes
 studentController.use("*", adminAuth);
 
+function isJsonRequest(contentType: string | undefined): boolean {
+  return (contentType ?? "").toLowerCase().includes("application/json");
+}
+
 // ─── CREATE Single Student ─────────────────────────
 studentController.post("/", async (c) => {
-  const body = await c.req.json();
   const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
+
+  let body: Record<string, any>;
+  let profileImageFile: File | null = null;
+
+  const contentType = c.req.header("content-type");
+
+  if (isJsonRequest(contentType)) {
+    body = await c.req.json();
+  } else {
+    const formData = await c.req.formData();
+    body = {
+      name: formData.get("name") as string,
+      rollNumber: formData.get("rollNumber") as string | null,
+      admissionNumber: formData.get("admissionNumber") as string | null,
+      email: formData.get("email") as string | null,
+      mobileNumber: formData.get("mobileNumber") as string | null,
+      parentName: formData.get("parentName") as string | null,
+      parentMobile: formData.get("parentMobile") as string | null,
+      parentEmail: formData.get("parentEmail") as string | null,
+      dateOfBirth: formData.get("dateOfBirth") as string | null,
+      gender: formData.get("gender") as string | null,
+      address: formData.get("address") as string | null,
+      admissionDate: formData.get("admissionDate") as string | null,
+      classId: formData.get("classId") as string,
+    };
+
+    const imgInput = formData.get("profileImage");
+    if (imgInput && typeof imgInput !== "string") {
+      profileImageFile = imgInput as unknown as File;
+    }
+  }
 
   // Verify class exists
   const [classData] = await db
@@ -55,6 +90,13 @@ studentController.post("/", async (c) => {
     throw new ForbiddenError("Access denied");
   }
 
+  // Handle profile image upload
+  let profileImage: string | undefined = body.profileImage;
+  if (profileImageFile) {
+    const result = await saveFile(c.env.BUCKET, profileImageFile, "students/profiles");
+    if (result.ok) profileImage = result.key;
+  }
+
   const studentId = uuid();
   const now = nowISO();
 
@@ -74,7 +116,7 @@ studentController.post("/", async (c) => {
       gender: body.gender,
       address: body.address,
       admissionDate: body.admissionDate || now,
-      profileImage: body.profileImage,
+      profileImage,
       classId: body.classId,
       institutionId: classData.institutionId,
       isActive: 1,
@@ -639,7 +681,6 @@ studentController.get("/:id", async (c) => {
 // ─── UPDATE Student ────────────────────────────────
 studentController.patch("/:id", async (c) => {
   const { id } = c.req.param();
-  const body = await c.req.json();
   const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
 
@@ -658,6 +699,34 @@ studentController.patch("/:id", async (c) => {
     student.institutionId !== user.institutionId
   ) {
     throw new ForbiddenError("Access denied");
+  }
+
+  let body: Record<string, any>;
+  let profileImageFile: File | null = null;
+
+  const contentType = c.req.header("content-type");
+
+  if (isJsonRequest(contentType)) {
+    body = await c.req.json();
+  } else {
+    const formData = await c.req.formData();
+    body = {};
+    const fields = [
+      "name", "rollNumber", "admissionNumber", "email", "mobileNumber",
+      "parentName", "parentMobile", "parentEmail", "dateOfBirth",
+      "gender", "address", "classId", "isActive",
+    ];
+    for (const f of fields) {
+      const v = formData.get(f);
+      if (v !== null) body[f] = v;
+    }
+
+    const imgInput = formData.get("profileImage");
+    if (imgInput && typeof imgInput !== "string") {
+      profileImageFile = imgInput as unknown as File;
+    } else if (typeof imgInput === "string") {
+      body.profileImage = imgInput;
+    }
   }
 
   // If changing class, update junction table
@@ -703,6 +772,16 @@ studentController.patch("/:id", async (c) => {
     if (body[field] !== undefined) {
       updateData[field] = body[field];
     }
+  }
+
+  // Handle profile image file upload
+  if (profileImageFile) {
+    // Delete old profile image from R2
+    if (student.profileImage) {
+      await deleteFile(c.env.BUCKET, student.profileImage);
+    }
+    const result = await saveFile(c.env.BUCKET, profileImageFile, "students/profiles");
+    if (result.ok) updateData.profileImage = result.key;
   }
 
   await db.update(students).set(updateData).where(eq(students.id, id));

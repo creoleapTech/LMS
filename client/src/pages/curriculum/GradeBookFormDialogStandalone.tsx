@@ -76,7 +76,7 @@ export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }:
 
     const curriculumOptions: CurriculumOption[] = (curriculums as any[])
         .map((curriculum) => {
-            const id = String(curriculum?._id ?? curriculum?.id ?? "");
+            const id = String(curriculum?.id ?? "");
             const name = String(curriculum?.name ?? "").trim();
             return { id, name };
         })

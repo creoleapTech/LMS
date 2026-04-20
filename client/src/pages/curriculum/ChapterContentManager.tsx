@@ -68,7 +68,7 @@ interface Props {
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
 
 interface ContentItem {
-  _id: string;
+  id: string;
   title: string;
   type: ContentType;
   fileUrl?: string;
@@ -139,7 +139,7 @@ function SortableContentItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item._id });
+  } = useSortable({ id: item.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -147,7 +147,7 @@ function SortableContentItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const isEditing = editingId === item._id;
+  const isEditing = editingId === item.id;
   const hasPreviewable =
     item.fileUrl || item.videoUrl || item.youtubeUrl || item.textContent || item.questions?.length;
 
@@ -185,11 +185,11 @@ function SortableContentItem({
                 className="h-8 text-sm"
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") onSaveEdit(item._id);
+                  if (e.key === "Enter") onSaveEdit(item.id);
                   if (e.key === "Escape") onCancelEdit();
                 }}
               />
-              <Button variant="ghost" size="sm" onClick={() => onSaveEdit(item._id)}>
+              <Button variant="ghost" size="sm" onClick={() => onSaveEdit(item.id)}>
                 <Check className="h-4 w-4 text-green-600" />
               </Button>
               <Button variant="ghost" size="sm" onClick={onCancelEdit}>
@@ -238,7 +238,7 @@ function SortableContentItem({
             className="text-destructive hover:text-destructive"
             onClick={() => {
               if (confirm("Delete this content?")) {
-                onDelete(item._id);
+                onDelete(item.id);
               }
             }}
           >
@@ -339,7 +339,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
   const reorderMutation = useMutation({
     mutationFn: async (reordered: ContentItem[]) => {
       const orderData = reordered.map((item, index) => ({
-        contentId: item._id,
+        contentId: item.id,
         order: index + 1,
       }));
       await _axios.post(`/admin/curriculum/chapter/${chapterId}/content/reorder`, {
@@ -465,8 +465,8 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     if (!over || active.id === over.id) return;
 
     setContentItems((items) => {
-      const oldIndex = items.findIndex((i) => i._id === active.id);
-      const newIndex = items.findIndex((i) => i._id === over.id);
+      const oldIndex = items.findIndex((i) => i.id === active.id);
+      const newIndex = items.findIndex((i) => i.id === over.id);
       const newOrder = arrayMove(items, oldIndex, newIndex).map((item, idx) => ({
         ...item,
         order: idx + 1,
@@ -477,7 +477,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
   }
 
   function startEdit(item: ContentItem) {
-    setEditingId(item._id);
+    setEditingId(item.id);
     setEditTitle(item.title);
   }
 
@@ -776,13 +776,13 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={contentItems.map((c) => c._id)}
+                items={contentItems.map((c) => c.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-4">
                   {contentItems.map((item) => (
                     <SortableContentItem
-                      key={item._id}
+                      key={item.id}
                       item={item}
                       chapterNumber={chapterNumber}
                       isSuperAdmin={!!isSuperAdmin}

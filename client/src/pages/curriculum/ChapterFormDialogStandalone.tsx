@@ -87,7 +87,7 @@ export function ChapterFormDialogStandalone({ open, onOpenChange, onSuccess }: P
 
     const curriculumOptions: CurriculumOption[] = (curriculums as any[])
         .map((curriculum) => {
-            const id = String(curriculum?._id ?? curriculum?.id ?? "");
+            const id = String(curriculum?.id ?? "");
             const name = String(curriculum?.name ?? "").trim();
             return { id, name };
         })
@@ -95,7 +95,7 @@ export function ChapterFormDialogStandalone({ open, onOpenChange, onSuccess }: P
 
     const gradeBookOptions: GradeBookOption[] = (gradeBooks as any[])
         .map((book) => {
-            const id = String(book?._id ?? book?.id ?? "");
+            const id = String(book?.id ?? "");
             const bookTitle = String(book?.bookTitle ?? "").trim();
             const grade = book?.grade ?? "";
             return { id, bookTitle, grade };

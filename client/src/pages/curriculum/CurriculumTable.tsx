@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/store/userAuthStore";
 
 type Curriculum = {
-  _id: string;
+  id: string;
   name: string;
   level: string[] | string;
   grades: number[];
@@ -104,7 +104,7 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
           </TableHeader>
           <TableBody>
             {curriculums.map((c) => (
-              <TableRow key={c._id}>
+              <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.name}</TableCell>
                 <TableCell>
                   <Badge variant="outline">
@@ -119,7 +119,7 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
                 </TableCell>
                 <TableCell className="text-right">
                   {onSelectCurriculum && (
-                    <Button size="sm" variant="ghost" onClick={() => onSelectCurriculum(c._id)} title="View Grade Books">
+                    <Button size="sm" variant="ghost" onClick={() => onSelectCurriculum(c.id)} title="View Grade Books">
                       <Eye className="h-4 w-4" />
                     </Button>
                   )}
@@ -128,7 +128,7 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
                       <Button size="sm" variant="ghost" onClick={() => { setEditingCurriculum(c); setOpenForm(true); }}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteMutation.mutate(c._id)}>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteMutation.mutate(c.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>

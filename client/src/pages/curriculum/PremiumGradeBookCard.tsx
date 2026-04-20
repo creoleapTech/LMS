@@ -8,14 +8,15 @@ import { Eye, Edit, Trash2, BookOpen, GraduationCap } from "lucide-react";
 import { Config } from "@/lib/config";
 
 interface GradeBook {
-    _id: string;
+    id: string;
     bookTitle: string;
     subtitle?: string;
     grade: number;
     description?: string;
     coverImage?: string;
     isPublished: boolean;
-    curriculumId?: { _id: string; name: string } | string;
+    curriculumId?: string;
+    curriculumName?: string;
 }
 
 interface Props {
@@ -35,8 +36,7 @@ export function PremiumGradeBookCard({
     showActions = true,
     curriculumName,
 }: Props) {
-    const curriculum = curriculumName ||
-        (typeof gradeBook.curriculumId === 'object' ? gradeBook.curriculumId.name : undefined);
+    const curriculum = curriculumName || gradeBook.curriculumName;
 
     return (
         <Card

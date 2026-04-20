@@ -1,9 +1,25 @@
 import Sidebar from '@/modules/sidebar';
 import { GlobalHeader } from '@/components/GlobalHeader';
-import { Outlet, createRootRoute, useLocation } from '@tanstack/react-router';
+import { Outlet, createRootRoute, redirect, useLocation } from '@tanstack/react-router';
 import { Toaster } from 'sonner';
 
+function getStoredToken(): string | null {
+  try {
+    const stored = localStorage.getItem('auth-storage');
+    if (!stored) return null;
+    return JSON.parse(stored)?.state?.user?.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export const Route = createRootRoute({
+  beforeLoad: ({ location }) => {
+    const token = getStoredToken();
+    if (!token && location.pathname !== '/') {
+      throw redirect({ to: '/' });
+    }
+  },
   component: () => {
     const { pathname } = useLocation();
     const showSidebar = pathname !== '/';

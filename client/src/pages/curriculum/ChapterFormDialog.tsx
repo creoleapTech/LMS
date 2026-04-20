@@ -70,7 +70,7 @@ export function ChapterFormDialog({ open, onOpenChange, gradeBookId, chapter, on
   const onSubmit = async (data: FormData) => {
     try {
       if (chapter) {
-        await _axios.patch(`/admin/curriculum/chapters/${chapter._id}`, data);
+        await _axios.patch(`/admin/curriculum/chapters/${chapter.id}`, data);
         toast.success("Chapter updated successfully!");
       } else {
         await _axios.post(`/admin/curriculum/gradebook/${gradeBookId}/chapters`, data);

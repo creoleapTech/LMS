@@ -18,6 +18,7 @@ import {
 } from "../../lib/excel-parser";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
+import { saveFile, deleteFile } from "../../lib/file";
 
 const staffController = new Hono<{
   Bindings: Bindings;
@@ -26,6 +27,10 @@ const staffController = new Hono<{
 
 // Apply auth to all routes
 staffController.use("*", adminAuth);
+
+function isJsonRequest(contentType: string | undefined): boolean {
+  return (contentType ?? "").toLowerCase().includes("application/json");
+}
 
 // ─── Helper: sync junction tables for a staff member ────
 async function syncStaffSubjects(
@@ -99,9 +104,40 @@ async function getStaffRelations(
 
 // ─── CREATE Single Staff ───────────────────────────
 staffController.post("/", async (c) => {
-  const body = await c.req.json();
   const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
+
+  let body: Record<string, any>;
+  let profileImageFile: File | null = null;
+
+  const contentType = c.req.header("content-type");
+
+  if (isJsonRequest(contentType)) {
+    body = await c.req.json();
+  } else {
+    const formData = await c.req.formData();
+    body = {
+      name: formData.get("name") as string,
+      salutation: formData.get("salutation") as string | null,
+      email: formData.get("email") as string,
+      mobileNumber: formData.get("mobileNumber") as string | null,
+      type: formData.get("type") as string | null,
+      joiningDate: formData.get("joiningDate") as string | null,
+      institutionId: formData.get("institutionId") as string,
+      password: formData.get("password") as string | null,
+      subjects: null,
+      assignedClasses: null,
+    };
+    const subjectsRaw = formData.get("subjects") as string | null;
+    if (subjectsRaw) { try { body.subjects = JSON.parse(subjectsRaw); } catch {} }
+    const classesRaw = formData.get("assignedClasses") as string | null;
+    if (classesRaw) { try { body.assignedClasses = JSON.parse(classesRaw); } catch {} }
+
+    const imgInput = formData.get("profileImage");
+    if (imgInput && typeof imgInput !== "string") {
+      profileImageFile = imgInput as unknown as File;
+    }
+  }
 
   // Verify institution
   const [inst] = await db
@@ -116,6 +152,13 @@ staffController.post("/", async (c) => {
 
   if (user.role !== "super_admin" && inst.id !== user.institutionId) {
     throw new ForbiddenError("Access denied");
+  }
+
+  // Handle profile image upload
+  let profileImage: string | undefined = body.profileImage;
+  if (profileImageFile) {
+    const result = await saveFile(c.env.BUCKET, profileImageFile, "staff/profiles");
+    if (result.ok) profileImage = result.key;
   }
 
   // Use provided password or generate a random one
@@ -139,7 +182,7 @@ staffController.post("/", async (c) => {
       mobileNumber: body.mobileNumber,
       type: body.type || "teacher",
       joiningDate: body.joiningDate || now,
-      profileImage: body.profileImage,
+      profileImage,
       institutionId: body.institutionId,
       password: hashedPw,
       isActive: 1,
@@ -528,7 +571,6 @@ staffController.get("/:id", async (c) => {
 // ─── UPDATE Staff ──────────────────────────────────
 staffController.patch("/:id", async (c) => {
   const { id } = c.req.param();
-  const body = await c.req.json();
   const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
 
@@ -551,6 +593,33 @@ staffController.patch("/:id", async (c) => {
 
   // Build update set from body (only known scalar fields)
   const updateData: Record<string, any> = { updatedAt: nowISO() };
+  let body: Record<string, any>;
+  let profileImageFile: File | null = null;
+
+  const contentType = c.req.header("content-type");
+
+  if (isJsonRequest(contentType)) {
+    body = await c.req.json();
+  } else {
+    const formData = await c.req.formData();
+    body = {};
+    const fields = ["name", "salutation", "email", "mobileNumber", "type", "isActive", "password"];
+    for (const f of fields) {
+      const v = formData.get(f);
+      if (v !== null) body[f] = v;
+    }
+    const subjectsRaw = formData.get("subjects") as string | null;
+    if (subjectsRaw) { try { body.subjects = JSON.parse(subjectsRaw); } catch {} }
+    const classesRaw = formData.get("assignedClasses") as string | null;
+    if (classesRaw) { try { body.assignedClasses = JSON.parse(classesRaw); } catch {} }
+
+    const imgInput = formData.get("profileImage");
+    if (imgInput && typeof imgInput !== "string") {
+      profileImageFile = imgInput as unknown as File;
+    } else if (typeof imgInput === "string") {
+      body.profileImage = imgInput;
+    }
+  }
 
   const scalarFields = [
     "name",
@@ -566,6 +635,16 @@ staffController.patch("/:id", async (c) => {
     if (body[field] !== undefined) {
       updateData[field] = body[field];
     }
+  }
+
+  // Handle profile image file upload
+  if (profileImageFile) {
+    // Delete old profile image from R2
+    if (staffRow.profileImage) {
+      await deleteFile(c.env.BUCKET, staffRow.profileImage);
+    }
+    const result = await saveFile(c.env.BUCKET, profileImageFile, "staff/profiles");
+    if (result.ok) updateData.profileImage = result.key;
   }
 
   // Hash password if provided

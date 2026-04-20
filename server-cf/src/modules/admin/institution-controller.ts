@@ -6,7 +6,7 @@ import { v4 as uuid } from "uuid";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { institutions, students, staff, classes } from "../../schema/admin";
-import { saveFile } from "../../lib/file";
+import { saveFile, deleteFile } from "../../lib/file";
 import { nowISO } from "../../lib/utils";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
@@ -430,6 +430,16 @@ app.patch("/:id", async (c) => {
 
   // Handle logo upload
   if (logoFile && logoFile instanceof File) {
+    // Delete old logo from R2 before saving new one
+    const db = getDb(c.env.DB);
+    const [existing] = await db
+      .select({ logo: institutions.logo })
+      .from(institutions)
+      .where(and(eq(institutions.id, id), eq(institutions.isDeleted, 0)));
+    if (existing?.logo) {
+      await deleteFile(c.env.BUCKET, existing.logo);
+    }
+
     const result = await saveFile(c.env.BUCKET, logoFile, "institutions");
     if (result.ok) {
       updateData.logo = result.key;

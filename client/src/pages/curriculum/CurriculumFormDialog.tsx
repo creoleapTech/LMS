@@ -23,7 +23,7 @@ const schema = z.object({
   tags: z.string().optional(),
   level: z.array(z.string()).min(1, "Please select at least one level"),
   grades: z.array(z.number()).min(1, "Please select at least one grade"),
-  isPublished: z.boolean(),
+  isPublished: z.preprocess((val) => typeof val === "number" ? val === 1 : Boolean(val), z.boolean()),
 });
 
 type CurriculumFormData = z.infer<typeof schema>;
@@ -86,7 +86,7 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
           tags: curriculum.tags?.join(", ") || "",
           level: levelValue,
           grades: curriculum.grades || [],
-          isPublished: curriculum.isPublished || false,
+          isPublished: Boolean(curriculum.isPublished),
         });
         setThumbnailPreview(curriculum.thumbnail ? `${Config.imgUrl}${curriculum.thumbnail}` : "");
         setBannerPreview(curriculum.banner ? `${Config.imgUrl}${curriculum.banner}` : "");
@@ -145,9 +145,9 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
 
   const handleSelectAllGrades = () => {
     if (selectedGrades.length === gradeOptions.length) {
-      setValue("grades", []);
+      setValue("grades", [], { shouldValidate: true, shouldDirty: true });
     } else {
-      setValue("grades", gradeOptions.map(g => g.value));
+      setValue("grades", gradeOptions.map(g => g.value), { shouldValidate: true, shouldDirty: true });
     }
   };
 
@@ -185,7 +185,7 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
       }
 
       if (curriculum) {
-        await _axios.patch(`/admin/curriculum/${curriculum._id}`, formData, {
+        await _axios.patch(`/admin/curriculum/${curriculum.id}`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
@@ -225,7 +225,11 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6 pt-4 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit, (validationErrors) => {
+          const fields = Object.keys(validationErrors).join(", ");
+          toast.error(`Validation failed on: ${fields}`);
+          console.error("Form validation errors:", validationErrors);
+        })} className="px-6 pb-6 pt-4 space-y-6">
           {/* ── Basic Info ── */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Curriculum Info</p>
@@ -244,7 +248,7 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
                 <MultiSelect
                   options={levelOptions}
                   selected={selectedLevels}
-                  onChange={(values) => setValue("level", values as string[])}
+                  onChange={(values) => setValue("level", values as string[], { shouldValidate: true, shouldDirty: true })}
                   placeholder="Select applicable levels..."
                 />
                 {errors.level && <p className="text-xs text-destructive">{errors.level.message}</p>}
@@ -338,7 +342,7 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
             <MultiSelect
               options={gradeOptions}
               selected={selectedGrades}
-              onChange={(values) => setValue("grades", values.map(Number))}
+              onChange={(values) => setValue("grades", values.map(Number), { shouldValidate: true, shouldDirty: true })}
               placeholder="Select applicable grades..."
             />
             {errors.grades && <p className="text-xs text-destructive mt-1">{errors.grades.message}</p>}
@@ -352,7 +356,7 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
               </div>
               <Switch
                 checked={watch("isPublished")}
-                onCheckedChange={(v) => setValue("isPublished", v)}
+                onCheckedChange={(v) => setValue("isPublished", v, { shouldValidate: true, shouldDirty: true })}
               />
             </div>
           </div>

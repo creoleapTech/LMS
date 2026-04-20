@@ -22,13 +22,14 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 interface GradeBook {
-    _id: string;
+    id: string;
     bookTitle: string;
     subtitle?: string;
     description?: string;
     grade: number;
     coverImage?: string;
-    curriculumId: { _id: string; name: string } | string;
+    curriculumId: string;
+    curriculumName?: string;
     isPublished: boolean;
     createdAt: string;
 }
@@ -60,7 +61,7 @@ export function AllGradeBooksTable() {
 
     const handleViewBook = (book: GradeBook) => {
         setSelectedGradeBook(book);
-        setSelectedGradeBookId(book._id);
+        setSelectedGradeBookId(book.id);
     };
 
     const handleBack = () => {
@@ -74,9 +75,7 @@ export function AllGradeBooksTable() {
 
     // If viewing a specific grade book's chapters
     if (selectedGradeBookId && !selectedChapterId) {
-        const curriculumName = selectedGradeBook && typeof selectedGradeBook.curriculumId === 'object'
-            ? selectedGradeBook.curriculumId.name
-            : '';
+        const curriculumName = selectedGradeBook?.curriculumName || '';
 
         return (
             <div className="space-y-6">
@@ -174,14 +173,11 @@ export function AllGradeBooksTable() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {data?.data?.map((book: GradeBook) => {
-                        const curriculumName =
-                            typeof book.curriculumId === "object"
-                                ? book.curriculumId.name
-                                : undefined;
+                        const curriculumName = book.curriculumName;
 
                         return (
                             <PremiumGradeBookCard
-                                key={book._id}
+                                key={book.id}
                                 gradeBook={book}
                                 onView={() => handleViewBook(book)}
                                 curriculumName={curriculumName}

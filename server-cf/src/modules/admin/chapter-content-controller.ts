@@ -10,6 +10,7 @@ import { adminAuth } from "../../middleware/admin-auth";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { chapters, chapterContents } from "../../schema/books";
+import { saveFile, deleteFile } from "../../lib/file";
 import {
   quizQuestions,
   quizQuestionOptions,
@@ -96,7 +97,36 @@ app.post(
     const [chapter] = await db.select().from(chapters).where(eq(chapters.id, chapterId));
     if (!chapter) throw new BadRequestError("Chapter not found");
 
-    const body = await c.req.json();
+    const formData = await c.req.formData();
+
+    const type = formData.get("type") as string;
+    const title = formData.get("title") as string;
+    const durationMinutes = formData.get("durationMinutes") as string | null;
+    const projectInstructions = formData.get("projectInstructions") as string | null;
+    const isFree = formData.get("isFree") === "true";
+    const order = parseInt(formData.get("order") as string, 10) || 0;
+    const questionsRaw = formData.get("questions") as string | null;
+    const file = formData.get("file") as File | null;
+
+    // Determine storage folder based on content type
+    let videoUrl: string | null = null;
+    let fileUrl: string | null = null;
+
+    if (file && typeof file !== "string") {
+      const folder = type === "video" ? "content/videos" : "content/docs";
+      const result = await saveFile(c.env.BUCKET, file as unknown as File, folder);
+      if (result.ok) {
+        if (type === "video") {
+          videoUrl = result.key;
+        } else {
+          fileUrl = result.key;
+        }
+      }
+    } else {
+      // Allow passing URLs directly for youtube type etc.
+      videoUrl = (formData.get("videoUrl") as string) || null;
+      fileUrl = (formData.get("fileUrl") as string) || null;
+    }
 
     const id = uuid();
     const now = nowISO();
@@ -104,14 +134,14 @@ app.post(
     const contentData: Record<string, any> = {
       id,
       chapterId,
-      type: body.type,
-      title: body.title,
-      videoUrl: body.videoUrl || null,
-      fileUrl: body.fileUrl || null,
-      durationMinutes: body.durationMinutes || null,
-      projectInstructions: body.projectInstructions || null,
-      isFree: body.isFree ? 1 : 0,
-      order: body.order,
+      type,
+      title,
+      videoUrl,
+      fileUrl,
+      durationMinutes: durationMinutes ? parseInt(durationMinutes, 10) : null,
+      projectInstructions: projectInstructions || null,
+      isFree: isFree ? 1 : 0,
+      order,
       createdAt: now,
       updatedAt: now,
     };
@@ -119,8 +149,13 @@ app.post(
     await db.insert(chapterContents).values(contentData as any);
 
     // Save quiz questions if type is quiz
-    if (body.type === "quiz" && Array.isArray(body.questions)) {
-      await saveQuizQuestions(db, id, body.questions);
+    if (type === "quiz" && questionsRaw) {
+      try {
+        const questions = JSON.parse(questionsRaw);
+        if (Array.isArray(questions)) {
+          await saveQuizQuestions(db, id, questions);
+        }
+      } catch {}
     }
 
     const [created] = await db.select().from(chapterContents).where(eq(chapterContents.id, id));
@@ -158,32 +193,78 @@ app.patch(
 
     const db = getDb(c.env.DB);
     const contentId = c.req.param("contentId");
-    const body = await c.req.json();
 
-    const updateData: Record<string, any> = {};
-    if (body.type !== undefined) updateData.type = body.type;
-    if (body.title !== undefined) updateData.title = body.title;
-    if (body.videoUrl !== undefined) updateData.videoUrl = body.videoUrl;
-    if (body.fileUrl !== undefined) updateData.fileUrl = body.fileUrl;
-    if (body.durationMinutes !== undefined) updateData.durationMinutes = body.durationMinutes;
-    if (body.projectInstructions !== undefined) updateData.projectInstructions = body.projectInstructions;
-    if (body.isFree !== undefined) updateData.isFree = body.isFree ? 1 : 0;
-    if (body.order !== undefined) updateData.order = body.order;
-    updateData.updatedAt = nowISO();
+    const [existing] = await db
+      .select()
+      .from(chapterContents)
+      .where(eq(chapterContents.id, contentId));
+    if (!existing) throw new BadRequestError("Content not found");
+
+    const formData = await c.req.formData();
+
+    const updateData: Record<string, any> = { updatedAt: nowISO() };
+
+    const type = formData.get("type") as string | null;
+    const title = formData.get("title") as string | null;
+    const durationMinutes = formData.get("durationMinutes") as string | null;
+    const projectInstructions = formData.get("projectInstructions") as string | null;
+    const isFree = formData.get("isFree") as string | null;
+    const order = formData.get("order") as string | null;
+    const questionsRaw = formData.get("questions") as string | null;
+    const file = formData.get("file") as File | null;
+
+    if (type !== null) updateData.type = type;
+    if (title !== null) updateData.title = title;
+    if (durationMinutes !== null) updateData.durationMinutes = parseInt(durationMinutes, 10);
+    if (projectInstructions !== null) updateData.projectInstructions = projectInstructions;
+    if (isFree !== null) updateData.isFree = isFree === "true" ? 1 : 0;
+    if (order !== null) updateData.order = parseInt(order, 10);
+
+    // Handle file upload
+    if (file && typeof file !== "string") {
+      const contentType = type || existing.type;
+      const folder = contentType === "video" ? "content/videos" : "content/docs";
+
+      // Delete old file from R2
+      if (contentType === "video" && existing.videoUrl) {
+        await deleteFile(c.env.BUCKET, existing.videoUrl);
+      } else if (contentType !== "video" && existing.fileUrl) {
+        await deleteFile(c.env.BUCKET, existing.fileUrl);
+      }
+
+      const result = await saveFile(c.env.BUCKET, file as unknown as File, folder);
+      if (result.ok) {
+        if (contentType === "video") {
+          updateData.videoUrl = result.key;
+        } else {
+          updateData.fileUrl = result.key;
+        }
+      }
+    } else {
+      // Allow passing URLs directly
+      const videoUrl = formData.get("videoUrl") as string | null;
+      const fileUrl = formData.get("fileUrl") as string | null;
+      if (videoUrl !== null) updateData.videoUrl = videoUrl;
+      if (fileUrl !== null) updateData.fileUrl = fileUrl;
+    }
 
     await db.update(chapterContents).set(updateData).where(eq(chapterContents.id, contentId));
 
     // Replace quiz questions if provided
-    if (Array.isArray(body.questions)) {
-      await deleteQuizQuestions(db, contentId);
-      await saveQuizQuestions(db, contentId, body.questions);
+    if (questionsRaw) {
+      try {
+        const questions = JSON.parse(questionsRaw);
+        if (Array.isArray(questions)) {
+          await deleteQuizQuestions(db, contentId);
+          await saveQuizQuestions(db, contentId, questions);
+        }
+      } catch {}
     }
 
     const [updated] = await db
       .select()
       .from(chapterContents)
       .where(eq(chapterContents.id, contentId));
-    if (!updated) throw new BadRequestError("Content not found");
 
     return c.json({ success: true, data: updated }, 200);
   },
@@ -245,6 +326,14 @@ app.delete(
       .from(chapterContents)
       .where(eq(chapterContents.id, contentId));
     if (!existing) throw new BadRequestError("Content not found");
+
+    // Delete files from R2
+    if (existing.videoUrl) {
+      await deleteFile(c.env.BUCKET, existing.videoUrl);
+    }
+    if (existing.fileUrl) {
+      await deleteFile(c.env.BUCKET, existing.fileUrl);
+    }
 
     // Delete quiz data first
     await deleteQuizQuestions(db, contentId);

@@ -15,11 +15,9 @@ database_id = "55260802-a4f9-43a7-a443-464299c97782"
 preview_database_id = "55260802-a4f9-43a7-a443-464299c97782"
 migrations_dir = "drizzle"
 
-# R2 intentionally disabled for now.
-# Re-enable this block once R2 is enabled on the account.
-# [[r2_buckets]]
-# binding = "BUCKET"
-# bucket_name = "lms-uploads"
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "lms-uploads"
 
 [vars]
 # Non-secret env vars here

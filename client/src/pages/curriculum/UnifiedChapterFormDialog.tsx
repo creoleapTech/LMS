@@ -101,7 +101,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
 
     const curriculumOptions: CurriculumOption[] = (curriculums as any[])
         .map((curriculum) => {
-            const id = String(curriculum?._id ?? curriculum?.id ?? "");
+            const id = String(curriculum?.id ?? "");
             const name = String(curriculum?.name ?? "").trim();
             return { id, name };
         })
@@ -109,7 +109,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
 
     const gradeBookOptions: GradeBookOption[] = (gradeBooks as any[])
         .map((book) => {
-            const id = String(book?._id ?? book?.id ?? "");
+            const id = String(book?.id ?? "");
             const bookTitle = String(book?.bookTitle ?? "").trim();
             const grade = book?.grade ?? "";
             return { id, bookTitle, grade };
@@ -183,7 +183,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
 
             if (chapter) {
                 // Update existing chapter
-                const existingChapterId = String(chapter?._id ?? chapter?.id ?? "");
+                const existingChapterId = String(chapter?.id ?? "");
                 await _axios.patch(`/admin/curriculum/chapters/${existingChapterId}`, chapterData);
                 chapterId = existingChapterId;
                 toast.success("Chapter updated successfully!");
@@ -193,7 +193,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                     `/admin/curriculum/gradebook/${data.gradeBookId}/chapters`,
                     chapterData
                 );
-                chapterId = String(response?.data?.data?._id ?? response?.data?.data?.id ?? "");
+                chapterId = String(response?.data?.data?.id ?? "");
                 toast.success("Chapter created successfully!");
             }
 

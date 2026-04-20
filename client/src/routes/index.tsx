@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Eye, EyeOff, Zap, ChevronRight, Fingerprint } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
@@ -250,5 +250,17 @@ function LoginPage() {
 }
 
 export const Route = createFileRoute('/')({
+  beforeLoad: () => {
+    try {
+      const stored = localStorage.getItem('auth-storage');
+      const token = stored ? JSON.parse(stored)?.state?.user?.token : null;
+      if (token) {
+        throw redirect({ to: '/dashboard' });
+      }
+    } catch (e) {
+      if (e instanceof Error) return; // JSON parse error, continue to login
+      throw e; // re-throw redirect
+    }
+  },
   component: LoginPage,
 });
