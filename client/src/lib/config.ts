@@ -6,6 +6,7 @@ interface IConfig {
   /** PPT preview endpoint — converts PPTX to PDF server-side */
   pptPreviewUrl: string;
 }
+//pointed to cloud pages
 
 const DEFAULT_CF_API_BASE_URL = ensureApiSuffix(
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
