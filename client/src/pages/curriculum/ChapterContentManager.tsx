@@ -67,6 +67,8 @@ interface Props {
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
 
+const DEFAULT_CONTENT_TYPE: ContentType = "text";
+
 interface ContentItem {
   id: string;
   title: string;
@@ -260,7 +262,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
   const isSuperAdmin = user?.role === "super_admin";
 
   // --- Upload form state ---
-  const [type, setType] = useState<ContentType | "">("");
+  const [type, setType] = useState<ContentType | "">(DEFAULT_CONTENT_TYPE);
   const [file, setFile] = useState<File | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [textContent, setTextContent] = useState("");
@@ -293,12 +295,17 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     setContentItems(contents);
   }, [contents]);
 
-  // Auto-select first content item when list loads
+  // Always enter a chapter in "add content" mode with a default type selected.
   useEffect(() => {
-    if (!viewingContent && contentItems.length > 0) {
-      setViewingContent(contentItems[0]);
-    }
-  }, [contentItems]);
+    setViewingContent(null);
+    setType(DEFAULT_CONTENT_TYPE);
+    setFile(null);
+    setYoutubeUrl("");
+    setTextContent("");
+    setQuestions([]);
+    setEditingId(null);
+    setEditTitle("");
+  }, [chapterId]);
 
   // Upload / create content
   const uploadMutation = useMutation({
@@ -371,7 +378,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
   // ---------------------------------------------------------------------------
 
   function resetForm() {
-    setType("");
+    setType(DEFAULT_CONTENT_TYPE);
     setFile(null);
     setYoutubeUrl("");
     setTextContent("");
