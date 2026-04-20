@@ -1,17 +1,34 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
+import { Config } from "@/lib/config";
+import { useAuthStore } from "@/store/userAuthStore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { User, Save, Loader2, Lock } from "lucide-react";
 import type { IUserProfile } from "@/types/settings";
 
+function resolveProfileImageSrc(profileImage?: string): string {
+  if (!profileImage) {
+    return "";
+  }
+
+  if (profileImage.startsWith("http://") || profileImage.startsWith("https://")) {
+    return profileImage;
+  }
+
+  return `${Config.imgUrl}${profileImage}`;
+}
+
 export function ProfileSection() {
   const queryClient = useQueryClient();
+  const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
 
   const { data: profile, isLoading } = useQuery<IUserProfile | null>({
     queryKey: ["settings", "profile"],
@@ -27,27 +44,91 @@ export function ProfileSection() {
   const [name, setName] = useState("");
   const [salutation, setSalutation] = useState<string>("");
   const [mobileNumber, setMobileNumber] = useState("");
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState("");
 
   useEffect(() => {
     if (profile) {
       setName(profile.name || "");
       setSalutation(profile.salutation || "");
       setMobileNumber(profile.mobileNumber || "");
+      setProfileImagePreview(resolveProfileImageSrc(profile.profileImage));
+      setProfileImageFile(null);
     }
   }, [profile]);
 
+  const handleProfileImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Profile image must be 5MB or smaller");
+      event.target.value = "";
+      return;
+    }
+
+    setProfileImageFile(file);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        setProfileImagePreview(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const initials = (name || profile?.name || profile?.email || "U")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U";
+
   const updateMutation = useMutation({
     mutationFn: async () => {
-      const { data: res } = await _axios.patch("/admin/settings/profile", {
-        name,
-        ...(salutation && { salutation }),
-        mobileNumber,
-      });
-      return res.data;
+      const formData = new FormData();
+      formData.append("name", name);
+      if (salutation) {
+        formData.append("salutation", salutation);
+      }
+      formData.append("mobileNumber", mobileNumber);
+      if (profileImageFile) {
+        formData.append("profileImage", profileImageFile);
+      }
+
+      const { data: res } = await _axios.patch<{ success: boolean; message: string; data: IUserProfile }>(
+        "/admin/settings/profile",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      return res;
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["settings", "profile"] });
-      toast.success("Profile updated!");
+
+      if (user && res.data) {
+        setUser({
+          ...user,
+          name: res.data.name ?? user.name,
+          salutation: (res.data.salutation as "Mr" | "Mrs" | "Ms" | "Dr" | undefined) ?? user.salutation,
+          mobileNumber: res.data.mobileNumber ?? user.mobileNumber,
+          profileImage: res.data.profileImage ?? user.profileImage,
+        });
+      }
+
+      setProfileImageFile(null);
+      setProfileImagePreview(resolveProfileImageSrc(res.data?.profileImage));
+      toast.success(res.message || "Profile updated!");
     },
     onError: (err: any) => {
       toast.error(err?.message || "Failed to update profile");
@@ -94,6 +175,29 @@ export function ProfileSection() {
           <CardDescription>Update your personal information</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="flex flex-col gap-4 rounded-xl border bg-muted/20 p-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={profileImagePreview || undefined} alt="Profile picture" />
+                <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+              </Avatar>
+
+              <div>
+                <p className="font-medium">Profile Picture</p>
+                <p className="text-sm text-muted-foreground">JPG, PNG or WEBP up to 5MB</p>
+              </div>
+            </div>
+
+            <div className="w-full md:w-auto">
+              <Input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleProfileImageChange}
+                className="w-full cursor-pointer md:w-[260px]"
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label>Salutation</Label>

@@ -11,6 +11,7 @@ import { hashPassword, verifyPassword } from "../../lib/password";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { adminAuth } from "../../middleware/admin-auth";
+import { saveFile, deleteFile } from "../../lib/file";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -104,12 +105,36 @@ app.get("/profile", async (c) => {
 // ─── PATCH /profile ──────────────────────────────────────
 app.patch("/profile", async (c) => {
   const user = c.get("user") as Record<string, any>;
-  const body = await c.req.json<{
+  let body: {
     name?: string;
     salutation?: string;
     mobileNumber?: string;
     profileImage?: string;
-  }>();
+  } = {};
+  let profileImageFile: File | null = null;
+
+  const contentType = c.req.header("content-type")?.toLowerCase() ?? "";
+  const isJson = contentType.includes("application/json");
+
+  if (isJson) {
+    body = await c.req.json<typeof body>();
+  } else {
+    const formData = await c.req.formData();
+    const name = formData.get("name");
+    const salutation = formData.get("salutation");
+    const mobileNumber = formData.get("mobileNumber");
+    const profileImage = formData.get("profileImage");
+
+    if (typeof name === "string") body.name = name;
+    if (typeof salutation === "string") body.salutation = salutation;
+    if (typeof mobileNumber === "string") body.mobileNumber = mobileNumber;
+
+    if (profileImage && typeof profileImage !== "string") {
+      profileImageFile = profileImage as unknown as File;
+    } else if (typeof profileImage === "string") {
+      body.profileImage = profileImage;
+    }
+  }
 
   const db = getDb(c.env.DB);
   const result = await findUserByToken(db, user);
@@ -120,6 +145,28 @@ app.patch("/profile", async (c) => {
   if (body.salutation !== undefined) updateData.salutation = body.salutation;
   if (body.mobileNumber !== undefined) updateData.mobileNumber = body.mobileNumber;
   if (body.profileImage !== undefined) updateData.profileImage = body.profileImage;
+
+  if (profileImageFile) {
+    if (!profileImageFile.type?.startsWith("image/")) {
+      throw new BadRequestError("Only image files are allowed");
+    }
+    if (profileImageFile.size > 5 * 1024 * 1024) {
+      throw new BadRequestError("Profile image must be 5MB or smaller");
+    }
+
+    const currentProfileImage = result.doc.profileImage;
+    if (currentProfileImage) {
+      await deleteFile(c.env.BUCKET, currentProfileImage);
+    }
+
+    const parentFolder = result.model === "Admin" ? "admins/profiles" : "staff/profiles";
+    const uploadResult = await saveFile(c.env.BUCKET, profileImageFile, parentFolder);
+    if (!uploadResult.ok) {
+      throw new BadRequestError("Failed to upload profile image");
+    }
+
+    updateData.profileImage = uploadResult.key;
+  }
 
   const table = result.model === "Admin" ? admins : staff;
 
