@@ -1,5 +1,5 @@
 import { useAuthStore } from "@/store/userAuthStore";
-import { useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Config } from "@/lib/config";
 import { Settings, LogOut, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
@@ -38,6 +38,7 @@ function getInitials(name: string): string {
 export function GlobalHeader() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const institutionId = user
     ? typeof user.institutionId === "object" && user.institutionId
@@ -54,6 +55,7 @@ export function GlobalHeader() {
   const isSuperAdmin = user.role === "super_admin";
   const displayName = isSuperAdmin && !institutionName ? "CreaLeap LMS" : institutionName;
   const logoUrl = institutionLogo ? `${Config.imgUrl}${institutionLogo}` : "";
+  const isInstitutionsListPage = pathname === "/institutions" || pathname === "/institutions/";
 
   const handleLogout = () => {
     logout();
@@ -83,6 +85,13 @@ export function GlobalHeader() {
                 {displayName || "Learning Management System"}
               </h1>
             </>
+          )}
+
+          {isSuperAdmin && isInstitutionsListPage && (
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">Institutions</h1>
+              <p className="text-sm sm:text-base text-slate-600 truncate">Manage schools and colleges</p>
+            </div>
           )}
         </div>
 
