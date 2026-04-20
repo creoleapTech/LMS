@@ -23,7 +23,7 @@ const schema = z.object({
   tags: z.string().optional(),
   level: z.array(z.string()).min(1, "Please select at least one level"),
   grades: z.array(z.number()).min(1, "Please select at least one grade"),
-  isPublished: z.preprocess((val) => typeof val === "number" ? val === 1 : Boolean(val), z.boolean()),
+  isPublished: z.boolean(),
 });
 
 type CurriculumFormData = z.infer<typeof schema>;
