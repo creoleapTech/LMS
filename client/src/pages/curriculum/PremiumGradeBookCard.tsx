@@ -69,7 +69,7 @@ export function PremiumGradeBookCard({
                         className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-100 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex items-center gap-2 rounded-full border border-white/35 bg-black/45 p-2 backdrop-blur-xs shadow-lg">
+                        <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/35 bg-black/45 p-2 backdrop-blur-xs shadow-lg">
                             {onViewDetails && (
                                 <Button
                                     size="sm"
@@ -79,7 +79,7 @@ export function PremiumGradeBookCard({
                                         onViewDetails();
                                     }}
                                     aria-label="View details"
-                                    className="h-8 bg-white/90 text-slate-900 hover:bg-white"
+                                    className="h-8 w-full justify-center bg-white/90 text-slate-900 hover:bg-white"
                                 >
                                     <Eye className="mr-1.5 h-3.5 w-3.5" />
                                     View Details
@@ -95,7 +95,7 @@ export function PremiumGradeBookCard({
                                         onEdit();
                                     }}
                                     aria-label="Edit book"
-                                    className="h-8 bg-white/90 text-slate-900 hover:bg-white"
+                                    className="h-8 w-full justify-center bg-white/90 text-slate-900 hover:bg-white"
                                 >
                                     <Edit className="mr-1.5 h-3.5 w-3.5" />
                                     Edit
