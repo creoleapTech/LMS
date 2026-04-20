@@ -7,7 +7,10 @@ interface IConfig {
   pptPreviewUrl: string;
 }
 
-const DEFAULT_CF_API_BASE_URL = "http://127.0.0.1:8787/api";
+const DEFAULT_CF_API_BASE_URL = ensureApiSuffix(
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+    "http://127.0.0.1:8787/api"
+);
 
 function trimTrailingSlashes(value: string): string {
   return value.replace(/\/+$/, "");
