@@ -64,19 +64,25 @@ const LANDSCAPE_LOGO_OFFSET = 6220000;
 let blueStripeData: ArrayBuffer | null = null;
 let logoData: ArrayBuffer | null = null;
 
+async function resolvePngAsset(asset: string | ArrayBuffer): Promise<ArrayBuffer | null> {
+  if (asset instanceof ArrayBuffer) {
+    return asset;
+  }
+
+  if (typeof asset === "string") {
+    const res = await fetch(asset);
+    return await res.arrayBuffer();
+  }
+
+  return null;
+}
+
 async function loadAssets() {
   try {
-    if (typeof blueStripePng === "string") {
-      // When bundled as a data URL or base64 string
-      const res = await fetch(blueStripePng);
-      blueStripeData = await res.arrayBuffer();
-    }
+    blueStripeData = await resolvePngAsset(blueStripePng);
   } catch { /* stripe image missing */ }
   try {
-    if (typeof logoPng === "string") {
-      const res = await fetch(logoPng);
-      logoData = await res.arrayBuffer();
-    }
+    logoData = await resolvePngAsset(logoPng);
   } catch { /* logo image missing */ }
 }
 

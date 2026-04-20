@@ -333,6 +333,7 @@ export default function MyClassesPage() {
               readOnly={isAdminRole}
               staffId={isAdminRole ? selectedStaffId : undefined}
               institutionId={isAdminRole ? effectiveInstitutionId : undefined}
+              fallbackPeriodConfig={periodConfig}
             />
           </div>
         </div>

@@ -6,7 +6,6 @@ import type {
   TextRunData,
   FillData,
   BackgroundData,
-  TextBodyProps,
   ShadowData,
   OutlineData,
   TableData,
@@ -199,15 +198,11 @@ function RenderParagraph({
 
 function RenderTable({
   table,
-  position,
   slideWidth,
-  slideHeight,
   baseStyle,
 }: {
   table: TableData;
-  position: SlideElement["position"];
   slideWidth: number;
-  slideHeight: number;
   baseStyle: React.CSSProperties;
 }) {
   // Calculate total table dimensions
@@ -387,9 +382,7 @@ function RenderElement({
     return (
       <RenderTable 
         table={element.table} 
-        position={position}
         slideWidth={slideWidth}
-        slideHeight={slideHeight}
         baseStyle={baseStyle}
       />
     );

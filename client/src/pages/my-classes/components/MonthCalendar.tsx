@@ -77,7 +77,7 @@ export function MonthCalendar({
     <div className="px-4 pt-3 pb-2">
       {/* Day header row */}
       <div className="grid grid-cols-7 mb-2">
-        {DAY_SHORT.map((day, i) => (
+        {DAY_SHORT.map((day) => (
           <div
             key={day}
             className="py-1.5 text-center text-[11px] font-extrabold uppercase tracking-widest text-indigo-900"
@@ -121,6 +121,7 @@ export function MonthCalendar({
                             ? "bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] border border-indigo-300/60 hover:shadow-[4px_4px_12px_var(--neo-shadow-dark),-4px_-4px_12px_var(--neo-shadow-light),0_0_12px_rgba(99,102,241,0.2)] hover:scale-105"
                             : "bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/30 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] hover:scale-[1.03] active:shadow-[inset_2px_2px_5px_var(--neo-shadow-dark),inset_-2px_-2px_5px_var(--neo-shadow-light)] active:scale-[0.97]"
                   }
+                  ${!isWorking && !isSelected ? "opacity-80" : ""}
                 `}
               >
                 {/* Date number */}

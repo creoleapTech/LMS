@@ -21,7 +21,7 @@ import {
   CheckCircle2,
   Clock,
 } from "lucide-react";
-import type { ITimetableEntry, IPeriodSlot } from "@/types/timetable";
+import type { ITimetableEntry, IPeriodSlot, IPeriodConfig } from "@/types/timetable";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -58,6 +58,7 @@ interface DayViewProps {
   readOnly?: boolean;
   staffId?: string | null;
   institutionId?: string | null;
+  fallbackPeriodConfig?: IPeriodConfig | null;
 }
 
 function formatDateString(date: Date): string {
@@ -67,7 +68,13 @@ function formatDateString(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function DayView({ date, readOnly = false, staffId, institutionId }: DayViewProps) {
+export function DayView({
+  date,
+  readOnly = false,
+  staffId,
+  institutionId,
+  fallbackPeriodConfig,
+}: DayViewProps) {
   const dateStr = formatDateString(date);
   const isAdminView = !!staffId && !!institutionId;
 
@@ -95,9 +102,12 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
 
   const periodConfig = data?.periodConfig;
   const entries = data?.entries || [];
-  const sortedPeriods = periodConfig
-    ? [...periodConfig.periods].sort((a, b) => a.periodNumber - b.periodNumber)
+  const dayPeriods = Array.isArray(periodConfig?.periods) ? periodConfig.periods : [];
+  const fallbackPeriods = Array.isArray(fallbackPeriodConfig?.periods)
+    ? fallbackPeriodConfig.periods
     : [];
+  const periods = dayPeriods.length > 0 ? dayPeriods : fallbackPeriods;
+  const sortedPeriods = [...periods].sort((a, b) => a.periodNumber - b.periodNumber);
 
   const entryMap = new Map<number, ITimetableEntry>();
   for (const entry of entries) {
@@ -167,7 +177,7 @@ export function DayView({ date, readOnly = false, staffId, institutionId }: DayV
         )}
 
         {/* No period config */}
-        {!isLoading && (!periodConfig || periodConfig.periods.length === 0) && (
+        {!isLoading && periods.length === 0 && (
           <div className="px-6 py-12 text-center">
             <p className="text-slate-500 font-semibold">No period schedule configured</p>
             <p className="text-slate-400 text-sm mt-1">

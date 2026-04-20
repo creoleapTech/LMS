@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Eye, Edit, Trash2, GripVertical, BookOpen, Target } from "lucide-react";
 
 interface Chapter {
-    _id: string;
+    id?: string;
+    _id?: string;
     title: string;
     chapterNumber: number;
     description?: string;

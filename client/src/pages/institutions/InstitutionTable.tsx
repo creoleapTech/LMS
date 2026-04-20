@@ -54,10 +54,11 @@ import { useNavigate } from "@tanstack/react-router";
 const columnHelper = createColumnHelper<Institution>();
 
 type Institution = {
-  _id: string;
+  id: string;
   name: string;
   type: "school" | "college";
   address: string;
+  logo?: string;
   contactDetails: {
     inchargePerson: string;
     mobileNumber: string;
@@ -67,10 +68,49 @@ type Institution = {
   isActive: boolean;
 };
 
+type ApiInstitution = {
+  id?: string;
+  _id?: string;
+  name?: string;
+  type?: "school" | "college";
+  address?: string | null;
+  logo?: string | null;
+  contactInchargePerson?: string | null;
+  contactMobile?: string | null;
+  contactEmail?: string | null;
+  contactOfficePhone?: string | null;
+  contactDetails?: {
+    inchargePerson?: string;
+    mobileNumber?: string;
+    email?: string;
+    officePhone?: string;
+  };
+  isActive?: number | boolean;
+};
+
 // Response type for the API
 type InstitutionsResponse = {
-  data: Institution[];
-  // Add other response fields if needed
+  data: ApiInstitution[];
+};
+
+function normalizeInstitution(row: ApiInstitution): Institution {
+  const nestedContact = row.contactDetails ?? {};
+  return {
+    id: String(row.id ?? row._id ?? ""),
+    name: String(row.name ?? ""),
+    type: row.type === "college" ? "college" : "school",
+    address: String(row.address ?? ""),
+    logo: row.logo ?? undefined,
+    contactDetails: {
+      inchargePerson: String(
+        row.contactInchargePerson ?? nestedContact.inchargePerson ?? "",
+      ),
+      mobileNumber: String(row.contactMobile ?? nestedContact.mobileNumber ?? ""),
+      email: String(row.contactEmail ?? nestedContact.email ?? ""),
+      officePhone: String(row.contactOfficePhone ?? nestedContact.officePhone ?? ""),
+    },
+    isActive: row.isActive === true || row.isActive === 1,
+  };
 };
 
 export function InstitutionTable() {
@@ -104,7 +144,9 @@ export function InstitutionTable() {
       if (type && type !== "all") params.append("type", type);
 
       const res = await _axios.get<InstitutionsResponse>(`/admin/institutions?${params.toString()}`);
-      return res.data?.data ?? [];
+      return (res.data?.data ?? [])
+        .map(normalizeInstitution)
+        .filter((institution) => institution.id.length > 0);
     },
     retry: 2,
     staleTime: 30 * 1000,
@@ -124,13 +166,11 @@ export function InstitutionTable() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const isFormData = data instanceof FormData;
-      const config = isFormData ? { headers: { "Content-Type": "multipart/form-data" } } : {};
+    mutationFn: async (data: FormData) => {
       if (editingInstitution) {
-        return _axios.patch(`/admin/institutions/${editingInstitution._id}`, data, config);
+        return _axios.patch(`/admin/institutions/${editingInstitution.id}`, data);
       } else {
-        return _axios.post("/admin/institutions", data, config);
+        return _axios.post("/admin/institutions", data);
       }
     },
     onSuccess: () => {
@@ -160,7 +200,7 @@ export function InstitutionTable() {
       header: "Institution",
       cell: ({ row }) => (
         <button
-          onClick={() => navigate({ to: "/institutions/$id", params: { id: row.original._id } })}
+          onClick={() => navigate({ to: "/institutions/$id", params: { id: row.original.id } })}
           className="text-left hover:underline font-semibold text-blue-600 transition"
         >
           <div className="flex items-center gap-3">
@@ -216,7 +256,7 @@ export function InstitutionTable() {
         <div className="flex items-center gap-3">
           <Switch
             checked={row.original.isActive}
-            onCheckedChange={() => toggleMutation.mutate(row.original._id)}
+            onCheckedChange={() => toggleMutation.mutate(row.original.id)}
             disabled={toggleMutation.isPending}
           />
           <Badge variant={row.original.isActive ? "default" : "secondary"}>
@@ -245,7 +285,7 @@ export function InstitutionTable() {
             size="sm" 
             variant="ghost" 
             className="text-destructive" 
-            onClick={() => setDeletingId(row.original._id)}
+            onClick={() => setDeletingId(row.original.id)}
             disabled={deleteMutation.isPending}
           >
             <Trash2 className="h-4 w-4" />

@@ -31,7 +31,7 @@ import { InstitutionSettingsTab } from "./InstitutionSettingsTab";
 import { Config } from "@/lib/config";
 
 type Institution = {
-  _id: string;
+  id: string;
   name: string;
   type: "school" | "college";
   address: string;
@@ -47,6 +47,50 @@ type Institution = {
   updatedAt: string;
 };
 
+type ApiInstitution = {
+  id?: string;
+  _id?: string;
+  name?: string;
+  type?: "school" | "college";
+  address?: string | null;
+  logo?: string | null;
+  contactInchargePerson?: string | null;
+  contactMobile?: string | null;
+  contactEmail?: string | null;
+  contactOfficePhone?: string | null;
+  contactDetails?: {
+    inchargePerson?: string;
+    mobileNumber?: string;
+    email?: string;
+    officePhone?: string;
+  };
+  isActive?: number | boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+function normalizeInstitution(row: ApiInstitution): Institution {
+  const nestedContact = row.contactDetails ?? {};
+  return {
+    id: String(row.id ?? row._id ?? ""),
+    name: String(row.name ?? ""),
+    type: row.type === "college" ? "college" : "school",
+    address: String(row.address ?? ""),
+    logo: row.logo ?? undefined,
+    contactDetails: {
+      inchargePerson: String(
+        row.contactInchargePerson ?? nestedContact.inchargePerson ?? "",
+      ),
+      mobileNumber: String(row.contactMobile ?? nestedContact.mobileNumber ?? ""),
+      email: String(row.contactEmail ?? nestedContact.email ?? ""),
+      officePhone: String(row.contactOfficePhone ?? nestedContact.officePhone ?? ""),
+    },
+    isActive: row.isActive === true || row.isActive === 1,
+    createdAt: String(row.createdAt ?? ""),
+    updatedAt: String(row.updatedAt ?? ""),
+  };
+}
+
 interface InstitutionDetailPageProps {
   id: string;
 }
@@ -60,7 +104,7 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
     queryKey: ["institution", id],
     queryFn: async () => {
       const res = await _axios.get(`/admin/institutions/${id}`);
-      return res.data.data as Institution;
+      return normalizeInstitution(res.data.data as ApiInstitution);
     },
     enabled: !!id,
   });
@@ -140,7 +184,7 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
             <div className="text-right">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Institution ID</p>
               <code className="text-xs neo-inset-rounded-lg px-3 py-1.5 font-mono break-all mt-1 inline-block">
-                {institution._id}
+                {institution.id}
               </code>
             </div>
           </div>
@@ -184,26 +228,26 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
 
           {/* Staff Tab */}
           <TabsContent value="staff">
-            <StaffTable institutionId={institution._id} institutionName={institution.name} />
+            <StaffTable institutionId={institution.id} institutionName={institution.name} />
           </TabsContent>
 
           {/* Students Tab */}
           <TabsContent value="students">
-            <StudentTable institutionId={institution._id} />
+            <StudentTable institutionId={institution.id} />
           </TabsContent>
 
           {/* Classes Tab */}
           <TabsContent value="classes">
-            <ClassTable institutionId={institution._id} />
+            <ClassTable institutionId={institution.id} />
           </TabsContent>
           <TabsContent value="curriculum">
-  {institution && <InstitutionCurriculumAccess institutionId={institution._id} />}
+  {institution && <InstitutionCurriculumAccess institutionId={institution.id} />}
 </TabsContent>
           <TabsContent value="periods">
             <PeriodConfigSection institutionId={id} />
           </TabsContent>
           <TabsContent value="settings">
-            <InstitutionSettingsTab institutionId={institution._id} />
+            <InstitutionSettingsTab institutionId={institution.id} />
           </TabsContent>
         </Tabs>
 

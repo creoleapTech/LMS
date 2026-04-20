@@ -8,11 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { BookOpen, Plus, Trash2, Save, Loader2 } from "lucide-react";
+import { BookOpen, Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -21,12 +22,12 @@ import {
 import { useAuthStore } from "@/store/userAuthStore";
 
 interface Curriculum {
-  _id: string;
+  id: string;
   name: string;
 }
 
 interface GradeBook {
-  _id: string;
+  id: string;
   grade: number;
   bookTitle: string;
   subtitle?: string;
@@ -34,8 +35,38 @@ interface GradeBook {
 }
 
 interface CurriculumAccess {
-  curriculumId: { _id: string; name: string };
+  curriculumId: { id: string; name: string };
   accessibleGradeBooks: GradeBook[];
+}
+
+function normalizeCurriculum(raw: any): Curriculum {
+  return {
+    id: String(raw?.id ?? raw?._id ?? ""),
+    name: String(raw?.name ?? ""),
+  };
+}
+
+function normalizeGradeBook(raw: any): GradeBook {
+  return {
+    id: String(raw?.id ?? raw?._id ?? ""),
+    grade: Number(raw?.grade ?? 0),
+    bookTitle: String(raw?.bookTitle ?? ""),
+    subtitle: raw?.subtitle ? String(raw.subtitle) : undefined,
+    coverImage: raw?.coverImage ? String(raw.coverImage) : undefined,
+  };
+}
+
+function normalizeCurriculumAccess(raw: any): CurriculumAccess {
+  const gradeBookRows = Array.isArray(raw?.accessibleGradeBooks)
+    ? raw.accessibleGradeBooks
+    : [];
+
+  return {
+    curriculumId: normalizeCurriculum(raw?.curriculumId ?? {}),
+    accessibleGradeBooks: gradeBookRows
+      .map((book: any) => normalizeGradeBook(book))
+      .filter((book: GradeBook) => book.id.length > 0),
+  };
 }
 
 interface Props {
@@ -57,7 +88,10 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
     queryKey: ["institution-curriculum-access", institutionId],
     queryFn: async () => {
       const res = await _axios.get(`/admin/institutions/${institutionId}/curriculum-access`);
-      return res.data.data;
+      const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+      return rows
+        .map((row: any) => normalizeCurriculumAccess(row))
+        .filter((item: CurriculumAccess) => item.curriculumId.id.length > 0);
     },
   });
 
@@ -66,7 +100,10 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
     queryKey: ["all-curriculums"],
     queryFn: async () => {
       const res = await _axios.get("/admin/curriculum");
-      return res.data.data;
+      const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+      return rows
+        .map((row: any) => normalizeCurriculum(row))
+        .filter((item: Curriculum) => item.id.length > 0);
     },
   });
 
@@ -76,7 +113,10 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
     queryFn: async () => {
       if (!selectedCurriculum) return [];
        const res = await _axios.get(`/admin/curriculum/${selectedCurriculum}/grades`);
-      return res.data.data;
+      const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+      return rows
+        .map((row: any) => normalizeGradeBook(row))
+        .filter((item: GradeBook) => item.id.length > 0);
     },
     enabled: !!selectedCurriculum,
   });
@@ -133,14 +173,17 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
       queryKey: ["gradebooks-for-curriculum", curriculumId],
       queryFn: async () => {
          const res = await _axios.get(`/admin/curriculum/${curriculumId}/grades`);
-        return res.data.data;
+        const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+        return rows
+          .map((row: any) => normalizeGradeBook(row))
+          .filter((item: GradeBook) => item.id.length > 0);
       },
     });
 
-    const accessItem = curriculumAccess.find(item => item.curriculumId._id === curriculumId);
-    const enabledIds = accessItem?.accessibleGradeBooks.map((b) => b._id) || [];
+    const accessItem = curriculumAccess.find(item => item.curriculumId.id === curriculumId);
+    const enabledIds = accessItem?.accessibleGradeBooks.map((b) => b.id) || [];
 
-    const disabledBooks = allBooks.filter((book) => !enabledIds.includes(book._id));
+    const disabledBooks = allBooks.filter((book) => !enabledIds.includes(book.id));
 
     if (disabledBooks.length === 0) {
       return (
@@ -152,7 +195,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {disabledBooks.map((book) => (
           <div
-            key={book._id}
+            key={book.id}
             className="flex items-center justify-between p-4 border rounded-xl bg-gray-100 dark:bg-gray-900 opacity-70"
           >
             <div>
@@ -166,7 +209,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
               onCheckedChange={() =>
                 toggleBookMutation.mutate({
                   curriculumId,
-                  gradeBookId: book._id,
+                  gradeBookId: book.id,
                 })
               }
               disabled={toggleBookMutation.isPending}
@@ -207,6 +250,9 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto rounded-2xl">
             <DialogHeader>
               <DialogTitle>Assign Curriculum & Select Books</DialogTitle>
+              <DialogDescription>
+                Choose a curriculum and enable the grade books this institution can use.
+              </DialogDescription>
             </DialogHeader>
 
             {/* Curriculum selector */}
@@ -225,7 +271,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
                 >
                   <option value="">-- Select Curriculum --</option>
                   {allCurriculums.map((c) => (
-                    <option key={c._id} value={c._id}>
+                    <option key={c.id} value={c.id}>
                       {c.name}
                     </option>
                   ))}
@@ -239,17 +285,17 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
                   <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
                     {booksForSelectedCurriculum.map((book) => (
                       <label
-                        key={book._id}
+                        key={book.id}
                         className="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer"
                       >
                         <input
                           type="checkbox"
-                          checked={selectedGradeBooks.includes(book._id)}
+                          checked={selectedGradeBooks.includes(book.id)}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedGradeBooks([...selectedGradeBooks, book._id]);
+                              setSelectedGradeBooks([...selectedGradeBooks, book.id]);
                             } else {
-                              setSelectedGradeBooks(selectedGradeBooks.filter((id) => id !== book._id));
+                              setSelectedGradeBooks(selectedGradeBooks.filter((id) => id !== book.id));
                             }
                           }}
                         />
@@ -297,7 +343,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
       ) : (
         <div className="space-y-8">
           {curriculumAccess.map((access) => (
-            <Card key={access.curriculumId._id} className="rounded-2xl border-slate-200/80">
+            <Card key={access.curriculumId.id} className="rounded-2xl border-slate-200/80">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <CardTitle className="flex items-center gap-2 min-w-0">
                   <BookOpen className="h-5 w-5 shrink-0" />
@@ -306,7 +352,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => removeMutation.mutate(access.curriculumId._id)}
+                  onClick={() => removeMutation.mutate(access.curriculumId.id)}
                   disabled={removeMutation.isPending}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
@@ -321,7 +367,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {access.accessibleGradeBooks.map((book) => (
                       <div
-                        key={book._id}
+                        key={book.id}
                         className="flex items-center justify-between p-4 border rounded-xl bg-slate-50 dark:bg-slate-800"
                       >
                         <div>
@@ -337,8 +383,8 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
                           checked={true}
                           onCheckedChange={() =>
                             toggleBookMutation.mutate({
-                              curriculumId: access.curriculumId._id,
-                              gradeBookId: book._id,
+                              curriculumId: access.curriculumId.id,
+                              gradeBookId: book.id,
                             })
                           }
                           disabled={toggleBookMutation.isPending}
@@ -351,7 +397,7 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
                 {/* Show all available books of this curriculum with switches to enable missing ones */}
                 <div className="mt-6">
                   <h4 className="text-sm font-medium mb-3">Add / Enable More Books</h4>
-                  <AdditionalBooksSection curriculumId={access.curriculumId._id} />
+                  <AdditionalBooksSection curriculumId={access.curriculumId.id} />
                 </div>
               </CardContent>
             </Card>

@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, BookOpen, GraduationCap, MapPin, User, PhoneCall, MailIcon, Phone, Pencil, LayoutDashboard, Zap, Activity, Clock } from "lucide-react";
+import { Users, BookOpen, GraduationCap, MapPin, User, PhoneCall, MailIcon, Phone, Pencil, LayoutDashboard, Zap, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,10 +11,10 @@ interface DashboardProps {
     id: string;
     institution: any;
     onEdit: () => void;
-    onTabChange: (tab: string) => void;
+    onTabChange?: (tab: string) => void;
 }
 
-export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: DashboardProps) {
+export function InstitutionDashboard({ id, institution, onEdit }: DashboardProps) {
     // Fetch Stats
     const { data: stats, isLoading } = useQuery({
         queryKey: ["institutionStats", id],
@@ -36,7 +36,6 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                     trend={stats?.studentTrend || "No data"}
                     icon={GraduationCap}
                     gradient="from-blue-500 to-indigo-500"
-                    shadowColor="shadow-blue-500/20"
                 />
                 <StatsWidget
                     title="Total Staff"
@@ -44,7 +43,6 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                     trend={stats?.staffTrend || "No data"}
                     icon={Users}
                     gradient="from-emerald-500 to-teal-500"
-                    shadowColor="shadow-emerald-500/20"
                 />
                 <StatsWidget
                     title="Active Classes"
@@ -52,7 +50,6 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                     trend={stats?.classTrend || "No data"}
                     icon={BookOpen}
                     gradient="from-purple-500 to-pink-500"
-                    shadowColor="shadow-purple-500/20"
                 />
             </div>
 
@@ -194,7 +191,7 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
 
 // --- SUBCOMPONENTS ---
 
-function StatsWidget({ title, value, trend, icon: Icon, gradient, shadowColor }: any) {
+function StatsWidget({ title, value, trend, icon: Icon, gradient }: any) {
     return (
         <div className={cn(
             "group relative overflow-hidden rounded-2xl p-6 transition-all duration-200 cursor-default",
@@ -232,26 +229,6 @@ function DetailRow({ icon: Icon, label, value }: any) {
                 <p className="text-sm font-semibold text-foreground mt-0.5 leading-snug">{value}</p>
             </div>
         </div>
-    )
-}
-
-function ActionCard({ icon: Icon, label, color, bg, onClick }: any) {
-    return (
-        <button
-            onClick={onClick}
-            className={cn(
-                "relative group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 overflow-hidden",
-                "after:absolute after:bottom-0 after:left-0 after:h-1 after:w-full after:scale-x-0 after:transition-transform hover:after:scale-x-100",
-                bg
-            )}
-        >
-            <div className={cn("p-3 rounded-xl bg-slate-50 dark:bg-slate-800 transition-colors group-hover:bg-white dark:group-hover:bg-slate-700", color)}>
-                <Icon className="h-6 w-6" />
-            </div>
-            <span className="font-semibold text-sm text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
-                {label}
-            </span>
-        </button>
     )
 }
 

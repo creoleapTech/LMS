@@ -4,7 +4,7 @@ import type { IPeriodConfig } from "@/types/timetable";
 
 export function usePeriodConfig() {
   return useQuery<IPeriodConfig | null>({
-    queryKey: ["period-config"],
+    queryKey: ["period-config", "own"],
     queryFn: async () => {
       const { data: res } = await _axios.get<{ success: boolean; data: IPeriodConfig | null }>(
         "/admin/period-config"

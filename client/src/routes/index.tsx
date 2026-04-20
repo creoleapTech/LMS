@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import { Eye, EyeOff, Cpu, Globe, Zap, ChevronRight, Fingerprint, Activity } from 'lucide-react';
+import { Eye, EyeOff, Zap, ChevronRight, Fingerprint } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { _axios } from '@/lib/axios';
 import { toast } from 'sonner';
@@ -107,191 +107,141 @@ function LoginPage() {
       <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] animate-blob animation-delay-4000 pointer-events-none z-0"></div>
 
       {/* Main Glass Terminal */}
-      <div className="z-10 w-full max-w-[1000px] p-4 sm:p-6 lg:p-8">
-        <div className="relative backdrop-blur-3xl bg-[#0C0620]/50 border border-white/5 shadow-[0_0_50px_rgba(111,66,193,0.1),inset_0_1px_0_rgba(255,255,255,0.1)] rounded-4xl overflow-hidden flex flex-col lg:flex-row group transition-all duration-700 hover:shadow-[0_0_80px_rgba(111,66,193,0.15)] ring-1 ring-white/10 min-h-[550px]">
-          
-          {/* Edge Glow Effect */}
-          <div className="absolute -top-px left-1/4 right-1/4 h-px bg-linear-to-r from-transparent via-purple-400 to-transparent opacity-50"></div>
-          <div className="absolute -bottom-px left-1/3 right-1/3 h-px bg-linear-to-r from-transparent via-indigo-400 to-transparent opacity-50"></div>
+      <div className="z-10 w-full max-w-[1040px] p-4 sm:p-6 lg:p-8">
+        <div className="relative min-h-[560px] overflow-hidden rounded-[28px] border border-white/10 bg-[#0B0720]/45 backdrop-blur-2xl ring-1 ring-white/10 shadow-[0_0_60px_rgba(80,49,165,0.18)]">
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(104,65,196,0.22),transparent_36%,rgba(29,16,74,0.36)_70%,rgba(104,65,196,0.18))]" />
 
-          {/* Left Panel - Information */}
-          <div className="hidden lg:flex flex-1 flex-col justify-between p-8 xl:p-12 relative">
-            {/* Header */}
-            <div>
-              <div className="relative inline-flex items-center gap-4 bg-white/[0.04] border border-white/[0.08] rounded-2xl px-5 py-3 backdrop-blur-md group/logo">
-                {/* Subtle glow behind logo block */}
-                <div className="absolute -inset-1 bg-linear-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 rounded-2xl blur-xl opacity-0 group-hover/logo:opacity-100 transition-opacity duration-700 pointer-events-none" />
-                <img src="/creo_white.png" alt="Creoleap" className="h-9 w-auto object-contain relative z-10 drop-shadow-[0_0_8px_rgba(139,92,246,0.3)]" />
-                <div className="h-8 w-px bg-linear-to-b from-transparent via-purple-400/50 to-transparent shrink-0" />
-                <div className="flex flex-col relative z-10">
-                  <span className="text-2xl font-black tracking-wide bg-clip-text text-transparent bg-linear-to-r from-white via-purple-100 to-white/80">
-                    LMS
-                  </span>
-                  <span className="text-[9px] font-medium text-purple-300/60 tracking-[0.2em] uppercase">E-Learning Portal</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Typography Hero */}
-            <div className="mt-6">
-              <h1 className="text-4xl xl:text-5xl font-black leading-[1.1] tracking-tighter mb-4 relative">
-                Empower Your <br />
-                <span className="bg-clip-text text-transparent bg-linear-to-r from-indigo-300 via-purple-300 to-pink-300">
-                  Learning Experience
+          <div className="relative flex h-full flex-col lg:flex-row">
+            {/* Left Panel - Stitch Inspired Hero */}
+            <div className="hidden flex-1 flex-col lg:flex p-8 xl:p-10">
+              <div className="inline-flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 w-fit">
+                <img
+                  src="/creo_white.png"
+                  alt="Creoleap"
+                  className="h-7 w-auto object-contain"
+                />
+                <span className="text-[9px] font-semibold tracking-[0.18em] text-white/65 uppercase">
+                  Tech Portal Login
                 </span>
-              </h1>
-              <p className="text-base text-purple-100/70 font-medium max-w-[380px] leading-relaxed relative z-10">
-                Access world-class courses, connect with expert instructors, and achieve your educational goals in one unified platform.
-              </p>
-            </div>
-
-            {/* Metric Displays (Futuristic Bento) */}
-            <div className="grid grid-cols-2 gap-3 mt-10 relative z-10">
-              <div className="bg-white/3 border border-white/5 rounded-xl p-4 backdrop-blur-md group/card hover:bg-white/5 transition-all">
-                <Cpu className="h-5 w-5 text-indigo-400 mb-2 opacity-70 group-hover/card:opacity-100 group-hover/card:text-indigo-300 transition-all" />
-                <div className="text-2xl font-black text-white font-mono tracking-tighter">10K+</div>
-                <div className="text-[10px] text-white/50 font-mono mt-0.5">ACTIVE COURSES</div>
               </div>
-              
-              <div className="bg-white/3 border border-white/5 rounded-xl p-4 backdrop-blur-md group/card hover:bg-white/5 transition-all relative overflow-hidden">
-                <Globe className="h-5 w-5 text-pink-400 mb-2 opacity-70 group-hover/card:opacity-100 group-hover/card:text-pink-300 transition-all" />
-                <div className="text-2xl font-black text-white font-mono tracking-tighter">50K+</div>
-                <div className="text-[10px] text-white/50 font-mono mt-0.5">STUDENTS</div>
-                
-                {/* Embedded subtle grid */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[10px_10px] pointer-events-none opacity-20"></div>
+
+              <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <img
+                  src="/futuristic_lms.png"
+                  alt="Creoleap technology workspace"
+                  className="h-[240px] w-full rounded-xl object-cover object-center"
+                />
+              </div>
+
+              <div className="mt-8 max-w-[470px]">
+                <h1 className="text-5xl font-black tracking-tight leading-[1.06] text-white">
+                  Bridge the Gap to
+                  <span className="block bg-clip-text text-transparent bg-linear-to-r from-white via-purple-100 to-indigo-200">
+                    Tech Excellence
+                  </span>
+                </h1>
+                <p className="mt-4 text-base text-white/70 leading-relaxed">
+                  Develop practical, industry-relevant skills through focused learning.
+                </p>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="mt-10 flex items-center justify-between text-white/30 text-[10px] font-mono uppercase tracking-widest border-t border-white/5 pt-4">
-              <span>SECURE_CONNECTION</span>
-              <Activity className="h-3 w-3 animate-pulse text-indigo-500" />
+            {/* Right Panel - Authentication Gateway */}
+            <div className="w-full lg:w-[430px] p-5 sm:p-8 lg:p-10 flex items-center justify-center">
+              <div className="w-full max-w-[360px] rounded-[24px] border border-white/20 bg-white/[0.07] px-6 sm:px-7 py-7 backdrop-blur-xl shadow-[0_20px_60px_rgba(10,6,34,0.45)]">
+                <div className="lg:hidden mb-6 flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                  <img
+                    src="/creo_white.png"
+                    alt="Creoleap"
+                    className="h-7 w-auto object-contain"
+                  />
+                  <span className="text-[9px] font-semibold tracking-[0.18em] text-white/65 uppercase">
+                    Tech Portal Login
+                  </span>
+                </div>
+
+                <div className="mb-7 text-center">
+                  <div className="mx-auto mb-2 inline-flex rounded-full border border-violet-400/25 bg-violet-400/10 p-2">
+                    <Fingerprint className="h-5 w-5 text-violet-300" />
+                  </div>
+                  <h2 className="text-3xl font-black tracking-tight text-white">Welcome Back</h2>
+                  <p className="mt-1 text-sm text-white/70">Please sign in to continue your learning journey.</p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="email" className="block text-[11px] font-semibold text-white/65 uppercase tracking-widest">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                        <Zap className="h-4 w-4 text-violet-300/70" />
+                      </div>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="block w-full rounded-xl border border-violet-300/30 bg-[#130D34]/75 py-3 pl-10 pr-4 text-sm text-white placeholder:text-white/30 focus:border-violet-300/70 focus:outline-none"
+                        placeholder="your.email@creoleap.com"
+                        disabled={loginMutation.isPending}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="password" className="block text-[11px] font-semibold text-white/65 uppercase tracking-widest">
+                        Password
+                      </label>
+                      <a href="#" className="text-[11px] font-semibold text-violet-300 hover:text-violet-200 transition-colors">
+                        Forgot Password?
+                      </a>
+                    </div>
+                    <div className="relative">
+                      <input
+                        id="password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="block w-full rounded-xl border border-violet-300/30 bg-[#130D34]/75 px-4 py-3 text-sm tracking-wide text-white placeholder:text-white/30 focus:border-violet-300/70 focus:outline-none"
+                        placeholder="••••••••••••"
+                        disabled={loginMutation.isPending}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center px-4 text-white/45 hover:text-white transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loginMutation.isPending}
+                    className="mt-2 w-full rounded-xl border border-white/20 bg-linear-to-r from-[#7D38FF] to-[#C24DFF] py-3 text-sm font-bold tracking-wider text-white shadow-[0_8px_20px_rgba(131,56,236,0.4)] transition-all hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      {loginMutation.isPending ? 'Authenticating...' : 'SIGN IN'}
+                      {!loginMutation.isPending && <ChevronRight className="h-4 w-4" />}
+                    </span>
+                  </button>
+
+                  <p className="pt-2 text-center text-[11px] text-white/45">
+                    Not registered?
+                    <a href="#" className="ml-1 text-violet-300 hover:text-violet-200 transition-colors">
+                      Contact Admin
+                    </a>
+                  </p>
+                </form>
+              </div>
             </div>
-          </div>
-
-          {/* Right Panel - Authentication Gateway */}
-          <div className="w-full lg:w-[420px] lg:border-l border-white/5 bg-[#03010A]/60 relative z-10 flex flex-col justify-center p-6 sm:p-10 backdrop-blur-2xl">
-             {/* Radial gradient background specific to right panel for depth */}
-             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(111,66,193,0.1),transparent_70%)] pointer-events-none"></div>
-
-             {/* Mobile logo variant */}
-             <div className="lg:hidden flex items-center gap-3 mb-8 bg-white/[0.04] border border-white/[0.08] rounded-2xl px-4 py-2.5 backdrop-blur-md w-fit">
-               <img src="/creo_white.png" alt="Creoleap" className="h-7 w-auto object-contain drop-shadow-[0_0_6px_rgba(139,92,246,0.3)]" />
-               <div className="h-6 w-px bg-linear-to-b from-transparent via-purple-400/50 to-transparent shrink-0" />
-               <div className="flex flex-col">
-                 <span className="text-xl font-black tracking-wide bg-clip-text text-transparent bg-linear-to-r from-white via-purple-100 to-white/80">
-                   LMS
-                 </span>
-                 <span className="text-[8px] font-medium text-purple-300/60 tracking-[0.2em] uppercase">E-Learning Portal</span>
-               </div>
-             </div>
-
-             <div className="mb-8 text-center lg:text-left relative z-10">
-               <div className="inline-block p-2 bg-indigo-500/10 rounded-full mb-3 border border-indigo-500/20">
-                 <Fingerprint className="h-5 w-5 text-indigo-400" />
-               </div>
-               <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Welcome Back</h2>
-               <p className="text-indigo-200/60 text-sm font-medium">Please sign in to continue your learning journey.</p>
-             </div>
-
-             <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
-               <div className="space-y-4">
-                 {/* Email Input */}
-                 <div className="space-y-1.5 relative group">
-                   <label htmlFor="email" className="block text-[11px] font-semibold text-purple-200/70 uppercase tracking-widest pl-1">
-                     Email Address
-                   </label>
-                   <div className="relative">
-                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                       <Zap className="h-4 w-4 text-purple-400/50 group-focus-within:text-purple-400 transition-colors" />
-                     </div>
-                     <input
-                       id="email"
-                       name="email"
-                       type="email"
-                       required
-                       value={email}
-                       onChange={(e) => setEmail(e.target.value)}
-                       className="block w-full pl-10 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-white/20 focus:bg-black/60 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all duration-300 backdrop-blur-md shadow-inner text-sm"
-                       placeholder="student@example.com"
-                       disabled={loginMutation.isPending}
-                     />
-                   </div>
-                 </div>
-
-                 {/* Password Input */}
-                 <div className="space-y-1.5 relative group">
-                   <div className="flex items-center justify-between pl-1">
-                     <label htmlFor="password" className="block text-[11px] font-semibold text-purple-200/70 uppercase tracking-widest">
-                       Password
-                     </label>
-                     <a href="#" className="text-[11px] font-semibold text-purple-400 hover:text-purple-300 transition-colors">
-                       Forgot Password?
-                     </a>
-                   </div>
-                   <div className="relative">
-                     <input
-                       id="password"
-                       name="password"
-                       type={showPassword ? 'text' : 'password'}
-                       required
-                       value={password}
-                       onChange={(e) => setPassword(e.target.value)}
-                       className="block w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-white/20 focus:bg-black/60 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all duration-300 backdrop-blur-md shadow-inner text-sm tracking-wide"
-                       placeholder="••••••••••••"
-                       disabled={loginMutation.isPending}
-                     />
-                     <button
-                       type="button"
-                       onClick={() => setShowPassword(!showPassword)}
-                       className="absolute inset-y-0 right-0 px-4 flex items-center text-white/40 hover:text-white focus:outline-none transition-colors"
-                     >
-                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                     </button>
-                   </div>
-                 </div>
-               </div>
-
-               {/* Submission Node */}
-               <div className="pt-4 relative">
-                 {/* Glowing backdrop for button */}
-                 <div className="absolute inset-x-0 bottom-0 h-full bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 blur-xl rounded-2xl transition-opacity group-hover:opacity-40"></div>
-                 
-                 <button
-                   type="submit"
-                   disabled={loginMutation.isPending}
-                   className="relative w-full flex justify-center items-center space-x-2 py-3 px-4 border border-white/10 text-sm font-bold rounded-xl text-white bg-linear-to-r from-indigo-600/80 via-purple-600/80 to-indigo-600/80 bg-size-[200%_auto] hover:border-purple-400/50 hover:bg-position-[right_center] focus:outline-none shadow-[0_0_20px_rgba(111,66,193,0.3)] transition-all duration-500 hover:shadow-[0_0_30px_rgba(111,66,193,0.5)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden"
-                 >
-                   {/* Cyber scanner line animation */}
-                   <div className="absolute top-0 left-0 w-full h-0.5 bg-white/60 -translate-y-5 group-hover:translate-y-[60px] transition-transform duration-1000 ease-in-out"></div>
-                   
-                   <div className="relative z-10 flex items-center justify-center space-x-2 font-mono uppercase tracking-widest">
-                     {loginMutation.isPending ? (
-                       <>
-                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div>
-                         <span>Authenticating...</span>
-                       </>
-                     ) : (
-                       <>
-                         <span>Sign In</span>
-                         <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
-                       </>
-                     )}
-                   </div>
-                 </button>
-               </div>
-
-               {/* Alternative Path */}
-               <div className="text-center mt-5 pt-5 border-t border-white/5">
-                 <p className="text-[11px] text-white/40 font-mono tracking-widest uppercase">
-                   NOT REGISTERED?{' '}
-                   <a href="#" className="font-bold text-indigo-400 hover:text-indigo-300 transition-colors ml-1">
-                     CONTACT ADMIN
-                   </a>
-                 </p>
-               </div>
-             </form>
           </div>
         </div>
       </div>

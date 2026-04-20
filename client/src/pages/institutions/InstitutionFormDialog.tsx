@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -43,11 +42,12 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   institution?: Institution | null;
-  onSave: (data: FormData | FormValues) => void;
+  onSave: (data: FormData) => void;
 }
 
 type Institution = {
-  _id: string;
+  id?: string;
+  _id?: string;
   name: string;
   type: "school" | "college";
   address: string;
@@ -132,17 +132,17 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave 
   };
 
   const onSubmit = (data: FormValues) => {
+    const formData = new FormData();
+    formData.append("name", data.name);
+    formData.append("type", data.type);
+    formData.append("address", data.address);
+    formData.append("contactDetails", JSON.stringify(data.contactDetails));
+
     if (logoFile) {
-      const formData = new FormData();
-      formData.append("name", data.name);
-      formData.append("type", data.type);
-      formData.append("address", data.address);
-      formData.append("contactDetails", JSON.stringify(data.contactDetails));
       formData.append("logo", logoFile);
-      onSave(formData);
-    } else {
-      onSave(data);
     }
+
+    onSave(formData);
     onOpenChange(false);
   };
 

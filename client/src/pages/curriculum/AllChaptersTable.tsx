@@ -21,22 +21,21 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 interface Chapter {
-    _id: string;
+    id: string;
     title: string;
     chapterNumber: number;
     description?: string;
     learningObjectives?: string;
-    gradeBookId: {
-        _id: string;
-        bookTitle: string;
-        curriculumId: { _id: string; name: string };
-    } | string;
+    gradeBookId: string;
+    bookTitle?: string;
+    curriculumId?: string;
+    curriculumName?: string;
     createdAt: string;
 }
 
 export function AllChaptersTable() {
     const [search, setSearch] = useState("");
-    const [page, setPage] = useState(1);
+    const page = 1;
     const [openForm, setOpenForm] = useState(false);
     const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
     const [selectedChapterNumber, setSelectedChapterNumber] = useState<number>(1);
@@ -119,25 +118,16 @@ export function AllChaptersTable() {
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {data?.data?.map((chapter: Chapter) => {
-                        const book =
-                            typeof chapter.gradeBookId === "object"
-                                ? chapter.gradeBookId
-                                : null;
-                        const curriculum =
-                            book && typeof book.curriculumId === "object"
-                                ? book.curriculumId
-                                : null;
-
                         return (
                             <PremiumChapterCard
-                                key={chapter._id}
+                                key={chapter.id}
                                 chapter={chapter}
                                 onView={() => {
-                                    setSelectedChapterId(chapter._id);
+                                    setSelectedChapterId(chapter.id);
                                     setSelectedChapterNumber(chapter.chapterNumber);
                                 }}
-                                curriculumName={curriculum?.name}
-                                bookTitle={book?.bookTitle}
+                                curriculumName={chapter.curriculumName}
+                                bookTitle={chapter.bookTitle}
                                 showActions={false}
                             />
                         );

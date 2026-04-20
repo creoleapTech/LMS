@@ -14,6 +14,46 @@ import { superAdminAuth } from "../../middleware/super-admin-auth";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
+function isJsonRequest(contentType: string | undefined): boolean {
+  return (contentType ?? "").toLowerCase().includes("application/json");
+}
+
+async function parseJsonBody(c: any): Promise<Record<string, unknown>> {
+  try {
+    return await c.req.json<Record<string, unknown>>();
+  } catch {
+    throw new BadRequestError("Invalid JSON body");
+  }
+}
+
+function parseContactDetails(raw: unknown): Record<string, unknown> {
+  if (!raw) {
+    return {};
+  }
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return {};
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
+    } catch {
+      throw new BadRequestError("contactDetails must be valid JSON");
+    }
+  }
+
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as Record<string, unknown>;
+  }
+
+  return {};
+}
+
 // All routes require super-admin auth (equivalent of .use(superAdminAuthMacro).guard({ isAuth: true }))
 app.use("*", superAdminAuth);
 
@@ -25,26 +65,44 @@ app.post("/", async (c) => {
     throw new ForbiddenError("Only super_admin can create institutions");
   }
 
-  const formData = await c.req.formData();
+  const contentType = c.req.header("content-type");
 
-  const name = formData.get("name") as string;
-  const type = formData.get("type") as string;
-  const address = formData.get("address") as string;
-  const contactDetailsRaw = formData.get("contactDetails");
-  const logoFile = formData.get("logo") as File | null;
+  let name: string | undefined;
+  let type: string | undefined;
+  let address: string | undefined;
+  let contactDetailsRaw: unknown;
+  let logoFile: File | null = null;
+
+  if (isJsonRequest(contentType)) {
+    const body = await parseJsonBody(c);
+    name = typeof body.name === "string" ? body.name.trim() : undefined;
+    type = typeof body.type === "string" ? body.type.trim() : undefined;
+    address = typeof body.address === "string" ? body.address : undefined;
+    contactDetailsRaw = body.contactDetails;
+  } else {
+    const formData = await c.req.formData();
+    const rawName = formData.get("name");
+    const rawType = formData.get("type");
+    const rawAddress = formData.get("address");
+
+    name = typeof rawName === "string" ? rawName.trim() : undefined;
+    type = typeof rawType === "string" ? rawType.trim() : undefined;
+    address = typeof rawAddress === "string" ? rawAddress : undefined;
+    contactDetailsRaw = formData.get("contactDetails");
+
+    const logoInput = formData.get("logo");
+    logoFile = logoInput instanceof File ? logoInput : null;
+  }
 
   if (!name || !type) {
     throw new BadRequestError("name and type are required");
   }
 
-  // Parse contact details (may arrive as JSON string or already-parsed)
-  let contactDetails: any = {};
-  if (contactDetailsRaw) {
-    contactDetails =
-      typeof contactDetailsRaw === "string"
-        ? JSON.parse(contactDetailsRaw)
-        : contactDetailsRaw;
+  if (type !== "school" && type !== "college") {
+    throw new BadRequestError("type must be either school or college");
   }
+
+  const contactDetails = parseContactDetails(contactDetailsRaw);
 
   // Handle logo upload
   let logoKey: string | null = null;
@@ -304,39 +362,70 @@ app.patch("/:id", async (c) => {
     throw new ForbiddenError("Only super_admin can update institutions");
   }
 
-  const formData = await c.req.formData();
-
   const updateData: Record<string, any> = { updatedAt: nowISO() };
 
-  const name = formData.get("name") as string | null;
-  const type = formData.get("type") as string | null;
-  const address = formData.get("address") as string | null;
-  const contactDetailsRaw = formData.get("contactDetails");
-  const isActiveRaw = formData.get("isActive");
-  const logoFile = formData.get("logo") as File | null;
+  const contentType = c.req.header("content-type");
 
-  if (name !== null) updateData.name = name;
-  if (type !== null) updateData.type = type;
-  if (address !== null) updateData.address = address;
-  if (isActiveRaw !== null) {
-    updateData.isActive = isActiveRaw === "true" || isActiveRaw === "1" ? 1 : 0;
+  let name: string | undefined;
+  let type: string | undefined;
+  let address: string | undefined;
+  let contactDetailsRaw: unknown;
+  let isActiveRaw: unknown;
+  let logoFile: File | null = null;
+
+  if (isJsonRequest(contentType)) {
+    const body = await parseJsonBody(c);
+    name = typeof body.name === "string" ? body.name : undefined;
+    type = typeof body.type === "string" ? body.type : undefined;
+    address = typeof body.address === "string" ? body.address : undefined;
+    contactDetailsRaw = body.contactDetails;
+    isActiveRaw = body.isActive;
+  } else {
+    const formData = await c.req.formData();
+
+    const rawName = formData.get("name");
+    const rawType = formData.get("type");
+    const rawAddress = formData.get("address");
+
+    name = typeof rawName === "string" ? rawName : undefined;
+    type = typeof rawType === "string" ? rawType : undefined;
+    address = typeof rawAddress === "string" ? rawAddress : undefined;
+    contactDetailsRaw = formData.get("contactDetails");
+    isActiveRaw = formData.get("isActive");
+
+    const logoInput = formData.get("logo");
+    logoFile = logoInput instanceof File ? logoInput : null;
+  }
+
+  if (name !== undefined) updateData.name = name;
+  if (type !== undefined) updateData.type = type;
+  if (address !== undefined) updateData.address = address;
+
+  if (isActiveRaw !== undefined && isActiveRaw !== null) {
+    if (typeof isActiveRaw === "boolean") {
+      updateData.isActive = isActiveRaw ? 1 : 0;
+    } else {
+      const isActiveText = String(isActiveRaw);
+      updateData.isActive = isActiveText === "true" || isActiveText === "1" ? 1 : 0;
+    }
   }
 
   // Parse contact details
   if (contactDetailsRaw) {
-    const contactDetails =
-      typeof contactDetailsRaw === "string"
-        ? JSON.parse(contactDetailsRaw)
-        : contactDetailsRaw;
+    const contactDetails = parseContactDetails(contactDetailsRaw);
 
-    if (contactDetails.inchargePerson !== undefined)
-      updateData.contactInchargePerson = contactDetails.inchargePerson;
-    if (contactDetails.mobileNumber !== undefined)
-      updateData.contactMobile = contactDetails.mobileNumber;
-    if (contactDetails.email !== undefined)
-      updateData.contactEmail = contactDetails.email;
-    if (contactDetails.officePhone !== undefined)
-      updateData.contactOfficePhone = contactDetails.officePhone;
+    if (contactDetails.inchargePerson !== undefined) {
+      updateData.contactInchargePerson = String(contactDetails.inchargePerson ?? "");
+    }
+    if (contactDetails.mobileNumber !== undefined) {
+      updateData.contactMobile = String(contactDetails.mobileNumber ?? "");
+    }
+    if (contactDetails.email !== undefined) {
+      updateData.contactEmail = String(contactDetails.email ?? "");
+    }
+    if (contactDetails.officePhone !== undefined) {
+      updateData.contactOfficePhone = String(contactDetails.officePhone ?? "");
+    }
   }
 
   // Handle logo upload

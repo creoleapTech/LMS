@@ -3,18 +3,27 @@ main = "src/index.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 
+[[rules]]
+type = "Data"
+globs = ["**/*.png"]
+fallthrough = true
+
 [[d1_databases]]
 binding = "DB"
 database_name = "lms"
-database_id = "placeholder-replace-with-actual-id"
+database_id = "55260802-a4f9-43a7-a443-464299c97782"
+preview_database_id = "55260802-a4f9-43a7-a443-464299c97782"
 migrations_dir = "drizzle"
 
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "lms-uploads"
+# R2 intentionally disabled for now.
+# Re-enable this block once R2 is enabled on the account.
+# [[r2_buckets]]
+# binding = "BUCKET"
+# bucket_name = "lms-uploads"
 
 [vars]
 # Non-secret env vars here
+CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001"
 
 # Secrets (set via `wrangler secret put`):
 # JWT_TEACHER_SECRET

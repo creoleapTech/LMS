@@ -12,6 +12,13 @@ const fileController = new Hono<{
 
 fileController.get("/proxy", async (c) => {
   try {
+    if (!c.env.BUCKET) {
+      return c.json(
+        { message: "File storage is not configured. Enable R2 to use file endpoints." },
+        503,
+      );
+    }
+
     const key = c.req.query("key");
 
     if (!key) {
@@ -68,6 +75,13 @@ fileController.get("/ppt-preview", async (c) => {
 
 fileController.get("/local", async (c) => {
   try {
+    if (!c.env.BUCKET) {
+      return c.json(
+        { message: "File storage is not configured. Enable R2 to use file endpoints." },
+        503,
+      );
+    }
+
     const key = c.req.query("key");
 
     if (!key) {

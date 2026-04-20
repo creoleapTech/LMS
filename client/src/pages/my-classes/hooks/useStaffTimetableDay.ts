@@ -2,6 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import type { ITimetableEntry, IPeriodConfig } from "@/types/timetable";
 
+function normalizePeriodConfig(periodConfig: IPeriodConfig | null | undefined): IPeriodConfig | null {
+  if (!periodConfig) return null;
+
+  return {
+    ...periodConfig,
+    periods: Array.isArray(periodConfig.periods) ? periodConfig.periods : [],
+    workingDays: Array.isArray(periodConfig.workingDays)
+      ? periodConfig.workingDays
+      : [1, 2, 3, 4, 5],
+  };
+}
+
 export function useStaffTimetableDay(
   staffId: string | null,
   institutionId: string | null,
@@ -16,7 +28,11 @@ export function useStaffTimetableDay(
       }>("/admin/timetable/staff-day", {
         params: { staffId, institutionId, date },
       });
-      return res.data;
+
+      return {
+        entries: Array.isArray(res.data?.entries) ? res.data.entries : [],
+        periodConfig: normalizePeriodConfig(res.data?.periodConfig),
+      };
     },
     enabled: !!staffId && !!institutionId && !!date,
     staleTime: 30 * 1000,

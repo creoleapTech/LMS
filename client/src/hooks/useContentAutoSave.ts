@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { _axios } from "@/lib/axios";
+import { Config } from "@/lib/config";
 
 const DEBOUNCE_MS = 5000;
 
@@ -47,8 +48,9 @@ export function useContentAutoSave(
         const data = JSON.stringify(pendingDataRef.current);
         // Use sendBeacon for reliable delivery on unmount
         try {
-          const blob = new Blob([data], { type: "application/json" });
-          const baseUrl = _axios.defaults.baseURL?.replace(/\/api$/, "") || "http://localhost:4000";
+          const baseUrl =
+            _axios.defaults.baseURL?.replace(/\/api$/, "") ||
+            Config.baseUrl.replace(/\/api$/, "");
           const token = localStorage.getItem("user-auth-storage");
           let authToken = "";
           if (token) {

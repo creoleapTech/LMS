@@ -1,9 +1,13 @@
 export async function saveFile(
-  bucket: R2Bucket,
+  bucket: R2Bucket | undefined,
   blob: Blob | File | undefined,
   parentFolder: string,
 ): Promise<{ ok: boolean; key: string }> {
   try {
+    if (!bucket) {
+      return { ok: false, key: "" };
+    }
+
     if (!blob) {
       return { ok: false, key: "" };
     }
@@ -24,10 +28,14 @@ export async function saveFile(
 }
 
 export async function deleteFile(
-  bucket: R2Bucket,
+  bucket: R2Bucket | undefined,
   key: string,
 ): Promise<{ ok: boolean }> {
   try {
+    if (!bucket) {
+      return { ok: false };
+    }
+
     await bucket.delete(key);
     return { ok: true };
   } catch (error) {
@@ -37,9 +45,13 @@ export async function deleteFile(
 }
 
 export async function getFile(
-  bucket: R2Bucket,
+  bucket: R2Bucket | undefined,
   key: string,
 ): Promise<R2ObjectBody | null> {
+  if (!bucket) {
+    return null;
+  }
+
   return bucket.get(key);
 }
 

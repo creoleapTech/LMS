@@ -2,8 +2,45 @@
 import axios from "axios";
 import { Config } from "./config";
 
+type JsonLike = null | boolean | number | string | JsonLike[] | { [key: string]: JsonLike };
+
+function normalizeIdAliases(value: JsonLike, visited: WeakSet<object> = new WeakSet()): JsonLike {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  if (visited.has(value as object)) {
+    return value;
+  }
+
+  visited.add(value as object);
+
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      value[i] = normalizeIdAliases(value[i], visited);
+    }
+    return value;
+  }
+
+  const obj = value as { [key: string]: JsonLike };
+
+  // Keep both aliases so pages can work with either Mongo-style _id or SQL-style id.
+  if (obj.id !== undefined && obj._id === undefined) {
+    obj._id = obj.id;
+  }
+  if (obj._id !== undefined && obj.id === undefined) {
+    obj.id = obj._id;
+  }
+
+  for (const key of Object.keys(obj)) {
+    obj[key] = normalizeIdAliases(obj[key], visited);
+  }
+
+  return obj;
+}
+
 export const _axios = axios.create({
-  baseURL: Config.baseUrl, // http://localhost:4000/api
+  baseURL: Config.baseUrl,
   withCredentials: true,
 });
 
@@ -20,7 +57,10 @@ _axios.interceptors.request.use((config) => {
 
 // RESPONSE INTERCEPTOR — HANDLE 401, 500, etc.
 _axios.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    response.data = normalizeIdAliases(response.data as JsonLike);
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {

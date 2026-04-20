@@ -16,7 +16,7 @@ import { UnifiedChapterFormDialog } from "./UnifiedChapterFormDialog";
 import { PremiumChapterCard } from "./PremiumChapterCard";
 
 interface Chapter {
-  _id: string;
+  id: string;
   title: string;
   chapterNumber: number;
   order: number;
@@ -43,7 +43,7 @@ function SortableChapter({
   onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: chapter._id
+    id: chapter.id
   });
 
   const style = {
@@ -98,7 +98,7 @@ export function ChapterManager({ gradeBookId, onChapterSelect }: Props) {
   const reorderMutation = useMutation({
     mutationFn: async (reorderedChapters: Chapter[]) => {
       const orderData = reorderedChapters.map((chapter, index) => ({
-        chapterId: chapter._id,
+        chapterId: chapter.id,
         order: index + 1
       }));
 
@@ -131,8 +131,8 @@ export function ChapterManager({ gradeBookId, onChapterSelect }: Props) {
     if (!over || active.id === over.id) return;
 
     setChapters((items) => {
-      const oldIndex = items.findIndex((item) => item._id === active.id);
-      const newIndex = items.findIndex((item) => item._id === over.id);
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
 
       const newOrder = arrayMove(items, oldIndex, newIndex);
       reorderMutation.mutate(newOrder);
@@ -173,17 +173,17 @@ export function ChapterManager({ gradeBookId, onChapterSelect }: Props) {
         onDragEnd={handleDragEnd}
       >
         <SortableContext
-          items={chapters.map((c) => c._id)}
+          items={chapters.map((c) => c.id)}
           strategy={verticalListSortingStrategy}
         >
           <div className="space-y-4">
             {chapters.map((chapter) => (
               <SortableChapter
-                key={chapter._id}
+                key={chapter.id}
                 chapter={chapter}
-                onView={() => onChapterSelect(chapter._id, chapter.chapterNumber)}
+                onView={() => onChapterSelect(chapter.id, chapter.chapterNumber)}
                 onEdit={isSuperAdmin ? () => handleEdit(chapter) : undefined as any}
-                onDelete={isSuperAdmin ? () => handleDelete(chapter._id) : undefined as any}
+                onDelete={isSuperAdmin ? () => handleDelete(chapter.id) : undefined as any}
               />
             ))}
           </div>

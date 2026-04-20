@@ -9,6 +9,7 @@ import { institutions, staff, classes } from "../../schema/admin";
 import { gradeBooks, chapters } from "../../schema/books";
 import { timetableEntries, periodConfigs } from "../../schema/settings";
 import {
+  periodConfigPeriods,
   periodConfigWorkingDays,
   timetableTopicsCovered,
   classTeacherIds,
@@ -183,6 +184,33 @@ timetableController.get("/my-day", async (c) => {
     .where(and(eq(periodConfigs.institutionId, institutionId), eq(periodConfigs.isDeleted, 0)))
     .limit(1);
 
+  let periodConfig: Record<string, any> | null = null;
+  if (pc) {
+    const [periods, workingDayRows] = await Promise.all([
+      db
+        .select({
+          id: periodConfigPeriods.id,
+          periodNumber: periodConfigPeriods.periodNumber,
+          label: periodConfigPeriods.label,
+          startTime: periodConfigPeriods.startTime,
+          endTime: periodConfigPeriods.endTime,
+          isBreak: periodConfigPeriods.isBreak,
+        })
+        .from(periodConfigPeriods)
+        .where(eq(periodConfigPeriods.periodConfigId, pc.id)),
+      db
+        .select({ day: periodConfigWorkingDays.day })
+        .from(periodConfigWorkingDays)
+        .where(eq(periodConfigWorkingDays.periodConfigId, pc.id)),
+    ]);
+
+    periodConfig = {
+      ...pc,
+      periods,
+      workingDays: workingDayRows.map((r: any) => r.day),
+    };
+  }
+
   // Get recurring entries for this day of week
   const recurringEntries = await db
     .select()
@@ -261,33 +289,45 @@ timetableController.get("/my-day", async (c) => {
     }),
   );
 
-  return c.json({ success: true, data: { entries: enriched, periodConfig: pc || null } });
+  return c.json({ success: true, data: { entries: enriched, periodConfig } });
 });
 
-// ─── GET /my-classes-list — teacher's assigned classes ─
+// ─── GET /my-classes-list — teacher's classes (assigned or all in institution) ─
 
 timetableController.get("/my-classes-list", async (c) => {
   const user = c.get("user") as Record<string, any>;
   const staffId = user.id;
+  const institutionId = user.institutionId;
   const db = getDb(c.env.DB);
 
-  // Find classes through the classTeacherIds junction
+  // First try: classes explicitly assigned to this teacher
   const junctionRows = await db
     .select({ classId: classTeacherIds.classId })
     .from(classTeacherIds)
     .where(eq(classTeacherIds.staffId, staffId));
 
-  if (junctionRows.length === 0) {
-    return c.json({ success: true, data: [] });
+  if (junctionRows.length > 0) {
+    const classIds = junctionRows.map((r: any) => r.classId);
+    const result = await db
+      .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
+      .from(classes)
+      .where(
+        and(
+          inArray(classes.id, classIds),
+          eq(classes.isDeleted, 0),
+          eq(classes.isActive, 1),
+        ),
+      );
+    return c.json({ success: true, data: result });
   }
 
-  const classIds = junctionRows.map((r: any) => r.classId);
+  // Fallback: return all active classes for the teacher's institution
   const result = await db
     .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
     .from(classes)
     .where(
       and(
-        inArray(classes.id, classIds),
+        eq(classes.institutionId, institutionId),
         eq(classes.isDeleted, 0),
         eq(classes.isActive, 1),
       ),
@@ -719,6 +759,33 @@ timetableController.get("/staff-day", async (c) => {
     .where(and(eq(periodConfigs.institutionId, institutionId), eq(periodConfigs.isDeleted, 0)))
     .limit(1);
 
+  let periodConfig: Record<string, any> | null = null;
+  if (pc) {
+    const [periods, workingDayRows] = await Promise.all([
+      db
+        .select({
+          id: periodConfigPeriods.id,
+          periodNumber: periodConfigPeriods.periodNumber,
+          label: periodConfigPeriods.label,
+          startTime: periodConfigPeriods.startTime,
+          endTime: periodConfigPeriods.endTime,
+          isBreak: periodConfigPeriods.isBreak,
+        })
+        .from(periodConfigPeriods)
+        .where(eq(periodConfigPeriods.periodConfigId, pc.id)),
+      db
+        .select({ day: periodConfigWorkingDays.day })
+        .from(periodConfigWorkingDays)
+        .where(eq(periodConfigWorkingDays.periodConfigId, pc.id)),
+    ]);
+
+    periodConfig = {
+      ...pc,
+      periods,
+      workingDays: workingDayRows.map((r: any) => r.day),
+    };
+  }
+
   const recurringEntries = await db
     .select()
     .from(timetableEntries)
@@ -793,7 +860,7 @@ timetableController.get("/staff-day", async (c) => {
     }),
   );
 
-  return c.json({ success: true, data: { entries: enriched, periodConfig: pc || null } });
+  return c.json({ success: true, data: { entries: enriched, periodConfig } });
 });
 
 // ═══ Monthly Report endpoints ═════════════════════

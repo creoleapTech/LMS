@@ -33,6 +33,11 @@ interface Props {
     onSuccess: () => void;
 }
 
+interface CurriculumOption {
+    id: string;
+    name: string;
+}
+
 export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }: Props) {
     const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
     const [coverImagePreview, setCoverImagePreview] = useState<string>("");
@@ -64,6 +69,18 @@ export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }:
             isPublished: false,
         },
     });
+
+    const selectedCurriculumId = watch("curriculumId") ?? "";
+    const selectedGrade = watch("grade") ?? 1;
+    const isPublished = watch("isPublished") ?? false;
+
+    const curriculumOptions: CurriculumOption[] = (curriculums as any[])
+        .map((curriculum) => {
+            const id = String(curriculum?._id ?? curriculum?.id ?? "");
+            const name = String(curriculum?.name ?? "").trim();
+            return { id, name };
+        })
+        .filter((curriculum) => curriculum.id.length > 0 && curriculum.name.length > 0);
 
     useEffect(() => {
         if (open) {
@@ -138,18 +155,30 @@ export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }:
                         <div className="space-y-2">
                             <Label>Curriculum *</Label>
                             <Select
-                                onValueChange={(v) => setValue("curriculumId", v)}
-                                value={watch("curriculumId")}
+                                onValueChange={(v) =>
+                                    setValue("curriculumId", v, {
+                                        shouldDirty: true,
+                                        shouldTouch: true,
+                                        shouldValidate: true,
+                                    })
+                                }
+                                value={selectedCurriculumId}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select a curriculum" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {curriculums.map((curriculum: any) => (
-                                        <SelectItem key={curriculum._id} value={curriculum._id}>
-                                            {curriculum.name}
+                                    {curriculumOptions.length > 0 ? (
+                                        curriculumOptions.map((curriculum) => (
+                                            <SelectItem key={curriculum.id} value={curriculum.id}>
+                                                {curriculum.name}
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <SelectItem value="__no_curriculum__" disabled>
+                                            No curriculum available
                                         </SelectItem>
-                                    ))}
+                                    )}
                                 </SelectContent>
                             </Select>
                             {errors.curriculumId && (
@@ -160,8 +189,15 @@ export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }:
                         <div className="space-y-2">
                             <Label>Grade *</Label>
                             <Select
-                                onValueChange={(v) => setValue("grade", parseInt(v))}
-                                value={watch("grade").toString()}
+                                onValueChange={(v) => {
+                                    const parsedGrade = Number.parseInt(v, 10);
+                                    setValue("grade", Number.isNaN(parsedGrade) ? 1 : parsedGrade, {
+                                        shouldDirty: true,
+                                        shouldTouch: true,
+                                        shouldValidate: true,
+                                    });
+                                }}
+                                value={String(selectedGrade)}
                             >
                                 <SelectTrigger>
                                     <SelectValue />
@@ -241,8 +277,14 @@ export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }:
                                 id="published"
                                 aria-label="Publish immediately"
                                 className="h-4 w-4"
-                                onChange={(e) => setValue("isPublished", e.target.checked)}
-                                checked={watch("isPublished")}
+                                onChange={(e) =>
+                                    setValue("isPublished", e.target.checked, {
+                                        shouldDirty: true,
+                                        shouldTouch: true,
+                                        shouldValidate: true,
+                                    })
+                                }
+                                checked={isPublished}
                             />
                             <Label htmlFor="published">Publish immediately</Label>
                         </div>

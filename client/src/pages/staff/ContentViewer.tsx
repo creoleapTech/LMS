@@ -90,7 +90,6 @@ export function ContentViewer({
   isCompleted,
   contentProgress,
   onMarkComplete,
-  onProgressUpdate,
   isCompletingLoading,
   isChapterComplete,
   hasNextChapter,

@@ -76,11 +76,11 @@ export function GlobalHeader() {
                 />
               ) : (
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-500/30 shrink-0">
-                  {displayName ? getInitials(displayName) : "LMS"}
+                  {displayName ? getInitials(displayName) : "Learning Management System"}
                 </div>
               )}
               <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 truncate">
-                {displayName || "LMS"}
+                {displayName || "Learning Management System"}
               </h1>
             </>
           )}

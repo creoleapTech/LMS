@@ -116,12 +116,6 @@ export function PptViewer({
     }
   }, []);
 
-  const exitFullscreen = useCallback(() => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    }
-  }, []);
-
   // Sync state with browser fullscreen changes (ESC key, etc.)
   useEffect(() => {
     const onChange = () => {

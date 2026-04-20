@@ -32,6 +32,17 @@ interface Props {
     onSuccess: () => void;
 }
 
+interface CurriculumOption {
+    id: string;
+    name: string;
+}
+
+interface GradeBookOption {
+    id: string;
+    bookTitle: string;
+    grade: number | string;
+}
+
 export function ChapterFormDialogStandalone({ open, onOpenChange, onSuccess }: Props) {
     const [selectedCurriculumId, setSelectedCurriculumId] = useState<string>("");
 
@@ -70,6 +81,26 @@ export function ChapterFormDialogStandalone({ open, onOpenChange, onSuccess }: P
             description: "",
         },
     });
+
+    const selectedFormCurriculumId = watch("curriculumId") ?? "";
+    const selectedGradeBookId = watch("gradeBookId") ?? "";
+
+    const curriculumOptions: CurriculumOption[] = (curriculums as any[])
+        .map((curriculum) => {
+            const id = String(curriculum?._id ?? curriculum?.id ?? "");
+            const name = String(curriculum?.name ?? "").trim();
+            return { id, name };
+        })
+        .filter((curriculum) => curriculum.id.length > 0 && curriculum.name.length > 0);
+
+    const gradeBookOptions: GradeBookOption[] = (gradeBooks as any[])
+        .map((book) => {
+            const id = String(book?._id ?? book?.id ?? "");
+            const bookTitle = String(book?.bookTitle ?? "").trim();
+            const grade = book?.grade ?? "";
+            return { id, bookTitle, grade };
+        })
+        .filter((book) => book.id.length > 0 && book.bookTitle.length > 0);
 
     useEffect(() => {
         if (open) {
@@ -113,21 +144,35 @@ export function ChapterFormDialogStandalone({ open, onOpenChange, onSuccess }: P
                             <Label>Curriculum *</Label>
                             <Select
                                 onValueChange={(v) => {
-                                    setValue("curriculumId", v);
+                                    setValue("curriculumId", v, {
+                                        shouldDirty: true,
+                                        shouldTouch: true,
+                                        shouldValidate: true,
+                                    });
                                     setSelectedCurriculumId(v);
-                                    setValue("gradeBookId", ""); // Reset grade book selection
+                                    setValue("gradeBookId", "", {
+                                        shouldDirty: true,
+                                        shouldTouch: true,
+                                        shouldValidate: true,
+                                    });
                                 }}
-                                value={watch("curriculumId")}
+                                value={selectedFormCurriculumId}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select a curriculum" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {curriculums.map((curriculum: any) => (
-                                        <SelectItem key={curriculum._id} value={curriculum._id}>
-                                            {curriculum.name}
+                                    {curriculumOptions.length > 0 ? (
+                                        curriculumOptions.map((curriculum) => (
+                                            <SelectItem key={curriculum.id} value={curriculum.id}>
+                                                {curriculum.name}
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <SelectItem value="__no_curriculum__" disabled>
+                                            No curriculum available
                                         </SelectItem>
-                                    ))}
+                                    )}
                                 </SelectContent>
                             </Select>
                             {errors.curriculumId && (
@@ -138,19 +183,31 @@ export function ChapterFormDialogStandalone({ open, onOpenChange, onSuccess }: P
                         <div className="space-y-2">
                             <Label>Grade Book *</Label>
                             <Select
-                                onValueChange={(v) => setValue("gradeBookId", v)}
-                                value={watch("gradeBookId")}
+                                onValueChange={(v) =>
+                                    setValue("gradeBookId", v, {
+                                        shouldDirty: true,
+                                        shouldTouch: true,
+                                        shouldValidate: true,
+                                    })
+                                }
+                                value={selectedGradeBookId}
                                 disabled={!selectedCurriculumId}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder={selectedCurriculumId ? "Select a grade book" : "Select curriculum first"} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {gradeBooks.map((book: any) => (
-                                        <SelectItem key={book._id} value={book._id}>
-                                            {book.bookTitle} (Class {book.grade})
+                                    {gradeBookOptions.length > 0 ? (
+                                        gradeBookOptions.map((book) => (
+                                            <SelectItem key={book.id} value={book.id}>
+                                                {book.bookTitle} (Class {book.grade})
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <SelectItem value="__no_grade_book__" disabled>
+                                            No grade books available
                                         </SelectItem>
-                                    ))}
+                                    )}
                                 </SelectContent>
                             </Select>
                             {errors.gradeBookId && (

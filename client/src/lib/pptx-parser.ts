@@ -172,10 +172,6 @@ const DEFAULT_FONT_STACK = "'Calibri', 'Segoe UI', Arial, sans-serif";
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-function qn(ns: string, local: string): string {
-  return `{${ns}}${local}`;
-}
-
 /** Parse XML string into a Document */
 function parseXml(xmlStr: string): Document {
   return new DOMParser().parseFromString(xmlStr, "application/xml");
@@ -275,7 +271,6 @@ function applyColorModifiers(baseHex: string, modifiers: Element): string {
   // Handle alpha
   if (alphaEl) {
     const alpha = parseInt(alphaEl.getAttribute("val") || "100000") / 100000;
-    const a = Math.round(alpha * 255);
     return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(2)})`;
   }
   
@@ -1263,9 +1258,6 @@ function parseCornerRadius(spPr: Element): number | undefined {
 /** Parse paragraphs from txBody */
 function parseParagraphs(txBody: Element, themeColors: Map<string, string>): ParagraphData[] {
   const paragraphs: ParagraphData[] = [];
-  
-  // Get default run properties from txBody
-  const lstStyle = getFirstByLocal(txBody, "lstStyle");
 
   for (const p of getElementsByLocal(txBody, "p")) {
     // Only direct children paragraphs

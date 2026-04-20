@@ -1,9 +1,10 @@
 export interface Bindings {
   DB: D1Database;
-  BUCKET: R2Bucket;
+  BUCKET?: R2Bucket;
   JWT_TEACHER_SECRET: string;
   JWT_ADMIN_SECRET: string;
   JWT_SUPERADMIN_SECRET: string;
+  CORS_ORIGINS?: string;
 }
 
 export interface Variables {
