@@ -59,16 +59,58 @@ fileController.get("/proxy", async (c) => {
   }
 });
 
-// ─── GET /ppt-preview — STUB (LibreOffice not available in Workers) ─
+// ─── GET /ppt-preview — supports raw PPT/PPTX streaming from R2 ─
 
 fileController.get("/ppt-preview", async (c) => {
-  return c.json(
-    {
-      message:
-        "PPT preview is not available in Cloudflare Workers. LibreOffice conversion is not supported in this environment.",
-    },
-    501,
-  );
+  try {
+    if (!c.env.BUCKET) {
+      return c.json(
+        { message: "File storage is not configured. Enable R2 to use file endpoints." },
+        503,
+      );
+    }
+
+    const key = c.req.query("key");
+    const format = (c.req.query("format") || "").toLowerCase();
+
+    if (!key) {
+      return c.json({ message: "Key not found" }, 400);
+    }
+
+    const lowerKey = key.toLowerCase();
+    if (!lowerKey.endsWith(".pptx") && !lowerKey.endsWith(".ppt")) {
+      return c.json({ message: "Only presentation files are supported" }, 400);
+    }
+
+    // format=raw streams the original PPT/PPTX for client-side rendering.
+    if (format === "raw") {
+      const object = await c.env.BUCKET.get(key);
+
+      if (!object) {
+        return c.json({ message: "File not found" }, 404);
+      }
+
+      const headers = new Headers();
+      headers.set("Content-Type", getMimeType(key));
+      headers.set("Content-Disposition", "inline");
+      headers.set("X-Content-Type-Options", "nosniff");
+      headers.set("Cache-Control", "private, max-age=3600");
+
+      return new Response(object.body, { headers });
+    }
+
+    // PDF conversion fallback is not possible in Workers (no LibreOffice runtime).
+    return c.json(
+      {
+        message:
+          "PPT preview conversion is not available in Cloudflare Workers. Use format=raw for client-side rendering.",
+      },
+      501,
+    );
+  } catch (error: any) {
+    console.error("PPT preview error:", error);
+    return c.json({ message: "Failed to load presentation" }, 500);
+  }
 });
 
 // ─── GET /local — serve via R2 proxy (backward compat) ─

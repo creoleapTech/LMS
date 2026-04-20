@@ -48,7 +48,31 @@ export function PptViewer({
         const res = await fetch(url);
 
         if (!res.ok) {
-          throw new Error(`Failed to fetch presentation (${res.status})`);
+          let serverMessage = "";
+          try {
+            const body = await res.json();
+            if (typeof body?.message === "string") {
+              serverMessage = body.message;
+            }
+          } catch {
+            // Ignore JSON parse failures and fallback to status-based messaging.
+          }
+
+          if (res.status === 501) {
+            throw new Error(
+              serverMessage ||
+                "PPT preview is not enabled on this server. Cloudflare Worker must support format=raw.",
+            );
+          }
+
+          if (res.status === 503) {
+            throw new Error(
+              serverMessage ||
+                "File storage is not configured on the server.",
+            );
+          }
+
+          throw new Error(serverMessage || `Failed to fetch presentation (${res.status})`);
         }
 
         const buffer = await res.arrayBuffer();

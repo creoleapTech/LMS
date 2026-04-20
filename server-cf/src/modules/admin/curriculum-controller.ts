@@ -37,6 +37,10 @@ function parseBool(v: unknown): boolean {
   return false;
 }
 
+function isJsonRequest(contentType: string | undefined): boolean {
+  return (contentType ?? "").toLowerCase().includes("application/json");
+}
+
 function parseIntSafe(v: unknown): number {
   if (typeof v === "number") return v;
   if (typeof v === "string") return parseInt(v, 10) || 0;
@@ -731,14 +735,40 @@ app.post("/chapter/:chapterId/content", async (c) => {
   const [chapter] = await db.select().from(chapters).where(eq(chapters.id, chapterId));
   if (!chapter) throw new BadRequestError("Chapter not found");
 
-  const formData = await c.req.formData();
-  const type = formData.get("type") as string;
-  const title = formData.get("title") as string | null;
-  const isFree = parseBool(formData.get("isFree"));
-  const youtubeUrl = formData.get("youtubeUrl") as string | null;
-  const textContent = formData.get("textContent") as string | null;
-  const questionsRaw = formData.get("questions") as string | null;
-  const file = formData.get("file") as File | null;
+  const contentType = c.req.header("content-type");
+
+  let type: string;
+  let title: string | null;
+  let isFree: boolean;
+  let youtubeUrl: string | null;
+  let textContent: string | null;
+  let questionsRaw: unknown;
+  let file: File | null = null;
+
+  if (isJsonRequest(contentType)) {
+    const body = (await c.req.json()) as Record<string, any>;
+
+    type = typeof body.type === "string" ? body.type : "";
+    title = typeof body.title === "string" ? body.title : null;
+    isFree = parseBool(body.isFree);
+    youtubeUrl = typeof body.youtubeUrl === "string" ? body.youtubeUrl : null;
+    textContent = typeof body.textContent === "string" ? body.textContent : null;
+    questionsRaw = body.questions ?? null;
+  } else {
+    const formData = await c.req.formData();
+
+    type = (formData.get("type") as string) || "";
+    title = formData.get("title") as string | null;
+    isFree = parseBool(formData.get("isFree"));
+    youtubeUrl = formData.get("youtubeUrl") as string | null;
+    textContent = formData.get("textContent") as string | null;
+    questionsRaw = formData.get("questions");
+    file = formData.get("file") as File | null;
+  }
+
+  if (!type) {
+    throw new BadRequestError("Content type is required");
+  }
 
   const [countRow] = await db
     .select({ count: count() })

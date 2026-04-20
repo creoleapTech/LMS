@@ -126,9 +126,9 @@ const Sidebar: React.FC = () => {
               Logout
             </span>
           </button>
-          <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'opacity-70 max-h-5' : 'opacity-0 max-h-0'}`}>
-            <p className="text-sm text-center tracking-wide">© 2026 LMS</p>
-          </div>
+          <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'opacity-70 max-h-16' : 'opacity-0 max-h-0'}`}>            <p className="text-[10px] text-center tracking-wide leading-tight px-1 break-words">
+            ©️2026 Creoleap LMS by Creoleap Technologies Pvt. Ltd. All rights reserved.
+          </p></div>
         </div>
       </div>
 

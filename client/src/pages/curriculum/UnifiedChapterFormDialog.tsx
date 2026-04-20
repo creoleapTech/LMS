@@ -245,7 +245,10 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
+            <DialogContent
+                className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl"
+                aria-describedby={undefined}
+            >
                 <DialogHeader>
                     <DialogTitle className="text-2xl">
                         {chapter ? "Edit Chapter" : "Create New Chapter"}

@@ -145,7 +145,10 @@ export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }:
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
+            <DialogContent
+                className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl"
+                aria-describedby={undefined}
+            >
                 <DialogHeader>
                     <DialogTitle className="text-2xl">Create New Grade Book</DialogTitle>
                 </DialogHeader>

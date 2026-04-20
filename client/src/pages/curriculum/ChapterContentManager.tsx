@@ -304,13 +304,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
   const uploadMutation = useMutation({
     mutationFn: async (payload: FormData | Record<string, any>) => {
       if (payload instanceof FormData) {
-        return (
-          await _axios.post(
-            `/admin/curriculum/chapter/${chapterId}/content`,
-            payload,
-            { headers: { "Content-Type": "multipart/form-data" } },
-          )
-        ).data;
+        return (await _axios.post(`/admin/curriculum/chapter/${chapterId}/content`, payload)).data;
       }
       return (await _axios.post(`/admin/curriculum/chapter/${chapterId}/content`, payload)).data;
     },

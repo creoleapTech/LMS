@@ -3,8 +3,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Eye, Edit, Trash2, BookOpen, GraduationCap } from "lucide-react";
+import { Edit, Trash2, BookOpen } from "lucide-react";
 import { Config } from "@/lib/config";
 
 interface GradeBook {
@@ -36,136 +35,69 @@ export function PremiumGradeBookCard({
     showActions = true,
     curriculumName,
 }: Props) {
-    const curriculum = curriculumName || gradeBook.curriculumName;
+    void curriculumName;
+    const coverUrl = gradeBook.coverImage ? `${Config.imgUrl}${gradeBook.coverImage}` : "";
 
     return (
         <Card
-            className="group relative overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white dark:bg-gray-900 rounded-2xl border-slate-200/80"
+            className="group relative w-full max-w-[220px] overflow-hidden rounded-2xl border-slate-200/80 bg-white transition-all duration-300 cursor-pointer hover:shadow-xl dark:bg-gray-900"
             onClick={onView}
+            role="button"
+            aria-label={`Open ${gradeBook.bookTitle}`}
         >
-            {/* Large Cover Image Section */}
-            <div className="relative h-64 overflow-hidden bg-linear-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+            <div className="relative aspect-[3/4] w-full overflow-hidden bg-linear-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
                 {gradeBook.coverImage ? (
-                    <>
-                        <img
-                            src={`${Config.imgUrl}${gradeBook.coverImage}`}
-                            alt={gradeBook.bookTitle}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        {/* Subtle gradient overlay only at bottom */}
-                        <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent" />
-                    </>
+                    <img
+                        src={coverUrl}
+                        alt={gradeBook.bookTitle}
+                        width={900}
+                        height={1200}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-contain object-center"
+                    />
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <BookOpen className="h-24 w-24 text-slate-300 dark:text-slate-700 mb-4" />
-                        <div className="text-7xl font-bold text-slate-200 dark:text-slate-800">
-                            {gradeBook.grade}
-                        </div>
+                        <BookOpen className="h-16 w-16 text-slate-300 dark:text-slate-700" />
                     </div>
                 )}
 
-                {/* Clean badges in corners */}
-                <div className="absolute top-3 left-3">
-                    <Badge className="bg-white/95 dark:bg-gray-900/95 text-gray-900 dark:text-gray-100 border-0 shadow-lg font-semibold">
-                        <GraduationCap className="h-3.5 w-3.5 mr-1.5" />
-                        Class {gradeBook.grade}
-                    </Badge>
-                </div>
-
-                {gradeBook.isPublished && (
-                    <div className="absolute top-3 right-3">
-                        <Badge className="bg-emerald-500 text-white border-0 shadow-lg">
-                            Published
-                        </Badge>
-                    </div>
-                )}
-            </div>
-
-            {/* Content Section - Clean and Minimal */}
-            <div className="p-5">
-                {/* Curriculum Name - Subtle */}
-                {curriculum && (
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
-                        {curriculum}
-                    </p>
-                )}
-
-                {/* Title - Bold and Clear */}
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1.5 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    {gradeBook.bookTitle}
-                </h3>
-
-                {/* Subtitle - Medium weight */}
-                {gradeBook.subtitle && (
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 line-clamp-1">
-                        {gradeBook.subtitle}
-                    </p>
-                )}
-
-                {/* Description - Light */}
-                {gradeBook.description && (
-                    <p className="text-sm text-gray-500 dark:text-gray-500 mb-4 line-clamp-2">
-                        {gradeBook.description}
-                    </p>
-                )}
-
-                {/* Simple divider */}
-                <div className="h-px bg-gray-200 dark:bg-gray-800 my-4" />
-
-                {/* Footer - Minimal */}
-                <div className="flex items-center justify-between">
-                    {!gradeBook.isPublished && (
-                        <Badge variant="outline" className="text-xs text-gray-600 dark:text-gray-400">
-                            Draft
-                        </Badge>
-                    )}
-                    {gradeBook.isPublished && <div />}
-
-                    {/* Action Buttons - Clean */}
-                    {showActions && (
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                {showActions && (onEdit || onDelete) && (
+                    <div
+                        className="absolute inset-x-0 bottom-0 flex items-center justify-end gap-2 bg-linear-to-t from-black/65 to-transparent p-2 opacity-100 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {onEdit && (
                             <Button
-                                size="sm"
+                                size="icon"
+                                variant="secondary"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onView();
+                                    onEdit();
                                 }}
-                                className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                                aria-label="Edit book"
+                                className="h-8 w-8 bg-white/90 text-slate-900 hover:bg-white"
                             >
-                                <Eye className="h-3.5 w-3.5 mr-1.5" />
-                                View
+                                <Edit className="h-4 w-4" />
                             </Button>
+                        )}
 
-                            {onEdit && (
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onEdit();
-                                    }}
-                                    className="border-gray-300 dark:border-gray-700"
-                                >
-                                    <Edit className="h-3.5 w-3.5" />
-                                </Button>
-                            )}
-
-                            {onDelete && (
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDelete();
-                                    }}
-                                    className="border-red-200 dark:border-red-900 text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                                >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                            )}
-                        </div>
-                    )}
-                </div>
+                        {onDelete && (
+                            <Button
+                                size="icon"
+                                variant="outline"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete();
+                                }}
+                                aria-label="Delete book"
+                                className="h-8 w-8 border-red-200 bg-white/90 text-red-600 hover:bg-red-50"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
+                )}
             </div>
         </Card>
     );
