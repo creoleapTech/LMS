@@ -77,7 +77,7 @@ export function PremiumChapterCard({
 
                 {/* Thumbnail / Number circle */}
                 <div className="shrink-0">
-                    <div className="w-14 h-14 rounded-full overflow-hidden bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md transition-all group-hover:scale-105">
+                    <div className="w-24 h-24 rounded-full overflow-hidden bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md transition-all group-hover:scale-105">
                         {thumbnailUrl ? (
                             <img
                                 src={thumbnailUrl}

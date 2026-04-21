@@ -43,6 +43,8 @@ import {
   GripVertical,
   Pencil,
   Check,
+  Plus,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -268,7 +270,8 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
   const [textContent, setTextContent] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
 
-  // --- List & view state ---
+  // --- Add content panel visibility ---
+  const [showAddForm, setShowAddForm] = useState(false);
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
   const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
 
@@ -305,6 +308,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     setQuestions([]);
     setEditingId(null);
     setEditTitle("");
+    setShowAddForm(false);
   }, [chapterId]);
 
   // Upload / create content
@@ -383,6 +387,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     setYoutubeUrl("");
     setTextContent("");
     setQuestions([]);
+    setShowAddForm(false);
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -569,7 +574,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
 
             {/* PPT */}
             {viewingContent.type === "ppt" && viewingContent.fileUrl && (
-              <div className="space-y-2">
+              <div className="w-full max-w-5xl mx-auto">
                 <PptViewer storageKey={viewingContent.fileUrl} title={viewingContent.title} />
               </div>
             )}
@@ -622,15 +627,27 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Upload form (super_admin only) */}
-      {isSuperAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Add Chapter Content</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6 max-w-2xl">
-              {/* Content type selector */}
+      {/* Content list */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle>Existing Content</CardTitle>
+          {isSuperAdmin && (
+            <Button
+              variant="outline"
+              className="gap-2 rounded-xl border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+              onClick={() => setShowAddForm((v) => !v)}
+            >
+              <Plus className="h-4 w-4" />
+              Add Content
+              <ChevronDown className={`h-4 w-4 transition-transform ${showAddForm ? "rotate-180" : ""}`} />
+            </Button>
+          )}
+        </CardHeader>
+
+        {/* Collapsible add form */}
+        {isSuperAdmin && showAddForm && (
+          <div className="px-6 pb-6 border-b border-slate-100 dark:border-slate-800">
+            <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Content Type</label>
                 <Select
@@ -658,7 +675,6 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                 </Select>
               </div>
 
-              {/* YouTube URL input */}
               {type === "youtube" && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">YouTube URL</label>
@@ -671,7 +687,6 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                 </div>
               )}
 
-              {/* Rich Text editor */}
               {type === "text" && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Content</label>
@@ -683,7 +698,6 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                 </div>
               )}
 
-              {/* Quiz builder */}
               {type === "quiz" && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Quiz Questions</label>
@@ -691,79 +705,66 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                 </div>
               )}
 
-              {/* File upload for file-based types */}
-              {type !== "" &&
-                type !== "youtube" &&
-                type !== "text" &&
-                type !== "quiz" && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">File</label>
-                    {!file ? (
-                      <div className="border-2 border-dashed border-muted-foreground/25 rounded-2xl p-8 text-center">
-                        <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                        <p className="text-lg mb-2">
-                          Drop your file here or click to browse
-                        </p>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Supports: MP4, PDF, PPT, DOC, ZIP (Max 100MB)
-                        </p>
-                        <input
-                          type="file"
-                          onChange={handleFileChange}
-                          className="hidden"
-                          id="file-upload"
-                          aria-label="Upload file"
-                          accept=".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip,.webm"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => document.getElementById('file-upload')?.click()}
-                        >
-                          Choose File
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="border rounded-xl p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-8 w-8 text-blue-600" />
-                          <div>
-                            <p className="font-medium">{file.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {(file.size / (1024 * 1024)).toFixed(2)} MB
-                            </p>
-                          </div>
+              {type !== "" && type !== "youtube" && type !== "text" && type !== "quiz" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">File</label>
+                  {!file ? (
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-2xl p-8 text-center">
+                      <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-lg mb-2">Drop your file here or click to browse</p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Supports: MP4, PDF, PPT, DOC, ZIP (Max 100MB)
+                      </p>
+                      <input
+                        type="file"
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="file-upload"
+                        aria-label="Upload file"
+                        accept=".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip,.webm"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById("file-upload")?.click()}
+                      >
+                        Choose File
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border rounded-xl p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-8 w-8 text-blue-600" />
+                        <div>
+                          <p className="font-medium">{file.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {(file.size / (1024 * 1024)).toFixed(2)} MB
+                          </p>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => setFile(null)}>
-                          <X className="h-4 w-4" />
-                        </Button>
                       </div>
-                    )}
-                  </div>
-                )}
+                      <Button variant="ghost" size="sm" onClick={() => setFile(null)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
 
-              {/* Submit */}
               {type !== "" && (
-                <Button
-                  onClick={handleUpload}
-                  disabled={uploadMutation.isPending}
-                  className="w-full"
-                  size="lg"
-                >
-                  {uploadMutation.isPending ? "Uploading..." : "Upload Content"}
-                </Button>
+                <div className="flex gap-3">
+                  <Button onClick={handleUpload} disabled={uploadMutation.isPending} className="flex-1" size="lg">
+                    {uploadMutation.isPending ? "Uploading..." : "Upload Content"}
+                  </Button>
+                  <Button variant="outline" size="lg" onClick={resetForm}>
+                    Cancel
+                  </Button>
+                </div>
               )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {/* Content list */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Existing Content</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           {isLoading ? (
             <div className="text-center py-8">Loading content...</div>
           ) : contentItems.length === 0 ? (
