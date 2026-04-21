@@ -1,0 +1,1 @@
+ALTER TABLE `chapters` ADD `learning_objectives` text;

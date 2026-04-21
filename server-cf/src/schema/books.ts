@@ -40,6 +40,7 @@ export const chapters = sqliteTable("chapters", {
   title: text("title"),
   chapterNumber: integer("chapter_number"),
   description: text("description"),
+  learningObjectives: text("learning_objectives"),
   durationMinutes: integer("duration_minutes"),
   isFree: integer("is_free").default(0),
   order: integer("order"),

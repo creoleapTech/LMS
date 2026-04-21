@@ -622,6 +622,7 @@ app.post("/gradebook/:gradeBookId/chapters", async (c) => {
     title: body.title,
     chapterNumber: body.chapterNumber,
     description: body.description || null,
+    learningObjectives: body.learningObjectives || null,
     order: existingCount + 1,
     createdAt: now,
     updatedAt: now,
@@ -673,6 +674,7 @@ app.patch("/chapters/:id", async (c) => {
   if (body.title !== undefined) updateData.title = body.title;
   if (body.chapterNumber !== undefined) updateData.chapterNumber = body.chapterNumber;
   if (body.description !== undefined) updateData.description = body.description;
+  if (body.learningObjectives !== undefined) updateData.learningObjectives = body.learningObjectives;
   updateData.updatedAt = nowISO();
 
   await db.update(chapters).set(updateData).where(eq(chapters.id, id));

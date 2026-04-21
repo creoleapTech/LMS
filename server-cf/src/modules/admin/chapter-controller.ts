@@ -42,6 +42,7 @@ app.post("/:curriculumId/grades/:grade/chapters", async (c) => {
     title: body.title,
     chapterNumber: body.chapterNumber,
     description: body.description || null,
+    learningObjectives: body.learningObjectives || null,
     isFree: body.isFree ? 1 : 0,
     order: body.order,
     createdAt: now,
@@ -90,6 +91,7 @@ app.patch("/:curriculumId/grades/:grade/chapters/:chapterId", async (c) => {
   const updateData: Record<string, any> = {};
   if (body.title !== undefined) updateData.title = body.title;
   if (body.description !== undefined) updateData.description = body.description;
+  if (body.learningObjectives !== undefined) updateData.learningObjectives = body.learningObjectives;
   if (body.isFree !== undefined) updateData.isFree = body.isFree ? 1 : 0;
   if (body.order !== undefined) updateData.order = body.order;
   updateData.updatedAt = nowISO();
