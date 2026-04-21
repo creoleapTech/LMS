@@ -21,6 +21,7 @@ interface Chapter {
   chapterNumber: number;
   order: number;
   description?: string;
+  thumbnail?: string | null;
 }
 
 interface Props {

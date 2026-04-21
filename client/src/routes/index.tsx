@@ -32,16 +32,8 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const navigate = useNavigate();
   const { setUser } = useAuthStore();
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    // Parallax effect for the background
-    const x = (e.clientX / window.innerWidth - 0.5) * 20;
-    const y = (e.clientY / window.innerHeight - 0.5) * 20;
-    setMousePos({ x, y });
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +76,7 @@ function LoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center relative bg-gradient-to-tr from-[#0a015a] to-[#080a25] text-white selection:bg-purple-500/50 overflow-hidden font-sans"
-      onMouseMove={handleMouseMove}
+      onMouseMove={() => {}}
     >
       {/* Dynamic 3D Background */}
       {/* <div 

@@ -1,7 +1,7 @@
 // src/pages/curriculum/UnifiedChapterFormDialog.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,10 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, ImagePlus, X } from "lucide-react";
 import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Config } from "@/lib/config";
 
 const schema = z.object({
     curriculumId: z.string().optional(),
@@ -58,6 +59,9 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
     const [selectedCurriculumId, setSelectedCurriculumId] = useState<string>("");
     const [contentFiles, setContentFiles] = useState<ContentFile[]>([]);
     const [currentContentType, setCurrentContentType] = useState<"video" | "ppt" | "pdf" | "activity" | "quiz">("video");
+    const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+    const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+    const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
     const { data: curriculums = [] } = useQuery({
         queryKey: ["curriculums-list"],
@@ -139,6 +143,8 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
             }
             setContentFiles([]);
             setSelectedCurriculumId("");
+            setThumbnailFile(null);
+            setThumbnailPreview(chapter?.thumbnail ? Config.proxyUrl + chapter.thumbnail : null);
         }
     }, [chapter, open, reset, providedGradeBookId]);
 
@@ -171,27 +177,28 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
 
     const onSubmit = async (data: FormData) => {
         try {
-            // Step 1: Create the chapter
-            const chapterData = {
-                title: data.title,
-                chapterNumber: data.chapterNumber,
-                description: data.description,
-                learningObjectives: data.learningObjectives,
-            };
+            // Step 1: Create/update the chapter
+            const chapterFormData = new globalThis.FormData();
+            chapterFormData.append("title", data.title);
+            chapterFormData.append("chapterNumber", String(data.chapterNumber));
+            if (data.description) chapterFormData.append("description", data.description);
+            if (data.learningObjectives) chapterFormData.append("learningObjectives", data.learningObjectives);
+            if (thumbnailFile) chapterFormData.append("thumbnail", thumbnailFile);
 
             let chapterId: string;
 
             if (chapter) {
-                // Update existing chapter
                 const existingChapterId = String(chapter?.id ?? "");
-                await _axios.patch(`/admin/curriculum/chapters/${existingChapterId}`, chapterData);
+                await _axios.patch(`/admin/curriculum/chapters/${existingChapterId}`, chapterFormData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
                 chapterId = existingChapterId;
                 toast.success("Chapter updated successfully!");
             } else {
-                // Create new chapter
                 const response = await _axios.post(
                     `/admin/curriculum/gradebook/${data.gradeBookId}/chapters`,
-                    chapterData
+                    chapterFormData,
+                    { headers: { "Content-Type": "multipart/form-data" } }
                 );
                 chapterId = String(response?.data?.data?.id ?? "");
                 toast.success("Chapter created successfully!");
@@ -202,7 +209,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                 toast.info(`Uploading ${contentFiles.length} content file(s)...`);
 
                 for (const content of contentFiles) {
-                    const formData = new FormData();
+                    const formData = new globalThis.FormData();
                     formData.append("file", content.file);
                     formData.append("type", content.type);
                     formData.append("title", content.title);
@@ -212,9 +219,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                         await _axios.post(
                             `/admin/curriculum/chapter/${chapterId}/content`,
                             formData,
-                            {
-                                headers: { "Content-Type": "multipart/form-data" },
-                            }
+                            { headers: { "Content-Type": "multipart/form-data" } }
                         );
                     } catch (err) {
                         console.error(`Failed to upload ${content.title}`, err);
@@ -364,6 +369,52 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                                     {errors.title && (
                                         <p className="text-sm text-red-500">{errors.title.message}</p>
                                     )}
+                                </div>
+                            </div>
+
+                            {/* Thumbnail Upload */}
+                            <div className="space-y-2">
+                                <Label>Chapter Thumbnail</Label>
+                                <div className="flex items-center gap-4">
+                                    {thumbnailPreview ? (
+                                        <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-200 shrink-0">
+                                            <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-full object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => { setThumbnailFile(null); setThumbnailPreview(null); }}
+                                                className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
+                                            >
+                                                <X className="h-4 w-4 text-white" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="w-16 h-16 rounded-full bg-indigo-50 border-2 border-dashed border-indigo-200 flex items-center justify-center shrink-0">
+                                            <ImagePlus className="h-6 w-6 text-indigo-300" />
+                                        </div>
+                                    )}
+                                    <div className="flex-1">
+                                        <input
+                                            ref={thumbnailInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                setThumbnailFile(file);
+                                                setThumbnailPreview(URL.createObjectURL(file));
+                                            }}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => thumbnailInputRef.current?.click()}
+                                        >
+                                            {thumbnailPreview ? "Change Image" : "Upload Image"}
+                                        </Button>
+                                        <p className="text-xs text-muted-foreground mt-1">Shown as the chapter circle thumbnail</p>
+                                    </div>
                                 </div>
                             </div>
 

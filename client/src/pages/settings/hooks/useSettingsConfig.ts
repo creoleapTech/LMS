@@ -8,7 +8,6 @@ import {
   GraduationCap,
   Bell,
   Shield,
-  Settings,
 } from "lucide-react";
 import { useAuthStore } from "@/store/userAuthStore";
 import { ProfileSection } from "../components/ProfileSection";
@@ -18,7 +17,6 @@ import { AcademicSection } from "../components/AcademicSection";
 import { GradingSection } from "../components/GradingSection";
 import { NotificationSection } from "../components/NotificationSection";
 import { SecuritySection } from "../components/SecuritySection";
-import { PreferencesSection } from "../components/PreferencesSection";
 
 export interface TabDefinition {
   id: string;
@@ -35,14 +33,13 @@ const ALL_TABS: Record<string, TabDefinition> = {
   grading: { id: "grading", label: "Grading", icon: GraduationCap, component: GradingSection },
   notifications: { id: "notifications", label: "Notifications", icon: Bell, component: NotificationSection },
   security: { id: "security", label: "Security", icon: Shield, component: SecuritySection },
-  preferences: { id: "preferences", label: "Preferences", icon: Settings, component: PreferencesSection },
 };
 
 const TABS_BY_ROLE: Record<string, string[]> = {
-  super_admin: ["profile", "preferences"],
+  super_admin: ["profile"],
   admin: ["profile", "institution-profile", "general", "academic", "grading", "notifications", "security"],
-  teacher: ["profile", "preferences", "notifications"],
-  staff: ["profile", "preferences", "notifications"],
+  teacher: ["profile", "notifications"],
+  staff: ["profile", "notifications"],
 };
 
 const SUBTITLES: Record<string, string> = {

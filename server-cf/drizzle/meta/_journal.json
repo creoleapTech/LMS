@@ -15,6 +15,13 @@
       "when": 1776749886141,
       "tag": "0001_lazy_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1776760755705,
+      "tag": "0002_breezy_giant_girl",
+      "breakpoints": true
     }
   ]
 }

@@ -604,7 +604,22 @@ app.post("/gradebook/:gradeBookId/chapters", async (c) => {
   const [gradeBook] = await db.select().from(gradeBooks).where(eq(gradeBooks.id, gradeBookId));
   if (!gradeBook) throw new BadRequestError("Grade book not found");
 
-  const body = await c.req.json();
+  const contentType = c.req.header("content-type") || "";
+  let body: Record<string, any>;
+  let thumbnailFile: File | null = null;
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await c.req.formData();
+    body = {
+      title: formData.get("title"),
+      chapterNumber: Number(formData.get("chapterNumber")),
+      description: formData.get("description"),
+      learningObjectives: formData.get("learningObjectives"),
+    };
+    thumbnailFile = formData.get("thumbnail") as File | null;
+  } else {
+    body = await c.req.json();
+  }
 
   const [countRow] = await db
     .select({ count: count() })
@@ -612,6 +627,12 @@ app.post("/gradebook/:gradeBookId/chapters", async (c) => {
     .where(eq(chapters.gradeBookId, gradeBookId));
 
   const existingCount = countRow?.count ?? 0;
+
+  let thumbnailKey: string | null = null;
+  if (thumbnailFile) {
+    const result = await saveFile(c.env.BUCKET, thumbnailFile, "chapters/thumbnails");
+    if (result.ok) thumbnailKey = result.key;
+  }
 
   const id = uuid();
   const now = nowISO();
@@ -623,6 +644,7 @@ app.post("/gradebook/:gradeBookId/chapters", async (c) => {
     chapterNumber: body.chapterNumber,
     description: body.description || null,
     learningObjectives: body.learningObjectives || null,
+    thumbnail: thumbnailKey,
     order: existingCount + 1,
     createdAt: now,
     updatedAt: now,
@@ -668,13 +690,35 @@ app.patch("/chapters/:id", async (c) => {
 
   const db = getDb(c.env.DB);
   const id = c.req.param("id");
-  const body = await c.req.json();
+
+  const contentType = c.req.header("content-type") || "";
+  let body: Record<string, any>;
+  let thumbnailFile: File | null = null;
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await c.req.formData();
+    body = {
+      title: formData.get("title"),
+      chapterNumber: formData.get("chapterNumber") ? Number(formData.get("chapterNumber")) : undefined,
+      description: formData.get("description"),
+      learningObjectives: formData.get("learningObjectives"),
+    };
+    thumbnailFile = formData.get("thumbnail") as File | null;
+  } else {
+    body = await c.req.json();
+  }
 
   const updateData: Record<string, any> = {};
   if (body.title !== undefined) updateData.title = body.title;
   if (body.chapterNumber !== undefined) updateData.chapterNumber = body.chapterNumber;
   if (body.description !== undefined) updateData.description = body.description;
   if (body.learningObjectives !== undefined) updateData.learningObjectives = body.learningObjectives;
+
+  if (thumbnailFile) {
+    const result = await saveFile(c.env.BUCKET, thumbnailFile, "chapters/thumbnails");
+    if (result.ok) updateData.thumbnail = result.key;
+  }
+
   updateData.updatedAt = nowISO();
 
   await db.update(chapters).set(updateData).where(eq(chapters.id, id));
