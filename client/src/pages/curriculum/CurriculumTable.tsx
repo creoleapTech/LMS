@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Search, Eye } from "lucide-react";
+import { Pencil, Trash2, Plus, Search } from "lucide-react";
 import { CurriculumFormDialog } from "./CurriculumFormDialog";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/userAuthStore";
@@ -104,7 +104,11 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
           </TableHeader>
           <TableBody>
             {curriculums.map((c) => (
-              <TableRow key={c.id}>
+              <TableRow 
+                key={c.id}
+                className={onSelectCurriculum ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
+                onClick={() => onSelectCurriculum && onSelectCurriculum(c.id)}
+              >
                 <TableCell className="font-medium">{c.name}</TableCell>
                 <TableCell>
                   <Badge variant="outline">
@@ -118,17 +122,12 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  {onSelectCurriculum && (
-                    <Button size="sm" variant="ghost" onClick={() => onSelectCurriculum(c.id)} title="View Grade Books">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  )}
                   {isSuperAdmin && (
                     <>
-                      <Button size="sm" variant="ghost" onClick={() => { setEditingCurriculum(c); setOpenForm(true); }}>
+                      <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditingCurriculum(c); setOpenForm(true); }}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteMutation.mutate(c.id)}>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(c.id); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>

@@ -70,6 +70,20 @@ export function PremiumGradeBookCard({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/35 bg-black/45 p-2 backdrop-blur-xs shadow-lg">
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onView();
+                                }}
+                                aria-label="View book"
+                                className="h-8 w-full justify-center bg-white/90 text-slate-900 hover:bg-white"
+                            >
+                                <Eye className="mr-1.5 h-3.5 w-3.5" />
+                                View
+                            </Button>
+
                             {onViewDetails && (
                                 <Button
                                     size="sm"
@@ -82,7 +96,7 @@ export function PremiumGradeBookCard({
                                     className="h-8 w-full justify-center bg-white/90 text-slate-900 hover:bg-white"
                                 >
                                     <Eye className="mr-1.5 h-3.5 w-3.5" />
-                                    View Details
+                                    Details
                                 </Button>
                             )}
 
@@ -111,7 +125,7 @@ export function PremiumGradeBookCard({
                                         onDelete();
                                     }}
                                     aria-label="Delete book"
-                                    className="h-8 w-8 border-red-200 bg-white/90 text-red-600 hover:bg-red-50"
+                                    className="h-8 w-8 rounded-full border-red-200 bg-white/90 text-red-600 hover:bg-red-50"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
