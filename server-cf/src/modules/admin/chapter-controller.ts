@@ -9,7 +9,7 @@ import { eq, and, asc, count } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
-import { chapters, gradeBooks } from "../../schema/books";
+import { chapters, chapterContents, gradeBooks } from "../../schema/books";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -142,6 +142,10 @@ app.delete("/:curriculumId/grades/:grade/chapters/:chapterId", async (c) => {
   const [existing] = await db.select().from(chapters).where(eq(chapters.id, chapterId));
   if (!existing) throw new BadRequestError("Chapter not found");
 
+  // Delete chapter contents first (FK constraint)
+  await db.delete(chapterContents).where(eq(chapterContents.chapterId, chapterId));
+  
+  // Then delete the chapter
   await db.delete(chapters).where(eq(chapters.id, chapterId));
 
   return c.json({ success: true, message: "Chapter deleted" }, 200);

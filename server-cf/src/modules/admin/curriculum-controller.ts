@@ -691,7 +691,13 @@ app.delete("/chapters/:id", async (c) => {
   if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
 
   const db = getDb(c.env.DB);
-  await db.delete(chapters).where(eq(chapters.id, c.req.param("id")));
+  const chapterId = c.req.param("id");
+
+  // Delete chapter contents first (FK constraint)
+  await db.delete(chapterContents).where(eq(chapterContents.chapterId, chapterId));
+  
+  // Then delete the chapter
+  await db.delete(chapters).where(eq(chapters.id, chapterId));
 
   return c.json({ success: true, message: "Chapter deleted" }, 200);
 });
