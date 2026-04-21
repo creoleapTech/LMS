@@ -8,6 +8,19 @@ export interface PresentationData {
   slides: SlideData[];
 }
 
+export interface PptxProgressMeta {
+  slideWidth: number;
+  slideHeight: number;
+  slideCount: number;
+}
+
+export interface ParsePptxProgressiveOptions {
+  onMeta?: (meta: PptxProgressMeta) => void;
+  onSlide?: (payload: { index: number; slide: SlideData }) => void;
+  signal?: AbortSignal;
+  concurrency?: number;
+}
+
 export interface SlideData {
   background?: BackgroundData;
   elements: SlideElement[];
@@ -1448,7 +1461,17 @@ function normalizePath(basePath: string, relativePath: string): string {
 
 // ── Main Parser ────────────────────────────────────────────────────
 
-export async function parsePptx(arrayBuffer: ArrayBuffer): Promise<PresentationData> {
+interface PreparedPresentationContext {
+  zip: JSZip;
+  themeColors: Map<string, string>;
+  slideWidth: number;
+  slideHeight: number;
+  slideCount: number;
+}
+
+async function preparePresentationContext(
+  arrayBuffer: ArrayBuffer
+): Promise<PreparedPresentationContext> {
   const zip = await JSZip.loadAsync(arrayBuffer);
 
   // ── Parse theme ──
@@ -1487,12 +1510,88 @@ export async function parsePptx(arrayBuffer: ArrayBuffer): Promise<PresentationD
     slideCount = i - 1;
   }
 
+  return {
+    zip,
+    themeColors,
+    slideWidth,
+    slideHeight,
+    slideCount,
+  };
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) {
+    throw new Error("PPT parse aborted");
+  }
+}
+
+export async function parsePptx(arrayBuffer: ArrayBuffer): Promise<PresentationData> {
+  const { zip, themeColors, slideWidth, slideHeight, slideCount } =
+    await preparePresentationContext(arrayBuffer);
+
   // ── Parse each slide ──
   const slides: SlideData[] = [];
   for (let i = 1; i <= slideCount; i++) {
     const slide = await parseSlide(zip, i, themeColors);
     slides.push(slide);
   }
+
+  return { slideWidth, slideHeight, slides };
+}
+
+export async function parsePptxProgressive(
+  arrayBuffer: ArrayBuffer,
+  options: ParsePptxProgressiveOptions = {}
+): Promise<PresentationData> {
+  const { onMeta, onSlide, signal } = options;
+  const requestedConcurrency = options.concurrency ?? 2;
+  const concurrency = Math.max(1, Math.min(6, requestedConcurrency));
+
+  throwIfAborted(signal);
+
+  const { zip, themeColors, slideWidth, slideHeight, slideCount } =
+    await preparePresentationContext(arrayBuffer);
+
+  throwIfAborted(signal);
+
+  onMeta?.({ slideWidth, slideHeight, slideCount });
+
+  if (slideCount === 0) {
+    return { slideWidth, slideHeight, slides: [] };
+  }
+
+  const slides: SlideData[] = new Array(slideCount);
+
+  // Parse the first slide immediately so the UI can render quickly.
+  const firstSlide = await parseSlide(zip, 1, themeColors);
+  throwIfAborted(signal);
+  slides[0] = firstSlide;
+  onSlide?.({ index: 0, slide: firstSlide });
+
+  if (slideCount > 1) {
+    let nextSlideIndex = 2;
+    const workerCount = Math.min(concurrency, slideCount - 1);
+
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (true) {
+        throwIfAborted(signal);
+
+        const slideNumber = nextSlideIndex;
+        nextSlideIndex += 1;
+        if (slideNumber > slideCount) return;
+
+        const parsedSlide = await parseSlide(zip, slideNumber, themeColors);
+        throwIfAborted(signal);
+
+        slides[slideNumber - 1] = parsedSlide;
+        onSlide?.({ index: slideNumber - 1, slide: parsedSlide });
+      }
+    });
+
+    await Promise.all(workers);
+  }
+
+  throwIfAborted(signal);
 
   return { slideWidth, slideHeight, slides };
 }

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentsIndexRouteImport } from './routes/students/index'
 import { Route as StaffIndexRouteImport } from './routes/staff/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as ReportsIndexRouteImport } from './routes/reports/index'
 import { Route as MyClassesIndexRouteImport } from './routes/my-classes/index'
 import { Route as InstitutionsIndexRouteImport } from './routes/institutions/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
@@ -38,6 +39,11 @@ const StaffIndexRoute = StaffIndexRouteImport.update({
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsIndexRoute = ReportsIndexRouteImport.update({
+  id: '/reports/',
+  path: '/reports/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MyClassesIndexRoute = MyClassesIndexRouteImport.update({
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardIndexRoute
   '/institutions': typeof InstitutionsIndexRoute
   '/my-classes': typeof MyClassesIndexRoute
+  '/reports': typeof ReportsIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/staff': typeof StaffIndexRoute
   '/students': typeof StudentsIndexRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardIndexRoute
   '/institutions': typeof InstitutionsIndexRoute
   '/my-classes': typeof MyClassesIndexRoute
+  '/reports': typeof ReportsIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/staff': typeof StaffIndexRoute
   '/students': typeof StudentsIndexRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/dashboard/': typeof DashboardIndexRoute
   '/institutions/': typeof InstitutionsIndexRoute
   '/my-classes/': typeof MyClassesIndexRoute
+  '/reports/': typeof ReportsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/students/': typeof StudentsIndexRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/institutions'
     | '/my-classes'
+    | '/reports'
     | '/settings'
     | '/staff'
     | '/students'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/institutions'
     | '/my-classes'
+    | '/reports'
     | '/settings'
     | '/staff'
     | '/students'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/institutions/'
     | '/my-classes/'
+    | '/reports/'
     | '/settings/'
     | '/staff/'
     | '/students/'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   DashboardIndexRoute: typeof DashboardIndexRoute
   InstitutionsIndexRoute: typeof InstitutionsIndexRoute
   MyClassesIndexRoute: typeof MyClassesIndexRoute
+  ReportsIndexRoute: typeof ReportsIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   StaffIndexRoute: typeof StaffIndexRoute
   StudentsIndexRoute: typeof StudentsIndexRoute
@@ -188,6 +201,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports/': {
+      id: '/reports/'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/my-classes/': {
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardIndexRoute: DashboardIndexRoute,
   InstitutionsIndexRoute: InstitutionsIndexRoute,
   MyClassesIndexRoute: MyClassesIndexRoute,
+  ReportsIndexRoute: ReportsIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   StaffIndexRoute: StaffIndexRoute,
   StudentsIndexRoute: StudentsIndexRoute,

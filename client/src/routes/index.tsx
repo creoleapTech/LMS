@@ -76,7 +76,7 @@ function LoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center relative bg-gradient-to-tr from-[#0a015a] to-[#080a25] text-white selection:bg-purple-500/50 overflow-hidden font-sans"
-      onMouseMove={() => {}}
+      onMouseMove={() => { }}
     >
       {/* Dynamic 3D Background */}
       {/* <div 
@@ -101,15 +101,12 @@ function LoginPage() {
         {/* Left Panel - Stitch Inspired Hero */}
         <div className="hidden flex-1 w-1/2 flex-col lg:flex  justify-center items-center ">
           <div className='w-3/4 flex flex-col justify-center items-center' >
-            <div className="inline-flex  items-start gap-3   w-full">
+            <div className="absolute top-6 left-6">
               <img
                 src="/creo_white.png"
                 alt="Creoleap"
-                className="h-14 w-auto object-contain"
+                className="h-22 w-auto object-contain"
               />
-              {/* <span className="text-[9px] font-semibold tracking-[0.18em] text-white/65 uppercase">
-                Tech Portal Login
-              </span> */}
             </div>
 
             <div className=" rounded-2xl  ">

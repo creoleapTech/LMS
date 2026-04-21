@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Config } from "@/lib/config";
-import { parsePptx, type PresentationData } from "@/lib/pptx-parser";
+import {
+  parsePptxProgressive,
+  type PresentationData,
+  type SlideData,
+} from "@/lib/pptx-parser";
 import { SlideRenderer } from "./SlideRenderer";
 import {
   Loader2,
@@ -30,14 +34,61 @@ export function PptViewer({
   const [error, setError] = useState<string | null>(null);
   const [isFlipping, setIsFlipping] = useState(false);
   const [flipDirection, setFlipDirection] = useState<"left" | "right" | null>(null);
+  const [loadedSlideIndexes, setLoadedSlideIndexes] = useState<Set<number>>(new Set());
+  const [renderedThumbnailIndexes, setRenderedThumbnailIndexes] = useState<Set<number>>(new Set());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [, setControlsVisible] = useState(true);
   const viewerRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushFrameRef = useRef<number | null>(null);
+  const pendingSlidesRef = useRef<Map<number, SlideData>>(new Map());
+  const startSlideRef = useRef(0);
+  const totalSlidesRef = useRef(0);
+
+  const createPlaceholderSlide = useCallback(
+    (): SlideData => ({
+      background: { type: "solid", color: "#FFFFFF" },
+      elements: [],
+    }),
+    []
+  );
+
+  const scheduleSlideFlush = useCallback(() => {
+    if (flushFrameRef.current !== null) return;
+
+    flushFrameRef.current = requestAnimationFrame(() => {
+      flushFrameRef.current = null;
+      const pendingSlides = pendingSlidesRef.current;
+      if (pendingSlides.size === 0) return;
+
+      setPresentation((prev) => {
+        if (!prev) {
+          pendingSlides.clear();
+          return prev;
+        }
+
+        const nextSlides = prev.slides.slice();
+        for (const [index, parsedSlide] of pendingSlides.entries()) {
+          nextSlides[index] = parsedSlide;
+        }
+        pendingSlides.clear();
+
+        return { ...prev, slides: nextSlides };
+      });
+    });
+  }, []);
 
   // Fetch & parse PPTX
   useEffect(() => {
     let cancelled = false;
+    const abortController = new AbortController();
+
+    setPresentation(null);
+    setLoadedSlideIndexes(new Set());
+    setRenderedThumbnailIndexes(new Set());
+    pendingSlidesRef.current.clear();
+    totalSlidesRef.current = 0;
+    startSlideRef.current = 0;
 
     async function load() {
       try {
@@ -78,29 +129,87 @@ export function PptViewer({
         const buffer = await res.arrayBuffer();
         if (cancelled) return;
 
-        const data = await parsePptx(buffer);
+        const data = await parsePptxProgressive(buffer, {
+          signal: abortController.signal,
+          concurrency: 2,
+          onMeta: (meta) => {
+            if (cancelled) return;
+
+            const placeholderSlides = Array.from(
+              { length: meta.slideCount },
+              () => createPlaceholderSlide()
+            );
+
+            const startSlide =
+              initialPage && initialPage >= 1 && initialPage <= meta.slideCount
+                ? initialPage - 1
+                : 0;
+
+            startSlideRef.current = startSlide;
+            totalSlidesRef.current = meta.slideCount;
+
+            setPresentation({
+              slideWidth: meta.slideWidth,
+              slideHeight: meta.slideHeight,
+              slides: placeholderSlides,
+            });
+            setCurrentSlide(startSlide);
+
+            if (meta.slideCount === 0) {
+              setLoading(false);
+            }
+          },
+          onSlide: ({ index, slide }) => {
+            if (cancelled) return;
+
+            pendingSlidesRef.current.set(index, slide);
+            scheduleSlideFlush();
+
+            setLoadedSlideIndexes((prev) => {
+              if (prev.has(index)) return prev;
+              const next = new Set(prev);
+              next.add(index);
+              return next;
+            });
+
+            if (index === startSlideRef.current) {
+              setLoading(false);
+            }
+          },
+        });
         if (cancelled) return;
 
         setPresentation(data);
-        const startSlide =
-          initialPage && initialPage >= 1 && initialPage <= data.slides.length
-            ? initialPage - 1
-            : 0;
-        setCurrentSlide(startSlide);
+        setLoadedSlideIndexes(new Set(data.slides.map((_, index) => index)));
+
+        if (data.slides.length > 0) {
+          setLoading(false);
+        }
       } catch (err: any) {
         if (!cancelled) {
+          if (err?.message === "PPT parse aborted") {
+            return;
+          }
           setError(err.message || "Failed to load presentation");
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && totalSlidesRef.current === 0) {
+          setLoading(false);
+        }
       }
     }
 
     load();
     return () => {
       cancelled = true;
+      abortController.abort();
+      if (flushFrameRef.current !== null) {
+        cancelAnimationFrame(flushFrameRef.current);
+        flushFrameRef.current = null;
+      }
+      pendingSlidesRef.current.clear();
     };
-  }, [storageKey]);
+  }, [storageKey, initialPage, createPlaceholderSlide, scheduleSlideFlush]);
 
   // Notify parent of page change
   useEffect(() => {
@@ -108,6 +217,27 @@ export function PptViewer({
       onPageChange(currentSlide + 1);
     }
   }, [currentSlide, presentation, onPageChange]);
+
+  // Persist thumbnails once they have been shown so previews do not disappear
+  // while navigating, while still limiting initial render pressure.
+  useEffect(() => {
+    if (!presentation || presentation.slides.length === 0) return;
+
+    setRenderedThumbnailIndexes((prev) => {
+      const next = new Set(prev);
+      const total = presentation.slides.length;
+      const from = Math.max(0, currentSlide - 2);
+      const to = Math.min(total - 1, currentSlide + 2);
+
+      for (let i = from; i <= to; i += 1) {
+        next.add(i);
+      }
+      next.add(0);
+      next.add(total - 1);
+
+      return next;
+    });
+  }, [currentSlide, presentation]);
 
   const goToPrev = useCallback(() => {
     if (currentSlide > 0 && !isFlipping) {
@@ -122,7 +252,12 @@ export function PptViewer({
   }, [currentSlide, isFlipping]);
 
   const goToNext = useCallback(() => {
-    if (presentation && currentSlide < presentation.slides.length - 1 && !isFlipping) {
+    if (
+      presentation &&
+      currentSlide < presentation.slides.length - 1 &&
+      loadedSlideIndexes.has(currentSlide + 1) &&
+      !isFlipping
+    ) {
       setFlipDirection("right");
       setIsFlipping(true);
       setCurrentSlide((s) => s + 1);
@@ -131,7 +266,7 @@ export function PptViewer({
         setFlipDirection(null);
       }, 150);
     }
-  }, [currentSlide, presentation, isFlipping]);
+  }, [currentSlide, presentation, loadedSlideIndexes, isFlipping]);
 
   // ── Fullscreen ──────────────────────────────────────────────────
   const enterFullscreen = useCallback(() => {
@@ -291,7 +426,11 @@ export function PptViewer({
         {/* Right arrow */}
         <button
           onClick={goToNext}
-          disabled={currentSlide >= totalSlides - 1 || isFlipping}
+          disabled={
+            currentSlide >= totalSlides - 1 ||
+            !loadedSlideIndexes.has(currentSlide + 1) ||
+            isFlipping
+          }
           className="group relative z-10 flex items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-full
                      bg-indigo-900/10 hover:bg-indigo-900/20 dark:bg-indigo-100/10 dark:hover:bg-indigo-100/20
                      text-indigo-900 dark:text-indigo-100 transition-all duration-200
@@ -318,7 +457,7 @@ export function PptViewer({
           {presentation.slides.map((s, i) => (
             <button
               key={i}
-              onClick={() => !isFlipping && setCurrentSlide(i)}
+              onClick={() => !isFlipping && loadedSlideIndexes.has(i) && setCurrentSlide(i)}
               aria-label={`Go to slide ${i + 1}`}
               className={`shrink-0 w-24 rounded border-2 transition-all overflow-hidden
                 ${i === currentSlide
@@ -326,11 +465,21 @@ export function PptViewer({
                   : "border-transparent opacity-60 hover:opacity-90 hover:border-gray-300"
                 }`}
             >
-              <SlideRenderer
-                slide={s}
-                slideWidth={presentation.slideWidth}
-                slideHeight={presentation.slideHeight}
-              />
+              {loadedSlideIndexes.has(i) && renderedThumbnailIndexes.has(i) ? (
+                <SlideRenderer
+                  slide={s}
+                  slideWidth={presentation.slideWidth}
+                  slideHeight={presentation.slideHeight}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    aspectRatio: `${presentation.slideWidth / presentation.slideHeight}`,
+                  }}
+                  className="bg-slate-100 dark:bg-slate-800"
+                />
+              )}
             </button>
           ))}
         </div>

@@ -2,11 +2,13 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, GripVertical, BookOpen, Target, ChevronDown, ChevronUp, LayoutList } from "lucide-react";
 import { Config } from "@/lib/config";
+import { _axios } from "@/lib/axios";
 
 interface Chapter {
     id?: string;
@@ -32,6 +34,13 @@ interface Props {
     bookTitle?: string;
 }
 
+interface ChapterContentHeading {
+    id?: string;
+    _id?: string;
+    title?: string;
+    order?: number;
+}
+
 export function PremiumChapterCard({
     chapter,
     onView,
@@ -45,11 +54,28 @@ export function PremiumChapterCard({
     bookTitle,
 }: Props) {
     const [expanded, setExpanded] = useState(false);
+    const chapterId = chapter.id ?? chapter._id ?? null;
     const thumbnailUrl = chapter.thumbnail ? Config.proxyUrl + chapter.thumbnail : null;
     const hasDetails = !!(chapter.description || chapter.learningObjectives);
+    const canExpand = hasDetails || !!chapterId;
+
+    const {
+        data: contentHeadings = [],
+        isLoading: isHeadingsLoading,
+        isError: isHeadingsError,
+    } = useQuery<ChapterContentHeading[]>({
+        queryKey: ["chapter-content-headings", chapterId],
+        queryFn: async () => {
+            const res = await _axios.get(`/admin/curriculum/chapter/${chapterId}/content`);
+            const rows = (res?.data?.data || []) as ChapterContentHeading[];
+            return [...rows].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        },
+        enabled: expanded && !!chapterId,
+        staleTime: 60 * 1000,
+    });
 
     const handleCardClick = () => {
-        if (hasDetails) {
+        if (canExpand) {
             setExpanded((prev) => !prev);
         }
     };
@@ -61,7 +87,7 @@ export function PremiumChapterCard({
         >
             {/* Main row */}
             <div
-                className={`p-5 flex items-start gap-4 ${hasDetails ? "cursor-pointer" : ""}`}
+                className={`p-5 flex items-center gap-4 ${canExpand ? "cursor-pointer" : ""}`}
                 onClick={handleCardClick}
             >
                 {/* Drag Handle */}
@@ -91,10 +117,15 @@ export function PremiumChapterCard({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-w-0">
-                    <Badge variant="outline" className="text-xs font-bold text-indigo-600 border-indigo-200 mb-1.5">
+                <div className="flex-1 items-center justify-center min-w-0">
+                  <div className="flex items-center gap-5">
+                      <Badge variant="outline" className="text-2xl p-2 px-5 font-bold text-indigo-600 border-indigo-200 mb-1.5">
                         Chapter {chapter.chapterNumber}
                     </Badge>
+                     <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
+                        {chapter.title}
+                    </h3>
+                  </div>
 
                     {(curriculumName || bookTitle) && (
                         <div className="flex items-center gap-2 mb-1.5 text-xs text-gray-500 dark:text-gray-400">
@@ -105,9 +136,7 @@ export function PremiumChapterCard({
                         </div>
                     )}
 
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
-                        {chapter.title}
-                    </h3>
+                   
                 </div>
 
                 {/* Right side: actions + expand toggle */}
@@ -147,7 +176,7 @@ export function PremiumChapterCard({
                         </>
                     )}
 
-                    {hasDetails && (
+                    {canExpand && (
                         <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); setExpanded((p) => !p); }}
@@ -160,7 +189,7 @@ export function PremiumChapterCard({
             </div>
 
             {/* Expandable details */}
-            {expanded && hasDetails && (
+            {expanded && canExpand && (
                 <div className="px-5 pb-5 space-y-4 border-t border-gray-100 dark:border-gray-800 pt-4">
                     {chapter.description && (
                         <div>
@@ -178,6 +207,36 @@ export function PremiumChapterCard({
                             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
                                 {chapter.learningObjectives}
                             </p>
+                        </div>
+                    )}
+
+                    {chapterId && (
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
+                                <LayoutList className="h-3.5 w-3.5 text-indigo-500" /> Content Headings
+                            </p>
+
+                            {isHeadingsLoading && (
+                                <p className="text-sm text-gray-600 dark:text-gray-300">Loading headings...</p>
+                            )}
+
+                            {!isHeadingsLoading && isHeadingsError && (
+                                <p className="text-sm text-red-600">Could not load content headings.</p>
+                            )}
+
+                            {!isHeadingsLoading && !isHeadingsError && contentHeadings.length === 0 && (
+                                <p className="text-sm text-gray-600 dark:text-gray-300">No content headings yet.</p>
+                            )}
+
+                            {!isHeadingsLoading && !isHeadingsError && contentHeadings.length > 0 && (
+                                <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-200">
+                                    {contentHeadings.map((heading, index) => (
+                                        <li key={heading.id || heading._id || `${heading.title || "heading"}-${index}`} className="truncate">
+                                            {(heading.order ?? index + 1)}. {heading.title || "Untitled content"}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
                     )}
                 </div>
