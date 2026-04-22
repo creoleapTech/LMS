@@ -19,6 +19,7 @@ interface Chapter {
     learningObjectives?: string;
     thumbnail?: string | null;
     order?: number;
+    updatedAt?: string;
 }
 
 interface Props {
@@ -55,7 +56,9 @@ export function PremiumChapterCard({
 }: Props) {
     const [expanded, setExpanded] = useState(false);
     const chapterId = chapter.id ?? chapter._id ?? null;
-    const thumbnailUrl = chapter.thumbnail ? Config.proxyUrl + chapter.thumbnail : null;
+    const thumbnailUrl = chapter.thumbnail
+        ? `${Config.proxyUrl}${chapter.thumbnail}`
+        : null;
     const hasDetails = !!(chapter.description || chapter.learningObjectives);
     const canExpand = hasDetails || !!chapterId;
 

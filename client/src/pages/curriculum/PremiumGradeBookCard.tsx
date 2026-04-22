@@ -16,6 +16,7 @@ interface GradeBook {
     isPublished: boolean;
     curriculumId?: string;
     curriculumName?: string;
+    updatedAt?: string;
 }
 
 interface Props {
@@ -38,7 +39,9 @@ export function PremiumGradeBookCard({
     curriculumName,
 }: Props) {
     void curriculumName;
-    const coverUrl = gradeBook.coverImage ? `${Config.imgUrl}${gradeBook.coverImage}` : "";
+    const coverUrl = gradeBook.coverImage
+        ? `${Config.imgUrl}${gradeBook.coverImage}`
+        : "";
 
     return (
         <Card

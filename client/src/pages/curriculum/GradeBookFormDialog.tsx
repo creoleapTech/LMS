@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 import { Config } from "@/lib/config";
+import { compressImage } from "@/lib/imageUtils";
 
 const schema = z.object({
   grade: z.number().min(1).max(12),
@@ -88,15 +89,14 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
     }
   }, [gradeBook, open, reset]);
 
-  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setCoverImageFile(file);
+      const compressed = await compressImage(file, { maxWidth: 600, maxHeight: 800, quality: 0.85 });
+      setCoverImageFile(compressed);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setCoverImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      reader.onloadend = () => setCoverImagePreview(reader.result as string);
+      reader.readAsDataURL(compressed);
     }
   };
 

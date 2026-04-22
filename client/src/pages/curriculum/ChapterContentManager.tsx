@@ -42,9 +42,9 @@ import {
   Eye,
   GripVertical,
   Pencil,
-  Check,
   Plus,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +85,177 @@ interface ContentItem {
 }
 
 // ---------------------------------------------------------------------------
+// Edit Content Dialog
+// ---------------------------------------------------------------------------
+
+interface EditContentDialogProps {
+  item: ContentItem;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+function EditContentDialog({ item, onClose, onSaved }: EditContentDialogProps) {
+  const [title, setTitle] = useState(item.title);
+  const [youtubeUrl, setYoutubeUrl] = useState(item.youtubeUrl || "");
+  const [textContent, setTextContent] = useState(item.textContent || "");
+  const [questions, setQuestions] = useState<Question[]>(item.questions || []);
+  const [newFile, setNewFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const isFileBased = ["video", "ppt", "pdf", "activity"].includes(item.type);
+
+  const handleSave = async () => {
+    if (!title.trim()) { toast.error("Title cannot be empty"); return; }
+    setSaving(true);
+    try {
+      if (isFileBased && newFile) {
+        const fd = new FormData();
+        fd.append("title", title.trim());
+        fd.append("file", newFile);
+        await _axios.patch(`/admin/curriculum/content/${item.id}`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else if (item.type === "quiz") {
+        await _axios.patch(`/admin/curriculum/content/${item.id}`, {
+          title: title.trim(),
+          questions: JSON.stringify(questions),
+        });
+      } else if (item.type === "youtube") {
+        await _axios.patch(`/admin/curriculum/content/${item.id}`, {
+          title: title.trim(),
+          youtubeUrl: youtubeUrl.trim(),
+        });
+      } else if (item.type === "text") {
+        await _axios.patch(`/admin/curriculum/content/${item.id}`, {
+          title: title.trim(),
+          textContent,
+        });
+      } else {
+        await _axios.patch(`/admin/curriculum/content/${item.id}`, { title: title.trim() });
+      }
+      toast.success("Content updated");
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update content");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-xl">
+              {getContentTypeIcon(item.type)}
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Edit Content</h2>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">{item.type}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {/* Title */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Title</label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Content title" />
+          </div>
+
+          {/* YouTube URL */}
+          {item.type === "youtube" && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">YouTube URL</label>
+              <Input
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+              {youtubeUrl && (
+                <div className="mt-2 rounded-xl overflow-hidden">
+                  <YouTubePlayer videoUrl={youtubeUrl} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Rich text */}
+          {item.type === "text" && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Content</label>
+              <RichTextEditor content={textContent} onChange={setTextContent} />
+            </div>
+          )}
+
+          {/* Quiz */}
+          {item.type === "quiz" && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Quiz Questions</label>
+              <QuizBuilder questions={questions} onChange={setQuestions} />
+            </div>
+          )}
+
+          {/* File replacement */}
+          {isFileBased && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Replace File <span className="text-muted-foreground font-normal">(optional)</span></label>
+              {newFile ? (
+                <div className="flex items-center gap-3 border rounded-xl p-3">
+                  <FileText className="h-6 w-6 text-indigo-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{newFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{(newFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setNewFile(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-6 text-center">
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground mb-3">Upload a new file to replace the existing one</p>
+                  <input
+                    type="file"
+                    id="edit-file-upload"
+                    className="hidden"
+                    accept=".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip,.webm"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      if (f.size > 100 * 1024 * 1024) { toast.error("File must be under 100MB"); return; }
+                      setNewFile(f);
+                    }}
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById("edit-file-upload")?.click()}>
+                    Choose File
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t shrink-0">
+          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : "Save Changes"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Content-type icon map
 // ---------------------------------------------------------------------------
 
@@ -113,28 +284,18 @@ interface SortableContentItemProps {
   item: ContentItem;
   chapterNumber: number;
   isSuperAdmin: boolean;
-  editingId: string | null;
-  editTitle: string;
-  onStartEdit: (item: ContentItem) => void;
-  onSaveEdit: (id: string) => void;
-  onCancelEdit: () => void;
-  onEditTitleChange: (value: string) => void;
   onView: (item: ContentItem) => void;
   onDelete: (id: string) => void;
+  onOpenEditDialog: (item: ContentItem) => void;
 }
 
 function SortableContentItem({
   item,
   chapterNumber,
   isSuperAdmin,
-  editingId,
-  editTitle,
-  onStartEdit,
-  onSaveEdit,
-  onCancelEdit,
-  onEditTitleChange,
   onView,
   onDelete,
+  onOpenEditDialog,
 }: SortableContentItemProps) {
   const {
     attributes,
@@ -151,7 +312,6 @@ function SortableContentItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const isEditing = editingId === item.id;
   const hasPreviewable =
     item.fileUrl || item.videoUrl || item.youtubeUrl || item.textContent || item.questions?.length;
 
@@ -181,40 +341,9 @@ function SortableContentItem({
         </Badge>
 
         <div className="min-w-0 flex-1">
-          {isEditing ? (
-            <div className="flex items-center gap-2">
-              <Input
-                value={editTitle}
-                onChange={(e) => onEditTitleChange(e.target.value)}
-                className="h-8 text-sm"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") onSaveEdit(item.id);
-                  if (e.key === "Escape") onCancelEdit();
-                }}
-              />
-              <Button variant="ghost" size="sm" onClick={() => onSaveEdit(item.id)}>
-                <Check className="h-4 w-4 text-green-600" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onCancelEdit}>
-                <X className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <h4 className="font-medium truncate">{item.title}</h4>
-              {isSuperAdmin && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 shrink-0"
-                  onClick={() => onStartEdit(item)}
-                >
-                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <h4 className="font-medium truncate">{item.title}</h4>
+          </div>
           <div className="flex items-center gap-2 mt-1">
             <Badge variant="outline" className="text-xs uppercase">
               {item.type}
@@ -236,18 +365,24 @@ function SortableContentItem({
           </Button>
         )}
         {isSuperAdmin && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            onClick={() => {
-              if (confirm("Delete this content?")) {
-                onDelete(item.id);
-              }
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <>
+            <Button variant="ghost" size="sm" onClick={() => onOpenEditDialog(item)} className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => {
+                if (confirm("Delete this content?")) {
+                  onDelete(item.id);
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
         )}
       </div>
     </div>
@@ -274,10 +409,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
   const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
-
-  // --- Inline editing state ---
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
+  const [editingContent, setEditingContent] = useState<ContentItem | null>(null);
 
   // --- DnD sensors ---
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
@@ -301,13 +433,12 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
   // Always enter a chapter in "add content" mode with a default type selected.
   useEffect(() => {
     setViewingContent(null);
+    setEditingContent(null);
     setType(DEFAULT_CONTENT_TYPE);
     setFile(null);
     setYoutubeUrl("");
     setTextContent("");
     setQuestions([]);
-    setEditingId(null);
-    setEditTitle("");
     setShowAddForm(false);
   }, [chapterId]);
 
@@ -358,22 +489,6 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Failed to reorder content");
       queryClient.invalidateQueries({ queryKey: ["chapter-content", chapterId] });
-    },
-  });
-
-  // Inline title edit
-  const editTitleMutation = useMutation({
-    mutationFn: async ({ id, title }: { id: string; title: string }) => {
-      await _axios.patch(`/admin/curriculum/content/${id}`, { title });
-    },
-    onSuccess: () => {
-      toast.success("Title updated");
-      setEditingId(null);
-      setEditTitle("");
-      queryClient.invalidateQueries({ queryKey: ["chapter-content", chapterId] });
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to update title");
     },
   });
 
@@ -480,25 +595,6 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
       reorderMutation.mutate(newOrder);
       return newOrder;
     });
-  }
-
-  function startEdit(item: ContentItem) {
-    setEditingId(item.id);
-    setEditTitle(item.title);
-  }
-
-  function saveEdit(id: string) {
-    const trimmed = editTitle.trim();
-    if (!trimmed) {
-      toast.error("Title cannot be empty");
-      return;
-    }
-    editTitleMutation.mutate({ id, title: trimmed });
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-    setEditTitle("");
   }
 
   function getFileUrl(item: ContentItem) {
@@ -627,6 +723,14 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Edit content dialog */}
+      {editingContent && (
+        <EditContentDialog
+          item={editingContent}
+          onClose={() => setEditingContent(null)}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ["chapter-content", chapterId] })}
+        />
+      )}
       {/* Content list */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -788,14 +892,9 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                       item={item}
                       chapterNumber={chapterNumber}
                       isSuperAdmin={!!isSuperAdmin}
-                      editingId={editingId}
-                      editTitle={editTitle}
-                      onStartEdit={startEdit}
-                      onSaveEdit={saveEdit}
-                      onCancelEdit={cancelEdit}
-                      onEditTitleChange={setEditTitle}
                       onView={setViewingContent}
                       onDelete={(id) => deleteMutation.mutate(id)}
+                      onOpenEditDialog={setEditingContent}
                     />
                   ))}
                 </div>

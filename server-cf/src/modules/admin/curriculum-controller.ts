@@ -22,6 +22,8 @@ import {
   quizQuestions,
   quizQuestionOptions,
   quizMatchPairs,
+  institutionCurriculumAccess,
+  institutionAccessibleGradebooks,
 } from "../../schema/junction";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -554,7 +556,7 @@ app.patch("/gradebook/:id", async (c) => {
   return c.json({ success: true, data: updated }, 200);
 });
 
-// DELETE gradeBook
+// DELETE gradeBook — cascades chapters, content, files, and institution access
 app.delete("/gradebook/:id", async (c) => {
   const user = c.get("user") as any;
   if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
@@ -565,10 +567,32 @@ app.delete("/gradebook/:id", async (c) => {
   const [gradeBook] = await db.select().from(gradeBooks).where(eq(gradeBooks.id, id));
   if (!gradeBook) throw new BadRequestError("Grade book not found");
 
+  // 1. Delete all chapter content files + quiz data, then content rows
+  const chapterRows = await db.select({ id: chapters.id }).from(chapters).where(eq(chapters.gradeBookId, id));
+  for (const chapter of chapterRows) {
+    const contentRows = await db.select().from(chapterContents).where(eq(chapterContents.chapterId, chapter.id));
+    for (const content of contentRows) {
+      if (content.fileUrl) await deleteFile(c.env.BUCKET, content.fileUrl);
+      if (content.videoUrl) await deleteFile(c.env.BUCKET, content.videoUrl);
+      await deleteQuizQuestions(db, content.id);
+    }
+    await db.delete(chapterContents).where(eq(chapterContents.chapterId, chapter.id));
+    // Delete chapter thumbnail
+    const [ch] = await db.select({ thumbnail: chapters.thumbnail }).from(chapters).where(eq(chapters.id, chapter.id));
+    if (ch?.thumbnail) await deleteFile(c.env.BUCKET, ch.thumbnail);
+  }
+  await db.delete(chapters).where(eq(chapters.gradeBookId, id));
+
+  // 2. Remove institution access rows (institution_accessible_gradebooks has cascade,
+  //    but institution_curriculum_access rows referencing only this book need cleanup)
+  await db.delete(institutionAccessibleGradebooks).where(eq(institutionAccessibleGradebooks.gradeBookId, id));
+
+  // 3. Delete cover image from R2
   if (gradeBook.coverImage) {
     await deleteFile(c.env.BUCKET, gradeBook.coverImage);
   }
 
+  // 4. Delete the grade book
   await db.delete(gradeBooks).where(eq(gradeBooks.id, id));
 
   return c.json({ success: true, message: "Grade book deleted" }, 200);
@@ -910,24 +934,83 @@ app.delete("/content/:id", async (c) => {
   return c.json({ success: true, message: "Content deleted" }, 200);
 });
 
-// UPDATE content (title only in original)
+// UPDATE content — supports title, youtubeUrl, textContent, questions, and file replacement
 app.patch("/content/:id", async (c) => {
   const user = c.get("user") as any;
   if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
 
   const db = getDb(c.env.DB);
   const id = c.req.param("id");
-  const body = await c.req.json();
 
-  await db
-    .update(chapterContents)
-    .set({ title: body.title, updatedAt: nowISO() })
-    .where(eq(chapterContents.id, id));
+  const [existing] = await db.select().from(chapterContents).where(eq(chapterContents.id, id));
+  if (!existing) throw new BadRequestError("Content not found");
+
+  const contentType = c.req.header("content-type") || "";
+  const now = nowISO();
+  const updateData: Record<string, any> = { updatedAt: now };
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await c.req.formData();
+    const title = formData.get("title") as string | null;
+    const youtubeUrl = formData.get("youtubeUrl") as string | null;
+    const textContent = formData.get("textContent") as string | null;
+    const questionsRaw = formData.get("questions") as string | null;
+    const file = formData.get("file") as File | null;
+
+    if (title) updateData.title = title;
+    if (youtubeUrl !== null) updateData.youtubeUrl = youtubeUrl;
+    if (textContent !== null) updateData.textContent = textContent;
+
+    // Replace file if provided
+    if (file && file.size > 0) {
+      const folder = existing.type === "video" ? "content/videos" : "content/docs";
+      // Delete old file
+      if (existing.videoUrl) await deleteFile(c.env.BUCKET, existing.videoUrl);
+      if (existing.fileUrl) await deleteFile(c.env.BUCKET, existing.fileUrl);
+      const result = await saveFile(c.env.BUCKET, file, folder);
+      if (result.ok) {
+        if (existing.type === "video") updateData.videoUrl = result.key;
+        else updateData.fileUrl = result.key;
+      }
+    }
+
+    // Replace quiz questions
+    if (questionsRaw && existing.type === "quiz") {
+      try {
+        const questions = JSON.parse(questionsRaw);
+        if (Array.isArray(questions)) {
+          await deleteQuizQuestions(db, id);
+          await saveQuizQuestions(db, id, questions);
+        }
+      } catch { /* ignore */ }
+    }
+  } else {
+    const body = await c.req.json();
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.youtubeUrl !== undefined) updateData.youtubeUrl = body.youtubeUrl;
+    if (body.textContent !== undefined) updateData.textContent = body.textContent;
+
+    if (body.questions !== undefined && existing.type === "quiz") {
+      try {
+        const questions = typeof body.questions === "string" ? JSON.parse(body.questions) : body.questions;
+        if (Array.isArray(questions)) {
+          await deleteQuizQuestions(db, id);
+          await saveQuizQuestions(db, id, questions);
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  await db.update(chapterContents).set(updateData).where(eq(chapterContents.id, id));
 
   const [updated] = await db.select().from(chapterContents).where(eq(chapterContents.id, id));
-  if (!updated) throw new BadRequestError("Content not found");
+  let data: any = updated;
+  if (existing.type === "quiz") {
+    const questions = await loadQuizQuestions(db, id);
+    data = { ...updated, questions };
+  }
 
-  return c.json({ success: true, data: updated }, 200);
+  return c.json({ success: true, data }, 200);
 });
 
 // REORDER content

@@ -21,7 +21,7 @@ bucket_name = "lms-uploads"
 
 [vars]
 # Non-secret env vars here
-CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-weld-psi.vercel.app"
+CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-weld-psi.vercel.app, https://lms.creoleap.com"
 
 # Secrets (set via `wrangler secret put`):
 # JWT_TEACHER_SECRET

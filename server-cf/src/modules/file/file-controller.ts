@@ -124,6 +124,7 @@ fileController.get("/local", async (c) => {
       );
     }
 
+    // Strip cache-buster param — key is the R2 object key only
     const key = c.req.query("key");
 
     if (!key) {
@@ -154,7 +155,8 @@ fileController.get("/local", async (c) => {
     headers.set("Content-Type", mimeType);
     headers.set("Content-Disposition", "inline");
     headers.set("X-Content-Type-Options", "nosniff");
-    headers.set("Cache-Control", "private, max-age=3600");
+    // Allow caching but revalidate — cache-buster param handles freshness
+    headers.set("Cache-Control", "public, max-age=31536000, immutable");
 
     return new Response(object.body, { headers });
   } catch (error: any) {

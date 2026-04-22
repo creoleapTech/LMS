@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 import { Config } from "@/lib/config";
+import { compressImage } from "@/lib/imageUtils";
 
 const schema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -109,27 +110,25 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
     }
   }, [curriculum, open, reset]);
 
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setThumbnailFile(file);
+      const compressed = await compressImage(file, { maxWidth: 800, maxHeight: 800, quality: 0.85 });
+      setThumbnailFile(compressed);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      reader.onloadend = () => setThumbnailPreview(reader.result as string);
+      reader.readAsDataURL(compressed);
     }
   };
 
-  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setBannerFile(file);
+      const compressed = await compressImage(file, { maxWidth: 1600, maxHeight: 600, quality: 0.85 });
+      setBannerFile(compressed);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setBannerPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      reader.onloadend = () => setBannerPreview(reader.result as string);
+      reader.readAsDataURL(compressed);
     }
   };
 

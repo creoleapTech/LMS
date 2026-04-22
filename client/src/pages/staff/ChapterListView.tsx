@@ -29,6 +29,7 @@ interface ChapterWithContent {
   description?: string;
   learningObjectives?: string;
   thumbnail?: string | null;
+  updatedAt?: string;
   content: ContentItem[];
 }
 
@@ -90,7 +91,7 @@ export function ChapterListView({
                     }`}>
                       {chapter.thumbnail ? (
                         <img
-                          src={Config.proxyUrl + chapter.thumbnail}
+                          src={`${Config.proxyUrl}${chapter.thumbnail}`}
                           alt={`Chapter ${chapter.chapterNumber}`}
                           className="w-full h-full object-cover"
                         />

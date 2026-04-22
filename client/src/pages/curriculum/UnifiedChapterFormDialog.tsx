@@ -12,11 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Trash2, ImagePlus, X } from "lucide-react";
+import { Loader2, ImagePlus, X } from "lucide-react";
 import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Config } from "@/lib/config";
+import { compressImage } from "@/lib/imageUtils";
 
 const schema = z.object({
     curriculumId: z.string().optional(),
@@ -28,13 +28,6 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
-
-interface ContentFile {
-    id: string;
-    type: "video" | "ppt" | "pdf" | "activity" | "quiz";
-    file: File;
-    title: string;
-}
 
 interface CurriculumOption {
     id: string;
@@ -50,15 +43,13 @@ interface GradeBookOption {
 interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    gradeBookId?: string; // If provided, skip curriculum/book selection
+    gradeBookId?: string;
     chapter?: any;
     onSuccess: () => void;
 }
 
 export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: providedGradeBookId, chapter, onSuccess }: Props) {
     const [selectedCurriculumId, setSelectedCurriculumId] = useState<string>("");
-    const [contentFiles, setContentFiles] = useState<ContentFile[]>([]);
-    const [currentContentType, setCurrentContentType] = useState<"video" | "ppt" | "pdf" | "activity" | "quiz">("video");
     const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
     const thumbnailInputRef = useRef<HTMLInputElement>(null);
@@ -104,21 +95,12 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
     const selectedFormGradeBookId = watch("gradeBookId") ?? "";
 
     const curriculumOptions: CurriculumOption[] = (curriculums as any[])
-        .map((curriculum) => {
-            const id = String(curriculum?.id ?? "");
-            const name = String(curriculum?.name ?? "").trim();
-            return { id, name };
-        })
-        .filter((curriculum) => curriculum.id.length > 0 && curriculum.name.length > 0);
+        .map((c) => ({ id: String(c?.id ?? ""), name: String(c?.name ?? "").trim() }))
+        .filter((c) => c.id && c.name);
 
     const gradeBookOptions: GradeBookOption[] = (gradeBooks as any[])
-        .map((book) => {
-            const id = String(book?.id ?? "");
-            const bookTitle = String(book?.bookTitle ?? "").trim();
-            const grade = book?.grade ?? "";
-            return { id, bookTitle, grade };
-        })
-        .filter((book) => book.id.length > 0 && book.bookTitle.length > 0);
+        .map((b) => ({ id: String(b?.id ?? ""), bookTitle: String(b?.bookTitle ?? "").trim(), grade: b?.grade ?? "" }))
+        .filter((b) => b.id && b.bookTitle);
 
     useEffect(() => {
         if (open) {
@@ -141,93 +123,31 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                     learningObjectives: "",
                 });
             }
-            setContentFiles([]);
             setSelectedCurriculumId("");
             setThumbnailFile(null);
             setThumbnailPreview(chapter?.thumbnail ? Config.proxyUrl + chapter.thumbnail : null);
         }
     }, [chapter, open, reset, providedGradeBookId]);
 
-    const handleFileAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files || files.length === 0) return;
-
-        const file = files[0];
-        const maxSize = 100 * 1024 * 1024; // 100MB
-        if (file.size > maxSize) {
-            toast.error("File size must be less than 100MB");
-            return;
-        }
-
-        const newContent: ContentFile = {
-            id: Math.random().toString(36).substr(2, 9),
-            type: currentContentType,
-            file: file,
-            title: file.name,
-        };
-
-        setContentFiles([...contentFiles, newContent]);
-        toast.success(`${file.name} added`);
-        e.target.value = ""; // Reset input
-    };
-
-    const removeContent = (id: string) => {
-        setContentFiles(contentFiles.filter(c => c.id !== id));
-    };
-
     const onSubmit = async (data: FormData) => {
         try {
-            // Step 1: Create/update the chapter
-            const chapterFormData = new globalThis.FormData();
-            chapterFormData.append("title", data.title);
-            chapterFormData.append("chapterNumber", String(data.chapterNumber));
-            if (data.description) chapterFormData.append("description", data.description);
-            if (data.learningObjectives) chapterFormData.append("learningObjectives", data.learningObjectives);
-            if (thumbnailFile) chapterFormData.append("thumbnail", thumbnailFile);
-
-            let chapterId: string;
+            const formData = new globalThis.FormData();
+            formData.append("title", data.title);
+            formData.append("chapterNumber", String(data.chapterNumber));
+            if (data.description) formData.append("description", data.description);
+            if (data.learningObjectives) formData.append("learningObjectives", data.learningObjectives);
+            if (thumbnailFile) formData.append("thumbnail", thumbnailFile);
 
             if (chapter) {
-                const existingChapterId = String(chapter?.id ?? "");
-                await _axios.patch(`/admin/curriculum/chapters/${existingChapterId}`, chapterFormData, {
+                await _axios.patch(`/admin/curriculum/chapters/${String(chapter?.id ?? "")}`, formData, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
-                chapterId = existingChapterId;
                 toast.success("Chapter updated successfully!");
             } else {
-                const response = await _axios.post(
-                    `/admin/curriculum/gradebook/${data.gradeBookId}/chapters`,
-                    chapterFormData,
-                    { headers: { "Content-Type": "multipart/form-data" } }
-                );
-                chapterId = String(response?.data?.data?.id ?? "");
+                await _axios.post(`/admin/curriculum/gradebook/${data.gradeBookId}/chapters`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
                 toast.success("Chapter created successfully!");
-            }
-
-            // Step 2: Upload content files if any
-            if (contentFiles.length > 0 && !chapter) {
-                toast.info(`Uploading ${contentFiles.length} content file(s)...`);
-
-                for (const content of contentFiles) {
-                    const formData = new globalThis.FormData();
-                    formData.append("file", content.file);
-                    formData.append("type", content.type);
-                    formData.append("title", content.title);
-                    formData.append("isFree", "false");
-
-                    try {
-                        await _axios.post(
-                            `/admin/curriculum/chapter/${chapterId}/content`,
-                            formData,
-                            { headers: { "Content-Type": "multipart/form-data" } }
-                        );
-                    } catch (err) {
-                        console.error(`Failed to upload ${content.title}`, err);
-                        toast.error(`Failed to upload ${content.title}`);
-                    }
-                }
-
-                toast.success("All content uploaded successfully!");
             }
 
             onSuccess();
@@ -237,286 +157,147 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
         }
     };
 
-    const getContentIcon = (type: string) => {
-        switch (type) {
-            case "video": return "🎥";
-            case "ppt": return "📊";
-            case "pdf": return "📄";
-            case "activity": return "🧩";
-            case "quiz": return "❓";
-            default: return "📁";
-        }
-    };
-
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent
-                className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl"
-                aria-describedby={undefined}
-            >
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl" aria-describedby={undefined}>
                 <DialogHeader>
                     <DialogTitle className="text-2xl">
                         {chapter ? "Edit Chapter" : "Create New Chapter"}
                     </DialogTitle>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                    <Tabs defaultValue="details" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="details">Chapter Details</TabsTrigger>
-                            <TabsTrigger value="content" disabled={!!chapter}>
-                                Content Files {contentFiles.length > 0 && `(${contentFiles.length})`}
-                            </TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="details" className="space-y-6 mt-6">
-                            {!providedGradeBookId && (
-                                <>
-                                    <div className="space-y-2">
-                                        <Label>Curriculum *</Label>
-                                        <Select
-                                            onValueChange={(v) => {
-                                                setValue("curriculumId", v, {
-                                                    shouldDirty: true,
-                                                    shouldTouch: true,
-                                                    shouldValidate: true,
-                                                });
-                                                setSelectedCurriculumId(v);
-                                                setValue("gradeBookId", "", {
-                                                    shouldDirty: true,
-                                                    shouldTouch: true,
-                                                    shouldValidate: true,
-                                                });
-                                            }}
-                                            value={selectedFormCurriculumId}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select a curriculum" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {curriculumOptions.length > 0 ? (
-                                                    curriculumOptions.map((curriculum) => (
-                                                        <SelectItem key={curriculum.id} value={curriculum.id}>
-                                                            {curriculum.name}
-                                                        </SelectItem>
-                                                    ))
-                                                ) : (
-                                                    <SelectItem value="__no_curriculum__" disabled>
-                                                        No curriculum available
-                                                    </SelectItem>
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label>Grade Book *</Label>
-                                        <Select
-                                            onValueChange={(v) =>
-                                                setValue("gradeBookId", v, {
-                                                    shouldDirty: true,
-                                                    shouldTouch: true,
-                                                    shouldValidate: true,
-                                                })
-                                            }
-                                            value={selectedFormGradeBookId}
-                                            disabled={!selectedCurriculumId}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder={selectedCurriculumId ? "Select a grade book" : "Select curriculum first"} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {gradeBookOptions.length > 0 ? (
-                                                    gradeBookOptions.map((book) => (
-                                                        <SelectItem key={book.id} value={book.id}>
-                                                            {book.bookTitle} (Class {book.grade})
-                                                        </SelectItem>
-                                                    ))
-                                                ) : (
-                                                    <SelectItem value="__no_grade_book__" disabled>
-                                                        No grade books available
-                                                    </SelectItem>
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.gradeBookId && (
-                                            <p className="text-sm text-red-500">{errors.gradeBookId.message}</p>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-2">
+                    {/* Curriculum + Grade Book selectors (only when not pre-scoped) */}
+                    {!providedGradeBookId && (
+                        <>
+                            <div className="space-y-2">
+                                <Label>Curriculum *</Label>
+                                <Select
+                                    onValueChange={(v) => {
+                                        setValue("curriculumId", v, { shouldValidate: true });
+                                        setSelectedCurriculumId(v);
+                                        setValue("gradeBookId", "", { shouldValidate: true });
+                                    }}
+                                    value={selectedFormCurriculumId}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a curriculum" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {curriculumOptions.length > 0 ? (
+                                            curriculumOptions.map((c) => (
+                                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value="__none__" disabled>No curriculum available</SelectItem>
                                         )}
-                                    </div>
-                                </>
-                            )}
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Chapter Number *</Label>
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        {...register("chapterNumber", { valueAsNumber: true })}
-                                        placeholder="1"
-                                    />
-                                    {errors.chapterNumber && (
-                                        <p className="text-sm text-red-500">{errors.chapterNumber.message}</p>
-                                    )}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>Chapter Title *</Label>
-                                    <Input
-                                        {...register("title")}
-                                        placeholder="Introduction to Algebra"
-                                    />
-                                    {errors.title && (
-                                        <p className="text-sm text-red-500">{errors.title.message}</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Thumbnail Upload */}
-                            <div className="space-y-2">
-                                <Label>Chapter Thumbnail</Label>
-                                <div className="flex items-center gap-4">
-                                    {thumbnailPreview ? (
-                                        <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-200 shrink-0">
-                                            <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-full object-cover" />
-                                            <button
-                                                type="button"
-                                                onClick={() => { setThumbnailFile(null); setThumbnailPreview(null); }}
-                                                className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
-                                            >
-                                                <X className="h-4 w-4 text-white" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="w-16 h-16 rounded-full bg-indigo-50 border-2 border-dashed border-indigo-200 flex items-center justify-center shrink-0">
-                                            <ImagePlus className="h-6 w-6 text-indigo-300" />
-                                        </div>
-                                    )}
-                                    <div className="flex-1">
-                                        <input
-                                            ref={thumbnailInputRef}
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if (!file) return;
-                                                setThumbnailFile(file);
-                                                setThumbnailPreview(URL.createObjectURL(file));
-                                            }}
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => thumbnailInputRef.current?.click()}
-                                        >
-                                            {thumbnailPreview ? "Change Image" : "Upload Image"}
-                                        </Button>
-                                        <p className="text-xs text-muted-foreground mt-1">Shown as the chapter circle thumbnail</p>
-                                    </div>
-                                </div>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Description</Label>
-                                <Textarea
-                                    {...register("description")}
-                                    rows={3}
-                                    placeholder="Brief description of this chapter..."
-                                />
+                                <Label>Grade Book *</Label>
+                                <Select
+                                    onValueChange={(v) => setValue("gradeBookId", v, { shouldValidate: true })}
+                                    value={selectedFormGradeBookId}
+                                    disabled={!selectedCurriculumId}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={selectedCurriculumId ? "Select a grade book" : "Select curriculum first"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {gradeBookOptions.length > 0 ? (
+                                            gradeBookOptions.map((b) => (
+                                                <SelectItem key={b.id} value={b.id}>
+                                                    {b.bookTitle} (Class {b.grade})
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value="__none__" disabled>No grade books available</SelectItem>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                {errors.gradeBookId && <p className="text-sm text-red-500">{errors.gradeBookId.message}</p>}
                             </div>
+                        </>
+                    )}
 
-                            <div className="space-y-2">
-                                <Label>Learning Objectives</Label>
-                                <Textarea
-                                    {...register("learningObjectives")}
-                                    rows={3}
-                                    placeholder="What students will learn in this chapter..."
-                                />
-                            </div>
-                        </TabsContent>
+                    {/* Chapter number + title */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Chapter Number *</Label>
+                            <Input type="number" min="1" {...register("chapterNumber", { valueAsNumber: true })} placeholder="1" />
+                            {errors.chapterNumber && <p className="text-sm text-red-500">{errors.chapterNumber.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Chapter Title *</Label>
+                            <Input {...register("title")} placeholder="Introduction to Algebra" />
+                            {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
+                        </div>
+                    </div>
 
-                        <TabsContent value="content" className="space-y-6 mt-6">
-                            <div className="bg-indigo-50 dark:bg-blue-950 p-4 rounded-xl border border-indigo-200 dark:border-blue-800">
-                                <p className="text-sm text-blue-800 dark:text-blue-200">
-                                    <strong>Add Content Files:</strong> Upload videos, PDFs, PPTs, and other materials for this chapter. They will be uploaded after the chapter is created.
-                                </p>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="flex flex-col sm:flex-row gap-4">
-                                    <Select
-                                        value={currentContentType}
-                                        onValueChange={(v: any) => setCurrentContentType(v)}
+                    {/* Thumbnail */}
+                    <div className="space-y-2">
+                        <Label>Chapter Thumbnail</Label>
+                        <div className="flex items-center gap-4">
+                            {thumbnailPreview ? (
+                                <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-200 shrink-0">
+                                    <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-full object-cover" />
+                                    <button
+                                        type="button"
+                                        onClick={() => { setThumbnailFile(null); setThumbnailPreview(null); }}
+                                        className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
                                     >
-                                        <SelectTrigger className="w-full sm:w-[200px]">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="video">🎥 Video Lecture</SelectItem>
-                                            <SelectItem value="ppt">📊 PPT Slides</SelectItem>
-                                            <SelectItem value="pdf">📄 PDF Notes</SelectItem>
-                                            <SelectItem value="activity">🧩 Activity</SelectItem>
-                                            <SelectItem value="quiz">❓ Quiz</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-
-                                    <div className="flex-1">
-                                        <Input
-                                            type="file"
-                                            onChange={handleFileAdd}
-                                            accept=".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip"
-                                            className="cursor-pointer"
-                                        />
-                                    </div>
+                                        <X className="h-4 w-4 text-white" />
+                                    </button>
                                 </div>
-
-                                {contentFiles.length > 0 && (
-                                    <div className="space-y-2">
-                                        <Label>Files to Upload ({contentFiles.length})</Label>
-                                        <div className="border rounded-xl divide-y">
-                                            {contentFiles.map((content) => (
-                                                <div key={content.id} className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-800">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-2xl">{getContentIcon(content.type)}</span>
-                                                        <div>
-                                                            <p className="font-medium text-sm">{content.title}</p>
-                                                            <p className="text-xs text-muted-foreground uppercase">{content.type}</p>
-                                                        </div>
-                                                    </div>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => removeContent(content.id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                            ) : (
+                                <div className="w-16 h-16 rounded-full bg-indigo-50 border-2 border-dashed border-indigo-200 flex items-center justify-center shrink-0">
+                                    <ImagePlus className="h-6 w-6 text-indigo-300" />
+                                </div>
+                            )}
+                            <div className="flex-1">
+                                <input
+                                    ref={thumbnailInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        const compressed = await compressImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.85 });
+                                        setThumbnailFile(compressed);
+                                        setThumbnailPreview(URL.createObjectURL(compressed));
+                                    }}
+                                />
+                                <Button type="button" variant="outline" size="sm" onClick={() => thumbnailInputRef.current?.click()}>
+                                    {thumbnailPreview ? "Change Image" : "Upload Image"}
+                                </Button>
+                                <p className="text-xs text-muted-foreground mt-1">Shown as the chapter circle thumbnail</p>
                             </div>
-                        </TabsContent>
-                    </Tabs>
+                        </div>
+                    </div>
 
-                    <div className="flex justify-end gap-4 pt-6 border-t">
+                    {/* Description */}
+                    <div className="space-y-2">
+                        <Label>Description</Label>
+                        <Textarea {...register("description")} rows={3} placeholder="Brief description of this chapter..." />
+                    </div>
+
+                    {/* Learning Objectives */}
+                    <div className="space-y-2">
+                        <Label>Learning Objectives</Label>
+                        <Textarea {...register("learningObjectives")} rows={3} placeholder="What students will learn in this chapter..." />
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t">
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
                             Cancel
                         </Button>
                         <Button type="submit" disabled={isSubmitting} className="rounded-xl">
                             {isSubmitting ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    {chapter ? "Updating..." : contentFiles.length > 0 ? "Creating & Uploading..." : "Creating..."}
-                                </>
-                            ) : chapter ? (
-                                "Update Chapter"
-                            ) : (
-                                `Create Chapter${contentFiles.length > 0 ? ` & Upload ${contentFiles.length} File(s)` : ""}`
-                            )}
+                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{chapter ? "Updating..." : "Creating..."}</>
+                            ) : chapter ? "Update Chapter" : "Create Chapter"}
                         </Button>
                     </div>
                 </form>
