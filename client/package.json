@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3001",
+    "dev:staging": "vite --port 3001 --mode staging",
     "build": "vite build && tsc",
+    "build:staging": "vite build --mode staging",
     "serve": "vite preview",
     "test": "vitest run",
     "postinstall": "node scripts/patch-compose-refs.cjs"

@@ -7,9 +7,8 @@ import {
     flexRender,
     getCoreRowModel,
     getFilteredRowModel,
-    getPaginationRowModel,
-    useReactTable,
     getSortedRowModel,
+    useReactTable,
     type SortingState,
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Pencil, Trash2, Plus, BookOpen, Search, ArrowUpDown, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Plus, BookOpen, Search, ArrowUpDown, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -26,6 +25,7 @@ import { ClassFormDialog } from "./ClassFormDialog";
 import type { IClass, CreateClassDTO, UpdateClassDTO } from "@/types/class";
 
 const columnHelper = createColumnHelper<IClass>();
+const PAGE_SIZE = 20;
 
 interface Props {
     institutionId: string;
@@ -37,18 +37,23 @@ export function ClassTable({ institutionId }: Props) {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [globalFilter, setGlobalFilter] = useState("");
     const [sorting, setSorting] = useState<SortingState>([]);
+    const [page, setPage] = useState(1);
     const queryClient = useQueryClient();
 
-    const { data: classes = [], isLoading } = useQuery<IClass[]>({
-        queryKey: ["classes", institutionId],
+    const { data: response, isLoading } = useQuery({
+        queryKey: ["classes", institutionId, page],
         queryFn: async () => {
-            const { data } = await _axios.get<{ success: boolean; data: IClass[] }>("/admin/classes", {
-                params: { institutionId },
+            const { data } = await _axios.get<{ success: boolean; data: IClass[]; meta: { total: number; page: number; limit: number } }>("/admin/classes", {
+                params: { institutionId, page, limit: PAGE_SIZE },
             });
-            return data.data;
+            return data;
         },
         enabled: !!institutionId,
     });
+
+    const classes = response?.data ?? [];
+    const total = response?.meta?.total ?? 0;
+    const totalPages = Math.ceil(total / PAGE_SIZE);
 
     const createMutation = useMutation({
         mutationFn: async (data: CreateClassDTO) => {
@@ -64,15 +69,14 @@ export function ClassTable({ institutionId }: Props) {
             setOpenForm(false);
         },
         onError: (error: any) => {
+            // Show the exact server message (e.g. "Section A already exists...")
             toast.error(error?.response?.data?.message || "Failed to add class");
         },
     });
 
     const updateMutation = useMutation({
         mutationFn: async ({ id, data }: { id: string; data: UpdateClassDTO }) => {
-            const { data: res } = await _axios.patch<{ success: boolean; data: IClass }>(`/admin/classes/${id}`, {
-                ...data,
-            });
+            const { data: res } = await _axios.patch<{ success: boolean; data: IClass }>(`/admin/classes/${id}`, data);
             return res.data;
         },
         onSuccess: () => {
@@ -101,21 +105,13 @@ export function ClassTable({ institutionId }: Props) {
         },
     });
 
-    const handleCreate = () => {
-        setEditingClass(null);
-        setOpenForm(true);
-    };
-
-    const handleEdit = (cls: IClass) => {
-        setEditingClass(cls);
-        setOpenForm(true);
-    };
-
+    const handleCreate = () => { setEditingClass(null); setOpenForm(true); };
+    const handleEdit = (cls: IClass) => { setEditingClass(cls); setOpenForm(true); };
     const handleSave = async (data: CreateClassDTO) => {
         if (editingClass) {
-            updateMutation.mutate({ id: editingClass._id, data });
+            await updateMutation.mutateAsync({ id: editingClass._id, data });
         } else {
-            createMutation.mutate(data);
+            await createMutation.mutateAsync(data);
         }
     };
 
@@ -171,12 +167,8 @@ export function ClassTable({ institutionId }: Props) {
         columns,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
         getSortedRowModel: getSortedRowModel(),
-        state: {
-            globalFilter,
-            sorting,
-        },
+        state: { globalFilter, sorting },
         onGlobalFilterChange: setGlobalFilter,
         onSortingChange: setSorting,
         globalFilterFn: "includesString",
@@ -205,14 +197,14 @@ export function ClassTable({ institutionId }: Props) {
                         <div className="relative flex-1 max-w-sm">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                             <Input
-                                placeholder="Search classes..."
+                                placeholder="Filter this page..."
                                 value={globalFilter ?? ""}
                                 onChange={e => setGlobalFilter(e.target.value)}
                                 className="pl-10 rounded-xl"
                             />
                         </div>
                         <div className="text-sm text-muted-foreground">
-                            Total: {classes.length}
+                            Total: {total}
                         </div>
                     </div>
                 </Card>
@@ -220,42 +212,75 @@ export function ClassTable({ institutionId }: Props) {
                 {isLoading ? (
                     <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
                 ) : (
-                    <div className="neo-table-wrapper overflow-hidden">
-                        <div className="overflow-x-auto">
-                        <Table className="min-w-[600px]">
-                            <TableHeader>
-                                {table.getHeaderGroups().map(headerGroup => (
-                                    <TableRow key={headerGroup.id}>
-                                        {headerGroup.headers.map(header => (
-                                            <TableHead className="text-center" key={header.id}>
-                                                {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                                            </TableHead>
+                    <>
+                        <div className="neo-table-wrapper overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <Table className="min-w-[600px]">
+                                    <TableHeader>
+                                        {table.getHeaderGroups().map(headerGroup => (
+                                            <TableRow key={headerGroup.id}>
+                                                {headerGroup.headers.map(header => (
+                                                    <TableHead className="text-center" key={header.id}>
+                                                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                                                    </TableHead>
+                                                ))}
+                                            </TableRow>
                                         ))}
-                                    </TableRow>
-                                ))}
-                            </TableHeader>
-                            <TableBody>
-                                {table.getRowModel().rows.length ? (
-                                    table.getRowModel().rows.map(row => (
-                                        <TableRow key={row.id}>
-                                            {row.getVisibleCells().map(cell => (
-                                                <TableCell className="text-center" key={cell.id}>
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                    </TableHeader>
+                                    <TableBody>
+                                        {table.getRowModel().rows.length ? (
+                                            table.getRowModel().rows.map(row => (
+                                                <TableRow key={row.id}>
+                                                    {row.getVisibleCells().map(cell => (
+                                                        <TableCell className="text-center" key={cell.id}>
+                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                        </TableCell>
+                                                    ))}
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
+                                                    No classes found. Add one to get started.
                                                 </TableCell>
-                                            ))}
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                                            No classes found. Add one to get started.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </div>
-                    </div>
+
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between px-1">
+                                <p className="text-sm text-muted-foreground">
+                                    Page {page} of {totalPages} &middot; {total} classes
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                                        disabled={page === 1}
+                                        className="rounded-lg"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                        Prev
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={page === totalPages}
+                                        className="rounded-lg"
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

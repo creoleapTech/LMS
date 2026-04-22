@@ -1134,7 +1134,7 @@ app.get("/all-chapters", async (c) => {
     .leftJoin(gradeBooks, eq(chapters.gradeBookId, gradeBooks.id))
     .leftJoin(curricula, eq(gradeBooks.curriculumId, curricula.id))
     .where(whereClause)
-    .orderBy(desc(chapters.createdAt))
+    .orderBy(asc(chapters.gradeBookId), asc(chapters.order))
     .limit(limit)
     .offset(skip);
 

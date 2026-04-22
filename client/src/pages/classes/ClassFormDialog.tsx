@@ -108,14 +108,10 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
     }, [cls, reset, open]);
 
     const onSubmit = async (values: FormValues) => {
-        try {
-            await onSave({
-                ...values,
-                institutionId,
-            });
-        } catch (error) {
-            // Error handled in parent
-        }
+        await onSave({
+            ...values,
+            institutionId,
+        });
     };
 
     return (

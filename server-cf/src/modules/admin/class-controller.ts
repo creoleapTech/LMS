@@ -117,6 +117,30 @@ classController.post("/", async (c) => {
   const classId = uuid();
   const now = nowISO();
 
+  // Check for duplicate section (case-insensitive) within same institution + grade
+  const normalizedSection = body.section.trim().toUpperCase();
+
+  const existingSections = await db
+    .select({ section: classes.section })
+    .from(classes)
+    .where(
+      and(
+        eq(classes.institutionId, body.institutionId),
+        eq(classes.grade, body.grade || ""),
+        eq(classes.isDeleted, 0)
+      )
+    );
+
+  const sectionExists = existingSections.some(
+    (row) => row.section.trim().toUpperCase() === normalizedSection
+  );
+
+  if (sectionExists) {
+    throw new BadRequestError(
+      `Class already exists: Grade ${body.grade || "N/A"} Section "${body.section}" is already created for this institution`
+    );
+  }
+
   const [newClass] = await db
     .insert(classes)
     .values({
@@ -143,6 +167,9 @@ classController.get("/", async (c) => {
 
   const institutionId = c.req.query("institutionId");
   const academicYear = c.req.query("academicYear");
+  const page = Math.max(1, parseInt(c.req.query("page") || "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query("limit") || "50", 10)));
+  const offset = (page - 1) * limit;
 
   const conditions: any[] = [eq(classes.isDeleted, 0)];
 
@@ -156,10 +183,18 @@ classController.get("/", async (c) => {
     conditions.push(eq(classes.year, academicYear));
   }
 
+  const [totalRow] = await db
+    .select({ count: count() })
+    .from(classes)
+    .where(and(...conditions));
+
   const classRows = await db
     .select()
     .from(classes)
-    .where(and(...conditions));
+    .where(and(...conditions))
+    .orderBy(classes.grade, classes.section)
+    .limit(limit)
+    .offset(offset);
 
   // Enrich each class with department, institution info, and student count
   const enriched = await Promise.all(
@@ -207,7 +242,7 @@ classController.get("/", async (c) => {
     })
   );
 
-  return c.json({ success: true, data: enriched }, 200);
+  return c.json({ success: true, data: enriched, meta: { total: totalRow?.count ?? 0, page, limit } }, 200);
 });
 
 // ─── GET Single Class ──────────────────────────────

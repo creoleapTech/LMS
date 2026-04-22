@@ -20,10 +20,37 @@ binding = "BUCKET"
 bucket_name = "lms-uploads"
 
 [vars]
-# Non-secret env vars here
-CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-weld-psi.vercel.app, https://lms.creoleap.com"
+CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-weld-psi.vercel.app,https://lms.creoleap.com"
 
 # Secrets (set via `wrangler secret put`):
 # JWT_TEACHER_SECRET
 # JWT_ADMIN_SECRET
 # JWT_SUPERADMIN_SECRET
+
+# ── Staging environment ───────────────────────────────────────────────────────
+# Deploy with: npx wrangler deploy --env staging
+# URL:         https://lms-api-staging.<your-subdomain>.workers.dev
+#
+# One-time setup (run these once):
+#   npx wrangler d1 create lms-staging
+#   npx wrangler d1 migrations apply lms-staging --remote
+#   npx wrangler r2 bucket create lms-uploads-staging
+#   npx wrangler secret put JWT_TEACHER_SECRET --env staging
+#   npx wrangler secret put JWT_ADMIN_SECRET --env staging
+#   npx wrangler secret put JWT_SUPERADMIN_SECRET --env staging
+
+[env.staging]
+name = "lms-api-staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "lms-staging"
+database_id = "REPLACE_WITH_STAGING_DB_ID"
+migrations_dir = "drizzle"
+
+[[env.staging.r2_buckets]]
+binding = "BUCKET"
+bucket_name = "lms-uploads-staging"
+
+[env.staging.vars]
+CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-staging.vercel.app"
