@@ -236,6 +236,7 @@ async function adminStats(institutionId: string, filters: { year?: number; month
     genderAgg,
     sessionsByMonthAgg,
     classActivityAgg,
+    classProgressAgg,
   ] = await Promise.all([
     StudentModel.countDocuments({ institutionId: instId, isDeleted: { $ne: true } }),
     StudentModel.countDocuments({ institutionId: instId, isActive: true, isDeleted: { $ne: true } }),
@@ -327,6 +328,16 @@ async function adminStats(institutionId: string, filters: { year?: number; month
         },
       },
     ]),
+    // Classwise progress
+    TeachingProgressModel.aggregate([
+      { $match: { institutionId: instId } },
+      {
+        $group: {
+          _id: "$classId",
+          avgProgress: { $avg: "$overallPercentage" },
+        },
+      },
+    ]),
   ]);
 
   const curriculumAccessCount = institution?.curriculumAccess?.length || 0;
@@ -406,7 +417,7 @@ async function adminStats(institutionId: string, filters: { year?: number; month
 
   // Class activity — resolve class names
   const classActivityIds = classActivityAgg.map((c: any) => c._id);
-  const classDocs = await ClassModel.find({ _id: { $in: classActivityIds } })
+  const classDocs = await ClassModel.find({ _id: { $in: [...classActivityIds, ...classProgressAgg.map((c: any) => c._id)] } })
     .select("grade section")
     .lean();
   const classNameMap: Record<string, string> = {};
@@ -417,6 +428,14 @@ async function adminStats(institutionId: string, filters: { year?: number; month
     sessions: c.sessions,
     minutes: c.totalMinutes,
   }));
+
+  // Classwise progress
+  const classwiseProgress = classProgressAgg
+    .map((c: any) => ({
+      class: classNameMap[c._id?.toString()] || "Unknown",
+      avgProgress: Math.round(c.avgProgress || 0),
+    }))
+    .sort((a: any, b: any) => a.class.localeCompare(b.class));
 
   // Course distribution — grade books per curriculum
   const courseDistAgg = await GradeBookModel.aggregate([
@@ -462,6 +481,7 @@ async function adminStats(institutionId: string, filters: { year?: number; month
     classActivity,
     courseDistribution,
     schoolProgress: avgTeachingProgress,
+    classwiseProgress,
   };
 }
 

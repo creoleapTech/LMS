@@ -101,6 +101,35 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
         )}
       </div>
 
+      {/* Row 1: Classwise Progress */}
+      <DashCard>
+        <SectionHeader icon={BarChart3} title="Class-wise Progress" subtitle="Average curriculum completion per class" accent="text-indigo-600 bg-indigo-50" />
+        <div className="h-[300px] mt-3">
+          {data.classwiseProgress?.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.classwiseProgress} layout="vertical" margin={{ left: 10, right: 50, top: 10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="classwiseGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#6366f1" />
+                    <stop offset="50%" stopColor="#8b5cf6" />
+                    <stop offset="100%" stopColor="#a78bfa" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#ccd3df" strokeOpacity={0.5} />
+                <XAxis type="number" domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
+                <YAxis dataKey="class" type="category" tick={{ fill: '#334155', fontSize: 12, fontWeight: 700 }} axisLine={false} tickLine={false} width={80} />
+                <Tooltip content={<ChartTooltip />} formatter={(v: any) => [`${v}%`, 'Progress']} />
+                <Bar dataKey="avgProgress" name="Progress %" fill="url(#classwiseGrad)" radius={[0, 8, 8, 0]} barSize={22} background={{ fill: '#d4dae6', radius: 8 }}
+                  label={{ position: 'right', formatter: (v: any) => `${v}%`, fill: '#334155', fontSize: 11, fontWeight: 700 }}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState message="No class progress data yet" />
+          )}
+        </div>
+      </DashCard>
+
       {/* Row 2: Student Growth + Sessions + Gender Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <DashCard className="lg:col-span-2">
