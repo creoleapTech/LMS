@@ -91,7 +91,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
         >
           <option value="">All Classes</option>
           {data.classSizeDistribution?.map((c: any, i: number) => (
-            <option key={i} value={c.class}>{c.class}</option>
+            <option key={i} value={c.id || c.class}>{c.class}</option>
           ))}
         </select>
         {hasFilters && (

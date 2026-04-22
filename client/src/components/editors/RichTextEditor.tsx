@@ -1,6 +1,5 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Image from "@tiptap/extension-image";
 import { Table } from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
@@ -8,6 +7,7 @@ import TableHeader from "@tiptap/extension-table-header";
 import Placeholder from "@tiptap/extension-placeholder";
 import UnderlineExt from "@tiptap/extension-underline";
 import LinkExt from "@tiptap/extension-link";
+import { ResizableImage } from "./ResizableImageExtension";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRef, useState } from "react";
@@ -53,7 +53,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
       }),
       UnderlineExt,
       LinkExt.configure({ openOnClick: false, HTMLAttributes: { class: "text-blue-600 underline cursor-pointer" } }),
-      Image.configure({ inline: false, allowBase64: true }),
+      ResizableImage,
       Table.configure({ resizable: true }),
       TableRow,
       TableCell,
@@ -75,7 +75,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
     const reader = new FileReader();
     reader.onload = () => {
       const src = reader.result as string;
-      editor.chain().focus().setImage({ src }).run();
+      (editor.chain().focus() as any).setResizableImage({ src }).run();
     };
     reader.readAsDataURL(file);
     e.target.value = "";
@@ -194,7 +194,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
         <Sep />
 
         {/* Image upload */}
-        <TB onClick={() => fileInputRef.current?.click()} title="Upload Image">
+        <TB onClick={() => fileInputRef.current?.click()} title="Upload Image (click to resize/crop after inserting)">
           <ImageIcon className="h-4 w-4" />
         </TB>
 
@@ -248,7 +248,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
         </div>
       )}
 
-      {/* Editor area — full width */}
+      {/* Editor area */}
       <EditorContent
         editor={editor}
         className="prose prose-sm max-w-none w-full p-4 min-h-[320px] focus-within:outline-none

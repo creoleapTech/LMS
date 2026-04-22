@@ -25,17 +25,19 @@ classSessionController.post("/start", async (c) => {
   const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
 
-  const { staffId, classId, institutionId, courseId } = body;
+  const { classId, courseId } = body;
+  // Use staffId and institutionId from the auth token — don't trust body for these
+  const staffId = (user._id || user.id)?.toString();
+  const institutionId = typeof user.institutionId === "object"
+    ? (user.institutionId as any)._id?.toString()
+    : user.institutionId?.toString();
 
-  // Verify staff belongs to institution
-  const [staffRow] = await db
-    .select({ id: staff.id, institutionId: staff.institutionId })
-    .from(staff)
-    .where(eq(staff.id, staffId))
-    .limit(1);
+  if (!staffId || !institutionId) {
+    throw new BadRequestError("Invalid session: missing staff or institution");
+  }
 
-  if (!staffRow || staffRow.institutionId !== institutionId) {
-    throw new BadRequestError("Invalid Staff or Institution");
+  if (!classId) {
+    throw new BadRequestError("classId is required");
   }
 
   // Verify class belongs to institution
@@ -47,6 +49,21 @@ classSessionController.post("/start", async (c) => {
 
   if (!classRow || classRow.institutionId !== institutionId) {
     throw new BadRequestError("Invalid Class");
+  }
+
+  // If there's already an ongoing session for this staff+class, return it
+  const [existing] = await db
+    .select()
+    .from(classSessions)
+    .where(and(
+      eq(classSessions.staffId, staffId),
+      eq(classSessions.classId, classId),
+      eq(classSessions.status, "ongoing"),
+    ))
+    .limit(1);
+
+  if (existing) {
+    return c.json({ success: true, data: existing }, 200);
   }
 
   const id = uuid();

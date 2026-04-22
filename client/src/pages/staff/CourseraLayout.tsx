@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChapterListView } from "./ChapterListView";
 import { CourseSidebar } from "./CourseSidebar";
 import { ContentViewer } from "./ContentViewer";
@@ -69,6 +69,43 @@ export function CourseraLayout({
     completeMutation,
     updateMutation,
   } = useTeachingProgress(classId, gradeBookId);
+
+  // Auto session tracking — start on mount in teach mode, end on unmount
+  const sessionIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== "teach") return;
+
+    let ended = false;
+
+    const startSession = async () => {
+      try {
+        const res = await _axios.post("/admin/class-session/start", { classId });
+        sessionIdRef.current = res.data?.data?.id || null;
+      } catch {
+        // Non-critical — don't block teaching if session tracking fails
+      }
+    };
+
+    const endSession = async () => {
+      if (!sessionIdRef.current || ended) return;
+      ended = true;
+      try {
+        await _axios.patch(`/admin/class-session/${sessionIdRef.current}/end`, {
+          remarks: "",
+          topicsCovered: [],
+        });
+      } catch {
+        // Non-critical
+      }
+    };
+
+    startSession();
+
+    return () => {
+      endSession();
+    };
+  }, [classId, mode]);
 
   const { data: chapters = [], isLoading } = useQuery<ChapterWithContent[]>({
     queryKey: ["gradebook-full", gradeBookId],

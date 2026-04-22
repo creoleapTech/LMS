@@ -17,6 +17,8 @@ export function RichTextViewer({ content, className = "" }: RichTextViewerProps)
       "href", "target", "rel", "src", "alt", "width", "height",
       "class", "style", "colspan", "rowspan",
     ],
+    // Allow width style on img for resized images
+    FORCE_BODY: false,
   });
 
   return (

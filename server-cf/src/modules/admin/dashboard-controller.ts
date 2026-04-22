@@ -270,10 +270,22 @@ async function adminStats(
       .from(classStudentIds)
       .where(eq(classStudentIds.classId, cls.id));
     classSizeDistribution.push({
+      id: cls.id,
       class: `${cls.grade || "?"}–${cls.section}`,
       students: sc.c,
     });
   }
+
+  // Build classId -> label map for reuse
+  const classIdToLabel: Record<string, string> = {};
+  for (const cls of classRows) {
+    classIdToLabel[cls.id] = `${cls.grade || "?"}–${cls.section}`;
+  }
+
+  // Apply classId filter to session/activity queries
+  const filteredClassIds = filters.classId
+    ? classRows.filter((c) => c.id === filters.classId).map((c) => c.id)
+    : classRows.map((c) => c.id);
 
   // Teacher leaderboard (top 5 by avg progress)
   const teacherProgressRows = await db
@@ -398,11 +410,14 @@ async function adminStats(
   }
 
   // Sessions by month
-  const sessionDateConditions = [
+  const sessionDateConditions: any[] = [
     eq(classSessions.institutionId, institutionId),
     gte(classSessions.startTime, dateFilt.gte),
   ];
-  if (dateFilt.lt) sessionDateConditions.push(sql`${classSessions.startTime} < ${dateFilt.lt}` as any);
+  if (dateFilt.lt) sessionDateConditions.push(sql`${classSessions.startTime} < ${dateFilt.lt}`);
+  if (filteredClassIds.length > 0 && filters.classId) {
+    sessionDateConditions.push(sql`${classSessions.classId} = ${filters.classId}`);
+  }
 
   const sessionsByMonthRows = await db
     .select({
@@ -445,24 +460,67 @@ async function adminStats(
     });
   }
 
-  // Course distribution — grade books per curriculum
-  const courseDistRows = await db
+  // Classwise progress — avg teaching completion per class
+  const classProgressRows = await db
     .select({
-      curriculumId: gradeBooks.curriculumId,
-      books: count(),
+      classId: teachingProgress.classId,
+      avg: sql<number>`coalesce(avg(${teachingProgress.overallPercentage}), 0)`.as("avg"),
     })
-    .from(gradeBooks)
-    .groupBy(gradeBooks.curriculumId);
+    .from(teachingProgress)
+    .where(and(
+      eq(teachingProgress.institutionId, institutionId),
+      sql`${teachingProgress.classId} is not null`,
+    ))
+    .groupBy(teachingProgress.classId);
 
-  const courseDistribution = [];
-  for (const row of courseDistRows) {
+  const classwiseProgress: { class: string; avgProgress: number }[] = [];
+
+  if (classProgressRows.length > 0) {
+    for (const row of classProgressRows) {
+      if (!row.classId) continue;
+      // Use pre-fetched class label, or look up if not in institution's classes
+      let label = classIdToLabel[row.classId];
+      if (!label) {
+        const [cls] = await db
+          .select({ grade: classes.grade, section: classes.section })
+          .from(classes)
+          .where(eq(classes.id, row.classId));
+        label = cls ? `${cls.grade || "?"}–${cls.section}` : "Unknown";
+      }
+      classwiseProgress.push({ class: label, avgProgress: Math.round(row.avg || 0) });
+    }
+  } else {
+    // No progress records yet — show all classes at 0%
+    for (const cls of classRows) {
+      classwiseProgress.push({
+        class: `${cls.grade || "?"}–${cls.section}`,
+        avgProgress: 0,
+      });
+    }
+  }
+
+  classwiseProgress.sort((a, b) => a.class.localeCompare(b.class));
+
+  // Course distribution — grade books accessible to this institution (scoped)
+  const courseDistribution: { name: string; value: number }[] = [];
+  const accessRows = await db
+    .select({ id: institutionCurriculumAccess.id, curriculumId: institutionCurriculumAccess.curriculumId })
+    .from(institutionCurriculumAccess)
+    .where(eq(institutionCurriculumAccess.institutionId, institutionId));
+
+  for (const access of accessRows) {
     const [curr] = await db
       .select({ name: curricula.name })
       .from(curricula)
-      .where(eq(curricula.id, row.curriculumId));
+      .where(eq(curricula.id, access.curriculumId));
+    // Count accessible grade books for this access entry
+    const [gbCount] = await db
+      .select({ c: count() })
+      .from(sql`institution_accessible_gradebooks`)
+      .where(sql`access_id = ${access.id}`);
     courseDistribution.push({
       name: curr?.name || "Unknown",
-      value: row.books,
+      value: (gbCount as any)?.c || 0,
     });
   }
 
@@ -485,6 +543,7 @@ async function adminStats(
     classActivity,
     courseDistribution,
     schoolProgress: avgTeachingProgress,
+    classwiseProgress,
   };
 }
 
