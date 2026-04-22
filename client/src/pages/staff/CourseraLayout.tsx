@@ -53,7 +53,6 @@ export function CourseraLayout({
   curriculumName,
   classId,
   classLabel,
-  userEmail,
   mode,
   onBack,
   onBackToCurriculumList,

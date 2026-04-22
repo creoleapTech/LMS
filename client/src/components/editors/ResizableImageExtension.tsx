@@ -1,7 +1,7 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react";
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Crop, X, Check, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { Crop, X, Check, RotateCcw, ZoomOut } from "lucide-react";
 
 // ── Crop Modal ────────────────────────────────────────────────────────────────
 
@@ -20,7 +20,6 @@ function CropModal({
   const imgRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [naturalSize, setNaturalSize] = useState({ w: 0, h: 0 });
   const [displaySize, setDisplaySize] = useState({ w: 0, h: 0 });
   const [crop, setCrop] = useState<CropArea>({ x: 0.1, y: 0.1, w: 0.8, h: 0.8 }); // normalized 0-1
   const [dragging, setDragging] = useState<null | "move" | "tl" | "tr" | "bl" | "br">(null);
@@ -31,7 +30,6 @@ function CropModal({
     const img = new Image();
     img.onload = () => {
       imgRef.current = img;
-      setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
       // Fit to max 600x400 display
       const maxW = 600, maxH = 400;
       const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
@@ -118,7 +116,7 @@ function CropModal({
     const prev = dragStart.current.crop;
     const minSize = 0.05;
 
-    setCrop((c) => {
+    setCrop((_prev) => {
       let { x, y, w, h } = prev;
       if (dragging === "move") {
         x = Math.max(0, Math.min(1 - w, prev.x + dx));

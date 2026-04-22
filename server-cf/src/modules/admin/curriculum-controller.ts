@@ -495,11 +495,8 @@ app.post("/:curriculumId/grades", async (c) => {
   return c.json({ success: true, data: created }, 201);
 });
 
-// LIST gradeBooks for a curriculum
+// LIST gradeBooks for a curriculum — accessible to all authenticated roles
 app.get("/:curriculumId/grades", async (c) => {
-  const user = c.get("user") as any;
-  if (user.role !== "super_admin") throw new ForbiddenError("Access denied");
-
   const db = getDb(c.env.DB);
   const curriculumId = c.req.param("curriculumId");
 
@@ -528,6 +525,9 @@ app.patch("/gradebook/:id", async (c) => {
 
   const bookTitle = formData.get("bookTitle") as string | null;
   if (bookTitle !== null) updateData.bookTitle = bookTitle;
+
+  const grade = formData.get("grade");
+  if (grade !== null) updateData.grade = parseInt(String(grade), 10);
 
   const subtitle = formData.get("subtitle") as string | null;
   if (subtitle !== null) updateData.subtitle = subtitle;

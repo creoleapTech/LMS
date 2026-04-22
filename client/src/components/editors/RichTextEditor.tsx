@@ -29,9 +29,6 @@ import {
   Redo,
   Quote,
   Minus,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
   Strikethrough,
 } from "lucide-react";
 
@@ -176,19 +173,6 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
         </TB>
         <TB onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal Rule">
           <Minus className="h-4 w-4" />
-        </TB>
-
-        <Sep />
-
-        {/* Alignment */}
-        <TB onClick={() => editor.chain().focus().setTextAlign?.("left").run()} title="Align Left">
-          <AlignLeft className="h-4 w-4" />
-        </TB>
-        <TB onClick={() => editor.chain().focus().setTextAlign?.("center").run()} title="Align Center">
-          <AlignCenter className="h-4 w-4" />
-        </TB>
-        <TB onClick={() => editor.chain().focus().setTextAlign?.("right").run()} title="Align Right">
-          <AlignRight className="h-4 w-4" />
         </TB>
 
         <Sep />

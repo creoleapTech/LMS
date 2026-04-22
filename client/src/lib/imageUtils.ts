@@ -14,7 +14,7 @@ export async function compressImage(
 ): Promise<File> {
   const { maxWidth = 1200, maxHeight = 1600, quality = 0.82 } = options;
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
 
