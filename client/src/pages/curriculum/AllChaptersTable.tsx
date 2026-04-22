@@ -26,6 +26,7 @@ interface Chapter {
     chapterNumber: number;
     description?: string;
     learningObjectives?: string;
+    thumbnail?: string | null;
     gradeBookId: string;
     bookTitle?: string;
     curriculumId?: string;

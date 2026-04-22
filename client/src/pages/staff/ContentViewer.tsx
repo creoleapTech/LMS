@@ -190,78 +190,92 @@ export function ContentViewer({
 
       {/* Content area */}
       <div className="p-6 lg:p-8">
-        <ContentProtectionWrapper watermarkText={watermarkText}>
-          {/* Video */}
-          {content.type === "video" && fileUrl && (
-            <video
-              ref={videoRef}
-              controls
-              controlsList="nodownload"
-              disablePictureInPicture
-              className="w-full max-w-5xl mx-auto rounded-2xl shadow-xl"
-              onContextMenu={(e) => e.preventDefault()}
-              onLoadedMetadata={handleVideoLoadedMetadata}
-              onTimeUpdate={handleVideoTimeUpdate}
-              onPause={handleVideoTimeUpdate}
-            >
-              <source src={fileUrl} type="video/mp4" />
-              Your browser does not support video.
-            </video>
-          )}
+        {/* Video — watermark wraps the video element directly */}
+        {content.type === "video" && fileUrl && (
+          <div className="max-w-5xl mx-auto">
+            <ContentProtectionWrapper watermarkText={watermarkText}>
+              <video
+                ref={videoRef}
+                controls
+                controlsList="nodownload"
+                disablePictureInPicture
+                className="w-full rounded-2xl shadow-xl"
+                onContextMenu={(e) => e.preventDefault()}
+                onLoadedMetadata={handleVideoLoadedMetadata}
+                onTimeUpdate={handleVideoTimeUpdate}
+                onPause={handleVideoTimeUpdate}
+              >
+                <source src={fileUrl} type="video/mp4" />
+                Your browser does not support video.
+              </video>
+            </ContentProtectionWrapper>
+          </div>
+        )}
 
-          {/* YouTube */}
-          {content.type === "youtube" && content.youtubeUrl && (
-            <div className="max-w-5xl mx-auto">
-              <YouTubePlayer videoUrl={content.youtubeUrl} />
-            </div>
-          )}
+        {/* YouTube — NO watermark, no protection wrapper needed */}
+        {content.type === "youtube" && content.youtubeUrl && (
+          <div className="max-w-5xl mx-auto">
+            <YouTubePlayer videoUrl={content.youtubeUrl} />
+          </div>
+        )}
 
-          {/* PDF — Book Viewer */}
-          {content.type === "pdf" && fileUrl && (
+        {/* PDF — watermarked, fillHeight for flipbook */}
+        {content.type === "pdf" && fileUrl && (
+          <ContentProtectionWrapper watermarkText={watermarkText} fillHeight>
             <PdfFlipBook
               fileUrl={fileUrl}
               initialPage={contentProgress?.pdfPage}
               onPageChange={handlePdfPageChange}
             />
-          )}
+          </ContentProtectionWrapper>
+        )}
 
-          {/* PPT — Presentation Viewer */}
-          {content.type === "ppt" && (content.fileUrl || content.videoUrl) && (
-            <div className="max-w-5xl mx-auto">
+        {/* PPT — watermark wraps the viewer directly */}
+        {content.type === "ppt" && (content.fileUrl || content.videoUrl) && (
+          <div className="max-w-5xl mx-auto">
+            <ContentProtectionWrapper watermarkText={watermarkText}>
               <PptViewer storageKey={(content.fileUrl || content.videoUrl)!} title={content.title} />
-            </div>
-          )}
+            </ContentProtectionWrapper>
+          </div>
+        )}
 
-          {/* Rich Text */}
-          {content.type === "text" && content.textContent && (
-            <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-8 lg:p-12">
-              <RichTextViewer content={content.textContent} />
-            </div>
-          )}
+        {/* Rich Text — watermark wraps the card directly */}
+        {content.type === "text" && content.textContent && (
+          <div className="max-w-4xl mx-auto">
+            <ContentProtectionWrapper watermarkText={watermarkText}>
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-8 lg:p-12">
+                <RichTextViewer content={content.textContent} />
+              </div>
+            </ContentProtectionWrapper>
+          </div>
+        )}
 
-          {/* Quiz */}
-          {content.type === "quiz" && content.questions && content.questions.length > 0 && (
-            <div className="max-w-4xl mx-auto">
+        {/* Quiz — watermark wraps the card directly */}
+        {content.type === "quiz" && content.questions && content.questions.length > 0 && (
+          <div className="max-w-4xl mx-auto">
+            <ContentProtectionWrapper watermarkText={watermarkText}>
               <QuizViewer questions={content.questions} readOnly={false} />
-            </div>
-          )}
+            </ContentProtectionWrapper>
+          </div>
+        )}
 
-          {/* Activity */}
-          {content.type === "activity" && fileUrl && (
+        {/* Activity — watermarked */}
+        {content.type === "activity" && fileUrl && (
+          <ContentProtectionWrapper watermarkText={watermarkText}>
             <iframe
               src={`https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`}
               className="w-full h-[75vh] rounded-2xl shadow-xl border-0"
               title={content.title}
             />
-          )}
+          </ContentProtectionWrapper>
+        )}
 
-          {/* Fallback */}
-          {!fileUrl && !content.youtubeUrl && !content.textContent && !(content.questions?.length) && (
-            <div className="flex items-center justify-center h-64 bg-muted rounded-2xl">
-              <p className="text-muted-foreground">No content available for this item.</p>
-            </div>
-          )}
-        </ContentProtectionWrapper>
+        {/* Fallback */}
+        {!fileUrl && !content.youtubeUrl && !content.textContent && !(content.questions?.length) && (
+          <div className="flex items-center justify-center h-64 bg-muted rounded-2xl">
+            <p className="text-muted-foreground">No content available for this item.</p>
+          </div>
+        )}
 
         {/* Chapter completion banner */}
         {!isViewMode && isChapterComplete && (

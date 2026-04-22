@@ -30,6 +30,8 @@ interface ChapterWithContent {
   chapterNumber: number;
   order: number;
   description?: string;
+  learningObjectives?: string;
+  thumbnail?: string | null;
   content: ContentItem[];
 }
 
@@ -278,7 +280,7 @@ export function CourseraLayout({
             <ContentViewer
               content={activeContent}
               chapterNumber={selectedChapter.chapterNumber}
-              watermarkText={userEmail}
+              watermarkText={"www.creoleap.com"}
               classId={classId}
               gradeBookId={gradeBookId}
               isCompleted={completedContentIds.has(activeContent._id)}

@@ -1,11 +1,38 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 
 interface ContentProtectionWrapperProps {
   children: React.ReactNode;
   watermarkText?: string;
   enabled?: boolean;
-  /** When true, wrapper fills parent height (use for PDF/flipbook that needs constrained height) */
   fillHeight?: boolean;
+}
+
+/** Build a tiled watermark as a base64 PNG data URL using canvas */
+function buildWatermarkDataUrl(text: string): string {
+  const canvas = document.createElement("canvas");
+  const tileW = 320;
+  const tileH = 160;
+  canvas.width = tileW;
+  canvas.height = tileH;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.clearRect(0, 0, tileW, tileH);
+  ctx.save();
+
+  // Rotate around tile centre
+  ctx.translate(tileW / 2, tileH / 2);
+  ctx.rotate(-Math.PI / 6); // -30°
+
+  ctx.font = "600 15px system-ui, sans-serif";
+  ctx.fillStyle = "rgba(0,0,0,0.07)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Draw the text centred — it will tile seamlessly
+  ctx.fillText(text, 0, 0);
+
+  ctx.restore();
+  return canvas.toDataURL("image/png");
 }
 
 export function ContentProtectionWrapper({
@@ -17,31 +44,25 @@ export function ContentProtectionWrapper({
   const containerRef = useRef<HTMLDivElement>(null);
   const [tabHidden, setTabHidden] = useState(false);
 
+  // Build the tiled watermark image once per text value
+  const watermarkBg = useMemo(() => {
+    if (!watermarkText) return null;
+    return buildWatermarkDataUrl(watermarkText);
+  }, [watermarkText]);
+
   useEffect(() => {
     if (!enabled) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Block PrintScreen
-      if (e.key === "PrintScreen") {
-        e.preventDefault();
-      }
-      // Block Ctrl+P (print), Ctrl+S (save), Ctrl+Shift+I (devtools)
-      if (e.ctrlKey && (e.key === "p" || e.key === "s")) {
-        e.preventDefault();
-      }
-      if (e.ctrlKey && e.shiftKey && e.key === "I") {
-        e.preventDefault();
-      }
+      if (e.key === "PrintScreen") e.preventDefault();
+      if (e.ctrlKey && (e.key === "p" || e.key === "s")) e.preventDefault();
+      if (e.ctrlKey && e.shiftKey && e.key === "I") e.preventDefault();
     };
-
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [enabled]);
 
-  // Hide content when tab loses focus (anti-screenshot)
   useEffect(() => {
     if (!enabled) return;
-
     const handleVisibility = () => setTabHidden(document.hidden);
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
@@ -52,53 +73,37 @@ export function ContentProtectionWrapper({
   return (
     <div
       ref={containerRef}
-      className={`relative select-none ${fillHeight ? "h-full flex flex-col" : ""}`}
+      className={`relative select-none overflow-hidden ${fillHeight ? "h-full flex flex-col" : "w-full"}`}
       onContextMenu={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
       style={{ WebkitUserSelect: "none", userSelect: "none" }}
     >
-      {/* Print blocker */}
-      <style>{`@media print { .content-protected { display: none !important; visibility: hidden !important; } }`}</style>
+      <style>{`@media print { .content-protected { display: none !important; } }`}</style>
 
+      {/* Content */}
       <div className={`content-protected ${fillHeight ? "flex-1 min-h-0 flex flex-col" : ""}`}>
         {children}
       </div>
 
-      {/* Tab-hidden overlay (anti-screenshot when switching away) */}
+      {/* Tiled watermark — sits exactly over the content, never outside */}
+      {watermarkBg && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none z-10 rounded-[inherit]"
+          style={{
+            backgroundImage: `url(${watermarkBg})`,
+            backgroundRepeat: "repeat",
+            backgroundSize: "320px 160px",
+          }}
+        />
+      )}
+
+      {/* Tab-hidden overlay */}
       {tabHidden && (
-        <div className="absolute inset-0 z-50 bg-white dark:bg-slate-950 flex items-center justify-center">
+        <div className="absolute inset-0 z-50 bg-white dark:bg-slate-950 flex items-center justify-center rounded-[inherit]">
           <p className="text-muted-foreground text-lg font-medium">
             Content hidden — return to this tab to continue viewing
           </p>
-        </div>
-      )}
-
-      {/* Watermark overlay */}
-      {watermarkText && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-10" aria-hidden="true">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `repeating-linear-gradient(
-              -45deg,
-              transparent,
-              transparent 150px,
-              rgba(0,0,0,0.02) 150px,
-              rgba(0,0,0,0.02) 151px
-            )`,
-          }}>
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div
-                key={i}
-                className="absolute text-black/[0.04] dark:text-white/[0.06] text-sm font-medium whitespace-nowrap"
-                style={{
-                  transform: "rotate(-35deg)",
-                  top: `${(i % 4) * 25 + 5}%`,
-                  left: `${Math.floor(i / 4) * 35 - 10}%`,
-                }}
-              >
-                {watermarkText}
-              </div>
-            ))}
-          </div>
         </div>
       )}
     </div>

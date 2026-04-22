@@ -1037,6 +1037,7 @@ app.get("/all-chapters", async (c) => {
       title: chapters.title,
       chapterNumber: chapters.chapterNumber,
       description: chapters.description,
+      thumbnail: chapters.thumbnail,
       durationMinutes: chapters.durationMinutes,
       isFree: chapters.isFree,
       order: chapters.order,

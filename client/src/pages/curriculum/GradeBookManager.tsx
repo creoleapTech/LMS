@@ -93,7 +93,7 @@ export function GradeBookManager({ curriculumId, onGradeSelect }: Props) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="flex flex-wrap gap-10">
           {gradeBooks.map((gradeBook) => (
             <PremiumGradeBookCard
               key={gradeBook.id}

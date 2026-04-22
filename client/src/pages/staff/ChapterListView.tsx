@@ -3,6 +3,7 @@ import { CheckCircle2, ChevronRight, BookOpen, PlayCircle, Info, Target } from "
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Config } from "@/lib/config";
 import type { TeachingMode } from "./types";
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
@@ -27,6 +28,7 @@ interface ChapterWithContent {
   order: number;
   description?: string;
   learningObjectives?: string;
+  thumbnail?: string | null;
   content: ContentItem[];
 }
 
@@ -77,29 +79,27 @@ export function ChapterListView({
                   onClick={() => onSelectChapter(index)}
                   className="w-full text-left bg-white dark:bg-slate-900 border-2 border-transparent hover:border-indigo-400 hover:shadow-md rounded-xl p-5 flex items-center gap-4 transition-all group"
                 >
-                  {/* Chapter number circle */}
-                  <div
-                    className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${
+                  {/* Thumbnail / Number circle — matches PremiumChapterCard */}
+                  <div className="shrink-0">
+                    <div className={`w-16 h-16 rounded-full overflow-hidden flex items-center justify-center shadow-md transition-all group-hover:scale-105 ${
                       allComplete
-                        ? "bg-green-100 dark:bg-green-900/40"
+                        ? "bg-gradient-to-br from-green-400 to-emerald-600"
                         : hasStarted
-                          ? "bg-indigo-100 dark:bg-indigo-900/40"
-                          : "bg-slate-100 dark:bg-slate-800"
-                    }`}
-                  >
-                    {allComplete ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    ) : (
-                      <span
-                        className={`text-sm font-bold ${
-                          hasStarted
-                            ? "text-indigo-700 dark:text-indigo-300"
-                            : "text-slate-600 dark:text-slate-400"
-                        }`}
-                      >
-                        {chapter.chapterNumber}
-                      </span>
-                    )}
+                          ? "bg-gradient-to-br from-indigo-500 to-purple-600"
+                          : "bg-gradient-to-br from-indigo-500 to-purple-600"
+                    }`}>
+                      {chapter.thumbnail ? (
+                        <img
+                          src={Config.proxyUrl + chapter.thumbnail}
+                          alt={`Chapter ${chapter.chapterNumber}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : allComplete ? (
+                        <CheckCircle2 className="h-7 w-7 text-white" />
+                      ) : (
+                        <span className="text-xl font-bold text-white">{chapter.chapterNumber}</span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Chapter info */}
