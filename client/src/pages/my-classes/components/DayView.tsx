@@ -78,6 +78,14 @@ export function DayView({
   const dateStr = formatDateString(date);
   const isAdminView = !!staffId && !!institutionId;
 
+  // Freeze past dates — always read-only regardless of prop
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+  const dateMidnight = new Date(date);
+  dateMidnight.setHours(0, 0, 0, 0);
+  const isPastDate = dateMidnight < todayMidnight;
+  const effectiveReadOnly = readOnly || isPastDate;
+
   // Use the appropriate hook based on whether we're viewing own or staff timetable
   const ownData = useTimetableDay(isAdminView ? null : dateStr);
   const staffData = useStaffTimetableDay(
@@ -130,22 +138,27 @@ export function DayView({
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
               Schedule For
             </p>
-            <h2 className="text-lg font-bold text-slate-900">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               {DAY_NAMES[date.getDay()]}, {MONTH_NAMES[date.getMonth()]} {date.getDate()}
-            </h2>
-          </div>
-          {!isLoading && entries.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-600 neo-inset-sm px-3 py-1.5">
-                {scheduledCount + completedCount} {scheduledCount + completedCount === 1 ? "class" : "classes"}
-              </span>
-              {completedCount > 0 && (
-                <span className="text-xs font-semibold text-emerald-700 bg-gradient-to-br from-emerald-100 to-emerald-50 shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-emerald-200/60 px-3 py-1.5 rounded-full">
-                  {completedCount} done
+              {isPastDate && (
+                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Read-only
                 </span>
               )}
-            </div>
-          )}
+            </h2>
+          </div>
+                {!isLoading && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-600 neo-inset-sm px-3 py-1.5">
+                      {scheduledCount + completedCount} {scheduledCount + completedCount === 1 ? "class" : "classes"}
+                    </span>
+                    {completedCount > 0 && (
+                      <span className="text-xs font-semibold text-emerald-700 bg-gradient-to-br from-emerald-100 to-emerald-50 shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-emerald-200/60 px-3 py-1.5 rounded-full">
+                        {completedCount} done
+                      </span>
+                    )}
+                  </div>
+                )}
         </div>
 
         {/* Loading state */}
@@ -158,7 +171,7 @@ export function DayView({
                   <TableHead className="w-[100px]"><Skeleton className="h-4 w-16" /></TableHead>
                   <TableHead><Skeleton className="h-4 w-32" /></TableHead>
                   <TableHead className="w-[90px] hidden sm:table-cell"><Skeleton className="h-4 w-14" /></TableHead>
-                  {!readOnly && <TableHead className="w-[72px]"><Skeleton className="h-4 w-8" /></TableHead>}
+                  {!effectiveReadOnly && <TableHead className="w-[72px]"><Skeleton className="h-4 w-8" /></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -168,7 +181,7 @@ export function DayView({
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                    {!readOnly && <TableCell><Skeleton className="h-6 w-6" /></TableCell>}
+                    {!effectiveReadOnly && <TableCell><Skeleton className="h-6 w-6" /></TableCell>}
                   </TableRow>
                 ))}
               </TableBody>
@@ -203,7 +216,7 @@ export function DayView({
                 <TableHead className="w-[90px] text-[11px] font-black uppercase tracking-wider text-slate-400 hidden sm:table-cell">
                   Status
                 </TableHead>
-                {!readOnly && (
+                {!effectiveReadOnly && (
                   <TableHead className="w-[72px] text-[11px] font-black uppercase tracking-wider text-slate-400 text-right pr-5">
                     Actions
                   </TableHead>
@@ -221,7 +234,7 @@ export function DayView({
                     <BreakRow
                       key={period.periodNumber}
                       period={period}
-                      readOnly={readOnly}
+                      readOnly={effectiveReadOnly}
                     />
                   );
                 }
@@ -230,7 +243,7 @@ export function DayView({
                 colorIdx++;
 
                 if (!entry) {
-                  return readOnly ? (
+                  return effectiveReadOnly ? (
                     <TableRow
                       key={period.periodNumber}
                       className="border-l-[3px] border-l-slate-200 border-b border-white/20"
@@ -273,7 +286,7 @@ export function DayView({
                     entry={entry}
                     isCompleted={isCompleted}
                     colors={colors}
-                    readOnly={readOnly}
+                    readOnly={effectiveReadOnly}
                     onEditClick={() =>
                       setScheduleDialog({
                         open: true,
