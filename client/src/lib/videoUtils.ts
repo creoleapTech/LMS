@@ -22,6 +22,8 @@ async function loadFFmpeg(): Promise<FFmpeg> {
   const ffmpeg = new FFmpeg();
 
   try {
+    // Use the single-threaded core build — does NOT require SharedArrayBuffer,
+    // so no COEP headers are needed and cross-origin resources are unaffected.
     const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
     await ffmpeg.load({
       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
