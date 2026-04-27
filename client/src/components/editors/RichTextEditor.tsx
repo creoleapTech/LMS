@@ -11,6 +11,7 @@ import { ResizableImage } from "./ResizableImageExtension";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRef, useState } from "react";
+import { compressImage } from "@/lib/imageUtils";
 import {
   Bold,
   Italic,
@@ -65,17 +66,27 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
 
   if (!editor) return null;
 
-  // ── Image upload (file → base64) ──────────────────────────────────────────
-  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ── Image upload (file → compress → base64) ───────────────────────────────
+  const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = "";
+
+    let processedFile = file;
+    if (file.type.startsWith("image/")) {
+      try {
+        processedFile = await compressImage(file, { maxWidth: 1200, maxHeight: 1600, quality: 0.82 });
+      } catch {
+        // fallback to original
+      }
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const src = reader.result as string;
       (editor.chain().focus() as any).setResizableImage({ src }).run();
     };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+    reader.readAsDataURL(processedFile);
   };
 
   // ── Link ──────────────────────────────────────────────────────────────────

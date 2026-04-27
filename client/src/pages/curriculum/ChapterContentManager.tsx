@@ -50,6 +50,8 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Config } from "@/lib/config";
 import { useAuthStore } from "@/store/userAuthStore";
+import { compressImage } from "@/lib/imageUtils";
+import { compressVideo } from "@/lib/videoUtils";
 import { RichTextEditor } from "@/components/editors/RichTextEditor";
 import { RichTextViewer } from "@/components/editors/RichTextViewer";
 import { YouTubePlayer } from "@/components/viewers/YouTubePlayer";
@@ -419,6 +421,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
   const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
   const [editingContent, setEditingContent] = useState<ContentItem | null>(null);
+  const [compressProgress, setCompressProgress] = useState<number | null>(null);
 
   // --- DnD sensors ---
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
@@ -527,7 +530,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     setFile(selectedFile);
   }
 
-  function handleUpload() {
+  async function handleUpload() {
     if (!type) {
       toast.error("Please select a content type");
       return;
@@ -584,8 +587,42 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
       return;
     }
 
+    let fileToUpload = file;
+
+    // Compress images
+    if (file.type.startsWith("image/")) {
+      try {
+        setCompressProgress(0);
+        toast.info("Compressing image…");
+        fileToUpload = await compressImage(file);
+        setCompressProgress(null);
+        const savedPct = Math.round((1 - fileToUpload.size / file.size) * 100);
+        if (savedPct > 0) toast.success(`Image compressed — ${savedPct}% smaller`);
+      } catch {
+        setCompressProgress(null);
+        // proceed with original
+      }
+    }
+
+    // Compress videos
+    if (type === "video") {
+      try {
+        setCompressProgress(0);
+        toast.info("Compressing video — this may take a moment…");
+        fileToUpload = await compressVideo(file, {
+          onProgress: (p) => setCompressProgress(p),
+        });
+        setCompressProgress(null);
+        const savedPct = Math.round((1 - fileToUpload.size / file.size) * 100);
+        if (savedPct > 0) toast.success(`Video compressed — ${savedPct}% smaller`);
+      } catch {
+        setCompressProgress(null);
+        // proceed with original
+      }
+    }
+
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", fileToUpload);
     formData.append("type", type);
     formData.append("title", resolvedTitle);
     formData.append("isFree", "false");
@@ -878,13 +915,41 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
               )}
 
               {type !== "" && (
-                <div className="flex gap-3">
-                  <Button onClick={handleUpload} disabled={uploadMutation.isPending} className="flex-1" size="lg">
-                    {uploadMutation.isPending ? "Uploading..." : "Upload Content"}
-                  </Button>
-                  <Button variant="outline" size="lg" onClick={resetForm}>
-                    Cancel
-                  </Button>
+                <div className="flex flex-col gap-3">
+                  {compressProgress !== null && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          {type === "video" ? "Compressing video…" : "Compressing image…"}
+                        </span>
+                        <span>{compressProgress}%</span>
+                      </div>
+                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                          style={{ width: `${compressProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleUpload}
+                      disabled={uploadMutation.isPending || compressProgress !== null}
+                      className="flex-1"
+                      size="lg"
+                    >
+                      {uploadMutation.isPending
+                        ? "Uploading…"
+                        : compressProgress !== null
+                        ? "Compressing…"
+                        : "Upload Content"}
+                    </Button>
+                    <Button variant="outline" size="lg" onClick={resetForm} disabled={compressProgress !== null}>
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
