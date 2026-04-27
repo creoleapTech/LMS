@@ -102,11 +102,13 @@ function LoginPage() {
         <div className="hidden flex-1 w-1/2 flex-col lg:flex  justify-center items-center ">
           <div className='w-3/4 flex flex-col justify-center items-center' >
             <div className="absolute top-6 left-6">
-              <img
-                src="/creo_white.png"
-                alt="Creoleap"
-                className="h-22 w-auto object-contain"
-              />
+              <a href="https://creoleap.com" target="_blank" rel="noopener noreferrer">
+                <img
+                  src="/creo_white.png"
+                  alt="Creoleap"
+                  className="h-22 w-auto object-contain"
+                />
+              </a>
             </div>
 
             <div className=" rounded-2xl  ">
@@ -146,11 +148,13 @@ function LoginPage() {
           <div className=' w-full p-5 py-12 flex items-center justify-center '>
             <div className="w-full max-w-[460px] rounded-[24px] border border-white/20 bg-white/[0.07] px-6 sm:px-7 py-10 backdrop-blur-xl shadow-[0_20px_60px_rgba(10,6,34,0.45)]">
               <div className="lg:hidden mb-6 flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                <img
-                  src="/creo_white.png"
-                  alt="Creoleap"
-                  className="h-7 w-auto object-contain"
-                />
+                <a href="https://creoleap.com" target="_blank" rel="noopener noreferrer">
+                  <img
+                    src="/creo_white.png"
+                    alt="Creoleap"
+                    className="h-7 w-auto object-contain"
+                  />
+                </a>
                 {/* <span className="text-[9px] font-semibold tracking-[0.18em] text-white/65 uppercase">
                 Tech Portal Login
               </span> */}

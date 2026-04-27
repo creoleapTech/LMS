@@ -4,7 +4,7 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
 import { nowISO, slugify } from "../../lib/utils";
-import { eq, and, like, sql, count, asc, desc } from "drizzle-orm";
+import { eq, and, like, sql, count, max, asc, desc } from "drizzle-orm";
 import { superAdminAuth } from "../../middleware/super-admin-auth";
 import { saveFile, deleteFile } from "../../lib/file";
 import { BadRequestError } from "../../lib/errors/bad-request";
@@ -847,10 +847,10 @@ app.post("/chapter/:chapterId/content", async (c) => {
   }
 
   const [countRow] = await db
-    .select({ count: count() })
+    .select({ maxOrder: max(chapterContents.order) })
     .from(chapterContents)
     .where(eq(chapterContents.chapterId, chapterId));
-  const existingCount = countRow?.count ?? 0;
+  const existingCount = countRow?.maxOrder ?? 0;
 
   // Handle file upload
   let fileKey = "";

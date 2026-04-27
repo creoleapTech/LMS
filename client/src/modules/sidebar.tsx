@@ -59,14 +59,25 @@ const Sidebar: React.FC = () => {
           } bg-brand-color text-white flex flex-col transition-all duration-300 ease-in-out shrink-0`}
       >
         {/* Header with logo and expand/minimize button */}
-        <div className="py-4 flex items-center justify-center min-h-[72px] relative">
+        <div className="py-4 flex flex-col items-center justify-center relative">
           {isExpanded ? (
-            <div className="flex flex-col items-center gap-1 transition-all duration-300">
-              <img src="/creo_white.png" alt="CreaLeap" className="h-16 px-5 w-auto object-contain" />
-              <span className="py-4 text-sm font-bold border border-white/20 tracking-widest text-white/90 text-center uppercase">Learning Management System</span>
+            <div className="flex flex-col items-center transition-all duration-300 w-full">
+              <a href="https://creoleap.com" target="_blank" rel="noopener noreferrer">
+                <img src="/creo_white.png" alt="CreaLeap" className="h-16 px-5 w-auto object-contain mb-1" />
+              </a>
+              <div className="w-full border-t border-b border-white/20 py-4">
+                <span className="block text-sm font-bold tracking-widest text-white/90 text-center uppercase">Learning Management System</span>
+              </div>
             </div>
           ) : (
-            <img src="/creo_white.png" alt="CreaLeap" className="h-9 w-auto object-contain" />
+            <div className="flex flex-col items-center transition-all duration-300 w-full">
+              <a href="https://creoleap.com" target="_blank" rel="noopener noreferrer">
+                <img src="/creoleap_white_short.svg" alt="CreaLeap" className="h-10 w-auto object-contain mb-1" />
+              </a>
+              <div className="w-full border-t border-b border-white/20 py-4">
+                <span className="block text-sm font-bold tracking-widest text-white/90 text-center uppercase">LMS</span>
+              </div>
+            </div>
           )}
 
           <button

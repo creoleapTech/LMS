@@ -57,6 +57,13 @@ import { PptViewer } from "@/components/viewers/PptViewer";
 import type { Question } from "@/components/quiz/types";
 import { QuizBuilder } from "@/components/quiz/QuizBuilder";
 import { QuizViewer } from "@/components/quiz/QuizViewer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -144,23 +151,24 @@ function EditContentDialog({ item, onClose, onSaved }: EditContentDialogProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-xl">
-              {getContentTypeIcon(item.type)}
+    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl p-0" showCloseButton={false}>
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-xl">
+                {getContentTypeIcon(item.type)}
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold">Edit Content</DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground uppercase tracking-wide">{item.type}</DialogDescription>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold">Edit Content</h2>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">{item.type}</p>
-            </div>
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+        </DialogHeader>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
@@ -250,8 +258,8 @@ function EditContentDialog({ item, onClose, onSaved }: EditContentDialogProps) {
             {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : "Save Changes"}
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -400,6 +408,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
 
   // --- Upload form state ---
   const [type, setType] = useState<ContentType | "">(DEFAULT_CONTENT_TYPE);
+  const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [textContent, setTextContent] = useState("");
@@ -435,6 +444,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     setViewingContent(null);
     setEditingContent(null);
     setType(DEFAULT_CONTENT_TYPE);
+    setTitle("");
     setFile(null);
     setYoutubeUrl("");
     setTextContent("");
@@ -498,6 +508,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
 
   function resetForm() {
     setType(DEFAULT_CONTENT_TYPE);
+    setTitle("");
     setFile(null);
     setYoutubeUrl("");
     setTextContent("");
@@ -523,7 +534,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     }
 
     const nextOrder = contentItems.length + 1;
-    const autoTitle = `${chapterNumber}.${nextOrder}`;
+    const resolvedTitle = title.trim() || `${chapterNumber}.${nextOrder}`;
 
     if (type === "youtube") {
       if (!youtubeUrl.trim()) {
@@ -532,7 +543,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
       }
       uploadMutation.mutate({
         type,
-        title: autoTitle,
+        title: resolvedTitle,
         youtubeUrl: youtubeUrl.trim(),
         isFree: false,
       });
@@ -546,7 +557,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
       }
       uploadMutation.mutate({
         type,
-        title: autoTitle,
+        title: resolvedTitle,
         textContent,
         isFree: false,
       });
@@ -560,7 +571,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
       }
       uploadMutation.mutate({
         type,
-        title: autoTitle,
+        title: resolvedTitle,
         questions: JSON.stringify(questions),
         isFree: false,
       });
@@ -576,7 +587,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("type", type);
-    formData.append("title", autoTitle);
+    formData.append("title", resolvedTitle);
     formData.append("isFree", "false");
     uploadMutation.mutate(formData);
   }
@@ -777,6 +788,18 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                     <SelectItem value="text">Rich Text / Notes</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Title <span className="text-muted-foreground font-normal">(optional — auto-generated if left blank)</span>
+                </label>
+                <Input
+                  placeholder={`e.g. ${chapterNumber}.${contentItems.length + 1} Introduction`}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="rounded-xl"
+                />
               </div>
 
               {type === "youtube" && (

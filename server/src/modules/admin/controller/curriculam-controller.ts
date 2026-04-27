@@ -487,7 +487,12 @@ export const curriculumController = new Elysia({
     const chapter = await ChapterModel.findById(params.chapterId);
     if (!chapter) throw new BadRequestError("Chapter not found");
 
-    const count = await ChapterContentModel.countDocuments({ chapterId: params.chapterId });
+    const maxOrderDoc = await ChapterContentModel.findOne(
+      { chapterId: params.chapterId },
+      { order: 1 },
+      { sort: { order: -1 } }
+    );
+    const count = maxOrderDoc?.order ?? 0;
 
     // Handle file upload
     let fileFilename = "";
