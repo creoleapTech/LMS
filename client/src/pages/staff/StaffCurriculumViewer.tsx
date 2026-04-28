@@ -182,17 +182,6 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
       <div className="max-w-screen-2xl mx-auto">
         <Breadcrumb />
 
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
-            My Teaching Resources
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            {selectedCurriculum
-              ? "Select a class and section to start teaching"
-              : "Access books, chapters, and materials assigned to your institution"}
-          </p>
-        </div>
-
         {/* Loading State */}
         {(loadingCurriculums || (selectedCurriculum && loadingClasses)) && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

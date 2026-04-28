@@ -4,13 +4,6 @@ export default function ReportsComingSoonPage() {
   return (
     <div className="min-h-screen">
       <div className="py-8 px-5 sm:px-8 max-w-screen-2xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-1.5 tracking-tight">
-            Reports
-          </h1>
-          <p className="text-muted-foreground">Insights and analytics for your LMS.</p>
-        </div>
-
         <section className="neo-card rounded-2xl border border-slate-200/80 p-8 sm:p-10 text-center">
           <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <BarChart3 className="h-7 w-7" />

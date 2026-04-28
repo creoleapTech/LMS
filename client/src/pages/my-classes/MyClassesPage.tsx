@@ -138,20 +138,6 @@ export default function MyClassesPage() {
   return (
     <div className="py-8 px-5 sm:px-8 max-w-screen-2xl mx-auto">
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-3 tracking-tight">
-          <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl text-white shadow-lg shadow-indigo-300/30">
-            <CalendarDays className="h-6 w-6" />
-          </div>
-          {isAdminRole ? "Teacher Timetables" : "My Timetable"}
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          {isAdminRole
-            ? "Select a teacher to view their class schedule and work progress"
-            : "Manage your class schedule and track teaching activity"}
-        </p>
-      </div>
-
       {/* Admin Selectors */}
       {isAdminRole && (
         <div className="flex flex-col sm:flex-row gap-4 mb-8">

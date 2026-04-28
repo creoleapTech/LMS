@@ -20,6 +20,8 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, './src'),
     },
+    // Force a single React instance — prevents duplicate React from FFmpeg or other packages
+    dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
     exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],

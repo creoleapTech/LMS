@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from '@tanstack/react-router';
 import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, BookOpenText, Users, LogOut, GraduationCap } from 'lucide-react';
 import { useAuthStore } from '@/store/userAuthStore';
+import { useSidebarStore } from '@/store/sidebarStore';
 
 // Define types for navigation items
 interface NavItem {
@@ -21,8 +22,6 @@ const navItems: NavItem[] = [
   { name: 'Reports', path: '/reports', icon: <BarChart className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
 ];
-
-import { useSidebarStore } from '@/store/sidebarStore';
 
 const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false); // Mobile toggle

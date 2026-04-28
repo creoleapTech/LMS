@@ -137,16 +137,7 @@ export function CourseTable({ institutionName }: Props) {
   return (
     <>
       <div className="py-8 px-5 sm:px-8 max-w-screen-2xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-3 tracking-tight">
-              <div className="p-2 bg-linear-to-br from-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
-                <BookOpen className="h-5 w-5" />
-              </div>
-              Courses
-            </h1>
-            <p className="text-muted-foreground mt-1">{institutionName}</p>
-          </div>
+        <div className="flex justify-end mb-8">
           <Button onClick={() => { setEditingCourse(null); setOpenForm(true); }} className="rounded-xl shadow-lg shadow-indigo-500/30">
             <Plus className="mr-2 h-4 w-4" /> Create Course
           </Button>

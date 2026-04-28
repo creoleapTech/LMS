@@ -14,6 +14,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useActiveAcademicYear } from "@/pages/dashboard/useAcademicYear";
 
+// Matches sidebar navItems — single source of truth for page titles
+const PAGE_TITLES: { path: string; title: string; subtitle?: string }[] = [
+  { path: "/dashboard",   title: "Dashboard",             subtitle: "Overview of your LMS activity" },
+  { path: "/curriculum",  title: "Curriculum Management", subtitle: "Manage curriculums, books, chapters and content" },
+  { path: "/institutions",title: "Institutions",          subtitle: "Manage schools and colleges" },
+  { path: "/my-classes",  title: "Class Management",      subtitle: "Manage your class schedule and teaching activity" },
+  { path: "/students",    title: "Student Management",    subtitle: "Manage classes, sections and students" },
+  { path: "/reports",     title: "Reports",               subtitle: "Insights and analytics for your LMS" },
+  { path: "/settings",    title: "Settings",              subtitle: "Configure your institution and account" },
+  { path: "/courses",     title: "Courses",               subtitle: "Manage courses and programs" },
+];
+
+function getPageInfo(pathname: string) {
+  return PAGE_TITLES.find(
+    (p) => pathname === p.path || pathname.startsWith(p.path + "/")
+  ) ?? null;
+}
+
 function getInstitutionInfo(user: any) {
   if (!user) return { name: "", logo: "" };
   if (typeof user.institutionId === "object" && user.institutionId) {
@@ -24,7 +42,7 @@ function getInstitutionInfo(user: any) {
   }
   return { name: "", logo: "" };
 }
-  
+
 function getInitials(name: string): string {
   return name
     .split(" ")
@@ -55,7 +73,8 @@ export function GlobalHeader() {
   const isSuperAdmin = user.role === "super_admin";
   const displayName = isSuperAdmin && !institutionName ? "CreaLeap LMS" : institutionName;
   const logoUrl = institutionLogo ? `${Config.imgUrl}${institutionLogo}` : "";
-  const isInstitutionsListPage = pathname === "/institutions" || pathname === "/institutions/";
+
+  const pageInfo = getPageInfo(pathname);
 
   const handleLogout = () => {
     logout();
@@ -66,37 +85,49 @@ export function GlobalHeader() {
   return (
     <div className="sticky top-0 z-40 neo-glass border-b-0">
       <div className="flex items-center justify-between px-5 sm:px-8 py-3">
-        {/* Left: Institution logo + name (hidden for super_admin) */}
+
+        {/* Left: page title always shown */}
         <div className="flex items-center gap-3 min-w-0">
+          {/* Institution logo — non-super-admin only */}
           {!isSuperAdmin && (
-            <>
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt={displayName}
-                  className="h-10 w-10 rounded-xl object-cover border border-white/60 shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] shrink-0"
-                />
-              ) : (
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-500/30 shrink-0">
-                  {displayName ? getInitials(displayName) : "Learning Management System"}
-                </div>
-              )}
-              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 truncate">
-                {displayName || "Learning Management System"}
-              </h1>
-            </>
+            logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={displayName}
+                className="h-10 w-10 rounded-xl object-cover border border-white/60 shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] shrink-0"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-500/30 shrink-0">
+                {displayName ? getInitials(displayName) : "LMS"}
+              </div>
+            )
           )}
 
-          {isSuperAdmin && isInstitutionsListPage && (
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">Institutions</h1>
-              <p className="text-sm sm:text-base text-slate-600 truncate">Manage schools and colleges</p>
-            </div>
-          )}
+          <div className="min-w-0">
+            {pageInfo ? (
+              <>
+                <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate leading-tight">
+                  {pageInfo.title}
+                </h1>
+                {pageInfo.subtitle && (
+                  <p className="text-xs text-slate-500 truncate leading-tight hidden sm:block">
+                    {pageInfo.subtitle}
+                  </p>
+                )}
+              </>
+            ) : (
+              /* Fallback: institution name for non-super-admin, nothing for super-admin */
+              !isSuperAdmin && displayName && (
+                <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate leading-tight">
+                  {displayName}
+                </h1>
+              )
+            )}
+          </div>
         </div>
 
-        {/* Center/Right: Academic year + Profile */}
-        <div className="flex items-center gap-3">
+        {/* Right: Academic year + Profile */}
+        <div className="flex items-center gap-3 shrink-0">
           {academicYear && !isSuperAdmin && (
             <span className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 px-2.5 py-1 rounded-full">
               <GraduationCap size={16} />
@@ -147,6 +178,7 @@ export function GlobalHeader() {
           </DropdownMenu>
         </div>
       </div>
+
       {/* Gradient accent line */}
       <div className="h-[2px] bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 opacity-60" />
     </div>

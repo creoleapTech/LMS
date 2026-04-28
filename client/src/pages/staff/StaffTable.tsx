@@ -275,16 +275,7 @@ export function StaffTable({ institutionId, institutionName }: Props) {
     <>
       <div className="py-5 px-4 sm:px-8 max-w-screen-2xl mx-auto">
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3 tracking-tight">
-                <div className="p-2 bg-linear-to-br from-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
-                  <User className="h-5 w-5" />
-                </div>
-                Staff Members
-              </h1>
-              <p className="text-muted-foreground mt-1">Managing staff for <strong>{institutionName}</strong></p>
-            </div>
+          <div className="flex justify-end">
             <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-indigo-500/30">
               <Plus className="mr-2 h-4 w-4" /> Add Staff
             </Button>

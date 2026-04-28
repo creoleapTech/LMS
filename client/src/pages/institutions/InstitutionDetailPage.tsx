@@ -156,9 +156,9 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
                 </div>
               )}
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
+                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
                   {institution.name}
-                </h1>
+                </p>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <Badge variant="outline" className="text-sm px-3 py-1 capitalize font-medium rounded-lg">
                     <School className="h-4 w-4 mr-1.5" />

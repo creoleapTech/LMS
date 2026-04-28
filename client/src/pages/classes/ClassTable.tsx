@@ -177,16 +177,7 @@ export function ClassTable({ institutionId }: Props) {
     return (
         <>
             <div className="flex flex-col gap-6 p-5 sm:p-8 max-w-screen-2xl mx-auto">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h2 className="text-2xl font-bold flex items-center gap-2.5 tracking-tight">
-                            <div className="p-2 bg-linear-to-br from-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
-                                <BookOpen className="h-5 w-5" />
-                            </div>
-                            Classes & Sections
-                        </h2>
-                        <p className="text-muted-foreground text-sm mt-1">Manage grades, sections, and class capacity.</p>
-                    </div>
+                <div className="flex justify-end">
                     <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-indigo-500/30">
                         <Plus className="mr-2 h-4 w-4" /> Add Class
                     </Button>

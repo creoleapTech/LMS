@@ -201,33 +201,33 @@ export function InstitutionTable() {
       cell: ({ row }) => (
         <button
           onClick={() => navigate({ to: "/institutions/$id", params: { id: row.original.id } })}
-          className="text-left hover:underline font-semibold text-blue-600 transition"
+          className="text-left hover:underline font-semibold text-blue-600 transition max-w-[220px]"
         >
           <div className="flex items-center gap-3">
-            <Building2 className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <div>{row.original.name}</div>
-            </div>
+            <Building2 className="h-5 w-5 text-muted-foreground shrink-0" />
+            <span className="truncate">{row.original.name}</span>
           </div>
         </button>
       ),
     }),
-        columnHelper.accessor("address", {
+    columnHelper.accessor("address", {
       header: "Address",
-      cell: info =>  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                <MapPin className="h-3 w-3" /> {info.getValue()}
-              </div>,
+      cell: info => (
+        <div className="text-sm text-muted-foreground flex items-center gap-1 max-w-[160px]">
+          <MapPin className="h-3 w-3 shrink-0" />
+          <span className="truncate">{info.getValue()}</span>
+        </div>
+      ),
     }),
-    
     columnHelper.accessor("type", {
       header: "Type",
-      cell: info => <Badge variant="outline" className="capitalize">{info.getValue()}</Badge>,
+      cell: info => <Badge variant="outline" className="capitalize whitespace-nowrap">{info.getValue()}</Badge>,
     }),
     columnHelper.accessor("contactDetails.inchargePerson", {
       header: "Incharge",
       cell: info => (
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <User className="h-4 w-4 text-muted-foreground shrink-0" />
           {info.getValue()}
         </div>
       ),
@@ -235,8 +235,8 @@ export function InstitutionTable() {
     columnHelper.accessor("contactDetails.mobileNumber", {
       header: "Mobile",
       cell: info => (
-        <div className="flex items-center gap-2">
-          <Phone className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
           {info.getValue()}
         </div>
       ),
@@ -244,16 +244,16 @@ export function InstitutionTable() {
     columnHelper.accessor("contactDetails.email", {
       header: "Email",
       cell: info => info.getValue() ? (
-        <div className="flex items-center gap-2">
-          <Mail className="h-4 w-4 text-muted-foreground" />
-          {info.getValue()}
+        <div className="flex items-center gap-2 max-w-[160px]">
+          <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="truncate">{info.getValue()}</span>
         </div>
-      ) : <span className="text-muted-foreground">-</span>,
+      ) : <span className="text-muted-foreground">—</span>,
     }),
     columnHelper.accessor("isActive", {
       header: "Status",
       cell: ({ row }) => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 whitespace-nowrap">
           <Switch
             checked={row.original.isActive}
             onCheckedChange={() => toggleMutation.mutate(row.original.id)}
@@ -375,44 +375,127 @@ export function InstitutionTable() {
           </div>
         )}
 
-        {/* Table */}
+        {/* Table — desktop */}
         {!isLoading && !isFetching && !error && (
-          <div className="neo-table-wrapper overflow-hidden">
-            <div className="overflow-x-auto">
-            <Table className="min-w-[800px]">
-              <TableHeader>
-                {table.getHeaderGroups().map((g) => (
-                  <TableRow key={g.id}>
-                    {g.headers.map((h) => (
-                      <TableHead key={h.id}>
-                        {flexRender(h.column.columnDef.header, h.getContext())}
-                      </TableHead>
+          <>
+            {/* Desktop table (md+) */}
+            <div className="hidden md:block neo-table-wrapper overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table className="min-w-[860px]">
+                  <TableHeader>
+                    {table.getHeaderGroups().map((g) => (
+                      <TableRow key={g.id}>
+                        {g.headers.map((h) => (
+                          <TableHead key={h.id} className="whitespace-nowrap">
+                            {flexRender(h.column.columnDef.header, h.getContext())}
+                          </TableHead>
+                        ))}
+                      </TableRow>
                     ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                          No institutions found
                         </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                      No institutions found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-          </div>
+
+            {/* Mobile cards (< md) */}
+            <div className="md:hidden space-y-3">
+              {institutions.length === 0 ? (
+                <p className="text-center text-muted-foreground py-12">No institutions found</p>
+              ) : (
+                institutions.map((inst) => (
+                  <div key={inst.id} className="neo-card rounded-2xl p-4 space-y-3">
+                    {/* Name + type */}
+                    <div className="flex items-start justify-between gap-3">
+                      <button
+                        onClick={() => navigate({ to: "/institutions/$id", params: { id: inst.id } })}
+                        className="text-left font-semibold text-blue-600 hover:underline flex items-center gap-2 flex-1 min-w-0"
+                      >
+                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="truncate">{inst.name}</span>
+                      </button>
+                      <Badge variant="outline" className="capitalize shrink-0">{inst.type}</Badge>
+                    </div>
+
+                    {/* Address */}
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <MapPin className="h-3.5 w-3.5 shrink-0" />
+                      <span>{inst.address || "—"}</span>
+                    </div>
+
+                    {/* Contact row */}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <User className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{inst.contactDetails.inchargePerson || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Phone className="h-3.5 w-3.5 shrink-0" />
+                        <span>{inst.contactDetails.mobileNumber || "—"}</span>
+                      </div>
+                      {inst.contactDetails.email && (
+                        <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
+                          <Mail className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{inst.contactDetails.email}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Status + actions */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={inst.isActive}
+                          onCheckedChange={() => toggleMutation.mutate(inst.id)}
+                          disabled={toggleMutation.isPending}
+                        />
+                        <Badge variant={inst.isActive ? "default" : "secondary"}>
+                          {inst.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => { setEditingInstitution(inst); setOpenForm(true); }}
+                          disabled={saveMutation.isPending}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => setDeletingId(inst.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
         )}
 
         {/* Pagination */}
