@@ -18,6 +18,7 @@ interface User {
 
 interface AuthStore {
   user: User | null;
+  hydrated: boolean;
   setUser: (user: User | null) => void;
   logout: () => void;
   isAuthenticated: () => boolean;
@@ -28,6 +29,7 @@ export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
       user: null,
+      hydrated: false,
       setUser: (user) => set({ user }),
       logout: () => {
         localStorage.removeItem('token');
@@ -37,8 +39,11 @@ export const useAuthStore = create<AuthStore>()(
       isAuthenticated: () => !!get().user?.token,
     }),
     {
-      name: 'auth-storage', // key in localStorage
-      partialize: (state) => ({ user: state.user }), // only persist user
+      name: 'auth-storage',
+      partialize: (state) => ({ user: state.user }),
+      onRehydrateStorage: () => (state) => {
+        if (state) state.hydrated = true;
+      },
     }
   )
 );

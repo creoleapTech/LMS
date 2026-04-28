@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from '@tanstack/react-router';
+import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, BookOpenText, Users, LogOut, GraduationCap } from 'lucide-react';
 import { useAuthStore } from '@/store/userAuthStore';
 import { useSidebarStore } from '@/store/sidebarStore';
@@ -24,10 +24,11 @@ const navItems: NavItem[] = [
 ];
 
 const Sidebar: React.FC = () => {
-  const [isOpen, setIsOpen] = useState<boolean>(false); // Mobile toggle
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   const { isExpanded, toggleExpand } = useSidebarStore();
   const location = useLocation();
-  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -126,8 +127,8 @@ const Sidebar: React.FC = () => {
         <div className="px-3 py-4 border-t border-white/20 space-y-2">
           <button
             onClick={() => {
-              useAuthStore.getState().logout();
-              window.location.href = '/';
+              logout();
+              navigate({ to: '/' });
             }}
             className={`flex items-center ${isExpanded ? 'px-3' : 'justify-center'} py-2.5 rounded-xl text-sm font-medium transition-all duration-300 w-full text-white/90 hover:text-white hover:bg-white/15 group`}
           >
