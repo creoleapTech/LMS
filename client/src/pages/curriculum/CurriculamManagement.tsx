@@ -39,18 +39,18 @@ export default function CurriculumManagementPage() {
   // Drill-down view component
   const DrillDownView = () => (
     <div className="space-y-8">
-      {/* Header for Drill-down */}
-      <div className="flex items-center gap-4 mb-4">
-        {(selectedCurriculumId || selectedGradeBookId || selectedChapterId) && (
+      {/* Breadcrumb — only shown when drilled into a curriculum */}
+      {(selectedCurriculumId || selectedGradeBookId || selectedChapterId) && (
+        <div className="flex items-center gap-4 mb-4">
           <Button onClick={handleBack} variant="ghost" size="sm" className="rounded-xl">
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back
           </Button>
-        )}
-        <h2 className="text-xl font-bold text-foreground">
-          {breadcrumb()}
-        </h2>
-      </div>
+          <h2 className="text-xl font-bold text-foreground">
+            {breadcrumb()}
+          </h2>
+        </div>
+      )}
 
       {/* Step 1: Curriculum List */}
       {!selectedCurriculumId && (
