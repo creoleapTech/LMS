@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GraduationCap, Building2, Users, Shapes } from "lucide-react";
+import { Building2, Users, Shapes } from "lucide-react";
 
 export function StudentManagementPage() {
   const user = useAuthStore((s) => s.user);

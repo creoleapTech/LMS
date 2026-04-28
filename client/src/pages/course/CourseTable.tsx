@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Pencil, Trash2, Plus, BookOpen, Search, IndianRupee } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, IndianRupee } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { CourseFormDialog } from "./CourseFormDialog";
@@ -45,10 +45,10 @@ const mockCourses: Course[] = [
 ];
 
 interface Props {
-  institutionName: string;
+  institutionName?: string;
 }
 
-export function CourseTable({ institutionName }: Props) {
+export function CourseTable({ institutionName: _institutionName }: Props) {
   const [courses, setCourses] = useState(mockCourses);
   const [openForm, setOpenForm] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);

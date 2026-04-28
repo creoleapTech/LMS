@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Pencil, Trash2, Plus, User, Search, ArrowUpDown, Loader2, KeyRound } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, ArrowUpDown, Loader2, KeyRound } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -31,10 +31,10 @@ const columnHelper = createColumnHelper<IStaff>();
 
 interface Props {
   institutionId: string;
-  institutionName: string;
+  institutionName?: string;
 }
 
-export function StaffTable({ institutionId, institutionName }: Props) {
+export function StaffTable({ institutionId, institutionName: _institutionName }: Props) {
   const [openForm, setOpenForm] = useState(false);
   const [editingStaff, setEditingStaff] = useState<IStaff | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
