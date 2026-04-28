@@ -7,6 +7,19 @@ import { AdminDashboard } from '../../pages/dashboard/AdminDashboard';
 import { TeacherDashboard } from '../../pages/dashboard/TeacherDashboard';
 import { DashboardSkeleton } from '../../pages/dashboard/components/DashboardComponents';
 import { DashboardHeader } from '../../pages/dashboard/components/DashboardHeader';
+import { _axios } from '../../lib/axios';
+
+// Prefetch function — same query as useDashboardStats with no filters
+async function prefetchDashboard(queryClient: any) {
+  await queryClient.prefetchQuery({
+    queryKey: ['dashboard-stats', undefined],
+    queryFn: async () => {
+      const { data } = await _axios.get('/admin/dashboard/stats');
+      return data as { success: boolean; role: string; data: any };
+    },
+    staleTime: 60_000,
+  });
+}
 
 function Dashboard() {
   const { user } = useAuthStore();
@@ -45,10 +58,8 @@ function Dashboard() {
   return (
     <div className="min-h-screen">
       <main className="p-6 md:p-8 max-w-screen-2xl mx-auto space-y-6">
-        {/* New Dashboard Header */}
         <DashboardHeader />
 
-        {/* Role-specific dashboard */}
         {stats ? (
           <>
             {effectiveRole === 'super_admin' && <SuperAdminDashboard data={stats} />}
@@ -70,5 +81,6 @@ function Dashboard() {
 }
 
 export const Route = createFileRoute('/dashboard/')({
+  loader: ({ context: { queryClient } }) => prefetchDashboard(queryClient),
   component: Dashboard,
 });

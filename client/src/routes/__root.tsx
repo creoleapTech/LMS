@@ -1,9 +1,10 @@
 import Sidebar from '@/modules/sidebar';
 import { GlobalHeader } from '@/components/GlobalHeader';
-import { Outlet, createRootRoute, redirect, useLocation } from '@tanstack/react-router';
+import { Outlet, createRootRouteWithContext, redirect, useLocation, useRouterState } from '@tanstack/react-router';
 import { Toaster } from 'sonner';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/store/userAuthStore';
+import type { QueryClient } from '@tanstack/react-query';
 
 function getStoredToken(): string | null {
   try {
@@ -17,61 +18,80 @@ function getStoredToken(): string | null {
 
 function AppLoader() {
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#dfe6f0]">
-      <img src="/creo_white.png" alt="Creoleap" className="h-14 w-auto object-contain mb-8 opacity-0 animate-[fadeIn_0.4s_ease_forwards]" style={{ filter: 'invert(0.35) sepia(1) saturate(3) hue-rotate(210deg)' }} />
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#0D0630]">
+      <img
+        src="/creo_white.png"
+        alt="Creoleap"
+        className="h-14 w-auto object-contain mb-8"
+      />
       <div className="flex items-center gap-2">
-        <span className="h-2.5 w-2.5 rounded-full bg-indigo-500 animate-bounce [animation-delay:0ms]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-violet-500 animate-bounce [animation-delay:150ms]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-purple-500 animate-bounce [animation-delay:300ms]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-indigo-400 animate-bounce [animation-delay:0ms]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-violet-400 animate-bounce [animation-delay:150ms]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-purple-400 animate-bounce [animation-delay:300ms]" />
       </div>
     </div>
   );
 }
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: ({ location }) => {
     const token = getStoredToken();
     if (!token && location.pathname !== '/') {
       throw redirect({ to: '/' });
     }
   },
-  component: () => {
-    const { pathname } = useLocation();
-    const hydrated = useAuthStore((s) => s.hydrated);
-    const showSidebar = pathname !== '/';
-    const scrollRef = useRef<HTMLDivElement>(null);
+  component: RootComponent,
+});
 
-    useEffect(() => {
-      scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
-    }, [pathname]);
+function RootComponent() {
+  const { pathname } = useLocation();
+  const showSidebar = pathname !== '/';
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Block render until Zustand has rehydrated from localStorage
-    if (!hydrated) {
-      return <AppLoader />;
-    }
+  // ── 1. Boot hydration loader ──────────────────────────────────────────────
+  // Zustand persist rehydrates synchronously from localStorage, but we still
+  // want a brief loader on cold boot so the UI doesn't flash unstyled content.
+  const [booting, setBooting] = useState(true);
+  useEffect(() => {
+    // Give Zustand one tick to finish rehydration, then clear the loader
+    const id = requestAnimationFrame(() => setBooting(false));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
-    return (
-      <>
-        <Toaster
-          position="top-right"
-          richColors
-          expand={false}
-          closeButton
-        />
+  // ── 2. Route-transition loader ────────────────────────────────────────────
+  // Shows during login→dashboard and logout→login navigations
+  const isNavigating = useRouterState({ select: (s) => s.status === 'pending' });
 
-        <div className="flex h-screen overflow-hidden bg-background">
-          <div className="z-50">
-            {showSidebar && <Sidebar />}
-          </div>
+  // ── 3. Scroll to top on navigation ───────────────────────────────────────
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+  }, [pathname]);
 
-          <div ref={scrollRef} className="z-10 flex-1 overflow-y-auto relative">
-            {showSidebar && <GlobalHeader />}
-            <div className="min-h-full page-enter" key={pathname}>
-              <Outlet />
-            </div>
+  if (booting || isNavigating) {
+    return <AppLoader />;
+  }
+
+  return (
+    <>
+      <Toaster
+        position="top-right"
+        richColors
+        expand={false}
+        closeButton
+      />
+
+      <div className="flex h-screen overflow-hidden bg-background">
+        <div className="z-50">
+          {showSidebar && <Sidebar />}
+        </div>
+
+        <div ref={scrollRef} className="z-10 flex-1 overflow-y-auto relative">
+          {showSidebar && <GlobalHeader />}
+          <div className="min-h-full page-enter" key={pathname}>
+            <Outlet />
           </div>
         </div>
-      </>
-    );
-  },
-});
+      </div>
+    </>
+  );
+}
