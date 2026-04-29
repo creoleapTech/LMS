@@ -15,10 +15,12 @@ import { Route as StaffIndexRouteImport } from './routes/staff/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ReportsIndexRouteImport } from './routes/reports/index'
 import { Route as MyClassesIndexRouteImport } from './routes/my-classes/index'
+import { Route as LessonPlansIndexRouteImport } from './routes/lesson-plans/index'
 import { Route as InstitutionsIndexRouteImport } from './routes/institutions/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as CurriculumIndexRouteImport } from './routes/curriculum/index'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
+import { Route as LessonPlansIdRouteImport } from './routes/lesson-plans/$id'
 import { Route as InstitutionsIdRouteImport } from './routes/institutions/$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -51,6 +53,11 @@ const MyClassesIndexRoute = MyClassesIndexRouteImport.update({
   path: '/my-classes/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LessonPlansIndexRoute = LessonPlansIndexRouteImport.update({
+  id: '/lesson-plans/',
+  path: '/lesson-plans/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InstitutionsIndexRoute = InstitutionsIndexRouteImport.update({
   id: '/institutions/',
   path: '/institutions/',
@@ -71,6 +78,11 @@ const CoursesIndexRoute = CoursesIndexRouteImport.update({
   path: '/courses/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LessonPlansIdRoute = LessonPlansIdRouteImport.update({
+  id: '/lesson-plans/$id',
+  path: '/lesson-plans/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InstitutionsIdRoute = InstitutionsIdRouteImport.update({
   id: '/institutions/$id',
   path: '/institutions/$id',
@@ -80,10 +92,12 @@ const InstitutionsIdRoute = InstitutionsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/institutions/$id': typeof InstitutionsIdRoute
+  '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/institutions/': typeof InstitutionsIndexRoute
+  '/lesson-plans/': typeof LessonPlansIndexRoute
   '/my-classes/': typeof MyClassesIndexRoute
   '/reports/': typeof ReportsIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -93,10 +107,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/institutions/$id': typeof InstitutionsIdRoute
+  '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/courses': typeof CoursesIndexRoute
   '/curriculum': typeof CurriculumIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/institutions': typeof InstitutionsIndexRoute
+  '/lesson-plans': typeof LessonPlansIndexRoute
   '/my-classes': typeof MyClassesIndexRoute
   '/reports': typeof ReportsIndexRoute
   '/settings': typeof SettingsIndexRoute
@@ -107,10 +123,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/institutions/$id': typeof InstitutionsIdRoute
+  '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/institutions/': typeof InstitutionsIndexRoute
+  '/lesson-plans/': typeof LessonPlansIndexRoute
   '/my-classes/': typeof MyClassesIndexRoute
   '/reports/': typeof ReportsIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -122,10 +140,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/institutions/$id'
+    | '/lesson-plans/$id'
     | '/courses/'
     | '/curriculum/'
     | '/dashboard/'
     | '/institutions/'
+    | '/lesson-plans/'
     | '/my-classes/'
     | '/reports/'
     | '/settings/'
@@ -135,10 +155,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/institutions/$id'
+    | '/lesson-plans/$id'
     | '/courses'
     | '/curriculum'
     | '/dashboard'
     | '/institutions'
+    | '/lesson-plans'
     | '/my-classes'
     | '/reports'
     | '/settings'
@@ -148,10 +170,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/institutions/$id'
+    | '/lesson-plans/$id'
     | '/courses/'
     | '/curriculum/'
     | '/dashboard/'
     | '/institutions/'
+    | '/lesson-plans/'
     | '/my-classes/'
     | '/reports/'
     | '/settings/'
@@ -162,10 +186,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InstitutionsIdRoute: typeof InstitutionsIdRoute
+  LessonPlansIdRoute: typeof LessonPlansIdRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
   CurriculumIndexRoute: typeof CurriculumIndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
   InstitutionsIndexRoute: typeof InstitutionsIndexRoute
+  LessonPlansIndexRoute: typeof LessonPlansIndexRoute
   MyClassesIndexRoute: typeof MyClassesIndexRoute
   ReportsIndexRoute: typeof ReportsIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -217,6 +243,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MyClassesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lesson-plans/': {
+      id: '/lesson-plans/'
+      path: '/lesson-plans'
+      fullPath: '/lesson-plans/'
+      preLoaderRoute: typeof LessonPlansIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/institutions/': {
       id: '/institutions/'
       path: '/institutions'
@@ -245,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoursesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lesson-plans/$id': {
+      id: '/lesson-plans/$id'
+      path: '/lesson-plans/$id'
+      fullPath: '/lesson-plans/$id'
+      preLoaderRoute: typeof LessonPlansIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/institutions/$id': {
       id: '/institutions/$id'
       path: '/institutions/$id'
@@ -258,10 +298,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InstitutionsIdRoute: InstitutionsIdRoute,
+  LessonPlansIdRoute: LessonPlansIdRoute,
   CoursesIndexRoute: CoursesIndexRoute,
   CurriculumIndexRoute: CurriculumIndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,
   InstitutionsIndexRoute: InstitutionsIndexRoute,
+  LessonPlansIndexRoute: LessonPlansIndexRoute,
   MyClassesIndexRoute: MyClassesIndexRoute,
   ReportsIndexRoute: ReportsIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,

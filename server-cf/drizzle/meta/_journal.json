@@ -22,6 +22,13 @@
       "when": 1776760755705,
       "tag": "0002_breezy_giant_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1777443327490,
+      "tag": "0003_nasty_siren",
+      "breakpoints": true
     }
   ]
 }

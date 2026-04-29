@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
-import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, BookOpenText, Users, LogOut, GraduationCap } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, BookOpenText, Users, LogOut, GraduationCap, BookMarked } from 'lucide-react';
 import { useAuthStore } from '@/store/userAuthStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 
@@ -18,6 +18,7 @@ const navItems: NavItem[] = [
   // { name: 'Courses', path: '/courses', icon: <BookIcon className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Institutions', path: '/institutions', icon: <Building className="w-5 h-5" />, roles: ['super_admin'] },
   { name: 'My Classes', path: '/my-classes', icon: <Users className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
+  { name: 'Lesson Plans', path: '/lesson-plans', icon: <BookMarked className="w-5 h-5" />, roles: ['teacher', 'admin', 'super_admin'] },
   { name: 'Students', path: '/students', icon: <GraduationCap className="w-5 h-5" />, roles: ['admin', 'super_admin'] },
   { name: 'Reports', path: '/reports', icon: <BarChart className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
