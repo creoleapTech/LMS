@@ -186,7 +186,9 @@ const lessonPlanArb: fc.Arbitrary<LessonPlan> = fc
   .map((record) => record as LessonPlan);
 
 /** Convert a LessonPlan to the LessonPlanFormValues shape used by the form */
-function planToFormValues(plan: LessonPlan): Partial<LessonPlanFormValues> {
+function planToFormValues(
+  plan: LessonPlan,
+): Partial<LessonPlanFormValues> & { status?: PlanStatus } {
   return {
     title: plan.title,
     subject: plan.subject,

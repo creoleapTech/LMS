@@ -25,15 +25,18 @@ import {
 import { useAuthStore } from "@/store/userAuthStore";
 import { _axios } from "@/lib/axios";
 import { useStaffList } from "@/pages/my-classes/hooks/useStaffList";
+import { useTimetableDay } from "@/pages/my-classes/hooks/useTimetableDay";
+import { useStaffTimetableDay } from "@/pages/my-classes/hooks/useStaffTimetableDay";
 import { MonthCalendar } from "@/pages/my-classes/components/MonthCalendar";
-import type { IMonthSummary } from "@/types/timetable";
+import type { IMonthSummary, ITimetableEntry, IPeriodSlot } from "@/types/timetable";
 
 import { useLessonPlans } from "./hooks/useLessonPlans";
 import { useUpdateLessonPlan } from "./hooks/useUpdateLessonPlan";
 import { useDeleteLessonPlan } from "./hooks/useDeleteLessonPlan";
 import { LessonPlanCard } from "./components/LessonPlanCard";
+import { LessonPlanStatusBadge } from "./components/LessonPlanStatusBadge";
 import { LessonPlanFormDialog } from "./components/LessonPlanFormDialog";
-import type { LessonPlan, PlanStatus } from "./types";
+import type { LessonPlan, LessonPlanFormValues, PlanStatus } from "./types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -49,6 +52,30 @@ function formatDateKey(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function getClassLabel(classId: ITimetableEntry["classId"]): string {
+  if (typeof classId === "object" && classId) {
+    return `${classId.grade || ""}–${classId.section || ""}`.replace(/^–|–$/g, "");
+  }
+  return "";
+}
+
+function getBookLabel(gradeBookId: ITimetableEntry["gradeBookId"]): string {
+  if (typeof gradeBookId === "object" && gradeBookId && gradeBookId.bookTitle) {
+    return gradeBookId.bookTitle;
+  }
+  return "";
+}
+
+function getGradeBookId(gradeBookId: ITimetableEntry["gradeBookId"]): string {
+  if (typeof gradeBookId === "object" && gradeBookId && gradeBookId._id) {
+    return gradeBookId._id;
+  }
+  if (typeof gradeBookId === "string") {
+    return gradeBookId;
+  }
+  return "";
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -116,6 +143,8 @@ export default function LessonPlansPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [editingPlan, setEditingPlan] = useState<LessonPlan | null>(null);
+  const [prefillValues, setPrefillValues] = useState<Partial<LessonPlanFormValues>>({});
+  const [selectedPeriodNumber, setSelectedPeriodNumber] = useState<number | undefined>(undefined);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // ── Data fetching — fetch the whole month ──────────────────────────────────
@@ -154,6 +183,53 @@ export default function LessonPlansPage() {
     [plans, selectedDateKey],
   );
 
+  // ── Timetable periods for the selected day ─────────────────────────────
+  const ownDayData = useTimetableDay(isAdminRole ? null : selectedDateKey);
+  const staffDayData = useStaffTimetableDay(
+    isAdminRole ? selectedStaffId || null : null,
+    isAdminRole ? effectiveInstitutionId || null : null,
+    isAdminRole ? selectedDateKey : null,
+  );
+
+  const timetableData = isAdminRole ? staffDayData.data : ownDayData.data;
+  const timetableLoading = isAdminRole ? staffDayData.isLoading : ownDayData.isLoading;
+  const timetableReady = isAdminRole ? !!selectedStaffId : true;
+
+  const periodsForDay = useMemo(() => {
+    const entries = timetableData?.entries ?? [];
+    const periodSlots = Array.isArray(timetableData?.periodConfig?.periods)
+      ? timetableData?.periodConfig?.periods
+      : [];
+    const slotMap = new Map<number, IPeriodSlot>();
+    for (const slot of periodSlots) {
+      slotMap.set(slot.periodNumber, slot);
+    }
+
+    const entryMap = new Map<number, ITimetableEntry>();
+    for (const entry of entries) {
+      entryMap.set(entry.periodNumber, entry);
+    }
+
+    return Array.from(entryMap.entries())
+      .map(([periodNumber, entry]) => ({
+        periodNumber,
+        entry,
+        slot: slotMap.get(periodNumber),
+      }))
+      .filter((item) => !item.slot?.isBreak)
+      .sort((a, b) => a.periodNumber - b.periodNumber);
+  }, [timetableData]);
+
+  const plansByPeriod = useMemo(() => {
+    const map = new Map<number, LessonPlan>();
+    for (const plan of plansForDay) {
+      if (typeof plan.periodNumber === "number") {
+        map.set(plan.periodNumber, plan);
+      }
+    }
+    return map;
+  }, [plansForDay]);
+
   // ── Mutations ──────────────────────────────────────────────────────────────
   const updateMutation = useUpdateLessonPlan();
   const deleteMutation = useDeleteLessonPlan();
@@ -191,6 +267,8 @@ export default function LessonPlansPage() {
   // ── Plan handlers ──────────────────────────────────────────────────────────
   const handleNewPlan = () => {
     setEditingPlan(null);
+    setPrefillValues({});
+    setSelectedPeriodNumber(undefined);
     setFormMode("create");
     setFormOpen(true);
   };
@@ -199,7 +277,36 @@ export default function LessonPlansPage() {
     const plan = plans.find((p) => p.id === id);
     if (!plan) return;
     setEditingPlan(plan);
+    setPrefillValues({});
+    setSelectedPeriodNumber(undefined);
     setFormMode("edit");
+    setFormOpen(true);
+  };
+
+  const handlePeriodPlan = (periodNumber: number, entry: ITimetableEntry) => {
+    const existingPlan = plansByPeriod.get(periodNumber);
+    if (existingPlan) {
+      navigate({ to: "/lesson-plans/$id", params: { id: existingPlan.id } });
+      return;
+    }
+
+    if (isReadOnly) return;
+
+    const classLabel = getClassLabel(entry.classId);
+    const bookLabel = getBookLabel(entry.gradeBookId);
+    const gradeBookId = getGradeBookId(entry.gradeBookId);
+
+    const nextPrefill: Partial<LessonPlanFormValues> = {
+      periodNumber,
+      ...(classLabel ? { gradeOrClass: classLabel } : {}),
+      ...(bookLabel ? { subject: bookLabel } : {}),
+      ...(gradeBookId ? { gradeBookId } : {}),
+    };
+
+    setEditingPlan(null);
+    setPrefillValues(nextPrefill);
+    setSelectedPeriodNumber(periodNumber);
+    setFormMode("create");
     setFormOpen(true);
   };
 
@@ -407,6 +514,80 @@ export default function LessonPlansPage() {
               )}
             </div>
 
+            {/* Periods for the day */}
+            <div className="px-5 py-4 border-b border-white/20">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                Periods
+              </p>
+              {!timetableReady ? (
+                <p className="text-sm text-muted-foreground">
+                  Select a teacher to view their periods for this day.
+                </p>
+              ) : timetableLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <span className="h-2 w-2 rounded-full bg-indigo-400 animate-bounce [animation-delay:0ms]" />
+                  <span className="h-2 w-2 rounded-full bg-violet-400 animate-bounce [animation-delay:150ms]" />
+                  <span className="h-2 w-2 rounded-full bg-purple-400 animate-bounce [animation-delay:300ms]" />
+                  Loading periods…
+                </div>
+              ) : periodsForDay.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {timetableData?.periodConfig
+                    ? "No scheduled periods for this day."
+                    : "Period schedule not configured."}
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {periodsForDay.map(({ periodNumber, entry, slot }) => {
+                    const plan = plansByPeriod.get(periodNumber);
+                    const classLabel = getClassLabel(entry.classId) || "Class";
+                    const bookLabel = getBookLabel(entry.gradeBookId) || "Subject";
+                    const timeLabel = slot ? `${slot.startTime}–${slot.endTime}` : "Time TBD";
+                    const disabled = isReadOnly && !plan;
+
+                    return (
+                      <button
+                        key={periodNumber}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => handlePeriodPlan(periodNumber, entry)}
+                        className={`text-left rounded-xl border border-border/60 p-3 transition-all bg-muted/20 hover:bg-muted/30 hover:border-indigo-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:cursor-not-allowed disabled:opacity-60`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              Period {periodNumber}
+                            </p>
+                            <p className="text-sm font-semibold text-foreground truncate">
+                              {classLabel}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {bookLabel}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              {timeLabel}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            {plan ? (
+                              <LessonPlanStatusBadge status={plan.status} size="sm" />
+                            ) : (
+                              <span className="text-[11px] font-semibold text-muted-foreground">
+                                No plan
+                              </span>
+                            )}
+                            <span className="text-[11px] font-semibold text-indigo-600">
+                              {plan ? "View plan" : "Add plan"}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* Plans for the day */}
             <div className="p-4">
               {isLoading ? (
@@ -475,6 +656,10 @@ export default function LessonPlansPage() {
         mode={formMode}
         planId={editingPlan?.id}
         selectedDate={formMode === "create" ? selectedDateKey : undefined}
+        selectedPeriodNumber={
+          formMode === "create" ? selectedPeriodNumber : undefined
+        }
+        prefillValues={formMode === "create" ? prefillValues : undefined}
         initialValues={
           editingPlan
             ? {
@@ -482,6 +667,7 @@ export default function LessonPlansPage() {
                 subject: editingPlan.subject,
                 gradeOrClass: editingPlan.gradeOrClass,
                 date: editingPlan.date,
+                periodNumber: editingPlan.periodNumber ?? undefined,
                 durationMinutes: editingPlan.durationMinutes,
                 learningObjectives: editingPlan.learningObjectives ?? "",
                 materialsNeeded: editingPlan.materialsNeeded ?? "",

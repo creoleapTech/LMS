@@ -27,7 +27,7 @@ import { useUpdateLessonPlan } from "./hooks/useUpdateLessonPlan";
 import { useDeleteLessonPlan } from "./hooks/useDeleteLessonPlan";
 import { LessonPlanStatusBadge } from "./components/LessonPlanStatusBadge";
 import { LessonPlanFormDialog } from "./components/LessonPlanFormDialog";
-import type { LessonPlan, PlanStatus } from "./types";
+import type { PlanStatus } from "./types";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -178,6 +178,12 @@ export default function LessonPlanDetailPage({ id }: LessonPlanDetailPageProps) 
             <span>{plan.subject}</span>
             <span className="mx-1.5 opacity-40">·</span>
             <span>{plan.gradeOrClass}</span>
+            {typeof plan.periodNumber === "number" && (
+              <>
+                <span className="mx-1.5 opacity-40">·</span>
+                <span>Period {plan.periodNumber}</span>
+              </>
+            )}
             <span className="mx-1.5 opacity-40">·</span>
             <span>{formatDate(plan.date)}</span>
             <span className="mx-1.5 opacity-40">·</span>
@@ -303,6 +309,7 @@ export default function LessonPlanDetailPage({ id }: LessonPlanDetailPageProps) 
           subject: plan.subject,
           gradeOrClass: plan.gradeOrClass,
           date: plan.date,
+          periodNumber: plan.periodNumber ?? undefined,
           durationMinutes: plan.durationMinutes,
           learningObjectives: plan.learningObjectives ?? "",
           materialsNeeded: plan.materialsNeeded ?? "",

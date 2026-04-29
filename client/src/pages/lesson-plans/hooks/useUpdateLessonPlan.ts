@@ -8,7 +8,7 @@ type UpdateLessonPlanVariables = { id: string } & Partial<UpdateLessonPlanPayloa
 export function useUpdateLessonPlan() {
   const queryClient = useQueryClient();
 
-  return useMutation<LessonPlan, Error, UpdateLessonPlanVariables>({
+  return useMutation<LessonPlan, Error, UpdateLessonPlanVariables, { previous?: LessonPlan }>({
     mutationFn: async ({ id, ...payload }) => {
       // If status is the only field being updated, use the dedicated status endpoint
       const keys = Object.keys(payload);
@@ -23,10 +23,13 @@ export function useUpdateLessonPlan() {
     },
     onMutate: async ({ id, status }) => {
       // Only apply optimistic update for status-only changes
-      if (status === undefined) return undefined;
+      if (status === undefined) return {};
 
       await queryClient.cancelQueries({ queryKey: ["lesson-plans"] });
-      const previous = queryClient.getQueryData(["lesson-plan", id]);
+      const previous = queryClient.getQueryData<LessonPlan | undefined>([
+        "lesson-plan",
+        id,
+      ]);
       queryClient.setQueryData(["lesson-plan", id], (old: LessonPlan | undefined) =>
         old ? { ...old, status } : old
       );

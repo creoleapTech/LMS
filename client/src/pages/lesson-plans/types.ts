@@ -15,6 +15,7 @@ export interface LessonPlan {
   subject: string;
   gradeOrClass: string;
   date: string; // YYYY-MM-DD
+  periodNumber?: number | null;
   durationMinutes: number;
   status: PlanStatus;
   learningObjectives?: string;
@@ -35,6 +36,7 @@ export interface CreateLessonPlanPayload {
   subject: string;
   gradeOrClass: string;
   date: string;
+  periodNumber?: number | null;
   durationMinutes: number;
   learningObjectives?: string;
   materialsNeeded?: string;
@@ -56,16 +58,17 @@ export interface LessonPlanFormValues {
   subject: string;
   gradeOrClass: string;
   date: string;
+  periodNumber?: number;
   durationMinutes: number;
-  learningObjectives: string;
-  materialsNeeded: string;
-  introduction: string;
-  mainActivity: string;
-  conclusion: string;
-  assessmentMethod: string;
-  homeworkNotes: string;
-  gradeBookId: string;
-  chapterId: string;
+  learningObjectives?: string;
+  materialsNeeded?: string;
+  introduction?: string;
+  mainActivity?: string;
+  conclusion?: string;
+  assessmentMethod?: string;
+  homeworkNotes?: string;
+  gradeBookId?: string;
+  chapterId?: string;
 }
 
 // ─── Grouping ─────────────────────────────────────────────────────────────────
@@ -86,6 +89,11 @@ export const lessonPlanSchema = z.object({
     .string()
     .min(1, "Date is required")
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  periodNumber: z
+    .number({ invalid_type_error: "Period must be a number" })
+    .int("Period must be a whole number")
+    .positive("Period must be a positive number")
+    .optional(),
   durationMinutes: z
     .number({ invalid_type_error: "Duration must be a number" })
     .int("Duration must be a whole number")

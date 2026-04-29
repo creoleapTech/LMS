@@ -40,19 +40,26 @@ import { useAuthStore } from "@/store/userAuthStore";
 import { useCreateLessonPlan } from "../hooks/useCreateLessonPlan";
 import { useUpdateLessonPlan } from "../hooks/useUpdateLessonPlan";
 import { lessonPlanSchema } from "../types";
-import type { LessonPlanFormValues } from "../types";
+import type { LessonPlanFormValues, PlanStatus } from "../types";
 import type { IClass } from "@/types/class";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
+
+type LessonPlanFormInitialValues = Partial<LessonPlanFormValues> & {
+  status?: PlanStatus;
+};
 
 export interface LessonPlanFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit";
-  initialValues?: Partial<LessonPlanFormValues>;
+  initialValues?: LessonPlanFormInitialValues;
+  prefillValues?: Partial<LessonPlanFormValues>;
   planId?: string;
   /** Pre-selected date from the calendar (create mode). Format: YYYY-MM-DD */
   selectedDate?: string;
+  /** Pre-selected period number from the timetable (create mode). */
+  selectedPeriodNumber?: number;
 }
 
 // ─── Curriculum types ─────────────────────────────────────────────────────────
@@ -94,8 +101,10 @@ export function LessonPlanFormDialog({
   onOpenChange,
   mode,
   initialValues,
+  prefillValues,
   planId,
   selectedDate,
+  selectedPeriodNumber,
 }: LessonPlanFormDialogProps) {
   const navigate = useNavigate();
 
@@ -128,6 +137,7 @@ export function LessonPlanFormDialog({
       subject: "",
       gradeOrClass: "",
       date: "",
+      periodNumber: undefined,
       durationMinutes: 45,
       learningObjectives: "",
       materialsNeeded: "",
@@ -149,6 +159,7 @@ export function LessonPlanFormDialog({
         subject: initialValues.subject ?? "",
         gradeOrClass: initialValues.gradeOrClass ?? "",
         date: initialValues.date ?? "",
+        periodNumber: initialValues.periodNumber ?? undefined,
         durationMinutes: initialValues.durationMinutes ?? 45,
         learningObjectives: initialValues.learningObjectives ?? "",
         materialsNeeded: initialValues.materialsNeeded ?? "",
@@ -162,23 +173,24 @@ export function LessonPlanFormDialog({
       });
     } else if (open && mode === "create") {
       reset({
-        title: "",
-        subject: "",
-        gradeOrClass: "",
-        date: selectedDate ?? "",
-        durationMinutes: 45,
-        learningObjectives: "",
-        materialsNeeded: "",
-        introduction: "",
-        mainActivity: "",
-        conclusion: "",
-        assessmentMethod: "",
-        homeworkNotes: "",
-        gradeBookId: "",
-        chapterId: "",
+        title: prefillValues?.title ?? "",
+        subject: prefillValues?.subject ?? "",
+        gradeOrClass: prefillValues?.gradeOrClass ?? "",
+        date: selectedDate ?? prefillValues?.date ?? "",
+        periodNumber: prefillValues?.periodNumber ?? selectedPeriodNumber ?? undefined,
+        durationMinutes: prefillValues?.durationMinutes ?? 45,
+        learningObjectives: prefillValues?.learningObjectives ?? "",
+        materialsNeeded: prefillValues?.materialsNeeded ?? "",
+        introduction: prefillValues?.introduction ?? "",
+        mainActivity: prefillValues?.mainActivity ?? "",
+        conclusion: prefillValues?.conclusion ?? "",
+        assessmentMethod: prefillValues?.assessmentMethod ?? "",
+        homeworkNotes: prefillValues?.homeworkNotes ?? "",
+        gradeBookId: prefillValues?.gradeBookId ?? "",
+        chapterId: prefillValues?.chapterId ?? "",
       });
     }
-  }, [open, mode, initialValues, selectedDate, reset]);
+  }, [open, mode, initialValues, prefillValues, selectedDate, selectedPeriodNumber, reset]);
 
   // ── Unsaved changes guard — beforeunload only ──────────────────────────────
   // Note: we intentionally skip the TanStack Router onBeforeNavigate subscription
@@ -197,6 +209,7 @@ export function LessonPlanFormDialog({
   // ── Curriculum data ────────────────────────────────────────────────────────
   // Watch the selected gradeBookId so we can fetch chapters for it
   const selectedGradeBookId = watch("gradeBookId") || "";
+  const periodNumber = watch("periodNumber");
 
   // ── Classes for this institution ───────────────────────────────────────────
   const user = useAuthStore((s) => s.user);
@@ -269,6 +282,9 @@ export function LessonPlanFormDialog({
       subject: values.subject,
       gradeOrClass: values.gradeOrClass,
       date: values.date,
+      ...(typeof values.periodNumber === "number"
+        ? { periodNumber: values.periodNumber }
+        : {}),
       durationMinutes: values.durationMinutes,
       learningObjectives: values.learningObjectives || undefined,
       materialsNeeded: values.materialsNeeded || undefined,
@@ -356,6 +372,15 @@ export function LessonPlanFormDialog({
           onSubmit={handleSubmit(onSubmit)}
           className="px-6 pb-6 pt-4 space-y-6"
         >
+          <input
+            type="hidden"
+            {...register("periodNumber", {
+              setValueAs: (value) =>
+                value === "" || value === null || value === undefined
+                  ? undefined
+                  : Number(value),
+            })}
+          />
           {/* ── Section: Core Details ──────────────────────────────────── */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
@@ -446,6 +471,17 @@ export function LessonPlanFormDialog({
                   </p>
                 )}
               </div>
+
+              {typeof periodNumber === "number" && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Period</Label>
+                  <Input
+                    value={`Period ${periodNumber}`}
+                    readOnly
+                    className="neo-input bg-muted/40 text-muted-foreground"
+                  />
+                </div>
+              )}
 
               {/* Date field removed — date is set from the calendar selection */}
 

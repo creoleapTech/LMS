@@ -82,11 +82,17 @@ export function LessonPlanCard({
           <LessonPlanStatusBadge status={plan.status} size="sm" />
         </div>
 
-        {/* Meta row: subject · grade · date · duration */}
+        {/* Meta row: subject · grade · period · date · duration */}
         <p className="text-xs text-muted-foreground">
           <span>{plan.subject}</span>
           <span className="mx-1.5 opacity-40">·</span>
           <span>{plan.gradeOrClass}</span>
+          {typeof plan.periodNumber === "number" && (
+            <>
+              <span className="mx-1.5 opacity-40">·</span>
+              <span>Period {plan.periodNumber}</span>
+            </>
+          )}
           <span className="mx-1.5 opacity-40">·</span>
           <span>{formattedDate}</span>
           <span className="mx-1.5 opacity-40">·</span>

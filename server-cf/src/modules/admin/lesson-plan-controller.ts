@@ -136,6 +136,12 @@ lessonPlanController.post("/", async (c) => {
     throw new BadRequestError("durationMinutes must be a positive number");
   }
 
+  if (body.periodNumber !== undefined && body.periodNumber !== null) {
+    if (!Number.isInteger(body.periodNumber) || body.periodNumber <= 0) {
+      throw new BadRequestError("periodNumber must be a positive whole number");
+    }
+  }
+
   const id = uuid();
   const now = nowISO();
 
@@ -149,6 +155,7 @@ lessonPlanController.post("/", async (c) => {
       subject: body.subject,
       gradeOrClass: body.gradeOrClass,
       date: body.date,
+      periodNumber: body.periodNumber ?? null,
       durationMinutes: body.durationMinutes,
       status: "draft", // Always start as draft regardless of payload
       learningObjectives: body.learningObjectives ?? null,
@@ -229,11 +236,18 @@ lessonPlanController.patch("/:id", async (c) => {
 
   const updateData: Record<string, any> = { updatedAt: nowISO() };
 
+  if (body.periodNumber !== undefined && body.periodNumber !== null) {
+    if (!Number.isInteger(body.periodNumber) || body.periodNumber <= 0) {
+      throw new BadRequestError("periodNumber must be a positive whole number");
+    }
+  }
+
   const allowedFields = [
     "title",
     "subject",
     "gradeOrClass",
     "date",
+    "periodNumber",
     "durationMinutes",
     "learningObjectives",
     "materialsNeeded",

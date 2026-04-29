@@ -13,6 +13,7 @@ export const lessonPlans = sqliteTable("lesson_plans", {
   subject:          text("subject").notNull(),
   gradeOrClass:     text("grade_or_class").notNull(),
   date:             text("date").notNull(),
+  periodNumber:     integer("period_number"),
   durationMinutes:  integer("duration_minutes").notNull(),
 
   // Status lifecycle
