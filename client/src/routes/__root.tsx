@@ -19,9 +19,9 @@ function AppLoader() {
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white">
       <img
-        src="/creo_white.png"
+        src="/creoleap_white_short.svg"
         alt="Creoleap"
-        className="h-14 w-auto object-contain mb-8"
+        className="h-14 w-14 object-contain mb-8"
         style={{ filter: 'brightness(0) saturate(100%) invert(13%) sepia(50%) saturate(800%) hue-rotate(220deg) brightness(90%)' }}
       />
       <div className="flex items-center gap-2">
