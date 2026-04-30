@@ -110,7 +110,7 @@ Implement the full lesson plan feature end-to-end: D1 schema, Hono controller, R
   - When `plans` is empty, render `<LessonPlanEmptyState>` (a simple inline component with an empty-state message and a "New Lesson Plan" CTA button)
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-  - [~] 9.1 Write property tests for grouping utilities — month-view and week-view invariants
+  - [ ] 9.1 Write property tests for grouping utilities — month-view and week-view invariants
     - Create `client/src/pages/lesson-plans/__tests__/grouping.test.ts`
     - Use `fast-check` to generate arbitrary arrays of `LessonPlan` objects with random ISO date strings
     - **Property 4: Month-view grouping invariant** — every plan in a group has a `date` in that group's calendar month; groups are ordered chronologically
@@ -118,12 +118,12 @@ Implement the full lesson plan feature end-to-end: D1 schema, Hono controller, R
     - Tags: `// Feature: lesson-plan, Property 4: Month-view grouping invariant` and `// Feature: lesson-plan, Property 5: Week-view grouping invariant`
     - **Validates: Requirements 2.3, 2.4**
 
-- [~] 10. Checkpoint — Ensure all tests pass
+- [ ] 10. Checkpoint — Ensure all tests pass
   - Run `cd client && npm test` and confirm all property and unit tests pass
   - Fix any failures before proceeding
   - Ask the user if questions arise
 
-- [~] 11. Frontend — `LessonPlansPage` (list page)
+- [ ] 11. Frontend — `LessonPlansPage` (list page)
   - Create `client/src/pages/lesson-plans/LessonPlansPage.tsx`
   - Use `py-8 px-5 sm:px-8 max-w-screen-2xl mx-auto` wrapper matching `MyClassesPage`
   - Page header: "Lesson Plans" title + "New Lesson Plan" button (opens `LessonPlanFormDialog` in create mode)
@@ -136,7 +136,7 @@ Implement the full lesson plan feature end-to-end: D1 schema, Hono controller, R
   - When admin is viewing another teacher's plans, pass `readOnly={true}` to `LessonPlanListView` (Requirement 9.4)
   - _Requirements: 1.1, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 7.6, 9.1, 9.2, 9.3, 9.4_
 
-- [~] 12. Frontend — `LessonPlanDetailPage`
+- [ ] 12. Frontend — `LessonPlanDetailPage`
   - Create `client/src/pages/lesson-plans/LessonPlanDetailPage.tsx`
   - Read `id` from route params via `useParams` / `Route.useParams()`
   - Fetch plan with `useLessonPlan(id)`; show skeleton while loading; show inline error with retry on failure
@@ -147,7 +147,7 @@ Implement the full lesson plan feature end-to-end: D1 schema, Hono controller, R
   - After successful delete, navigate back to `/lesson-plans`
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 5.1, 5.4, 6.1, 6.2, 6.3, 6.4, 7.2, 8.2, 8.3, 8.4_
 
-- [~] 13. Frontend — Route files
+- [ ] 13. Frontend — Route files
   - Create `client/src/routes/lesson-plans/index.tsx`
     - `createFileRoute('/lesson-plans/')` with a `beforeLoad` guard: read stored token and user role from `localStorage` (`auth-storage` key, same pattern as `__root.tsx`); if no token throw `redirect({ to: '/' })`; if role is `staff` throw `redirect({ to: '/dashboard' })`
     - Set `component: LessonPlansPage`
@@ -155,7 +155,7 @@ Implement the full lesson plan feature end-to-end: D1 schema, Hono controller, R
     - `createFileRoute('/lesson-plans/$id')` with `component: LessonPlanDetailPage`
   - _Requirements: 1.3, 1.4_
 
-- [~] 14. Frontend — Sidebar nav item
+- [ ] 14. Frontend — Sidebar nav item
   - In `client/src/modules/sidebar.tsx`, add a new entry to the `navItems` array:
     ```ts
     { name: 'Lesson Plans', path: '/lesson-plans', icon: <BookMarked className="w-5 h-5" />, roles: ['teacher', 'admin', 'super_admin'] }
@@ -164,21 +164,21 @@ Implement the full lesson plan feature end-to-end: D1 schema, Hono controller, R
   - Position the entry after "My Classes" and before "Students" (or wherever it fits the logical flow)
   - _Requirements: 1.1, 1.2_
 
-  - [~] 14.1 Write property test for sidebar role-based visibility
+  - [ ] 14.1 Write property test for sidebar role-based visibility
     - Create `client/src/pages/lesson-plans/__tests__/sidebar.test.tsx`
     - Use `fast-check` to generate arbitrary role strings
     - **Property 1: Role-based sidebar visibility** — "Lesson Plans" nav item is visible if and only if role is `teacher`, `admin`, or `super_admin`; any other role (including `staff`) must not see it
     - Tag: `// Feature: lesson-plan, Property 1: Role-based sidebar visibility`
     - **Validates: Requirements 1.1, 1.2**
 
-- [~] 15. Frontend — `GlobalHeader` PAGE_TITLES entry
+- [ ] 15. Frontend — `GlobalHeader` PAGE_TITLES entry
   - In `client/src/components/GlobalHeader.tsx`, add an entry to the `PAGE_TITLES` array:
     ```ts
     { path: "/lesson-plans", title: "Lesson Plans", subtitle: "Plan and track your teaching sessions" }
     ```
   - _Requirements: 2.1_
 
-- [~] 16. Final checkpoint — Ensure all tests pass
+- [ ] 16. Final checkpoint — Ensure all tests pass
   - Run `cd client && npm test` and confirm all tests pass
   - Verify TypeScript compiles without errors: `cd client && npx tsc --noEmit`
   - Ask the user if questions arise

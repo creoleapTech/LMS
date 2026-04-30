@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Plus, ChevronLeft, ChevronRight, Building2, Users, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Building2, Users, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -265,13 +264,6 @@ export default function LessonPlansPage() {
   };
 
   // ── Plan handlers ──────────────────────────────────────────────────────────
-  const handleNewPlan = () => {
-    setEditingPlan(null);
-    setPrefillValues({});
-    setSelectedPeriodNumber(undefined);
-    setFormMode("create");
-    setFormOpen(true);
-  };
 
   const handleEdit = (id: string) => {
     const plan = plans.find((p) => p.id === id);
@@ -355,15 +347,7 @@ export default function LessonPlansPage() {
             </SelectContent>
           </Select>
 
-          {!isReadOnly && (
-            <Button
-              onClick={handleNewPlan}
-              className="rounded-xl bg-brand-color hover:bg-brand-color/90 shadow-lg shadow-indigo-500/30"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Lesson Plan
-            </Button>
-          )}
+          
         </div>
       </div>
 
@@ -492,26 +476,13 @@ export default function LessonPlansPage() {
         <div className="lg:col-span-3">
           <div className="neo-card rounded-2xl overflow-hidden">
             {/* Day header */}
-            <div className="px-5 py-4 border-b border-white/20 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Selected Day
-                </p>
-                <h2 className="text-base font-bold text-foreground mt-0.5">
-                  {selectedDayLabel}
-                </h2>
-              </div>
-              {!isReadOnly && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="rounded-xl gap-1.5 text-xs"
-                  onClick={handleNewPlan}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Plan
-                </Button>
-              )}
+            <div className="px-5 py-4 border-b border-white/20">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Selected Day
+              </p>
+              <h2 className="text-base font-bold text-foreground mt-0.5">
+                {selectedDayLabel}
+              </h2>
             </div>
 
             {/* Periods for the day */}
@@ -603,17 +574,6 @@ export default function LessonPlansPage() {
                   <p className="text-sm font-medium text-muted-foreground">
                     No lesson plans for this day
                   </p>
-                  {!isReadOnly && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded-xl text-xs gap-1.5"
-                      onClick={handleNewPlan}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Create one
-                    </Button>
-                  )}
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
