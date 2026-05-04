@@ -169,7 +169,7 @@ export function ExaminationFormDialog({
             </div>
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-xl font-semibold leading-tight">
-                {mode === "create" ? "New Examination" : "Edit Examination"}
+                {mode === "create" ? "New Assessment" : "Edit Assessment"}
               </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground mt-0.5">
                 {mode === "create"
@@ -290,7 +290,7 @@ export function ExaminationFormDialog({
               className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30"
             >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {mode === "create" ? "Create Examination" : "Save Changes"}
+              {mode === "create" ? "Create Assessment" : "Save Changes"}
             </Button>
           </div>
         </form>

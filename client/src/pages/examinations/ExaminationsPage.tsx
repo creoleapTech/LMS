@@ -138,13 +138,13 @@ export default function ExaminationsPage() {
 
       {/* ── Page header ───────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Examinations</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Assessments</h1>
         <Button
           onClick={() => setFormOpen(true)}
           className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 gap-2"
         >
           <Plus className="h-4 w-4" />
-          New Examination
+          New Assessment
         </Button>
       </div>
 
@@ -181,7 +181,7 @@ export default function ExaminationsPage() {
       <div className="relative mb-6 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search examinations…"
+          placeholder="Search assessments…"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="pl-9 rounded-xl"
@@ -196,7 +196,7 @@ export default function ExaminationsPage() {
       ) : examinations.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <p className="text-muted-foreground text-sm font-medium">
-            No examinations yet. Create one to get started.
+            No assessments yet. Create one to get started.
           </p>
         </div>
       ) : (
