@@ -24,6 +24,7 @@ const PAGE_TITLES: { path: string; title: string; subtitle?: string }[] = [
   { path: "/reports",     title: "Reports",               subtitle: "Insights and analytics for your LMS" },
   { path: "/settings",    title: "Settings",              subtitle: "Configure your institution and account" },
   { path: "/courses",     title: "Courses",               subtitle: "Manage courses and programs" },
+  { path: "/examinations", title: "Examinations",          subtitle: "Create and manage student assessments" },
 ];
 
 function getPageInfo(pathname: string) {

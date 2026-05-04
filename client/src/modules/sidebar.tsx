@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
-import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, BookOpenText, Users, LogOut, GraduationCap, BookMarked } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, BookOpenText, Users, LogOut, GraduationCap, BookMarked, ClipboardList } from 'lucide-react';
 import { useAuthStore } from '@/store/userAuthStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 
@@ -9,7 +9,7 @@ interface NavItem {
   name: string;
   path: string;
   icon: React.ReactNode;
-  roles: ('admin' | 'super_admin' | 'staff' | 'teacher')[];
+  roles: ('admin' | 'super_admin' | 'staff' | 'teacher' | 'student')[];
 }
 
 const navItems: NavItem[] = [
@@ -19,6 +19,7 @@ const navItems: NavItem[] = [
   { name: 'Institutions', path: '/institutions', icon: <Building className="w-5 h-5" />, roles: ['super_admin'] },
   { name: 'My Classes', path: '/my-classes', icon: <Users className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Lesson Plans', path: '/lesson-plans', icon: <BookMarked className="w-5 h-5" />, roles: ['teacher', 'admin', 'super_admin'] },
+  { name: 'Examinations', path: '/examinations', icon: <ClipboardList className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher', 'student'] },
   { name: 'Students', path: '/students', icon: <GraduationCap className="w-5 h-5" />, roles: ['admin', 'super_admin'] },
   { name: 'Reports', path: '/reports', icon: <BarChart className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
@@ -40,7 +41,7 @@ const Sidebar: React.FC = () => {
 
   if (!user) return null;
 
-  const filteredNavItems = navItems.filter(item => item.roles.includes(user?.role));
+  const filteredNavItems = navItems.filter(item => item.roles.includes(user?.role as any));
 
   return (
     <>

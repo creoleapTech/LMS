@@ -17,11 +17,13 @@ import { Route as ReportsIndexRouteImport } from './routes/reports/index'
 import { Route as MyClassesIndexRouteImport } from './routes/my-classes/index'
 import { Route as LessonPlansIndexRouteImport } from './routes/lesson-plans/index'
 import { Route as InstitutionsIndexRouteImport } from './routes/institutions/index'
+import { Route as ExaminationsIndexRouteImport } from './routes/examinations/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as CurriculumIndexRouteImport } from './routes/curriculum/index'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
 import { Route as LessonPlansIdRouteImport } from './routes/lesson-plans/$id'
 import { Route as InstitutionsIdRouteImport } from './routes/institutions/$id'
+import { Route as ExaminationsIdRouteImport } from './routes/examinations/$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -63,6 +65,11 @@ const InstitutionsIndexRoute = InstitutionsIndexRouteImport.update({
   path: '/institutions/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExaminationsIndexRoute = ExaminationsIndexRouteImport.update({
+  id: '/examinations/',
+  path: '/examinations/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/dashboard/',
   path: '/dashboard/',
@@ -88,14 +95,21 @@ const InstitutionsIdRoute = InstitutionsIdRouteImport.update({
   path: '/institutions/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExaminationsIdRoute = ExaminationsIdRouteImport.update({
+  id: '/examinations/$id',
+  path: '/examinations/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/examinations/$id': typeof ExaminationsIdRoute
   '/institutions/$id': typeof InstitutionsIdRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/examinations/': typeof ExaminationsIndexRoute
   '/institutions/': typeof InstitutionsIndexRoute
   '/lesson-plans/': typeof LessonPlansIndexRoute
   '/my-classes/': typeof MyClassesIndexRoute
@@ -106,11 +120,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/examinations/$id': typeof ExaminationsIdRoute
   '/institutions/$id': typeof InstitutionsIdRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/courses': typeof CoursesIndexRoute
   '/curriculum': typeof CurriculumIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/examinations': typeof ExaminationsIndexRoute
   '/institutions': typeof InstitutionsIndexRoute
   '/lesson-plans': typeof LessonPlansIndexRoute
   '/my-classes': typeof MyClassesIndexRoute
@@ -122,11 +138,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/examinations/$id': typeof ExaminationsIdRoute
   '/institutions/$id': typeof InstitutionsIdRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/examinations/': typeof ExaminationsIndexRoute
   '/institutions/': typeof InstitutionsIndexRoute
   '/lesson-plans/': typeof LessonPlansIndexRoute
   '/my-classes/': typeof MyClassesIndexRoute
@@ -139,11 +157,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/examinations/$id'
     | '/institutions/$id'
     | '/lesson-plans/$id'
     | '/courses/'
     | '/curriculum/'
     | '/dashboard/'
+    | '/examinations/'
     | '/institutions/'
     | '/lesson-plans/'
     | '/my-classes/'
@@ -154,11 +174,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/examinations/$id'
     | '/institutions/$id'
     | '/lesson-plans/$id'
     | '/courses'
     | '/curriculum'
     | '/dashboard'
+    | '/examinations'
     | '/institutions'
     | '/lesson-plans'
     | '/my-classes'
@@ -169,11 +191,13 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/examinations/$id'
     | '/institutions/$id'
     | '/lesson-plans/$id'
     | '/courses/'
     | '/curriculum/'
     | '/dashboard/'
+    | '/examinations/'
     | '/institutions/'
     | '/lesson-plans/'
     | '/my-classes/'
@@ -185,11 +209,13 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ExaminationsIdRoute: typeof ExaminationsIdRoute
   InstitutionsIdRoute: typeof InstitutionsIdRoute
   LessonPlansIdRoute: typeof LessonPlansIdRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
   CurriculumIndexRoute: typeof CurriculumIndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  ExaminationsIndexRoute: typeof ExaminationsIndexRoute
   InstitutionsIndexRoute: typeof InstitutionsIndexRoute
   LessonPlansIndexRoute: typeof LessonPlansIndexRoute
   MyClassesIndexRoute: typeof MyClassesIndexRoute
@@ -257,6 +283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstitutionsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/examinations/': {
+      id: '/examinations/'
+      path: '/examinations'
+      fullPath: '/examinations/'
+      preLoaderRoute: typeof ExaminationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/': {
       id: '/dashboard/'
       path: '/dashboard'
@@ -292,16 +325,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstitutionsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/examinations/$id': {
+      id: '/examinations/$id'
+      path: '/examinations/$id'
+      fullPath: '/examinations/$id'
+      preLoaderRoute: typeof ExaminationsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ExaminationsIdRoute: ExaminationsIdRoute,
   InstitutionsIdRoute: InstitutionsIdRoute,
   LessonPlansIdRoute: LessonPlansIdRoute,
   CoursesIndexRoute: CoursesIndexRoute,
   CurriculumIndexRoute: CurriculumIndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  ExaminationsIndexRoute: ExaminationsIndexRoute,
   InstitutionsIndexRoute: InstitutionsIndexRoute,
   LessonPlansIndexRoute: LessonPlansIndexRoute,
   MyClassesIndexRoute: MyClassesIndexRoute,

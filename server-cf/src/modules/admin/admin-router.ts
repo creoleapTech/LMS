@@ -22,6 +22,7 @@ import { periodConfigController } from "./period-config-controller";
 import { timetableController } from "./timetable-controller";
 import { settingsController } from "./settings-controller";
 import { lessonPlanController } from "./lesson-plan-controller";
+import { examinationController } from "./examination-controller";
 
 // ─── Import staff-module controllers (mounted under admin) ─
 import { classSessionController } from "../staff/class-session-controller";
@@ -69,5 +70,6 @@ adminBaseRouter.route("/period-config", periodConfigController);
 adminBaseRouter.route("/timetable", timetableController);
 adminBaseRouter.route("/settings", settingsController);
 adminBaseRouter.route("/lesson-plans", lessonPlanController);
+adminBaseRouter.route("/examinations", examinationController);
 
 export { adminBaseRouter };
