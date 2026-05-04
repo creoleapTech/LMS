@@ -26,9 +26,8 @@ import { useUpdateExamination } from "./hooks/useUpdateExamination";
 import { useDeleteExamination } from "./hooks/useDeleteExamination";
 import { useSaveColumns } from "./hooks/useSaveColumns";
 import { useSaveCells } from "./hooks/useSaveCells";
-import { ClassSelectorPanel } from "./components/ClassSelectorPanel";
-import { StudentRosterGrid } from "./components/StudentRosterGrid";
-import { ColumnConfigSheet } from "./components/ColumnConfigSheet";
+import { ConfigureClassesDialog } from "./components/ConfigureClassesDialog";
+import { StudentRosterGrid } from "./components/StudentRosterGrid";import { ColumnConfigSheet } from "./components/ColumnConfigSheet";
 import { ExaminationFormDialog } from "./components/ExaminationFormDialog";
 import { ExaminationExportButton } from "./components/ExaminationExportButton";
 import type { ExaminationColumn, ExaminationDetail } from "./types";
@@ -142,15 +141,6 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
       }, 500);
     },
     [id, saveCellsMutation]
-  );
-
-  // ── Class selection change ─────────────────────────────────────────────────
-  const handleClassSelectionChange = useCallback(
-    (ids: string[]) => {
-      setSelectedClassIds(ids);
-      updateMutation.mutate({ id, selectedClassIds: ids });
-    },
-    [id, updateMutation]
   );
 
   // ── Column operations ──────────────────────────────────────────────────────
@@ -332,9 +322,12 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
       {/* Class selector — hidden for students */}
       {!isReadOnly && (
         <div className="neo-card rounded-2xl p-5 mb-6">
-          <ClassSelectorPanel
+          <ConfigureClassesDialog
             selectedClassIds={selectedClassIds}
-            onSelectionChange={handleClassSelectionChange}
+            onApply={(ids) => {
+              setSelectedClassIds(ids);
+              updateMutation.mutate({ id, selectedClassIds: ids });
+            }}
             institutionId={institutionId}
           />
         </div>
