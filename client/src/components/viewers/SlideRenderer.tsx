@@ -347,7 +347,9 @@ function RenderElement({
     height: `${pct(position.height, slideHeight)}%`,
     transform: transforms.length > 0 ? transforms.join(" ") : undefined,
     transformOrigin: "center center",
-    overflow: "hidden",
+    // Images clip to their box; text/shapes use visible so text that renders
+    // slightly taller than the declared PPTX height isn't cut off.
+    overflow: element.type === "image" ? "hidden" : "visible",
     boxShadow: shouldShowShadow ? shadowToCss(element.shadow) : undefined,
   };
 
@@ -424,6 +426,10 @@ function RenderElement({
     boxSizing: "border-box",
     wordWrap: "break-word",
     overflowWrap: "break-word",
+    // Text must be allowed to overflow its declared box — PowerPoint doesn't
+    // clip text boxes by default and web fonts render slightly taller than
+    // PPT's own metrics, causing the last line to be cut if we use hidden.
+    overflow: "visible",
     whiteSpace: bodyProps.wrap === "none" ? "nowrap" : undefined,
   };
 
