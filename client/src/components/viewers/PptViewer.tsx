@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Config } from "@/lib/config";
 import {
   parsePptxProgressive,
@@ -6,6 +6,7 @@ import {
   type SlideData,
 } from "@/lib/pptx-parser";
 import { SlideRenderer } from "./SlideRenderer";
+import { buildWatermarkDataUrl } from "../../lib/watermarkUtils";
 import {
   Loader2,
   ChevronLeft,
@@ -20,6 +21,7 @@ interface PptViewerProps {
   title?: string;
   onPageChange?: (page: number) => void;
   initialPage?: number;
+  watermarkText?: string;
 }
 
 export function PptViewer({
@@ -27,6 +29,7 @@ export function PptViewer({
   title: _title,
   onPageChange,
   initialPage,
+  watermarkText,
 }: PptViewerProps) {
   const [presentation, setPresentation] = useState<PresentationData | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -51,6 +54,11 @@ export function PptViewer({
       elements: [],
     }),
     []
+  );
+
+  const watermarkBg = useMemo(
+    () => (watermarkText ? buildWatermarkDataUrl(watermarkText) : null),
+    [watermarkText]
   );
 
   const scheduleSlideFlush = useCallback(() => {
@@ -348,27 +356,69 @@ export function PptViewer({
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 gap-3">
-        <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
-        <span className="text-muted-foreground font-medium">Loading presentation...</span>
+      <div ref={viewerRef} className="flex flex-col items-center gap-0 select-none ppt-viewer">
+        {isFullscreen && watermarkBg && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: "fixed", inset: 0,
+              pointerEvents: "none", zIndex: 30,
+              backgroundImage: `url(${watermarkBg})`,
+              backgroundRepeat: "repeat",
+              backgroundSize: "320px 160px",
+            }}
+          />
+        )}
+        <div className="flex flex-col items-center justify-center h-96 gap-3">
+          <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+          <span className="text-muted-foreground font-medium">Loading presentation...</span>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 gap-3 text-destructive">
-        <AlertTriangle className="h-10 w-10" />
-        <p className="font-medium">Failed to load presentation</p>
-        <p className="text-sm text-muted-foreground">{error}</p>
+      <div ref={viewerRef} className="flex flex-col items-center gap-0 select-none ppt-viewer">
+        {isFullscreen && watermarkBg && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: "fixed", inset: 0,
+              pointerEvents: "none", zIndex: 30,
+              backgroundImage: `url(${watermarkBg})`,
+              backgroundRepeat: "repeat",
+              backgroundSize: "320px 160px",
+            }}
+          />
+        )}
+        <div className="flex flex-col items-center justify-center h-96 gap-3 text-destructive">
+          <AlertTriangle className="h-10 w-10" />
+          <p className="font-medium">Failed to load presentation</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
       </div>
     );
   }
 
   if (!presentation || presentation.slides.length === 0) {
     return (
-      <div className="flex items-center justify-center h-96 text-muted-foreground">
-        <p>No slides found in this presentation.</p>
+      <div ref={viewerRef} className="flex flex-col items-center gap-0 select-none ppt-viewer">
+        {isFullscreen && watermarkBg && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: "fixed", inset: 0,
+              pointerEvents: "none", zIndex: 30,
+              backgroundImage: `url(${watermarkBg})`,
+              backgroundRepeat: "repeat",
+              backgroundSize: "320px 160px",
+            }}
+          />
+        )}
+        <div className="flex items-center justify-center h-96 text-muted-foreground">
+          <p>No slides found in this presentation.</p>
+        </div>
       </div>
     );
   }
@@ -377,13 +427,27 @@ export function PptViewer({
   const slide = presentation.slides[currentSlide];
 
   return (
-    <div className="flex flex-col items-center gap-0 select-none ppt-viewer">
+    <div ref={viewerRef} className="flex flex-col items-center gap-0 select-none ppt-viewer">
       {/* Print protection */}
       <style>{`
         @media print {
           .ppt-viewer { display: none !important; visibility: hidden !important; }
         }
       `}</style>
+
+      {/* Fullscreen watermark overlay */}
+      {isFullscreen && watermarkBg && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed", inset: 0,
+            pointerEvents: "none", zIndex: 30,
+            backgroundImage: `url(${watermarkBg})`,
+            backgroundRepeat: "repeat",
+            backgroundSize: "320px 160px",
+          }}
+        />
+      )}
 
       {/* Slide with side arrows */}
       <div className="relative flex items-center gap-0 w-full justify-center">

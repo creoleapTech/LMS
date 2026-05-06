@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, forwardRef } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef, useMemo } from "react";
 import HTMLFlipBook from "react-pageflip";
 import {
   Loader2,
@@ -8,11 +8,13 @@ import {
   Maximize,
   Minimize,
 } from "lucide-react";
+import { buildWatermarkDataUrl } from "../../lib/watermarkUtils";
 
 interface PdfFlipBookProps {
   fileUrl: string;
   initialPage?: number;
   onPageChange?: (page: number) => void;
+  watermarkText?: string;
 }
 
 /* ─── Single page wrapper (react-pageflip requires forwardRef children) ─── */
@@ -37,7 +39,7 @@ const Page = forwardRef<HTMLDivElement, { src: string; pageNum: number; totalPag
 Page.displayName = "Page";
 
 /* ─── Main Component ─── */
-export function PdfFlipBook({ fileUrl, initialPage, onPageChange }: PdfFlipBookProps) {
+export function PdfFlipBook({ fileUrl, initialPage, onPageChange, watermarkText }: PdfFlipBookProps) {
   const [pageImages, setPageImages] = useState<string[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -52,6 +54,12 @@ export function PdfFlipBook({ fileUrl, initialPage, onPageChange }: PdfFlipBookP
   const flipBookRef = useRef<any>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  /* ─── Watermark data URL (memoised to avoid re-running canvas on every render) ─── */
+  const watermarkBg = useMemo(
+    () => (watermarkText ? buildWatermarkDataUrl(watermarkText) : null),
+    [watermarkText]
+  );
 
   /* ─── Calculate dimensions to fill available space without clipping ─── */
   const calcDimensions = useCallback((ar: number, fs: boolean) => {
@@ -325,6 +333,20 @@ export function PdfFlipBook({ fileUrl, initialPage, onPageChange }: PdfFlipBookP
         @media print { .pdf-book-viewer { display: none !important; visibility: hidden !important; } }
         .stf__wrapper { box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 1px rgba(0,0,0,0.1) !important; }
       `}</style>
+
+      {/* Fullscreen watermark overlay — rendered inside wrapperRef so it is promoted with the fullscreen element */}
+      {isFullscreen && watermarkBg && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute", inset: 0,
+            pointerEvents: "none", zIndex: 30,
+            backgroundImage: `url(${watermarkBg})`,
+            backgroundRepeat: "repeat",
+            backgroundSize: "320px 160px",
+          }}
+        />
+      )}
 
       <div
         ref={containerRef}

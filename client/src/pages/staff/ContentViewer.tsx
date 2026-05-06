@@ -224,6 +224,7 @@ export function ContentViewer({
           <ContentProtectionWrapper watermarkText={watermarkText} fillHeight>
             <PdfFlipBook
               fileUrl={fileUrl}
+              watermarkText={watermarkText}
               initialPage={contentProgress?.pdfPage}
               onPageChange={handlePdfPageChange}
             />
@@ -234,7 +235,11 @@ export function ContentViewer({
         {content.type === "ppt" && (content.fileUrl || content.videoUrl) && (
           <div className="max-w-5xl mx-auto">
             <ContentProtectionWrapper watermarkText={watermarkText}>
-              <PptViewer storageKey={(content.fileUrl || content.videoUrl)!} title={content.title} />
+              <PptViewer
+                storageKey={(content.fileUrl || content.videoUrl)!}
+                title={content.title}
+                watermarkText={watermarkText}
+              />
             </ContentProtectionWrapper>
           </div>
         )}
