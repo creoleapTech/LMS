@@ -1,11 +1,11 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Config } from "@/lib/config";
 import { ContentProtectionWrapper } from "@/components/protection/ContentProtectionWrapper";
 import { YouTubePlayer } from "@/components/viewers/YouTubePlayer";
-import { PdfFlipBook } from "@/components/viewers/PdfFlipBook";
-import { PptViewer } from "@/components/viewers/PptViewer";
+import { PdfFlipBook, type PdfFlipBookHandle } from "@/components/viewers/PdfFlipBook";
+import { PptViewer, type PptViewerHandle } from "@/components/viewers/PptViewer";
 import { RichTextViewer } from "@/components/editors/RichTextViewer";
 import { QuizViewer } from "@/components/quiz/QuizViewer";
 import { useContentAutoSave } from "@/hooks/useContentAutoSave";
@@ -23,6 +23,7 @@ import {
   Loader2,
   ChevronRight,
   ArrowLeft,
+  Maximize,
 } from "lucide-react";
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
@@ -98,8 +99,13 @@ export function ContentViewer({
   mode,
 }: ContentViewerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const pdfRef   = useRef<PdfFlipBookHandle>(null);
+  const pptRef   = useRef<PptViewerHandle>(null);
   const hasSetInitialTime = useRef(false);
   const isViewMode = mode === "view";
+
+  const [pdfIsFullscreen, setPdfIsFullscreen] = useState(false);
+  const [pptIsFullscreen, setPptIsFullscreen] = useState(false);
 
   const { save: autoSave } = useContentAutoSave(
     isViewMode ? "" : classId,
@@ -164,27 +170,55 @@ export function ContentViewer({
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl lg:text-3xl font-bold">{content.title}</h1>
 
-          {/* Mark as Complete Button */}
-          {!isViewMode && (
-            <Button
-              onClick={() => onMarkComplete(content._id)}
-              disabled={isCompletingLoading}
-              variant={isCompleted ? "secondary" : "default"}
-              size="sm"
-              className={`shrink-0 gap-2 ${
-                isCompleted
-                  ? "bg-green-500/30 text-white hover:bg-green-500/40 border border-green-400/40"
-                  : "bg-white/25 text-white hover:bg-white/35 border border-white/30"
-              }`}
-            >
-              {isCompletingLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4" />
-              )}
-              {isCompleted ? "Completed" : "Mark as Complete"}
-            </Button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Fullscreen button — PDF */}
+            {content.type === "pdf" && !pdfIsFullscreen && (
+              <Button
+                onClick={() => pdfRef.current?.toggleFullscreen()}
+                variant="ghost"
+                size="sm"
+                className="gap-2 bg-white/25 text-white hover:bg-white/35 border border-white/30"
+              >
+                <Maximize className="h-4 w-4" />
+                <span className="hidden sm:inline">Fullscreen</span>
+              </Button>
+            )}
+
+            {/* Fullscreen button — PPT */}
+            {content.type === "ppt" && !pptIsFullscreen && (
+              <Button
+                onClick={() => pptRef.current?.toggleFullscreen()}
+                variant="ghost"
+                size="sm"
+                className="gap-2 bg-white/25 text-white hover:bg-white/35 border border-white/30"
+              >
+                <Maximize className="h-4 w-4" />
+                <span className="hidden sm:inline">Fullscreen</span>
+              </Button>
+            )}
+
+            {/* Mark as Complete Button */}
+            {!isViewMode && (
+              <Button
+                onClick={() => onMarkComplete(content._id)}
+                disabled={isCompletingLoading}
+                variant={isCompleted ? "secondary" : "default"}
+                size="sm"
+                className={`gap-2 ${
+                  isCompleted
+                    ? "bg-green-500/30 text-white hover:bg-green-500/40 border border-green-400/40"
+                    : "bg-white/25 text-white hover:bg-white/35 border border-white/30"
+                }`}
+              >
+                {isCompletingLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+                {isCompleted ? "Completed" : "Mark as Complete"}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -219,16 +253,23 @@ export function ContentViewer({
           </div>
         )}
 
-        {/* PDF — watermarked, fillHeight for flipbook */}
+        {/* PDF — fills the available viewport height so the flipbook can measure and expand */}
         {content.type === "pdf" && fileUrl && (
-          <ContentProtectionWrapper watermarkText={watermarkText} fillHeight>
-            <PdfFlipBook
-              fileUrl={fileUrl}
-              watermarkText={watermarkText}
-              initialPage={contentProgress?.pdfPage}
-              onPageChange={handlePdfPageChange}
-            />
-          </ContentProtectionWrapper>
+          <div
+            className="w-full"
+            style={{ height: "calc(100svh - 220px)", minHeight: 480 }}
+          >
+            <ContentProtectionWrapper watermarkText={watermarkText} fillHeight>
+              <PdfFlipBook
+                ref={pdfRef}
+                fileUrl={fileUrl}
+                watermarkText={watermarkText}
+                initialPage={contentProgress?.pdfPage}
+                onPageChange={handlePdfPageChange}
+                onFullscreenChange={setPdfIsFullscreen}
+              />
+            </ContentProtectionWrapper>
+          </div>
         )}
 
         {/* PPT — watermark wraps the viewer directly */}
@@ -236,9 +277,11 @@ export function ContentViewer({
           <div className="max-w-5xl mx-auto">
             <ContentProtectionWrapper watermarkText={watermarkText}>
               <PptViewer
+                ref={pptRef}
                 storageKey={(content.fileUrl || content.videoUrl)!}
                 title={content.title}
                 watermarkText={watermarkText}
+                onFullscreenChange={setPptIsFullscreen}
               />
             </ContentProtectionWrapper>
           </div>
