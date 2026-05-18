@@ -111,9 +111,92 @@ function outlineToCss(outline?: OutlineData, slideWidth?: number): React.CSSProp
   };
 }
 
+function dashTypeToCss(dashType?: OutlineData["dashType"]): string {
+  if (dashType === "dash" || dashType === "dashDot") return "dashed";
+  if (dashType === "dot") return "dotted";
+  return "solid";
+}
+
+function toRoman(value: number): string {
+  const numerals: Array<[number, string]> = [
+    [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"],
+    [100, "C"], [90, "XC"], [50, "L"], [40, "XL"],
+    [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
+  ];
+  let remaining = Math.max(1, value);
+  let result = "";
+  for (const [num, roman] of numerals) {
+    while (remaining >= num) {
+      result += roman;
+      remaining -= num;
+    }
+  }
+  return result;
+}
+
+function toAlpha(value: number): string {
+  let remaining = Math.max(1, value);
+  let result = "";
+  while (remaining > 0) {
+    remaining -= 1;
+    result = String.fromCharCode(97 + (remaining % 26)) + result;
+    remaining = Math.floor(remaining / 26);
+  }
+  return result;
+}
+
+function formatAutoNumber(value: number, type?: string): string {
+  const rawType = type || "arabicPeriod";
+  const lowerType = rawType.toLowerCase();
+  let label = String(value);
+
+  if (lowerType.includes("roman")) {
+    label = toRoman(value);
+    if (!rawType.includes("Uc")) label = label.toLowerCase();
+  } else if (lowerType.includes("alpha")) {
+    label = toAlpha(value);
+    if (rawType.includes("Uc")) label = label.toUpperCase();
+  }
+
+  if (lowerType.includes("parenboth")) return `(${label})`;
+  if (lowerType.includes("parenr")) return `${label})`;
+  if (lowerType.includes("plain")) return label;
+  return `${label}.`;
+}
+
+function buildParagraphMarkers(paragraphs: ParagraphData[]): Array<string | undefined> {
+  const counters = new Map<number, number>();
+
+  return paragraphs.map((para) => {
+    const level = para.level ?? 0;
+
+    for (const key of Array.from(counters.keys())) {
+      if (key > level) counters.delete(key);
+    }
+
+    if (para.bulletType === "number") {
+      const previous = counters.get(level);
+      const next = previous === undefined ? (para.bulletStartAt ?? 1) : previous + 1;
+      counters.set(level, next);
+      return formatAutoNumber(next, para.bulletAutoNumType);
+    }
+
+    if (para.bulletType === "bullet" && para.bulletChar) {
+      return para.bulletChar;
+    }
+
+    if (para.marginLeft && para.indent && para.indent < 0) {
+      return "•";
+    }
+
+    counters.delete(level);
+    return undefined;
+  });
+}
+
 // ── Text Rendering ─────────────────────────────────────────────────
 
-function RenderRun({ run, slideWidth }: { run: TextRunData; slideWidth: number }) {
+function RenderRun({ run, slideWidth, preserveWords }: { run: TextRunData; slideWidth: number; preserveWords?: boolean }) {
   if (run.text === "\n") return <br />;
 
   const style: React.CSSProperties = {
@@ -138,7 +221,8 @@ function RenderRun({ run, slideWidth }: { run: TextRunData; slideWidth: number }
         : "0.7em",
     } : {}),
     whiteSpace: "pre-wrap",
-    wordBreak: "break-word",
+    wordBreak: preserveWords ? "normal" : "break-word",
+    overflowWrap: preserveWords ? "normal" : undefined,
   };
 
   return <span style={style}>{run.text}</span>;
@@ -149,45 +233,56 @@ function RenderParagraph({
   slideWidth,
   isFirst,
   isLast,
+  preserveWords,
+  listMarker,
 }: { 
   para: ParagraphData; 
   slideWidth: number;
   isFirst: boolean;
   isLast: boolean;
+  preserveWords?: boolean;
+  listMarker?: string;
 }) {
   // Calculate line height from lineSpacing (100 = normal)
   const lineHeight = para.lineSpacing ? para.lineSpacing / 100 : 1.2;
   
+  const inferredBulletChar = listMarker || para.bulletChar || (para.marginLeft && para.indent && para.indent < 0 ? "•" : undefined);
+  const marginLeftPt = para.marginLeft ?? (para.level ? (para.level + 1) * 18 : 0);
+  const indentPt = para.indent ?? (inferredBulletChar ? -18 : 0);
+  const markerWidthPt = inferredBulletChar ? Math.max(Math.abs(indentPt), para.bulletSize ? 14 * (para.bulletSize / 100) : 14) : 0;
+  const paddingLeftPt = inferredBulletChar ? Math.max(marginLeftPt, markerWidthPt) : marginLeftPt;
+
   const style: React.CSSProperties = {
     textAlign: para.alignment || "left",
     margin: 0,
     paddingTop: !isFirst && para.spaceBefore ? ptToCqw(para.spaceBefore, slideWidth) : undefined,
     paddingBottom: !isLast && para.spaceAfter ? ptToCqw(para.spaceAfter, slideWidth) : undefined,
-    paddingLeft: para.marginLeft ? ptToCqw(para.marginLeft, slideWidth) : 
-                 (para.level ? ptToCqw((para.level + 1) * 18, slideWidth) : undefined),
-    textIndent: para.indent ? ptToCqw(para.indent, slideWidth) : undefined,
+    paddingLeft: paddingLeftPt !== 0 ? ptToCqw(paddingLeftPt, slideWidth) : undefined,
+    textIndent: indentPt !== 0 ? ptToCqw(indentPt, slideWidth) : undefined,
     lineHeight,
     minHeight: "1em",
   };
 
   const isEmpty = para.runs.length === 0 || para.runs.every((r) => !r.text.trim());
 
-  // Bullet styling
-  const bulletStyle: React.CSSProperties = para.bulletChar ? {
-    display: "inline-block",
-    marginRight: ptToCqw(6, slideWidth),
-    color: para.bulletColor || "inherit",
-    fontSize: para.bulletSize ? `${para.bulletSize}%` : undefined,
-    minWidth: ptToCqw(12, slideWidth),
-  } : {};
-
   return (
     <div style={style}>
-      {para.bulletChar && !isEmpty && (
-        <span style={bulletStyle}>{para.bulletChar}</span>
+      {inferredBulletChar && !isEmpty && (
+        <span style={{
+          display: "inline-block",
+          width: ptToCqw(markerWidthPt, slideWidth),
+          textAlign: para.alignment === "right" ? "left" : "left",
+          color: para.bulletColor || para.runs[0]?.color || "inherit",
+          fontSize: para.bulletSize ? `${para.bulletSize}%` : (para.runs[0]?.fontSize ? ptToCqw(para.runs[0].fontSize, slideWidth) : undefined),
+          fontFamily: para.bulletFont || para.runs[0]?.fontFamily || undefined,
+          fontWeight: para.runs[0]?.bold ? 700 : undefined,
+          fontStyle: para.runs[0]?.italic ? "italic" : undefined,
+        }}>
+          {inferredBulletChar}
+        </span>
       )}
       {para.runs.map((run, i) => (
-        <RenderRun key={i} run={run} slideWidth={slideWidth} />
+        <RenderRun key={i} run={run} slideWidth={slideWidth} preserveWords={preserveWords} />
       ))}
       {isEmpty && <span>&nbsp;</span>}
     </div>
@@ -207,21 +302,22 @@ function RenderTable({
 }) {
   // Calculate total table dimensions
   const totalGridWidth = table.gridCols.reduce((sum, w) => sum + w, 0);
-  const totalRowHeight = table.rows.reduce((sum, r) => sum + r.height, 0);
+  const safeTotalGridWidth = totalGridWidth > 0 ? totalGridWidth : table.gridCols.length || 1;
   
   return (
-    <div style={{ ...baseStyle, overflow: "visible" }}>
+    <div style={{ ...baseStyle, overflow: "visible", minWidth: emuToCqw(totalGridWidth, slideWidth) }}>
       <table 
         style={{
           width: "100%",
-          height: "100%",
+          minWidth: emuToCqw(totalGridWidth, slideWidth),
           borderCollapse: "collapse",
           tableLayout: "fixed",
+          fontVariantNumeric: "tabular-nums",
         }}
       >
         <colgroup>
-          {table.gridCols.map((w, i) => (
-            <col key={i} style={{ width: `${(w / totalGridWidth) * 100}%` }} />
+          {(table.gridCols.length ? table.gridCols : [safeTotalGridWidth]).map((w, i) => (
+            <col key={i} style={{ width: `${(Math.max(w, 1) / safeTotalGridWidth) * 100}%` }} />
           ))}
         </colgroup>
         <tbody>
@@ -229,7 +325,6 @@ function RenderTable({
             <RenderTableRow 
               key={rowIdx}
               row={row}
-              rowHeight={(row.height / totalRowHeight) * 100}
               slideWidth={slideWidth}
             />
           ))}
@@ -241,15 +336,13 @@ function RenderTable({
 
 function RenderTableRow({
   row,
-  rowHeight,
   slideWidth,
 }: {
   row: TableRowData;
-  rowHeight: number;
   slideWidth: number;
 }) {
   return (
-    <tr style={{ height: `${rowHeight}%` }}>
+    <tr style={{ height: emuToCqw(Math.max(row.height, 1), slideWidth) }}>
       {row.cells.map((cell, cellIdx) => (
         <RenderTableCell 
           key={cellIdx} 
@@ -270,20 +363,19 @@ function RenderTableCell({
 }) {
   const fillCss = fillToCss(cell.fill);
   
-  // Build border styles
   const borderStyle: React.CSSProperties = {};
-  if (cell.borders) {
-    if (cell.borders.left) {
-      borderStyle.borderLeft = `${cell.borders.left.width}pt solid ${cell.borders.left.color}`;
-    }
-    if (cell.borders.right) {
-      borderStyle.borderRight = `${cell.borders.right.width}pt solid ${cell.borders.right.color}`;
-    }
-    if (cell.borders.top) {
-      borderStyle.borderTop = `${cell.borders.top.width}pt solid ${cell.borders.top.color}`;
-    }
-    if (cell.borders.bottom) {
-      borderStyle.borderBottom = `${cell.borders.bottom.width}pt solid ${cell.borders.bottom.color}`;
+  const sides = ["left", "right", "top", "bottom"] as const;
+  const defaultBorder = "0.5pt solid #d0d0d0";
+  
+  for (const side of sides) {
+    const borderKey = `border${side.charAt(0).toUpperCase() + side.slice(1)}` as keyof React.CSSProperties;
+    const borderData = cell.borders?.[side];
+    if (borderData && borderData.width > 0) {
+      (borderStyle as any)[borderKey] = `${borderData.width}pt ${dashTypeToCss(borderData.dashType)} ${borderData.color}`;
+    } else if (borderData && borderData.width === 0) {
+      (borderStyle as any)[borderKey] = "none";
+    } else {
+      (borderStyle as any)[borderKey] = defaultBorder;
     }
   }
   
@@ -292,8 +384,14 @@ function RenderTableCell({
     ...borderStyle,
     padding: ptToCqw(2, slideWidth),
     verticalAlign: "top",
-    overflow: "hidden",
+    overflow: "visible",
+    boxSizing: "border-box",
+    whiteSpace: "normal",
+    overflowWrap: "normal",
+    wordBreak: "normal",
   };
+
+  const markers = buildParagraphMarkers(cell.paragraphs);
   
   return (
     <td 
@@ -308,6 +406,8 @@ function RenderTableCell({
           slideWidth={slideWidth}
           isFirst={i === 0}
           isLast={i === cell.paragraphs.length - 1}
+          preserveWords
+          listMarker={markers[i]}
         />
       ))}
     </td>
@@ -433,6 +533,8 @@ function RenderElement({
     whiteSpace: bodyProps.wrap === "none" ? "nowrap" : undefined,
   };
 
+  const markers = element.paragraphs ? buildParagraphMarkers(element.paragraphs) : [];
+
   return (
     <div style={shapeStyle}>
       {element.paragraphs && (
@@ -444,6 +546,7 @@ function RenderElement({
               slideWidth={slideWidth}
               isFirst={i === 0}
               isLast={i === element.paragraphs!.length - 1}
+              listMarker={markers[i]}
             />
           ))}
         </div>
@@ -468,9 +571,6 @@ export const SlideRenderer = memo(function SlideRenderer({
   const bgStyle = bgToCss(slide.background);
   const aspectRatio = slideWidth / slideHeight;
 
-  // Default font size: ~18pt equivalent scaled to container (common PPT default)
-  const defaultFontSize = ptToCqw(18, slideWidth);
-  
   // Sort elements by their position to handle z-order (elements later in array are on top)
   const sortedElements = useMemo(() => {
     // Keep original order - PPT elements are already in z-order
@@ -493,7 +593,6 @@ export const SlideRenderer = memo(function SlideRenderer({
           ...bgStyle,
           overflow: "hidden",
           borderRadius: "4px",
-          fontSize: defaultFontSize,
           fontFamily: "'Calibri', 'Segoe UI', Arial, sans-serif",
           lineHeight: 1.2,
           WebkitFontSmoothing: "antialiased",

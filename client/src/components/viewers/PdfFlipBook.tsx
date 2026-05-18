@@ -22,6 +22,7 @@ interface PdfFlipBookProps {
   initialPage?: number;
   onPageChange?: (page: number) => void;
   onFullscreenChange?: (fs: boolean) => void;
+  onLoadError?: (error: unknown) => void;
   watermarkText?: string;
 }
 
@@ -49,7 +50,7 @@ Page.displayName = "Page";
 /* ─── Main Component ─── */
 export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
   function PdfFlipBook(
-    { fileUrl, initialPage, onPageChange, onFullscreenChange, watermarkText },
+    { fileUrl, initialPage, onPageChange, onFullscreenChange, onLoadError, watermarkText },
     ref,
   ) {
     const [pageImages, setPageImages]         = useState<string[]>([]);
@@ -206,12 +207,13 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
 
           if (!cancelled) { setPageImages(images); setLoading(false); }
         } catch (err: any) {
+          onLoadError?.(err);
           if (!cancelled) { setError(err.message || "Failed to load PDF"); setLoading(false); }
         }
       }
       loadAndRender();
       return () => { cancelled = true; };
-    }, [fileUrl]);
+    }, [fileUrl, onLoadError]);
 
     /* ─── Jump to initial page ─── */
     useEffect(() => {

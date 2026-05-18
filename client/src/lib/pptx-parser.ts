@@ -27,7 +27,7 @@ export interface SlideData {
 }
 
 export interface BackgroundData {
-  type: "solid" | "gradient" | "image";
+  type: "solid" | "gradient" | "image" | "none";
   color?: string;
   gradientStops?: { position: number; color: string }[];
   imageData?: string;
@@ -91,9 +91,13 @@ export interface FillData {
 export interface ParagraphData {
   alignment?: "left" | "center" | "right" | "justify";
   runs: TextRunData[];
+  bulletType?: "bullet" | "number";
   bulletChar?: string;
+  bulletAutoNumType?: string;
   bulletColor?: string;
   bulletSize?: number;
+  bulletFont?: string;
+  bulletStartAt?: number;
   level?: number;
   spaceBefore?: number;
   spaceAfter?: number;
@@ -183,6 +187,13 @@ const FONT_STACKS: Record<string, string> = {
 
 const DEFAULT_FONT_STACK = "'Calibri', 'Segoe UI', Arial, sans-serif";
 
+interface ThemeFonts {
+  majorLatin?: string;
+  minorLatin?: string;
+}
+
+let activeThemeFonts: ThemeFonts = {};
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 /** Parse XML string into a Document */
@@ -225,11 +236,18 @@ function emuToPoints(emu: number): number {
 /** Get a font stack for a given font family */
 function getFontStack(fontFamily: string | undefined): string {
   if (!fontFamily) return DEFAULT_FONT_STACK;
-  // Check if we have a predefined stack
-  const stack = FONT_STACKS[fontFamily];
+  const normalizedFont = fontFamily.trim().replace(/^['"]|['"]$/g, "");
+  if (normalizedFont === "+mj-lt" || normalizedFont === "+mj-ea" || normalizedFont === "+mj-cs") {
+    return getFontStack(activeThemeFonts.majorLatin || "Times New Roman");
+  }
+  if (normalizedFont === "+mn-lt" || normalizedFont === "+mn-ea" || normalizedFont === "+mn-cs") {
+    return getFontStack(activeThemeFonts.minorLatin || "Calibri");
+  }
+  const knownFont = Object.keys(FONT_STACKS).find((name) => name.toLowerCase() === normalizedFont.toLowerCase());
+  const stack = knownFont ? FONT_STACKS[knownFont] : undefined;
   if (stack) return stack;
-  // Build a fallback stack
-  return `'${fontFamily}', ${DEFAULT_FONT_STACK}`;
+  if (normalizedFont.toLowerCase().includes("times")) return FONT_STACKS["Times New Roman"];
+  return `'${normalizedFont}', ${DEFAULT_FONT_STACK}`;
 }
 
 /** Parse hex color and apply modifiers (lumMod, lumOff, tint, shade, alpha) */
@@ -583,6 +601,19 @@ function parseThemeColors(themeXml: string): Map<string, string> {
   if (colors.has("lt2")) colors.set("bg2", colors.get("lt2")!);
 
   return colors;
+}
+
+function parseThemeFonts(themeXml: string): ThemeFonts {
+  const doc = parseXml(themeXml);
+  const fontScheme = getFirstByLocal(doc, "fontScheme");
+  if (!fontScheme) return {};
+
+  const majorFont = getDirectChildByLocal(fontScheme, "majorFont");
+  const minorFont = getDirectChildByLocal(fontScheme, "minorFont");
+  const majorLatin = majorFont ? getDirectChildByLocal(majorFont, "latin")?.getAttribute("typeface") || undefined : undefined;
+  const minorLatin = minorFont ? getDirectChildByLocal(minorFont, "latin")?.getAttribute("typeface") || undefined : undefined;
+
+  return { majorLatin, minorLatin };
 }
 
 // ── Slide Layout/Master Background Parser ──
@@ -968,21 +999,6 @@ async function parseTable(
   graphicFrame: Element,
   themeColors: Map<string, string>
 ): Promise<SlideElement | null> {
-  // Get position from xfrm
-  const xfrm = getFirstByLocal(graphicFrame, "xfrm");
-  if (!xfrm) return null;
-  
-  const off = getFirstByLocal(xfrm, "off");
-  const ext = getFirstByLocal(xfrm, "ext");
-  if (!off || !ext) return null;
-  
-  const pos = {
-    x: parseInt(off.getAttribute("x") || "0"),
-    y: parseInt(off.getAttribute("y") || "0"),
-    width: parseInt(ext.getAttribute("cx") || "0"),
-    height: parseInt(ext.getAttribute("cy") || "0"),
-  };
-  
   // Find the table element
   const tbl = getFirstByLocal(graphicFrame, "tbl");
   if (!tbl) return null;
@@ -1002,7 +1018,8 @@ async function parseTable(
   for (const tr of getElementsByLocal(tbl, "tr")) {
     if (tr.parentElement !== tbl) continue;
     
-    const height = parseInt(tr.getAttribute("h") || "0");
+    const rawHeight = parseInt(tr.getAttribute("h") || "0");
+    const height = rawHeight > 0 ? rawHeight : 370800; // ~29.2pt default row height
     const cells: TableCellData[] = [];
     
     for (const tc of getElementsByLocal(tr, "tc")) {
@@ -1012,7 +1029,7 @@ async function parseTable(
       const tcPr = getFirstByLocal(tc, "tcPr");
       const fill = tcPr ? parseFill(tcPr, themeColors) : undefined;
       
-      // Parse cell borders
+      // Parse cell borders - only add object if at least one side is present
       const borders: TableCellData["borders"] = {};
       if (tcPr) {
         const lnL = getFirstByLocal(tcPr, "lnL");
@@ -1034,10 +1051,11 @@ async function parseTable(
       const gridSpan = parseInt(tc.getAttribute("gridSpan") || "1");
       const rowSpan = parseInt(tc.getAttribute("rowSpan") || "1");
       
+      const hasBorders = Object.keys(borders).length > 0;
       cells.push({
         paragraphs,
         fill,
-        borders,
+        ...(hasBorders ? { borders } : {}),
         gridSpan: gridSpan > 1 ? gridSpan : undefined,
         rowSpan: rowSpan > 1 ? rowSpan : undefined,
       });
@@ -1045,11 +1063,36 @@ async function parseTable(
     
     rows.push({ height, cells });
   }
+
+  const xfrm = getDirectChildByLocal(graphicFrame, "xfrm") || getFirstByLocal(graphicFrame, "xfrm");
+  if (!xfrm) return null;
+  
+  const off = getDirectChildByLocal(xfrm, "off") || getFirstByLocal(xfrm, "off");
+  const ext = getDirectChildByLocal(xfrm, "ext") || getFirstByLocal(xfrm, "ext");
+  if (!off || !ext) return null;
+
+  const gridWidth = gridCols.reduce((sum, w) => sum + Math.max(w, 0), 0);
+  const rowsHeight = rows.reduce((sum, r) => sum + Math.max(r.height, 0), 0);
+  const rawWidth = parseInt(ext.getAttribute("cx") || "0");
+  const rawHeight = parseInt(ext.getAttribute("cy") || "0");
+  const fallbackColWidth = gridCols.length ? Math.floor(rawWidth / gridCols.length) : rawWidth;
+  const normalizedGridCols = gridCols.length
+    ? gridCols.map((w) => w > 0 ? w : fallbackColWidth)
+    : (rows[0]?.cells.length
+      ? Array.from({ length: rows[0].cells.length }, () => Math.floor(rawWidth / rows[0].cells.length))
+      : []);
+  
+  const pos = {
+    x: parseInt(off.getAttribute("x") || "0"),
+    y: parseInt(off.getAttribute("y") || "0"),
+    width: rawWidth > 0 ? Math.max(rawWidth, gridWidth) : gridWidth,
+    height: rawHeight > 0 ? Math.max(rawHeight, rowsHeight) : rowsHeight,
+  };
   
   return {
     type: "table",
     position: pos,
-    table: { rows, gridCols },
+    table: { rows, gridCols: normalizedGridCols },
   };
 }
 
@@ -1059,17 +1102,28 @@ function parseCellBorder(
   themeColors: Map<string, string>
 ): OutlineData | undefined {
   const w = parseInt(ln.getAttribute("w") || "0");
-  if (w <= 0) return undefined;
   
   const noFill = getFirstByLocal(ln, "noFill");
-  if (noFill) return undefined;
+  if (noFill) return { color: "transparent", width: 0, dashType: "solid" };
+  
+  if (w <= 0) return { color: "transparent", width: 0, dashType: "solid" };
   
   const color = parseColor(ln, themeColors) || "#000000";
+  
+  // Parse dash type
+  let dashType: OutlineData["dashType"] = "solid";
+  const prstDash = getFirstByLocal(ln, "prstDash");
+  if (prstDash) {
+    const val = prstDash.getAttribute("val") || "solid";
+    if (val === "dash" || val === "lgDash" || val === "sysDash") dashType = "dash";
+    else if (val === "dot" || val === "sysDot") dashType = "dot";
+    else if (val === "dashDot" || val === "lgDashDot") dashType = "dashDot";
+  }
   
   return {
     color,
     width: emuToPoints(w),
-    dashType: "solid",
+    dashType,
   };
 }
 
@@ -1268,9 +1322,151 @@ function parseCornerRadius(spPr: Element): number | undefined {
   return undefined;
 }
 
+function getDirectChildrenByLocal(parent: Element, localName: string): Element[] {
+  return Array.from(parent.children).filter((el) => el.localName === localName);
+}
+
+function getDirectChildByLocal(parent: Element, localName: string): Element | null {
+  return getDirectChildrenByLocal(parent, localName)[0] || null;
+}
+
+function parseBulletAutoNumChar(type: string): string {
+  if (type.includes("alpha")) return "a.";
+  if (type.includes("roman")) return "i.";
+  return "1.";
+}
+
+function normalizeBulletChar(char: string, typeface?: string | null): string {
+  const code = char.codePointAt(0);
+  const font = (typeface || "").toLowerCase();
+
+  if (char === "·" || char === "∙" || char === "●") return "•";
+  if (!code) return "•";
+
+  if (font.includes("wingdings") || font.includes("webdings") || font.includes("symbol")) {
+    if (code === 0xf0fc) return "✓";
+    if (code === 0xf0d8) return "➢";
+    if (code === 0xf0a7 || code === 0xf06e) return "▪";
+    if (code >= 0xe000 && code <= 0xf8ff) return "•";
+  }
+
+  if (code >= 0xf000 && code <= 0xf0ff) return "•";
+
+  return char;
+}
+
+function applyParagraphProperties(
+  para: ParagraphData,
+  pPr: Element,
+  themeColors: Map<string, string>,
+  defaultRunProps: Partial<TextRunData>,
+  overrideExisting: boolean,
+): boolean {
+  let hasExplicitBulletSetting = false;
+
+  const algn = pPr.getAttribute("algn");
+  if (algn && (overrideExisting || para.alignment === undefined)) {
+    if (algn === "ctr") para.alignment = "center";
+    else if (algn === "r") para.alignment = "right";
+    else if (algn === "just") para.alignment = "justify";
+    else para.alignment = "left";
+  }
+
+  const lvl = pPr.getAttribute("lvl");
+  if (lvl && (overrideExisting || para.level === undefined)) para.level = parseInt(lvl);
+  
+  const indent = pPr.getAttribute("indent");
+  if (indent && (overrideExisting || para.indent === undefined)) para.indent = emuToPoints(parseInt(indent));
+  
+  const marL = pPr.getAttribute("marL");
+  if (marL && (overrideExisting || para.marginLeft === undefined)) para.marginLeft = emuToPoints(parseInt(marL));
+  
+  const defTabSz = pPr.getAttribute("defTabSz");
+  if (defTabSz && (overrideExisting || para.defTabSz === undefined)) para.defTabSz = emuToPoints(parseInt(defTabSz));
+
+  const buNone = getDirectChildByLocal(pPr, "buNone");
+  if (buNone) {
+    if (overrideExisting) {
+      para.bulletType = undefined;
+      para.bulletChar = undefined;
+      para.bulletAutoNumType = undefined;
+      para.bulletColor = undefined;
+      para.bulletSize = undefined;
+      para.bulletFont = undefined;
+      para.bulletStartAt = undefined;
+    }
+    return true;
+  }
+
+  const buChar = getDirectChildByLocal(pPr, "buChar");
+  if (buChar && (overrideExisting || para.bulletChar === undefined)) {
+    const buFont = getDirectChildByLocal(pPr, "buFont");
+    para.bulletType = "bullet";
+    para.bulletChar = normalizeBulletChar(buChar.getAttribute("char") || "•", buFont?.getAttribute("typeface"));
+    para.bulletAutoNumType = undefined;
+    hasExplicitBulletSetting = true;
+  }
+
+  const buAutoNum = getDirectChildByLocal(pPr, "buAutoNum");
+  if (buAutoNum && (overrideExisting || para.bulletChar === undefined)) {
+    const autoNumType = buAutoNum.getAttribute("type") || "arabicPeriod";
+    para.bulletType = "number";
+    para.bulletAutoNumType = autoNumType;
+    para.bulletChar = parseBulletAutoNumChar(autoNumType);
+    const startAt = buAutoNum.getAttribute("startAt");
+    if (startAt) para.bulletStartAt = parseInt(startAt);
+    hasExplicitBulletSetting = true;
+  }
+  
+  const buClr = getDirectChildByLocal(pPr, "buClr");
+  if (buClr && (overrideExisting || para.bulletColor === undefined)) {
+    para.bulletColor = parseColor(buClr, themeColors);
+  }
+  
+  const buSzPct = getDirectChildByLocal(pPr, "buSzPct");
+  if (buSzPct && (overrideExisting || para.bulletSize === undefined)) {
+    para.bulletSize = parseInt(buSzPct.getAttribute("val") || "100000") / 1000;
+  }
+  
+  const buFont = getDirectChildByLocal(pPr, "buFont");
+  if (buFont && (overrideExisting || para.bulletFont === undefined)) {
+    para.bulletFont = getFontStack(buFont.getAttribute("typeface") || undefined);
+  }
+
+  const spcBef = getDirectChildByLocal(pPr, "spcBef");
+  if (spcBef && (overrideExisting || para.spaceBefore === undefined)) {
+    const pts = getFirstByLocal(spcBef, "spcPts");
+    const pct = getFirstByLocal(spcBef, "spcPct");
+    if (pts) para.spaceBefore = parseInt(pts.getAttribute("val") || "0") / 100;
+    else if (pct) para.spaceBefore = parseInt(pct.getAttribute("val") || "0") / 1000;
+  }
+  
+  const spcAft = getDirectChildByLocal(pPr, "spcAft");
+  if (spcAft && (overrideExisting || para.spaceAfter === undefined)) {
+    const pts = getFirstByLocal(spcAft, "spcPts");
+    const pct = getFirstByLocal(spcAft, "spcPct");
+    if (pts) para.spaceAfter = parseInt(pts.getAttribute("val") || "0") / 100;
+    else if (pct) para.spaceAfter = parseInt(pct.getAttribute("val") || "0") / 1000;
+  }
+  
+  const lnSpc = getDirectChildByLocal(pPr, "lnSpc");
+  if (lnSpc && (overrideExisting || para.lineSpacing === undefined)) {
+    const pct = getFirstByLocal(lnSpc, "spcPct");
+    if (pct) para.lineSpacing = parseInt(pct.getAttribute("val") || "100000") / 1000;
+  }
+
+  const defRPr = getDirectChildByLocal(pPr, "defRPr");
+  if (defRPr && (overrideExisting || Object.keys(defaultRunProps).length === 0)) {
+    Object.assign(defaultRunProps, parseRunProperties(defRPr, themeColors));
+  }
+
+  return hasExplicitBulletSetting;
+}
+
 /** Parse paragraphs from txBody */
 function parseParagraphs(txBody: Element, themeColors: Map<string, string>): ParagraphData[] {
   const paragraphs: ParagraphData[] = [];
+  const lstStyle = getDirectChildByLocal(txBody, "lstStyle");
 
   for (const p of getElementsByLocal(txBody, "p")) {
     // Only direct children paragraphs
@@ -1278,91 +1474,43 @@ function parseParagraphs(txBody: Element, themeColors: Map<string, string>): Par
 
     const para: ParagraphData = { runs: [] };
 
-    // Paragraph properties
-    const pPr = getFirstByLocal(p, "pPr");
+    // Default run properties for the paragraph
+    const defaultRunProps: Partial<TextRunData> = {};
+
+    const pPr = getDirectChildByLocal(p, "pPr");
+    const level = pPr?.getAttribute("lvl") ? parseInt(pPr.getAttribute("lvl") || "0") : 0;
+    const defaultStyle = lstStyle ? getDirectChildByLocal(lstStyle, "defPPr") : null;
+    const levelStyle = lstStyle ? getDirectChildByLocal(lstStyle, `lvl${level + 1}pPr`) : null;
+
+    if (defaultStyle) {
+      applyParagraphProperties(para, defaultStyle, themeColors, defaultRunProps, false);
+    }
+
+    if (levelStyle) {
+      applyParagraphProperties(para, levelStyle, themeColors, defaultRunProps, false);
+    }
+
     if (pPr) {
-      const algn = pPr.getAttribute("algn");
-      if (algn === "ctr") para.alignment = "center";
-      else if (algn === "r") para.alignment = "right";
-      else if (algn === "just") para.alignment = "justify";
-      else para.alignment = "left";
+      applyParagraphProperties(para, pPr, themeColors, defaultRunProps, true);
+    }
 
-      const lvl = pPr.getAttribute("lvl");
-      if (lvl) para.level = parseInt(lvl);
-      
-      // Indentation
-      const indent = pPr.getAttribute("indent");
-      if (indent) para.indent = emuToPoints(parseInt(indent));
-      
-      const marL = pPr.getAttribute("marL");
-      if (marL) para.marginLeft = emuToPoints(parseInt(marL));
-      
-      // Default tab size
-      const defTabSz = pPr.getAttribute("defTabSz");
-      if (defTabSz) para.defTabSz = emuToPoints(parseInt(defTabSz));
-
-      // Bullet
-      const buChar = getFirstByLocal(pPr, "buChar");
-      if (buChar) {
-        para.bulletChar = buChar.getAttribute("char") || "•";
-      }
-      const buAutoNum = getFirstByLocal(pPr, "buAutoNum");
-      if (buAutoNum) {
-        const type = buAutoNum.getAttribute("type") || "arabicPeriod";
-        if (type.includes("alpha")) para.bulletChar = "a.";
-        else if (type.includes("roman")) para.bulletChar = "i.";
-        else para.bulletChar = "1.";
-      }
-      
-      // Bullet color
-      const buClr = getFirstByLocal(pPr, "buClr");
-      if (buClr) {
-        para.bulletColor = parseColor(buClr, themeColors);
-      }
-      
-      // Bullet size (percentage)
-      const buSzPct = getFirstByLocal(pPr, "buSzPct");
-      if (buSzPct) {
-        para.bulletSize = parseInt(buSzPct.getAttribute("val") || "100000") / 1000;
-      }
-
-      // Spacing before
-      const spcBef = getFirstByLocal(pPr, "spcBef");
-      if (spcBef) {
-        const pts = getFirstByLocal(spcBef, "spcPts");
-        const pct = getFirstByLocal(spcBef, "spcPct");
-        if (pts) para.spaceBefore = parseInt(pts.getAttribute("val") || "0") / 100;
-        else if (pct) para.spaceBefore = parseInt(pct.getAttribute("val") || "0") / 1000;
-      }
-      
-      // Spacing after
-      const spcAft = getFirstByLocal(pPr, "spcAft");
-      if (spcAft) {
-        const pts = getFirstByLocal(spcAft, "spcPts");
-        const pct = getFirstByLocal(spcAft, "spcPct");
-        if (pts) para.spaceAfter = parseInt(pts.getAttribute("val") || "0") / 100;
-        else if (pct) para.spaceAfter = parseInt(pct.getAttribute("val") || "0") / 1000;
-      }
-      
-      // Line spacing
-      const lnSpc = getFirstByLocal(pPr, "lnSpc");
-      if (lnSpc) {
-        const pct = getFirstByLocal(lnSpc, "spcPct");
-        if (pct) para.lineSpacing = parseInt(pct.getAttribute("val") || "100000") / 1000;
-      }
+    // endParaRPr provides fallback defaults when defRPr is absent
+    const endParaRPr = getFirstByLocal(p, "endParaRPr");
+    if (endParaRPr && Object.keys(defaultRunProps).length === 0) {
+      Object.assign(defaultRunProps, parseRunProperties(endParaRPr, themeColors));
     }
 
     // Text runs
     for (const r of getElementsByLocal(p, "r")) {
       if (r.parentElement !== p) continue;
-      const run = parseTextRun(r, themeColors);
+      const run = parseTextRun(r, themeColors, defaultRunProps);
       if (run) para.runs.push(run);
     }
 
     // Standalone text (no run wrapper)
     for (const t of getElementsByLocal(p, "t")) {
       if (t.parentElement === p) {
-        para.runs.push({ text: t.textContent || "" });
+        para.runs.push({ text: t.textContent || "", ...defaultRunProps });
       }
     }
 
@@ -1388,8 +1536,59 @@ function parseParagraphs(txBody: Element, themeColors: Map<string, string>): Par
   return paragraphs;
 }
 
+/** Extract run properties from an rPr-like element */
+function parseRunProperties(rPr: Element | null, themeColors: Map<string, string>): Partial<TextRunData> {
+  if (!rPr) return {};
+
+  const props: Partial<TextRunData> = {};
+
+  const b = rPr.getAttribute("b");
+  if (b !== null) props.bold = b === "1";
+
+  const i = rPr.getAttribute("i");
+  if (i !== null) props.italic = i === "1";
+
+  const u = rPr.getAttribute("u");
+  if (u !== null) props.underline = u === "sng" || u === "heavy" || u === "dbl";
+
+  const strike = rPr.getAttribute("strike");
+  if (strike !== null) props.strike = strike === "sngStrike" || strike === "dblStrike";
+
+  const sz = rPr.getAttribute("sz");
+  if (sz) props.fontSize = parseInt(sz) / 100;
+
+  const latin = getFirstByLocal(rPr, "latin");
+  const cs = getFirstByLocal(rPr, "cs");
+  const ea = getFirstByLocal(rPr, "ea");
+  if (latin) props.fontFamily = getFontStack(latin.getAttribute("typeface") || undefined);
+  else if (cs) props.fontFamily = getFontStack(cs.getAttribute("typeface") || undefined);
+  else if (ea) props.fontFamily = getFontStack(ea.getAttribute("typeface") || undefined);
+
+  const solidFill = getFirstByLocal(rPr, "solidFill");
+  if (solidFill) {
+    props.color = parseColor(solidFill, themeColors);
+  }
+
+  const spc = rPr.getAttribute("spc");
+  if (spc) props.letterSpacing = parseInt(spc) / 100;
+
+  const baseline = rPr.getAttribute("baseline");
+  if (baseline) props.baseline = parseInt(baseline) / 1000;
+
+  const cap = rPr.getAttribute("cap");
+  if (cap === "all") props.caps = "all";
+  else if (cap === "small") props.caps = "small";
+
+  const highlight = getFirstByLocal(rPr, "highlight");
+  if (highlight) {
+    props.highlight = parseColor(highlight, themeColors);
+  }
+
+  return props;
+}
+
 /** Parse a single text run */
-function parseTextRun(r: Element, themeColors: Map<string, string>): TextRunData | null {
+function parseTextRun(r: Element, themeColors: Map<string, string>, defaults?: Partial<TextRunData>): TextRunData | null {
   const tEl = getFirstByLocal(r, "t");
   if (!tEl) return null;
 
@@ -1397,48 +1596,105 @@ function parseTextRun(r: Element, themeColors: Map<string, string>): TextRunData
   const run: TextRunData = { text };
 
   const rPr = getFirstByLocal(r, "rPr");
+
+  const getBool = (attr: string, defaultKey: "bold" | "italic"): boolean | undefined => {
+    if (rPr) {
+      const val = rPr.getAttribute(attr);
+      if (val !== null) return val === "1";
+    }
+    return defaults?.[defaultKey];
+  };
+
+  run.bold = getBool("b", "bold");
+  run.italic = getBool("i", "italic");
+
   if (rPr) {
-    run.bold = rPr.getAttribute("b") === "1";
-    run.italic = rPr.getAttribute("i") === "1";
-    run.underline = rPr.getAttribute("u") === "sng" || rPr.getAttribute("u") === "heavy" || rPr.getAttribute("u") === "dbl";
-    run.strike = rPr.getAttribute("strike") === "sngStrike" || rPr.getAttribute("strike") === "dblStrike";
+    const u = rPr.getAttribute("u");
+    if (u !== null) run.underline = u === "sng" || u === "heavy" || u === "dbl";
+    else if (defaults?.underline !== undefined) run.underline = defaults.underline;
+  } else if (defaults?.underline !== undefined) {
+    run.underline = defaults.underline;
+  }
 
+  if (rPr) {
+    const strike = rPr.getAttribute("strike");
+    if (strike !== null) run.strike = strike === "sngStrike" || strike === "dblStrike";
+    else if (defaults?.strike !== undefined) run.strike = defaults.strike;
+  } else if (defaults?.strike !== undefined) {
+    run.strike = defaults.strike;
+  }
+
+  if (rPr) {
     const sz = rPr.getAttribute("sz");
-    if (sz) run.fontSize = parseInt(sz) / 100; // hundredths of a point → points
+    if (sz) run.fontSize = parseInt(sz) / 100;
+    else if (defaults?.fontSize !== undefined) run.fontSize = defaults.fontSize;
+  } else if (defaults?.fontSize !== undefined) {
+    run.fontSize = defaults.fontSize;
+  }
 
-    // Font - try multiple sources
+  // Font - try multiple sources
+  if (rPr) {
     const latin = getFirstByLocal(rPr, "latin");
-    const cs = getFirstByLocal(rPr, "cs"); // complex script
-    const ea = getFirstByLocal(rPr, "ea"); // east asian
-    
+    const cs = getFirstByLocal(rPr, "cs");
+    const ea = getFirstByLocal(rPr, "ea");
     if (latin) run.fontFamily = getFontStack(latin.getAttribute("typeface") || undefined);
     else if (cs) run.fontFamily = getFontStack(cs.getAttribute("typeface") || undefined);
     else if (ea) run.fontFamily = getFontStack(ea.getAttribute("typeface") || undefined);
+    else if (defaults?.fontFamily !== undefined) run.fontFamily = defaults.fontFamily;
+  } else if (defaults?.fontFamily !== undefined) {
+    run.fontFamily = defaults.fontFamily;
+  }
 
-    // Color
+  // Color
+  if (rPr) {
     const solidFill = getFirstByLocal(rPr, "solidFill");
     if (solidFill) {
       run.color = parseColor(solidFill, themeColors);
+    } else if (defaults?.color !== undefined) {
+      run.color = defaults.color;
     }
-    
-    // Character spacing (tracking)
+  } else if (defaults?.color !== undefined) {
+    run.color = defaults.color;
+  }
+
+  // Character spacing (tracking)
+  if (rPr) {
     const spc = rPr.getAttribute("spc");
-    if (spc) run.letterSpacing = parseInt(spc) / 100; // hundredths of a point
-    
-    // Baseline (superscript/subscript)
+    if (spc) run.letterSpacing = parseInt(spc) / 100;
+    else if (defaults?.letterSpacing !== undefined) run.letterSpacing = defaults.letterSpacing;
+  } else if (defaults?.letterSpacing !== undefined) {
+    run.letterSpacing = defaults.letterSpacing;
+  }
+
+  // Baseline (superscript/subscript)
+  if (rPr) {
     const baseline = rPr.getAttribute("baseline");
-    if (baseline) run.baseline = parseInt(baseline) / 1000; // percentage
-    
-    // Caps
+    if (baseline) run.baseline = parseInt(baseline) / 1000;
+    else if (defaults?.baseline !== undefined) run.baseline = defaults.baseline;
+  } else if (defaults?.baseline !== undefined) {
+    run.baseline = defaults.baseline;
+  }
+
+  // Caps
+  if (rPr) {
     const cap = rPr.getAttribute("cap");
     if (cap === "all") run.caps = "all";
     else if (cap === "small") run.caps = "small";
-    
-    // Highlight
+    else if (defaults?.caps !== undefined) run.caps = defaults.caps;
+  } else if (defaults?.caps !== undefined) {
+    run.caps = defaults.caps;
+  }
+
+  // Highlight
+  if (rPr) {
     const highlight = getFirstByLocal(rPr, "highlight");
     if (highlight) {
       run.highlight = parseColor(highlight, themeColors);
+    } else if (defaults?.highlight !== undefined) {
+      run.highlight = defaults.highlight;
     }
+  } else if (defaults?.highlight !== undefined) {
+    run.highlight = defaults.highlight;
   }
 
   return run;
@@ -1479,6 +1735,9 @@ async function preparePresentationContext(
   const themeXml = await readZipText(zip, "ppt/theme/theme1.xml");
   if (themeXml) {
     themeColors = parseThemeColors(themeXml);
+    activeThemeFonts = parseThemeFonts(themeXml);
+  } else {
+    activeThemeFonts = {};
   }
 
   // ── Parse presentation.xml for slide dimensions and slide list ──

@@ -9,6 +9,7 @@ import {
   type SlideData,
 } from "@/lib/pptx-parser";
 import { SlideRenderer } from "./SlideRenderer";
+import { PdfFlipBook } from "./PdfFlipBook";
 import { buildWatermarkDataUrl } from "../../lib/watermarkUtils";
 import {
   Loader2,
@@ -33,8 +34,8 @@ interface PptViewerProps {
   watermarkText?: string;
 }
 
-export const PptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
-  function PptViewer(
+export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
+  function LegacyPptViewer(
     { storageKey, title: _title, onPageChange, onFullscreenChange, initialPage, watermarkText },
     ref,
   ) {
@@ -527,6 +528,44 @@ export const PptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
           </div>
         )}
       </div>
+    );
+  }
+);
+
+LegacyPptViewer.displayName = "LegacyPptViewer";
+
+export const PptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
+  function PptViewer(
+    { storageKey, title, onPageChange, onFullscreenChange, initialPage, watermarkText },
+    ref,
+  ) {
+    const [useLegacyRenderer, setUseLegacyRenderer] = useState(false);
+    const fileUrl = `${Config.pptPreviewUrl}${encodeURIComponent(storageKey)}`;
+
+    if (useLegacyRenderer) {
+      return (
+        <LegacyPptViewer
+          ref={ref}
+          storageKey={storageKey}
+          title={title}
+          initialPage={initialPage}
+          onPageChange={onPageChange}
+          onFullscreenChange={onFullscreenChange}
+          watermarkText={watermarkText}
+        />
+      );
+    }
+
+    return (
+      <PdfFlipBook
+        ref={ref}
+        fileUrl={fileUrl}
+        initialPage={initialPage}
+        onPageChange={onPageChange}
+        onFullscreenChange={onFullscreenChange}
+        onLoadError={() => setUseLegacyRenderer(true)}
+        watermarkText={watermarkText}
+      />
     );
   }
 );
