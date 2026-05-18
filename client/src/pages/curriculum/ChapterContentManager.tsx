@@ -1,7 +1,7 @@
 // src/components/curriculum/ChapterContentManager.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import {
@@ -22,6 +22,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -93,6 +95,35 @@ interface ContentItem {
   order: number;
 }
 
+const CODE_BLOCK_REGEX = /<pre[\s>]|<code[\s>]/i;
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildCodeHtml(code: string) {
+  if (!code.trim()) return "";
+  return `<pre><code>${escapeHtml(code)}</code></pre>`;
+}
+
+function getTextContentFromHtml(html: string) {
+  if (!html) return "";
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") {
+    return html.replace(/<[^>]*>/g, "");
+  }
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.body.textContent ?? "";
+}
+
+function isCodeHtml(html: string) {
+  return CODE_BLOCK_REGEX.test(html);
+}
+
 // ---------------------------------------------------------------------------
 // Edit Content Dialog
 // ---------------------------------------------------------------------------
@@ -107,11 +138,25 @@ function EditContentDialog({ item, onClose, onSaved }: EditContentDialogProps) {
   const [title, setTitle] = useState(item.title);
   const [youtubeUrl, setYoutubeUrl] = useState(item.youtubeUrl || "");
   const [textContent, setTextContent] = useState(item.textContent || "");
+  const [textMode, setTextMode] = useState<"rich" | "code">(
+    item.type === "text" && isCodeHtml(item.textContent || "") ? "code" : "rich"
+  );
   const [questions, setQuestions] = useState<Question[]>(item.questions || []);
   const [newFile, setNewFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
   const isFileBased = ["video", "ppt", "pdf", "activity"].includes(item.type);
+  const codeText = useMemo(() => getTextContentFromHtml(textContent), [textContent]);
+
+  const handleTextModeChange = (checked: boolean) => {
+    if (checked) {
+      const nextCode = getTextContentFromHtml(textContent);
+      setTextContent(buildCodeHtml(nextCode));
+      setTextMode("code");
+      return;
+    }
+    setTextMode("rich");
+  };
 
   const handleSave = async () => {
     if (!title.trim()) { toast.error("Title cannot be empty"); return; }
@@ -135,10 +180,21 @@ function EditContentDialog({ item, onClose, onSaved }: EditContentDialogProps) {
           youtubeUrl: youtubeUrl.trim(),
         });
       } else if (item.type === "text") {
-        await _axios.patch(`/admin/curriculum/content/${item.id}`, {
-          title: title.trim(),
-          textContent,
-        });
+        if (textMode === "code") {
+          if (!codeText.trim()) {
+            toast.error("Please paste some code");
+            return;
+          }
+          await _axios.patch(`/admin/curriculum/content/${item.id}`, {
+            title: title.trim(),
+            textContent: buildCodeHtml(codeText),
+          });
+        } else {
+          await _axios.patch(`/admin/curriculum/content/${item.id}`, {
+            title: title.trim(),
+            textContent,
+          });
+        }
       } else {
         await _axios.patch(`/admin/curriculum/content/${item.id}`, { title: title.trim() });
       }
@@ -199,9 +255,29 @@ function EditContentDialog({ item, onClose, onSaved }: EditContentDialogProps) {
 
           {/* Rich text */}
           {item.type === "text" && (
-            <div className="space-y-1.5">
+            <div className="space-y-3">
               <label className="text-sm font-medium">Content</label>
-              <RichTextEditor content={textContent} onChange={setTextContent} />
+              <div className="flex items-center justify-between gap-4 rounded-xl border px-3 py-2">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Editor mode</p>
+                  <p className="text-xs text-muted-foreground">Toggle code mode to paste code in any language.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Code</span>
+                  <Switch checked={textMode === "code"} onCheckedChange={handleTextModeChange} />
+                </div>
+              </div>
+              {textMode === "code" ? (
+                <Textarea
+                  value={codeText}
+                  onChange={(e) => setTextContent(buildCodeHtml(e.target.value))}
+                  placeholder="Paste code here..."
+                  className="font-mono text-sm min-h-[320px]"
+                  spellCheck={false}
+                />
+              ) : (
+                <RichTextEditor content={textContent} onChange={setTextContent} />
+              )}
             </div>
           )}
 
@@ -414,6 +490,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [textContent, setTextContent] = useState("");
+  const [textMode, setTextMode] = useState<"rich" | "code">("rich");
   const [questions, setQuestions] = useState<Question[]>([]);
 
   // --- Add content panel visibility ---
@@ -451,6 +528,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     setFile(null);
     setYoutubeUrl("");
     setTextContent("");
+    setTextMode("rich");
     setQuestions([]);
     setShowAddForm(false);
   }, [chapterId]);
@@ -515,6 +593,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     setFile(null);
     setYoutubeUrl("");
     setTextContent("");
+    setTextMode("rich");
     setQuestions([]);
     setShowAddForm(false);
   }
@@ -554,16 +633,30 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
     }
 
     if (type === "text") {
-      if (!textContent.trim()) {
-        toast.error("Please enter some text content");
-        return;
+      const codeValue = getTextContentFromHtml(textContent);
+      if (textMode === "code") {
+        if (!codeValue.trim()) {
+          toast.error("Please paste some code");
+          return;
+        }
+        uploadMutation.mutate({
+          type,
+          title: resolvedTitle,
+          textContent: buildCodeHtml(codeValue),
+          isFree: false,
+        });
+      } else {
+        if (!textContent.trim()) {
+          toast.error("Please enter some text content");
+          return;
+        }
+        uploadMutation.mutate({
+          type,
+          title: resolvedTitle,
+          textContent,
+          isFree: false,
+        });
       }
-      uploadMutation.mutate({
-        type,
-        title: resolvedTitle,
-        textContent,
-        isFree: false,
-      });
       return;
     }
 
@@ -809,6 +902,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                     setFile(null);
                     setYoutubeUrl("");
                     setTextContent("");
+                    setTextMode("rich");
                     setQuestions([]);
                   }}
                 >
@@ -852,13 +946,44 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
               )}
 
               {type === "text" && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <label className="text-sm font-medium">Content</label>
-                  <RichTextEditor
-                    content={textContent}
-                    onChange={setTextContent}
-                    placeholder="Write your notes or rich text content here..."
-                  />
+                  <div className="flex items-center justify-between gap-4 rounded-xl border px-3 py-2">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">Editor mode</p>
+                      <p className="text-xs text-muted-foreground">Toggle code mode to paste code in any language.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Code</span>
+                      <Switch
+                        checked={textMode === "code"}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            const nextCode = getTextContentFromHtml(textContent);
+                            setTextContent(buildCodeHtml(nextCode));
+                            setTextMode("code");
+                            return;
+                          }
+                          setTextMode("rich");
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {textMode === "code" ? (
+                    <Textarea
+                      value={getTextContentFromHtml(textContent)}
+                      onChange={(e) => setTextContent(buildCodeHtml(e.target.value))}
+                      placeholder="Paste code here..."
+                      className="font-mono text-sm min-h-[320px]"
+                      spellCheck={false}
+                    />
+                  ) : (
+                    <RichTextEditor
+                      content={textContent}
+                      onChange={setTextContent}
+                      placeholder="Write your notes or rich text content here..."
+                    />
+                  )}
                 </div>
               )}
 

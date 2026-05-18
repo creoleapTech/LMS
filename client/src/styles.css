@@ -176,6 +176,14 @@ html {
     background: var(--bg-brand-color);
   }
 
+  .prose pre code.hljs {
+    @apply rounded-lg;
+  }
+
+  .prose :where(pre):not(:where([class~="not-prose"],[class~="not-prose"] *)) {
+    @apply bg-slate-900 text-slate-100;
+  }
+
   /* ─── Neomorphic Dashboard Utilities ─── */
   .neo-bg { background: var(--neo-bg); }
 
