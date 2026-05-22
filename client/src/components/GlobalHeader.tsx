@@ -105,6 +105,11 @@ export function GlobalHeader() {
           )}
 
           <div className="min-w-0">
+            {(user.role === "admin" || user.role === "teacher" || user.role === "staff") && displayName && pageInfo && (
+              <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-indigo-600 uppercase mb-0.5 truncate">
+                {displayName}
+              </div>
+            )}
             {pageInfo ? (
               <>
                 <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate leading-tight">
