@@ -43,7 +43,12 @@ export async function decodeToken(
     const { payload } = await jose.jwtDecrypt(token, key);
     return payload as Record<string, any>;
   } catch (error) {
-    console.error("Failed to decode token:", error);
+    // Suppress expected "wrong key" decryption failures to reduce log noise.
+    // The admin middleware tries multiple keys; only the matching one should succeed.
+    const errName = (error as any)?.name ?? "";
+    if (errName !== "JWEDecryptionFailed") {
+      console.error("Failed to decode token:", error);
+    }
     return null;
   }
 }
