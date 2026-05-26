@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import {
   Building2,
   Users,
@@ -45,6 +46,7 @@ const CONTENT_COLORS: Record<string, string> = {
 };
 
 export function SuperAdminDashboard({ data }: { data: any }) {
+  const navigate = useNavigate();
   const contentPieData = Object.entries(data.contentByType || {}).map(([type, count]) => ({
     name: type,
     value: count as number,
@@ -55,24 +57,24 @@ export function SuperAdminDashboard({ data }: { data: any }) {
     <div className="space-y-6">
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Institutions" value={data.totalInstitutions} subtitle={`${data.activeInstitutions} active`} icon={Building2} accent="indigo" delay={0} />
-        <StatCard title="Total Students" value={data.totalStudents} subtitle={`${data.activeStudents} active`} icon={GraduationCap} accent="emerald" delay={40} />
-        <StatCard title="Total Staff" value={data.totalStaff} subtitle={`${data.activeStaff} active`} icon={Users} accent="violet" delay={80} />
-        <StatCard title="Classes" value={data.totalClasses} icon={UserCheck} accent="amber" delay={120} />
+        <StatCard title="Institutions" value={data.totalInstitutions} subtitle={`${data.activeInstitutions} active`} icon={Building2} accent="indigo" delay={0} onClick={() => navigate({ to: '/institutions' })} />
+        <StatCard title="Total Students" value={data.totalStudents} subtitle={`${data.activeStudents} active`} icon={GraduationCap} accent="emerald" delay={40} onClick={() => navigate({ to: '/students' })} />
+        <StatCard title="Total Staff" value={data.totalStaff} subtitle={`${data.activeStaff} active`} icon={Users} accent="violet" delay={80} onClick={() => navigate({ to: '/staff' })} />
+        <StatCard title="Classes" value={data.totalClasses} icon={UserCheck} accent="amber" delay={120} onClick={() => navigate({ to: '/my-classes' })} />
       </div>
 
       {/* Content Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Curriculums" value={data.totalCurriculums} subtitle={`${data.publishedCurriculums} published`} icon={BookOpen} accent="sky" delay={160} />
-        <StatCard title="Grade Books" value={data.totalGradeBooks} icon={Library} accent="rose" delay={200} />
-        <StatCard title="Chapters" value={data.totalChapters} icon={FileText} accent="cyan" delay={240} />
-        <StatCard title="Content Items" value={data.totalContent} icon={Layers} accent="violet" delay={280} />
+        <StatCard title="Curriculums" value={data.totalCurriculums} subtitle={`${data.publishedCurriculums} published`} icon={BookOpen} accent="sky" delay={160} onClick={() => navigate({ to: '/curriculum' })} />
+        <StatCard title="Grade Books" value={data.totalGradeBooks} icon={Library} accent="rose" delay={200} onClick={() => navigate({ to: '/curriculum' })} />
+        <StatCard title="Chapters" value={data.totalChapters} icon={FileText} accent="cyan" delay={240} onClick={() => navigate({ to: '/curriculum' })} />
+        <StatCard title="Content Items" value={data.totalContent} icon={Layers} accent="violet" delay={280} onClick={() => navigate({ to: '/curriculum' })} />
       </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Enrollment Trend */}
-        <DashCard className="lg:col-span-2">
+        <DashCard className="lg:col-span-2" onClick={() => navigate({ to: '/students' })}>
           <SectionHeader
             icon={TrendingUp}
             title="Enrollment Trend"
@@ -102,7 +104,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
         </DashCard>
 
         {/* Content Distribution */}
-        <DashCard>
+        <DashCard onClick={() => navigate({ to: '/curriculum' })}>
           <SectionHeader
             icon={Layers}
             title="Content Types"
@@ -168,7 +170,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
                 </thead>
                 <tbody>
                   {data.institutionOverview.map((inst: any) => (
-                    <tr key={inst._id} className="border-b border-white/30 hover:bg-white/20 transition-colors">
+                    <tr key={inst._id} className="border-b border-white/30 hover:bg-white/20 transition-colors cursor-pointer" onClick={() => navigate({ to: '/institutions/$id', params: { id: inst._id } })}>
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-2.5">
                           <div className={`w-2 h-2 rounded-full ${inst.isActive ? 'bg-emerald-400' : 'bg-slate-300'}`} />
@@ -205,7 +207,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
           <div className="mt-4 space-y-4">
             {data.recentActivity?.length > 0 ? (
               data.recentActivity.map((item: any, i: number) => (
-                <div key={i} className="flex gap-3 items-start group hover:bg-white/20 rounded-xl p-2 -mx-2 transition-all">
+                <div key={i} className="flex gap-3 items-start group hover:bg-white/20 rounded-xl p-2 -mx-2 transition-all cursor-pointer" onClick={() => navigate({ to: item.type === 'student' ? '/students' : '/staff' })}>
                   <ActivityDot type={item.type} />
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] text-slate-800 font-semibold leading-snug group-hover:text-indigo-600 transition-colors truncate">

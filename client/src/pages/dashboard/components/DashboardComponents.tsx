@@ -39,6 +39,7 @@ interface StatCardProps {
   icon: LucideIcon;
   accent: 'indigo' | 'emerald' | 'violet' | 'amber' | 'rose' | 'cyan' | 'sky';
   delay?: number;
+  onClick?: () => void;
 }
 
 const accentConfig = {
@@ -86,7 +87,7 @@ const accentConfig = {
   },
 };
 
-export function StatCard({ title, value, suffix, prefix, subtitle, icon: Icon, accent, delay = 0 }: StatCardProps) {
+export function StatCard({ title, value, suffix, prefix, subtitle, icon: Icon, accent, delay = 0, onClick }: StatCardProps) {
   const cfg = accentConfig[accent];
   const displayValue = useCountUp(value);
   const [visible, setVisible] = useState(false);
@@ -96,10 +97,13 @@ export function StatCard({ title, value, suffix, prefix, subtitle, icon: Icon, a
     return () => clearTimeout(t);
   }, [delay]);
 
+  const Tag = onClick ? 'button' : 'div';
+
   return (
-    <div
-      className={`neo-card neo-card-hover ${cfg.glow} p-6 group relative overflow-hidden ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+    <Tag
+      className={`neo-card neo-card-hover ${cfg.glow} p-6 group relative overflow-hidden ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'} ${onClick ? 'cursor-pointer text-left w-full' : ''}`}
       style={{ transitionDelay: `${delay}ms` }}
+      onClick={onClick}
     >
       {/* Colorful gradient overlay */}
       <div className={`absolute inset-0 bg-gradient-to-br ${cfg.gradient} opacity-40 group-hover:opacity-70 transition-opacity duration-500`} />
@@ -123,7 +127,7 @@ export function StatCard({ title, value, suffix, prefix, subtitle, icon: Icon, a
           <Icon size={20} strokeWidth={2} />
         </div>
       </div>
-    </div>
+    </Tag>
   );
 }
 
@@ -159,11 +163,12 @@ export function SectionHeader({ icon: Icon, title, subtitle, accent = 'text-indi
 
 // ── Card Shell ──
 
-export function DashCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+export function DashCard({ children, className = '', onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div className={`neo-card neo-card-hover p-6 ${className}`}>
+    <Tag className={`neo-card neo-card-hover p-6 ${className} ${onClick ? 'cursor-pointer text-left w-full' : ''}`} onClick={onClick}>
       {children}
-    </div>
+    </Tag>
   );
 }
 

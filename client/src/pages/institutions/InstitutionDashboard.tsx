@@ -14,7 +14,7 @@ interface DashboardProps {
     onTabChange?: (tab: string) => void;
 }
 
-export function InstitutionDashboard({ id, institution, onEdit }: DashboardProps) {
+export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: DashboardProps) {
     // Fetch Stats
     const { data: stats, isLoading } = useQuery({
         queryKey: ["institutionStats", id],
@@ -36,6 +36,7 @@ export function InstitutionDashboard({ id, institution, onEdit }: DashboardProps
                     trend={stats?.studentTrend || "No data"}
                     icon={GraduationCap}
                     gradient="from-blue-500 to-indigo-500"
+                    onClick={() => onTabChange?.("students")}
                 />
                 <StatsWidget
                     title="Total Staff"
@@ -43,6 +44,7 @@ export function InstitutionDashboard({ id, institution, onEdit }: DashboardProps
                     trend={stats?.staffTrend || "No data"}
                     icon={Users}
                     gradient="from-emerald-500 to-teal-500"
+                    onClick={() => onTabChange?.("staff")}
                 />
                 <StatsWidget
                     title="Active Classes"
@@ -50,6 +52,7 @@ export function InstitutionDashboard({ id, institution, onEdit }: DashboardProps
                     trend={stats?.classTrend || "No data"}
                     icon={BookOpen}
                     gradient="from-purple-500 to-pink-500"
+                    onClick={() => onTabChange?.("classes")}
                 />
             </div>
 
@@ -191,12 +194,13 @@ export function InstitutionDashboard({ id, institution, onEdit }: DashboardProps
 
 // --- SUBCOMPONENTS ---
 
-function StatsWidget({ title, value, trend, icon: Icon, gradient }: any) {
+function StatsWidget({ title, value, trend, icon: Icon, gradient, onClick }: any) {
     return (
         <div className={cn(
-            "group relative overflow-hidden rounded-2xl p-6 transition-all duration-200 cursor-default",
+            "group relative overflow-hidden rounded-2xl p-6 transition-all duration-200",
+            onClick ? "cursor-pointer" : "cursor-default",
             "neo-card neo-card-hover",
-        )}>
+        )} onClick={onClick}>
             <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
                 <Icon className="h-28 w-28 -mr-6 -mt-6" />
             </div>

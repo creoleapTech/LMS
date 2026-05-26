@@ -39,18 +39,20 @@ export function TeacherDashboard({ data }: { data: any }) {
     <div className="space-y-5">
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="My Students" value={data.totalStudents} icon={GraduationCap} accent="indigo" delay={0} />
-        <StatCard title="Overall Progress" value={data.overallProgress} suffix="%" icon={TrendingUp} accent="emerald" delay={40} />
-        <StatCard title="Total Sessions" value={data.totalSessions} icon={Clock} accent="violet" delay={80} />
-        <StatCard title="My Classes" value={data.myClasses?.length || 0} icon={Layers} accent="amber" delay={120} />
+        <StatCard title="My Students" value={data.totalStudents} icon={GraduationCap} accent="indigo" delay={0} onClick={() => navigate({ to: '/my-classes' })} />
+        <StatCard title="Overall Progress" value={data.overallProgress} suffix="%" icon={TrendingUp} accent="emerald" delay={40} onClick={() => navigate({ to: '/curriculum' })} />
+        <StatCard title="Total Sessions" value={data.totalSessions} icon={Clock} accent="violet" delay={80} onClick={() => navigate({ to: '/my-classes' })} />
+        <StatCard title="My Classes" value={data.myClasses?.length || 0} icon={Layers} accent="amber" delay={120} onClick={() => navigate({ to: '/my-classes' })} />
       </div>
 
       {/* Today's Schedule */}
-      <DayView date={new Date()} readOnly />
+      <div className="cursor-pointer" onClick={() => navigate({ to: '/my-classes' })}>
+        <DayView date={new Date()} readOnly />
+      </div>
 
       {/* Charts Row: Teaching Activity + Class Progress Radar */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <DashCard>
+        <DashCard onClick={() => navigate({ to: '/my-classes' })}>
           <SectionHeader icon={Activity} title="Teaching Activity" subtitle="Sessions per month over last 6 months" accent="text-rose-600 bg-rose-50" />
           <div className="h-[300px] mt-3">
             {data.sessionsByMonth?.length > 0 ? (
@@ -81,7 +83,7 @@ export function TeacherDashboard({ data }: { data: any }) {
           </div>
         </DashCard>
 
-        <DashCard>
+        <DashCard onClick={() => navigate({ to: '/curriculum' })}>
           <SectionHeader icon={Target} title="Class-wise Progress" subtitle="Your teaching progress per class" accent="text-violet-600 bg-violet-50" />
           <div className="h-[300px] mt-3">
             {data.progressByClass?.length > 1 ? (
@@ -160,7 +162,7 @@ export function TeacherDashboard({ data }: { data: any }) {
                   const ringColors = [CHART_COLORS.indigo, CHART_COLORS.emerald, CHART_COLORS.rose, CHART_COLORS.amber, CHART_COLORS.sky];
                   const color = ringColors[idx % ringColors.length];
                   return (
-                    <div key={cls._id} className={`flex items-center gap-4 p-3.5 neo-card-flat ${gradients[idx % gradients.length]} transition-all hover:scale-[1.01] group`}>
+                    <div key={cls._id} className={`flex items-center gap-4 p-3.5 neo-card-flat ${gradients[idx % gradients.length]} transition-all hover:scale-[1.01] group cursor-pointer`} onClick={() => navigate({ to: '/my-classes' })}>
                       <div className="relative w-12 h-12 shrink-0">
                         <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
                           <circle cx="24" cy="24" r="20" fill="none" stroke="#d4dae6" strokeWidth="5" />
@@ -236,7 +238,7 @@ export function TeacherDashboard({ data }: { data: any }) {
                     const bgs = ['bg-gradient-to-r from-emerald-50/80 to-cyan-50/80', 'bg-gradient-to-r from-rose-50/80 to-pink-50/80', 'bg-gradient-to-r from-amber-50/80 to-orange-50/80'];
                     const colors = ['from-emerald-500 to-cyan-500', 'from-rose-500 to-pink-500', 'from-amber-500 to-orange-500'];
                     return (
-                      <div key={p._id} className={`p-3 neo-card-flat space-y-2 ${bgs[idx % bgs.length]}`}>
+                      <div key={p._id} className={`p-3 neo-card-flat space-y-2 ${bgs[idx % bgs.length]} cursor-pointer`} onClick={() => navigate({ to: '/curriculum', search: { gradeBookId: p.gradeBookId, classId: p.classId, bookTitle: p.bookTitle } })}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-slate-800 truncate">{p.bookTitle}</p>
@@ -262,7 +264,7 @@ export function TeacherDashboard({ data }: { data: any }) {
 
         {/* Right column */}
         <div className="space-y-5">
-          <DashCard>
+          <DashCard onClick={() => navigate({ to: '/curriculum' })}>
             <SectionHeader icon={BookOpen} title="Grade Book Progress" subtitle="Your teaching progress per book" />
             {data.progressByGradeBook?.length > 0 && (
               <div className="h-[180px] mt-3">
@@ -295,7 +297,7 @@ export function TeacherDashboard({ data }: { data: any }) {
                   const colors = ['from-indigo-500 to-violet-500', 'from-emerald-500 to-cyan-500', 'from-rose-500 to-pink-500', 'from-amber-500 to-orange-500', 'from-sky-500 to-blue-500'];
                   const bgs = ['bg-gradient-to-r from-indigo-50/80 to-violet-50/80', 'bg-gradient-to-r from-emerald-50/80 to-cyan-50/80', 'bg-gradient-to-r from-rose-50/80 to-pink-50/80', 'bg-gradient-to-r from-amber-50/80 to-orange-50/80', 'bg-gradient-to-r from-sky-50/80 to-blue-50/80'];
                   return (
-                    <div key={p._id} className={`p-3 neo-card-flat space-y-2 ${bgs[idx % bgs.length]} transition-all hover:scale-[1.01]`}>
+                    <div key={p._id} className={`p-3 neo-card-flat space-y-2 ${bgs[idx % bgs.length]} transition-all hover:scale-[1.01] cursor-pointer`} onClick={() => navigate({ to: '/curriculum', search: { gradeBookId: p.gradeBookId, classId: p.classId, bookTitle: p.bookTitle } })}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-slate-800 truncate">{p.bookTitle}</p>
@@ -320,7 +322,7 @@ export function TeacherDashboard({ data }: { data: any }) {
             </div>
           </DashCard>
 
-          <DashCard>
+          <DashCard onClick={() => navigate({ to: '/my-classes' })}>
             <SectionHeader icon={Clock} title="Recent Sessions" subtitle="Your latest teaching sessions" accent="text-emerald-600 bg-emerald-50" />
             <div className="mt-3 max-h-[400px] overflow-y-auto pr-1 space-y-2.5">
               {data.recentSessions?.length > 0 ? (

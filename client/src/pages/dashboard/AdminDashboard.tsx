@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import {
   BookOpen,
   GraduationCap,
@@ -47,6 +48,7 @@ interface AdminDashboardProps {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboardProps) {
+  const navigate = useNavigate();
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
@@ -56,10 +58,10 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
     <div className="space-y-5">
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Curriculum" value={data.curriculumAccessCount || 0} icon={BookOpen} accent="indigo" delay={0} />
-        <StatCard title="Classes" value={data.totalClasses} icon={Users} accent="violet" delay={40} />
-        <StatCard title="Staff" value={data.totalStaff} subtitle={`${data.activeStaff} active`} icon={UserCheck} accent="emerald" delay={80} />
-        <StatCard title="Enrolled Students" value={data.totalStudents} subtitle={`${data.activeStudents} active`} icon={GraduationCap} accent="amber" delay={120} />
+        <StatCard title="Curriculum" value={data.curriculumAccessCount || 0} icon={BookOpen} accent="indigo" delay={0} onClick={() => navigate({ to: '/curriculum' })} />
+        <StatCard title="Classes" value={data.totalClasses} icon={Users} accent="violet" delay={40} onClick={() => navigate({ to: '/my-classes' })} />
+        <StatCard title="Staff" value={data.totalStaff} subtitle={`${data.activeStaff} active`} icon={UserCheck} accent="emerald" delay={80} onClick={() => navigate({ to: '/staff' })} />
+        <StatCard title="Enrolled Students" value={data.totalStudents} subtitle={`${data.activeStudents} active`} icon={GraduationCap} accent="amber" delay={120} onClick={() => navigate({ to: '/students' })} />
       </div>
 
       {/* Filter Bar */}
@@ -102,7 +104,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
       </div>
 
       {/* Row 1: Classwise Progress */}
-      <DashCard>
+      <DashCard onClick={() => navigate({ to: '/my-classes' })}>
         <SectionHeader icon={BarChart3} title="Class-wise Progress" subtitle="Average curriculum completion per class" accent="text-indigo-600 bg-indigo-50" />
         <div className="h-[300px] mt-3">
           {data.classwiseProgress?.length > 0 ? (
@@ -132,7 +134,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
 
       {/* Row 2: Student Growth + Sessions + Gender Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <DashCard className="lg:col-span-2">
+        <DashCard className="lg:col-span-2" onClick={() => navigate({ to: '/students' })}>
           <SectionHeader icon={TrendingUp} title="Student Growth & Teaching Sessions" subtitle="Enrollment and session trends" />
           <div className="h-[320px] mt-3">
             {(data.studentGrowth?.length > 0 || data.sessionsByMonth?.length > 0) ? (
@@ -166,7 +168,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
         </DashCard>
 
         {/* Gender Distribution */}
-        <DashCard>
+        <DashCard onClick={() => navigate({ to: '/students' })}>
           <SectionHeader icon={PieChartIcon} title="Student Demographics" subtitle="Gender distribution" accent="text-pink-600 bg-pink-50" />
           <div className="h-[320px] mt-3 flex flex-col items-center justify-center">
             {data.genderDistribution?.length > 0 ? (
@@ -229,7 +231,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
 
       {/* Row 3: Class Engagement + Curriculum Progress */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <DashCard>
+        <DashCard onClick={() => navigate({ to: '/my-classes' })}>
           <SectionHeader icon={Activity} title="Class Engagement" subtitle="Students & sessions per class" accent="text-cyan-600 bg-cyan-50" />
           <div className="h-[300px] mt-3">
             {data.classSizeDistribution?.length > 0 ? (
@@ -260,7 +262,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
           </div>
         </DashCard>
 
-        <DashCard>
+        <DashCard onClick={() => navigate({ to: '/curriculum' })}>
           <SectionHeader icon={BookOpen} title="Curriculum Progress" subtitle="Average teaching completion per book" accent="text-indigo-600 bg-indigo-50" />
           <div className="h-[300px] mt-3">
             {data.teachingProgressByBook?.length > 0 ? (
@@ -289,7 +291,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
 
       {/* Row 4: School Progress Gauge + Recent Sessions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <DashCard className="flex flex-col items-center justify-center">
+        <DashCard className="flex flex-col items-center justify-center" onClick={() => navigate({ to: '/curriculum' })}>
           <SectionHeader icon={TrendingUp} title="School Progress" subtitle="Overall teaching completion" accent="text-emerald-600 bg-emerald-50" />
           <div className="h-[260px] w-full mt-3 relative flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
@@ -326,7 +328,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
           </div>
         </DashCard>
 
-        <DashCard>
+        <DashCard onClick={() => navigate({ to: '/my-classes' })}>
           <SectionHeader icon={Clock} title="Recent Sessions" subtitle="Latest teaching sessions" accent="text-emerald-600 bg-emerald-50" />
           <div className="mt-3 space-y-2 max-h-[280px] overflow-y-auto pr-1">
             {data.recentSessions?.length > 0 ? (
@@ -363,7 +365,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
       {/* Row 5: Course Distribution + Student Growth */}
       {data.courseDistribution?.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <DashCard>
+          <DashCard onClick={() => navigate({ to: '/curriculum' })}>
             <SectionHeader icon={PieChartIcon} title="Course Distribution" subtitle="Grade books per curriculum" accent="text-violet-600 bg-violet-50" />
             <div className="h-[300px] mt-3 flex items-center">
               <ResponsiveContainer width="100%" height="100%">
@@ -397,7 +399,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
             </div>
           </DashCard>
 
-          <DashCard>
+          <DashCard onClick={() => navigate({ to: '/students' })}>
             <SectionHeader icon={BarChart3} title="Student Growth" subtitle="New enrollments over time" accent="text-rose-600 bg-rose-50" />
             <div className="h-[300px] mt-3">
               {data.studentGrowth?.length > 0 ? (
