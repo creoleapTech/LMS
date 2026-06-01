@@ -612,7 +612,7 @@ app.get("/gradebook/:gradeBookId/chapters", async (c) => {
     .select()
     .from(chapters)
     .where(eq(chapters.gradeBookId, gradeBookId))
-    .orderBy(asc(chapters.order));
+    .orderBy(asc(chapters.chapterNumber));
 
   return c.json({ success: true, data: rows }, 200);
 });
@@ -645,12 +645,12 @@ app.post("/gradebook/:gradeBookId/chapters", async (c) => {
     body = await c.req.json();
   }
 
-  const [countRow] = await db
-    .select({ count: count() })
+  const [maxRow] = await db
+    .select({ max: sql<number>`COALESCE(MAX(${chapters.order}), 0)` })
     .from(chapters)
     .where(eq(chapters.gradeBookId, gradeBookId));
 
-  const existingCount = countRow?.count ?? 0;
+  const nextOrder = (maxRow?.max ?? 0) + 1;
 
   let thumbnailKey: string | null = null;
   if (thumbnailFile) {
@@ -669,7 +669,7 @@ app.post("/gradebook/:gradeBookId/chapters", async (c) => {
     description: body.description || null,
     learningObjectives: body.learningObjectives || null,
     thumbnail: thumbnailKey,
-    order: existingCount + 1,
+    order: nextOrder,
     createdAt: now,
     updatedAt: now,
   });
