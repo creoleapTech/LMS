@@ -101,6 +101,8 @@ export interface ParagraphData {
   level?: number;
   spaceBefore?: number;
   spaceAfter?: number;
+  spaceBeforePct?: number; // spcPct before (in 1/1000 of a percent, i.e. 100000 = 100%)
+  spaceAfterPct?: number; // spcPct after
   lineSpacing?: number; // percentage (100 = single space)
   indent?: number; // first line indent in points
   marginLeft?: number; // left margin in points
@@ -1162,6 +1164,15 @@ async function parseShape(
         const dataUrl = await readZipBase64(zip, imgPath, mime);
         if (dataUrl) {
           const crop = parseImageCrop(blipFill);
+
+          // PowerPoint allows a shape with a blipFill to also contain a txBody
+          // (text overlay). Don't drop the text — parse it and include it
+          // so the renderer can place it on top of the image.
+          const txBody = getFirstByLocal(sp, "txBody");
+          const paragraphs = txBody ? parseParagraphs(txBody, themeColors) : undefined;
+          const bodyProps = txBody ? parseBodyProps(txBody) : undefined;
+          const hasText = paragraphs && paragraphs.some((p) => p.runs.some((r) => r.text.trim()));
+
           return {
             type: "image",
             position: pos,
@@ -1171,6 +1182,8 @@ async function parseShape(
             imageData: dataUrl,
             imageCrop: crop,
             shadow,
+            paragraphs: hasText ? paragraphs : undefined,
+            bodyProps,
           };
         }
       }
@@ -1256,6 +1269,14 @@ async function parsePicture(
 
   const crop = parseImageCrop(blipFill);
 
+  // Pictures can also carry a txBody for text overlays (e.g. a screenshot
+  // with a caption baked into the picture shape). Parse it so the renderer
+  // can place the text on top of the image.
+  const txBody = getFirstByLocal(pic, "txBody");
+  const paragraphs = txBody ? parseParagraphs(txBody, themeColors) : undefined;
+  const bodyProps = txBody ? parseBodyProps(txBody) : undefined;
+  const hasText = paragraphs && paragraphs.some((p) => p.runs.some((r) => r.text.trim()));
+
   return {
     type: "image",
     position: pos,
@@ -1265,6 +1286,8 @@ async function parsePicture(
     imageData: dataUrl,
     imageCrop: crop,
     shadow,
+    paragraphs: hasText ? paragraphs : undefined,
+    bodyProps,
   };
 }
 
@@ -1386,15 +1409,17 @@ function applyParagraphProperties(
 
   const buNone = getDirectChildByLocal(pPr, "buNone");
   if (buNone) {
-    if (overrideExisting) {
-      para.bulletType = undefined;
-      para.bulletChar = undefined;
-      para.bulletAutoNumType = undefined;
-      para.bulletColor = undefined;
-      para.bulletSize = undefined;
-      para.bulletFont = undefined;
-      para.bulletStartAt = undefined;
-    }
+    // buNone is explicit and must clear any bullet info that was inherited
+    // from lstStyle / defaultStyle, even when we're not in override mode
+    // (otherwise an inherited "1." marker would show up over the explicit
+    // "no bullet" property).
+    para.bulletType = undefined;
+    para.bulletChar = undefined;
+    para.bulletAutoNumType = undefined;
+    para.bulletColor = undefined;
+    para.bulletSize = undefined;
+    para.bulletFont = undefined;
+    para.bulletStartAt = undefined;
     return true;
   }
 
@@ -1434,19 +1459,30 @@ function applyParagraphProperties(
   }
 
   const spcBef = getDirectChildByLocal(pPr, "spcBef");
-  if (spcBef && (overrideExisting || para.spaceBefore === undefined)) {
+  if (spcBef && (overrideExisting || para.spaceBefore === undefined || para.spaceBeforePct === undefined)) {
     const pts = getFirstByLocal(spcBef, "spcPts");
     const pct = getFirstByLocal(spcBef, "spcPct");
-    if (pts) para.spaceBefore = parseInt(pts.getAttribute("val") || "0") / 100;
-    else if (pct) para.spaceBefore = parseInt(pct.getAttribute("val") || "0") / 1000;
+    if (pts) {
+      para.spaceBefore = parseInt(pts.getAttribute("val") || "0") / 100;
+      para.spaceBeforePct = undefined;
+    } else if (pct) {
+      // spcPct val is in 1/1000 of a percent: 100000 = 100%. Keep it as a
+      // percentage of line height so the renderer can map it to em units
+      // instead of treating it as points (which was the previous bug).
+      para.spaceBeforePct = parseInt(pct.getAttribute("val") || "0") / 1000;
+    }
   }
-  
+
   const spcAft = getDirectChildByLocal(pPr, "spcAft");
-  if (spcAft && (overrideExisting || para.spaceAfter === undefined)) {
+  if (spcAft && (overrideExisting || para.spaceAfter === undefined || para.spaceAfterPct === undefined)) {
     const pts = getFirstByLocal(spcAft, "spcPts");
     const pct = getFirstByLocal(spcAft, "spcPct");
-    if (pts) para.spaceAfter = parseInt(pts.getAttribute("val") || "0") / 100;
-    else if (pct) para.spaceAfter = parseInt(pct.getAttribute("val") || "0") / 1000;
+    if (pts) {
+      para.spaceAfter = parseInt(pts.getAttribute("val") || "0") / 100;
+      para.spaceAfterPct = undefined;
+    } else if (pct) {
+      para.spaceAfterPct = parseInt(pct.getAttribute("val") || "0") / 1000;
+    }
   }
   
   const lnSpc = getDirectChildByLocal(pPr, "lnSpc");
@@ -1486,8 +1522,12 @@ function parseParagraphs(txBody: Element, themeColors: Map<string, string>): Par
       applyParagraphProperties(para, defaultStyle, themeColors, defaultRunProps, false);
     }
 
+    // PowerPoint semantics: level-specific properties override the default
+    // (defPPr) properties. The previous code passed `false` here, which meant
+    // once the default style set e.g. `bulletChar` (from a buAutoNum preview)
+    // the level's own buAutoNum / buChar / defRPr could not take effect.
     if (levelStyle) {
-      applyParagraphProperties(para, levelStyle, themeColors, defaultRunProps, false);
+      applyParagraphProperties(para, levelStyle, themeColors, defaultRunProps, true);
     }
 
     if (pPr) {
