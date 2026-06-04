@@ -60,7 +60,7 @@ export function GlobalHeader() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { gradeNumber, bookTitle, chapterNumber, chapterTitle, clearCurriculumContext } = useCurriculumNavStore();
+  const { curriculumName, gradeNumber, bookTitle, chapterNumber, chapterTitle, clearCurriculumContext } = useCurriculumNavStore();
 
   useEffect(() => {
     if (!pathname.startsWith("/curriculum")) {
@@ -141,8 +141,13 @@ export function GlobalHeader() {
           </div>
 
           {/* Curriculum context badges */}
-          {pathname.startsWith("/curriculum") && (gradeNumber || chapterNumber) && (
+          {pathname.startsWith("/curriculum") && (curriculumName || gradeNumber || chapterNumber) && (
             <div className="flex flex-wrap items-center gap-2 ml-2 pl-3 border-l border-slate-200 dark:border-slate-700">
+              {curriculumName && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  {curriculumName}
+                </span>
+              )}
               {gradeNumber && (
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full whitespace-nowrap">
                   Grade {gradeNumber}

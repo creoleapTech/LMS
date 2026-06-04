@@ -129,6 +129,7 @@ export function AllChaptersTable() {
                                     setSelectedChapterId(chapter.id);
                                     setSelectedChapterNumber(chapter.chapterNumber);
                                     setCurriculumContext({
+                                        curriculumName: chapter.curriculumName || null,
                                         chapterNumber: chapter.chapterNumber,
                                         chapterTitle: chapter.title,
                                         bookTitle: chapter.bookTitle,

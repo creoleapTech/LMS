@@ -93,7 +93,7 @@ export function AllGradeBooksTable() {
         setDetailsGradeBook(null);
         setSelectedGradeBook(book);
         setSelectedGradeBookId(book.id);
-        setCurriculumContext({ gradeNumber: book.grade, bookTitle: book.bookTitle });
+        setCurriculumContext({ curriculumName: book.curriculumName || null, gradeNumber: book.grade, bookTitle: book.bookTitle });
     };
 
     const handleBack = () => {

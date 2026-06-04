@@ -21,6 +21,11 @@ export default function CurriculumManagementPage() {
   const [selectedChapterNumber, setSelectedChapterNumber] = useState<number>(1);
   const { setCurriculumContext, clearCurriculumContext, clearChapterContext, clearGradeContext } = useCurriculumNavStore();
 
+  const handleSelectCurriculum = (id: string, name: string) => {
+    setSelectedCurriculumId(id);
+    setCurriculumContext({ curriculumName: name });
+  };
+
   const handleBack = () => {
     if (selectedChapterId) {
       setSelectedChapterId(null);
@@ -69,7 +74,7 @@ export default function CurriculumManagementPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <CurriculumTable onSelectCurriculum={setSelectedCurriculumId} />
+            <CurriculumTable onSelectCurriculum={handleSelectCurriculum} />
           </CardContent>
         </Card>
       )}

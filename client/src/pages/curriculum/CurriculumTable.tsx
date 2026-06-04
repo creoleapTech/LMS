@@ -23,7 +23,7 @@ type Curriculum = {
 };
 
 interface Props {
-  onSelectCurriculum?: (curriculumId: string) => void;
+  onSelectCurriculum?: (curriculumId: string, curriculumName: string) => void;
 }
 
 export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
@@ -107,7 +107,7 @@ export function CurriculumTable({ onSelectCurriculum }: Props = {}) {
               <TableRow 
                 key={c.id}
                 className={onSelectCurriculum ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
-                onClick={() => onSelectCurriculum && onSelectCurriculum(c.id)}
+                onClick={() => onSelectCurriculum && onSelectCurriculum(c.id, c.name)}
               >
                 <TableCell className="font-medium">{c.name}</TableCell>
                 <TableCell>

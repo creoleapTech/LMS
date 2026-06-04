@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 interface CurriculumNavState {
+  curriculumName: string | null;
   gradeNumber: number | null;
   bookTitle: string | null;
   chapterNumber: number | null;
@@ -22,13 +23,14 @@ interface CurriculumNavState {
 }
 
 export const useCurriculumNavStore = create<CurriculumNavState>((set) => ({
+  curriculumName: null,
   gradeNumber: null,
   bookTitle: null,
   chapterNumber: null,
   chapterTitle: null,
   setCurriculumContext: (ctx) => set((state) => ({ ...state, ...ctx })),
   clearCurriculumContext: () =>
-    set({ gradeNumber: null, bookTitle: null, chapterNumber: null, chapterTitle: null }),
+    set({ curriculumName: null, gradeNumber: null, bookTitle: null, chapterNumber: null, chapterTitle: null }),
   clearChapterContext: () => set({ chapterNumber: null, chapterTitle: null }),
   clearGradeContext: () =>
     set({ gradeNumber: null, bookTitle: null, chapterNumber: null, chapterTitle: null }),
