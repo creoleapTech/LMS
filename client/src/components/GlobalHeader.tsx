@@ -142,7 +142,7 @@ export function GlobalHeader() {
 
           {/* Curriculum context badges */}
           {pathname.startsWith("/curriculum") && (gradeNumber || chapterNumber) && (
-            <div className="hidden sm:flex items-center gap-2 ml-2 pl-3 border-l border-slate-200 dark:border-slate-700">
+            <div className="flex flex-wrap items-center gap-2 ml-2 pl-3 border-l border-slate-200 dark:border-slate-700">
               {gradeNumber && (
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full whitespace-nowrap">
                   Grade {gradeNumber}
