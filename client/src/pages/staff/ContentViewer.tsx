@@ -24,9 +24,10 @@ import {
   ChevronRight,
   ArrowLeft,
   Maximize,
+  File,
 } from "lucide-react";
 
-type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
+type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text" | "file";
 
 interface ContentItem {
   _id: string;
@@ -70,6 +71,7 @@ const typeLabels: Record<ContentType, string> = {
   activity: "Activity",
   quiz: "Quiz",
   text: "Reading Material",
+  file: "File",
 };
 
 const typeIcons: Record<ContentType, any> = {
@@ -80,6 +82,7 @@ const typeIcons: Record<ContentType, any> = {
   activity: Activity,
   quiz: HelpCircle,
   text: Type,
+  file: File,
 };
 
 export function ContentViewer({
@@ -316,6 +319,28 @@ export function ContentViewer({
               title={content.title}
             />
           </ContentProtectionWrapper>
+        )}
+
+        {/* Generic File — download card */}
+        {content.type === "file" && (
+          <div className="max-w-2xl mx-auto">
+            <a
+              href={fileUrl}
+              download
+              className="flex items-center gap-4 p-6 border-2 border-dashed border-muted-foreground/25 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors group"
+            >
+              <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800 transition-colors">
+                <File className="h-8 w-8 text-indigo-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{content.title}</p>
+                <p className="text-sm text-muted-foreground">Click to download this file</p>
+              </div>
+              <Button variant="outline" size="sm" className="shrink-0">
+                Download
+              </Button>
+            </a>
+          </div>
         )}
 
         {/* Fallback */}

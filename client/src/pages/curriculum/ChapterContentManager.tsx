@@ -47,6 +47,7 @@ import {
   Plus,
   ChevronDown,
   Loader2,
+  File,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -78,7 +79,7 @@ interface Props {
   chapterNumber: number;
 }
 
-type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
+type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text" | "file";
 
 const DEFAULT_CONTENT_TYPE: ContentType = "text";
 
@@ -145,7 +146,7 @@ function EditContentDialog({ item, onClose, onSaved }: EditContentDialogProps) {
   const [newFile, setNewFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const isFileBased = ["video", "ppt", "pdf", "activity"].includes(item.type);
+  const isFileBased = ["video", "ppt", "pdf", "activity", "file"].includes(item.type);
   const codeText = useMemo(() => getTextContentFromHtml(textContent), [textContent]);
 
   const handleTextModeChange = (checked: boolean) => {
@@ -312,7 +313,7 @@ function EditContentDialog({ item, onClose, onSaved }: EditContentDialogProps) {
                     type="file"
                     id="edit-file-upload"
                     className="hidden"
-                    accept=".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip,.webm"
+                    accept={item.type === "file" ? undefined : ".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip,.webm"}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (!f) return;
@@ -353,6 +354,7 @@ const contentTypeIcons: Record<ContentType, typeof Video> = {
   activity: Activity,
   quiz: HelpCircle,
   text: FileText,
+  file: File,
 };
 
 const EMPTY_CONTENTS: ContentItem[] = [];
@@ -674,7 +676,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
       return;
     }
 
-    // File-based types: video, ppt, pdf, activity
+    // File-based types: video, ppt, pdf, activity, file
     if (!file) {
       toast.error("Please select a file");
       return;
@@ -852,6 +854,28 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                 </p>
               </div>
             )}
+
+            {/* File (generic) */}
+            {viewingContent.type === "file" && viewingContent.fileUrl && (
+              <div className="space-y-4">
+                <a
+                  href={fileUrl}
+                  download
+                  className="flex items-center gap-4 p-6 border-2 border-dashed border-muted-foreground/25 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors group"
+                >
+                  <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800 transition-colors">
+                    <File className="h-8 w-8 text-indigo-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{viewingContent.title}</p>
+                    <p className="text-sm text-muted-foreground">Click to download this file</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="shrink-0">
+                    Download
+                  </Button>
+                </a>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -917,6 +941,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                     <SelectItem value="activity">Activity Sheet</SelectItem>
                     <SelectItem value="quiz">Quiz</SelectItem>
                     <SelectItem value="text">Rich Text / Notes</SelectItem>
+                    <SelectItem value="file">Any File</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1001,16 +1026,18 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                     <div className="border-2 border-dashed border-muted-foreground/25 rounded-2xl p-8 text-center">
                       <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                       <p className="text-lg mb-2">Drop your file here or click to browse</p>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Supports: MP4, PDF, PPT, DOC, ZIP (Max 100MB)
-                      </p>
+                      {type !== "file" && (
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Supports: MP4, PDF, PPT, DOC, ZIP (Max 100MB)
+                        </p>
+                      )}
                       <input
                         type="file"
                         onChange={handleFileChange}
                         className="hidden"
                         id="file-upload"
                         aria-label="Upload file"
-                        accept=".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip,.webm"
+                        accept={type === "file" ? undefined : ".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip,.webm"}
                       />
                       <Button
                         type="button"

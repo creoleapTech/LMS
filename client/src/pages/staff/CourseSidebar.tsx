@@ -11,13 +11,14 @@ import {
   CheckCircle2,
   Play,
   Circle,
+  File,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { ContentProgressEntry } from "@/hooks/useTeachingProgress";
 import type { TeachingMode } from "./types";
 
-type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
+type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text" | "file";
 
 interface ContentItem {
   _id: string;
@@ -63,6 +64,7 @@ const contentTypeIcons: Record<ContentType, any> = {
   activity: Activity,
   quiz: HelpCircle,
   text: Type,
+  file: File,
 };
 
 export function CourseSidebar({

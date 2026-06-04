@@ -9,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import type { TeachingMode } from "./types";
 
-type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
+type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text" | "file";
 
 interface ContentItem {
   _id: string;

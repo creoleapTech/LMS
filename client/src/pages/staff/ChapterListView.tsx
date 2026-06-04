@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Config } from "@/lib/config";
 import type { TeachingMode } from "./types";
 
-type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text";
+type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text" | "file";
 
 interface ContentItem {
   _id: string;

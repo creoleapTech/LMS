@@ -56,7 +56,7 @@ export const chapterContents = sqliteTable("chapter_contents", {
   id: text("id").primaryKey(),
   chapterId: text("chapter_id").notNull().references(() => chapters.id),
   type: text("type", {
-    enum: ["video", "youtube", "ppt", "pdf", "activity", "quiz", "project", "note", "text"],
+    enum: ["video", "youtube", "ppt", "pdf", "activity", "quiz", "project", "note", "text", "file"],
   }).notNull(),
   title: text("title"),
   videoUrl: text("video_url"),
