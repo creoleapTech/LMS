@@ -454,25 +454,60 @@ function RenderElement({
   };
 
   if (element.type === "image" && element.imageData) {
-    // Handle image cropping
     const crop = element.imageCrop;
-    const imgStyle: React.CSSProperties = {
-      width: crop ? `${100 + crop.l + crop.r}%` : "100%",
-      height: crop ? `${100 + crop.t + crop.b}%` : "100%",
-      objectFit: "cover",
-      objectPosition: crop ? `${-crop.l}% ${-crop.t}%` : "center",
-      pointerEvents: "none",
-      marginLeft: crop ? `${-crop.l}%` : undefined,
-      marginTop: crop ? `${-crop.t}%` : undefined,
-    };
-    
+    const sizing = element.imageSizing;
+
+    // Tile mode: use CSS background-repeat
+    if (sizing === "tile") {
+      return (
+        <div
+          style={{
+            ...baseStyle,
+            backgroundImage: `url(${element.imageData})`,
+            backgroundRepeat: "repeat",
+            backgroundSize: "auto",
+          }}
+        />
+      );
+    }
+
+    // Crop mode: expand image beyond container, shift with negative margins
+    if (crop || sizing === "crop") {
+      const imgStyle: React.CSSProperties = {
+        width: crop ? `${100 + crop.l + crop.r}%` : "100%",
+        height: crop ? `${100 + crop.t + crop.b}%` : "100%",
+        objectFit: "fill",
+        objectPosition: crop ? `${-crop.l}% ${-crop.t}%` : "center",
+        pointerEvents: "none",
+        marginLeft: crop ? `${-crop.l}%` : undefined,
+        marginTop: crop ? `${-crop.t}%` : undefined,
+      };
+      return (
+        <div style={baseStyle}>
+          <img
+            src={element.imageData}
+            alt=""
+            draggable={false}
+            style={imgStyle}
+            onContextMenu={(e) => e.preventDefault()}
+          />
+        </div>
+      );
+    }
+
+    // Default: preserve aspect ratio, fill container (may crop edges)
     return (
       <div style={baseStyle}>
         <img
           src={element.imageData}
           alt=""
           draggable={false}
-          style={imgStyle}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            pointerEvents: "none",
+          }}
           onContextMenu={(e) => e.preventDefault()}
         />
       </div>
@@ -591,7 +626,7 @@ export const SlideRenderer = memo(function SlideRenderer({
           width: "100%",
           aspectRatio: `${aspectRatio}`,
           ...bgStyle,
-          overflow: "hidden",
+          overflow: "visible",
           borderRadius: "4px",
           fontFamily: "'Calibri', 'Segoe UI', Arial, sans-serif",
           lineHeight: 1.2,

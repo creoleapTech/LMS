@@ -56,6 +56,8 @@ export interface SlideElement {
   // image
   imageData?: string;
   imageCrop?: { l: number; r: number; t: number; b: number }; // crop percentages
+  imageSizing?: "stretch" | "tile" | "crop";
+  noChangeAspect?: boolean;
   // shape
   shapeType?: string;
   fill?: FillData;
@@ -991,6 +993,20 @@ async function parseGroupShape(
     }
   }
   
+  // Process nested groups recursively
+  for (const childGrp of Array.from(grpSp.children).filter(el => el.localName === "grpSp")) {
+    const childElements = await parseGroupShape(childGrp as Element, themeColors, zip, relDoc);
+    for (const el of childElements) {
+      el.position = {
+        x: grpOffX + (el.position.x - chOffX) * scaleX,
+        y: grpOffY + (el.position.y - chOffY) * scaleY,
+        width: el.position.width * scaleX,
+        height: el.position.height * scaleY,
+      };
+      elements.push(el);
+    }
+  }
+  
   return elements;
 }
 
@@ -1158,20 +1174,25 @@ async function parseShape(
       const target = resolveRel(relDoc, embedId);
       if (target) {
         const imgPath = normalizePath("ppt/slides", target);
-        const mime = getMimeFromExt(imgPath);
-        const dataUrl = await readZipBase64(zip, imgPath, mime);
-        if (dataUrl) {
-          const crop = parseImageCrop(blipFill);
-          return {
-            type: "image",
-            position: pos,
-            rotation,
-            flipH,
-            flipV,
-            imageData: dataUrl,
-            imageCrop: crop,
-            shadow,
-          };
+        const ext = imgPath.split(".").pop()?.toLowerCase() || "";
+        if (!isVectorMeta(ext)) {
+          const mime = getMimeFromExt(imgPath);
+          const dataUrl = await readZipBase64(zip, imgPath, mime);
+          if (dataUrl) {
+            const crop = parseImageCrop(blipFill);
+            const sizing = parseBlipFillSizing(blipFill);
+            return {
+              type: "image",
+              position: pos,
+              rotation,
+              flipH,
+              flipV,
+              imageData: dataUrl,
+              imageCrop: crop,
+              imageSizing: sizing,
+              shadow,
+            };
+          }
         }
       }
     }
@@ -1218,6 +1239,25 @@ function parseImageCrop(blipFill: Element): SlideElement["imageCrop"] | undefine
   return { l, r, t, b };
 }
 
+/** Determine image sizing mode from blipFill (stretch, tile, or crop) */
+function parseBlipFillSizing(blipFill: Element): "stretch" | "tile" | "crop" {
+  if (getFirstByLocal(blipFill, "tile")) return "tile";
+  const srcRect = getFirstByLocal(blipFill, "srcRect");
+  if (srcRect) {
+    const l = parseInt(srcRect.getAttribute("l") || "0");
+    const r = parseInt(srcRect.getAttribute("r") || "0");
+    const t = parseInt(srcRect.getAttribute("t") || "0");
+    const b = parseInt(srcRect.getAttribute("b") || "0");
+    if (l !== 0 || r !== 0 || t !== 0 || b !== 0) return "crop";
+  }
+  return "stretch";
+}
+
+/** Check if a file extension is a vector metafile not renderable by browsers */
+function isVectorMeta(ext: string): boolean {
+  return ext === "emf" || ext === "wmf";
+}
+
 /** Parse a picture element */
 async function parsePicture(
   pic: Element,
@@ -1249,12 +1289,22 @@ async function parsePicture(
   if (!target) return null;
 
   const imgPath = normalizePath("ppt/slides", target);
+  const ext = imgPath.split(".").pop()?.toLowerCase() || "";
+  if (isVectorMeta(ext)) return null;
+
   const mime = getMimeFromExt(imgPath);
   const dataUrl = await readZipBase64(zip, imgPath, mime);
 
   if (!dataUrl) return null;
 
   const crop = parseImageCrop(blipFill);
+  const sizing = parseBlipFillSizing(blipFill);
+
+  // Parse noChangeAspect from picLocks (set by Google Slides to preserve ratio)
+  const nvPicPr = getFirstByLocal(pic, "nvPicPr");
+  const cNvPicPr = nvPicPr ? getFirstByLocal(nvPicPr, "cNvPicPr") : null;
+  const picLocks = cNvPicPr ? getFirstByLocal(cNvPicPr, "picLocks") : null;
+  const noChangeAspect = picLocks?.getAttribute("noChangeAspect") === "1";
 
   return {
     type: "image",
@@ -1264,6 +1314,8 @@ async function parsePicture(
     flipV,
     imageData: dataUrl,
     imageCrop: crop,
+    imageSizing: sizing,
+    noChangeAspect,
     shadow,
   };
 }

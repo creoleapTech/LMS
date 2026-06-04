@@ -458,7 +458,7 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
             <ChevronLeft className="h-6 w-6 md:h-7 md:w-7 group-hover:-translate-x-0.5 transition-transform" />
           </button>
 
-          <div className="relative overflow-hidden w-full max-w-4xl">
+          <div className="relative overflow-visible w-full max-w-4xl">
             <div
               className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
                           border border-gray-200/60 dark:border-slate-700/60"
