@@ -495,7 +495,34 @@ function RenderElement({
       );
     }
 
-    // Default: preserve aspect ratio, fill container (may crop edges)
+    // Stretch mode: respect the noChangeAspect flag from the PPTX.
+    // Pictures (noChangeAspect defined):
+    //   true  → preserve ratio, show full image (no crop)
+    //   false → distort to fill the frame exactly
+    // Shape fills (noChangeAspect undefined) → fill the shape area (may crop)
+    if (sizing === "stretch") {
+      const objectFit =
+        element.noChangeAspect === true ? "contain" :
+        element.noChangeAspect === false ? "fill" : "cover";
+      return (
+        <div style={baseStyle}>
+          <img
+            src={element.imageData}
+            alt=""
+            draggable={false}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit,
+              pointerEvents: "none",
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+          />
+        </div>
+      );
+    }
+
+    // Fallback: preserve aspect ratio, fill container (may crop edges)
     return (
       <div style={baseStyle}>
         <img
