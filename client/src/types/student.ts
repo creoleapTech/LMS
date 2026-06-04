@@ -5,8 +5,8 @@ export interface IStudent {
   admissionNumber?: string;
   email?: string;
   mobileNumber?: string;
-  parentName: string;
-  parentMobile: string;
+  parentName?: string;
+  parentMobile?: string;
   parentEmail?: string;
   dateOfBirth?: string;
   gender?: "male" | "female" | "other";
@@ -27,8 +27,8 @@ export interface CreateStudentDTO {
   admissionNumber?: string;
   email?: string;
   mobileNumber?: string;
-  parentName: string;
-  parentMobile: string;
+  parentName?: string;
+  parentMobile?: string;
   parentEmail?: string;
   dateOfBirth?: string;
   gender?: "male" | "female" | "other";

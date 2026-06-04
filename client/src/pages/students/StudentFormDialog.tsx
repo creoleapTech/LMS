@@ -8,15 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, GraduationCap, User, Smartphone, Hash, Mail, Users } from "lucide-react";
+import { Loader2, GraduationCap, User, Hash, Mail } from "lucide-react";
 import { useEffect } from "react";
 import type { IStudent, CreateStudentDTO } from "@/types/student";
 import type { IClass } from "@/types/class";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  parentName: z.string().min(1, "Parent name is required"),
-  parentMobile: z.string().min(10, "Mobile number must be at least 10 digits"),
   classId: z.string().min(1, "Class is required"),
   admissionNumber: z.string().optional(),
   rollNumber: z.string().optional(),
@@ -40,8 +38,6 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      parentName: "",
-      parentMobile: "",
       classId: "",
       admissionNumber: "",
       rollNumber: "",
@@ -61,8 +57,6 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
 
         reset({
           name: student.name,
-          parentName: student.parentName,
-          parentMobile: student.parentMobile,
           classId: clsId || "",
           admissionNumber: student.admissionNumber || "",
           rollNumber: student.rollNumber || "",
@@ -72,8 +66,6 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
       } else {
         reset({
           name: "",
-          parentName: "",
-          parentMobile: "",
           classId: "",
           admissionNumber: "",
           rollNumber: "",
@@ -170,30 +162,6 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                   <Input id="email" type="email" placeholder="student@example.com" {...register("email")} className="pl-9" />
                 </div>
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Parent / Guardian */}
-          <div className="space-y-4 pt-1">
-            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Parent / Guardian</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="parentName" className="text-sm font-medium">Guardian Name <span className="text-destructive">*</span></Label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="parentName" placeholder="Parent / Guardian" {...register("parentName")} className="pl-9" />
-                </div>
-                {errors.parentName && <p className="text-sm text-destructive">{errors.parentName.message}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="parentMobile" className="text-sm font-medium">Guardian Mobile <span className="text-destructive">*</span></Label>
-                <div className="relative">
-                  <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="parentMobile" placeholder="Mobile Number" {...register("parentMobile")} className="pl-9" />
-                </div>
-                {errors.parentMobile && <p className="text-sm text-destructive">{errors.parentMobile.message}</p>}
               </div>
             </div>
           </div>

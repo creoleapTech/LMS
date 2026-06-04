@@ -220,20 +220,11 @@ studentController.post("/bulk-upload", async (c) => {
       if (!row.name || row.name.trim() === "") {
         errors.push("Name is required");
       }
-      if (!row.parentName || row.parentName.trim() === "") {
-        errors.push("Parent name is required");
-      }
-      if (!row.parentMobile || row.parentMobile.trim() === "") {
-        errors.push("Parent mobile is required");
-      }
 
       // Validate email format if provided
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (row.email && !emailRegex.test(row.email)) {
         errors.push("Invalid email format");
-      }
-      if (row.parentEmail && !emailRegex.test(row.parentEmail)) {
-        errors.push("Invalid parent email format");
       }
 
       // Validate gender
@@ -269,7 +260,7 @@ studentController.post("/bulk-upload", async (c) => {
         },
       };
     },
-    ["name", "parentName", "parentMobile"]
+    ["name"]
   );
 
   // ── DEDUPLICATION ────────────────────────────────
@@ -281,12 +272,12 @@ studentController.post("/bulk-upload", async (c) => {
     const seenInFile = new Set<string>();
 
     validData.forEach((student, index) => {
-      const key = `${student.name.trim().toLowerCase()}-${student.parentName.trim().toLowerCase()}-${student.classId}`;
+      const key = `${student.name.trim().toLowerCase()}-${student.classId}`;
       if (seenInFile.has(key)) {
         result.errors.push({
           row: index + 2,
           errors: [
-            `Duplicate entry in this file: Student '${student.name}' with parent '${student.parentName}' appears multiple times.`,
+            `Duplicate entry in this file: Student '${student.name}' appears multiple times.`,
           ],
         });
       } else {
@@ -324,8 +315,6 @@ studentController.post("/bulk-upload", async (c) => {
         (existing) =>
           (existing.name || "").toLowerCase() ===
             newStudent.name.toLowerCase() &&
-          (existing.parentName || "").toLowerCase() ===
-            newStudent.parentName.toLowerCase() &&
           existing.classId === newStudent.classId
       );
 
@@ -333,7 +322,7 @@ studentController.post("/bulk-upload", async (c) => {
         result.errors.push({
           row: index + 2,
           errors: [
-            `Student '${newStudent.name}' with parent '${newStudent.parentName}' already exists in this class.`,
+            `Student '${newStudent.name}' already exists in this class.`,
           ],
         });
       } else {
@@ -444,9 +433,6 @@ studentController.get("/template", async (c) => {
     "admissionNumber",
     "email",
     "mobileNumber",
-    "parentName",
-    "parentMobile",
-    "parentEmail",
     "dateOfBirth",
     "gender",
     "address",
@@ -462,9 +448,6 @@ studentController.get("/template", async (c) => {
       admissionNumber: "ADM2024001",
       email: "jane@example.com",
       mobileNumber: "9876543210",
-      parentName: "John Smith",
-      parentMobile: "9876543211",
-      parentEmail: "john.smith@example.com",
       dateOfBirth: "2010-05-15",
       gender: "female",
       address: "123 Main St, City",
@@ -554,9 +537,7 @@ studentController.get("/", async (c) => {
       or(
         like(students.name, `%${search}%`),
         like(students.rollNumber, `%${search}%`),
-        like(students.admissionNumber, `%${search}%`),
-        like(students.parentName, `%${search}%`),
-        like(students.parentMobile, `%${search}%`)
+        like(students.admissionNumber, `%${search}%`)
       )
     );
   }

@@ -24,7 +24,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
 import { _axios } from "@/lib/axios";
 import { StudentFormDialog } from "./StudentFormDialog";
 import type { IStudent, CreateStudentDTO, UpdateStudentDTO } from "@/types/student";
@@ -220,7 +219,7 @@ export function StudentTable({ institutionId }: Props) {
       cell: info => {
         const classData = info.getValue() as any;
         return classData ? (
-          <Badge variant="outline">{classData.grade?.toString() || ""}-{classData.section}</Badge>
+          <Badge variant="outline">Class {classData.grade?.toString() || ""}</Badge>
         ) : "-";
       },
       filterFn: (row, columnId, filterValue) => {
@@ -229,20 +228,15 @@ export function StudentTable({ institutionId }: Props) {
         return classData?._id === filterValue;
       },
     }),
-    columnHelper.accessor("parentName", { header: "Parent" }),
-    columnHelper.accessor("parentMobile", { header: "Parent Mobile" }),
     columnHelper.display({
-      id: "isActive",
-      header: "Status",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={row.original.isActive}
-            onCheckedChange={(val) => updateMutation.mutate({ id: row.original._id, data: { isActive: val } as any })}
-          />
-          <span className="text-xs text-muted-foreground w-12">{row.original.isActive ? "Active" : "Inactive"}</span>
-        </div>
-      ),
+      id: "section",
+      header: "Section",
+      cell: ({ row }) => {
+        const classData = row.original.classId as any;
+        return classData ? (
+          <Badge variant="outline">{classData.section}</Badge>
+        ) : "-";
+      },
     }),
     columnHelper.display({
       id: "actions",
