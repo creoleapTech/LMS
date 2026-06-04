@@ -164,15 +164,8 @@ function formatAutoNumber(value: number, type?: string): string {
   return `${label}.`;
 }
 
-/** Exported for unit testing — assigns a bullet/number marker to each
- *  paragraph so the renderer can show "1.", "2.", "•", etc. correctly. */
-export function buildParagraphMarkers(paragraphs: ParagraphData[]): Array<string | undefined> {
+function buildParagraphMarkers(paragraphs: ParagraphData[]): Array<string | undefined> {
   const counters = new Map<number, number>();
-  // Track the last seen bullet type per level so paragraphs that inherit
-  // list-like indents (no explicit bullet) can continue the running number.
-  const lastBulletType = new Map<number, "bullet" | "number" | undefined>();
-  const lastAutoNumType = new Map<number, string | undefined>();
-  const lastStartAt = new Map<number, number | undefined>();
 
   return paragraphs.map((para) => {
     const level = para.level ?? 0;
@@ -180,57 +173,23 @@ export function buildParagraphMarkers(paragraphs: ParagraphData[]): Array<string
     for (const key of Array.from(counters.keys())) {
       if (key > level) counters.delete(key);
     }
-    for (const key of Array.from(lastBulletType.keys())) {
-      if (key > level) {
-        lastBulletType.delete(key);
-        lastAutoNumType.delete(key);
-        lastStartAt.delete(key);
-      }
-    }
 
     if (para.bulletType === "number") {
       const previous = counters.get(level);
       const next = previous === undefined ? (para.bulletStartAt ?? 1) : previous + 1;
       counters.set(level, next);
-      lastBulletType.set(level, "number");
-      lastAutoNumType.set(level, para.bulletAutoNumType);
-      lastStartAt.set(level, para.bulletStartAt);
       return formatAutoNumber(next, para.bulletAutoNumType);
     }
 
     if (para.bulletType === "bullet" && para.bulletChar) {
-      counters.delete(level);
-      lastBulletType.set(level, "bullet");
-      lastAutoNumType.delete(level);
-      lastStartAt.delete(level);
       return para.bulletChar;
     }
 
-    // Paragraph has no explicit bullet but is list-like (has a left margin
-    // and a negative first-line indent). Continue the previous list's
-    // numbering if the previous paragraph on this level was numbered —
-    // this is what PowerPoint does for sub-items that simply inherit the
-    // list style instead of restating `buAutoNum` on every paragraph.
-    const isListLike =
-      para.marginLeft !== undefined && para.indent !== undefined && para.indent < 0;
-
-    if (isListLike && lastBulletType.get(level) === "number") {
-      const previous = counters.get(level);
-      const next = previous === undefined
-        ? (lastStartAt.get(level) ?? para.bulletStartAt ?? 1)
-        : previous + 1;
-      counters.set(level, next);
-      return formatAutoNumber(next, lastAutoNumType.get(level));
-    }
-
-    if (isListLike) {
+    if (para.marginLeft && para.indent && para.indent < 0) {
       return "•";
     }
 
     counters.delete(level);
-    lastBulletType.set(level, undefined);
-    lastAutoNumType.delete(level);
-    lastStartAt.delete(level);
     return undefined;
   });
 }
@@ -296,23 +255,8 @@ function RenderParagraph({
   const style: React.CSSProperties = {
     textAlign: para.alignment || "left",
     margin: 0,
-    // spcPct is a percentage of line height (e.g. 100000 -> 100% -> 1em),
-    // NOT a points value. The parser now stores these in *Pct fields; the
-    // legacy *spaceBefore/spaceAfter fields only carry spcPts.
-    paddingTop: !isFirst
-      ? para.spaceBeforePct !== undefined
-        ? `${para.spaceBeforePct / 100}em`
-        : para.spaceBefore
-          ? ptToCqw(para.spaceBefore, slideWidth)
-          : undefined
-      : undefined,
-    paddingBottom: !isLast
-      ? para.spaceAfterPct !== undefined
-        ? `${para.spaceAfterPct / 100}em`
-        : para.spaceAfter
-          ? ptToCqw(para.spaceAfter, slideWidth)
-          : undefined
-      : undefined,
+    paddingTop: !isFirst && para.spaceBefore ? ptToCqw(para.spaceBefore, slideWidth) : undefined,
+    paddingBottom: !isLast && para.spaceAfter ? ptToCqw(para.spaceAfter, slideWidth) : undefined,
     paddingLeft: paddingLeftPt !== 0 ? ptToCqw(paddingLeftPt, slideWidth) : undefined,
     textIndent: indentPt !== 0 ? ptToCqw(indentPt, slideWidth) : undefined,
     lineHeight,
@@ -510,86 +454,18 @@ function RenderElement({
   };
 
   if (element.type === "image" && element.imageData) {
-    // Handle image cropping. OOXML srcRect values are percentages of the
-    // source image; cropping a percent off both sides means the remaining
-    // image needs to be scaled UP so the un-cropped portion still fills
-    // 100% of the box. The previous "100 + l + r" sizing was wrong because
-    // it didn't account for the fact that the cropped region is itself a
-    // percentage of the *original* dimensions — we need to scale the
-    // visible image so the visible region is 100% wide.
+    // Handle image cropping
     const crop = element.imageCrop;
-    const visibleW = 100 - (crop?.l ?? 0) - (crop?.r ?? 0);
-    const visibleH = 100 - (crop?.t ?? 0) - (crop?.b ?? 0);
-    const scaleX = visibleW > 0 ? 100 / visibleW : 1;
-    const scaleY = visibleH > 0 ? 100 / visibleH : 1;
     const imgStyle: React.CSSProperties = {
-      width: crop ? `${100 * scaleX}%` : "100%",
-      height: crop ? `${100 * scaleY}%` : "100%",
-      // No objectFit/objectPosition — we size and offset manually so the
-      // math is exact and matches PowerPoint's own rendering.
+      width: crop ? `${100 + crop.l + crop.r}%` : "100%",
+      height: crop ? `${100 + crop.t + crop.b}%` : "100%",
+      objectFit: "cover",
+      objectPosition: crop ? `${-crop.l}% ${-crop.t}%` : "center",
       pointerEvents: "none",
-      marginLeft: crop ? `${-(crop.l * scaleX)}%` : undefined,
-      marginTop: crop ? `${-(crop.t * scaleY)}%` : undefined,
+      marginLeft: crop ? `${-crop.l}%` : undefined,
+      marginTop: crop ? `${-crop.t}%` : undefined,
     };
-
-    // If the picture / image-filled shape also carries a txBody, render it
-    // on top of the image as a text overlay.
-    const hasOverlayText =
-      element.paragraphs && element.paragraphs.some((p) => p.runs.some((r) => r.text.trim()));
-
-    if (!hasOverlayText) {
-      return (
-        <div style={baseStyle}>
-          <img
-            src={element.imageData}
-            alt=""
-            draggable={false}
-            style={imgStyle}
-            onContextMenu={(e) => e.preventDefault()}
-          />
-        </div>
-      );
-    }
-
-    const bodyProps = element.bodyProps || {};
-    const lIns = bodyProps.lIns ?? 91440;
-    const rIns = bodyProps.rIns ?? 91440;
-    const tIns = bodyProps.tIns ?? 45720;
-    const bIns = bodyProps.bIns ?? 45720;
-
-    let justifyContent = "flex-start";
-    if (bodyProps.anchor === "ctr") justifyContent = "center";
-    else if (bodyProps.anchor === "b") justifyContent = "flex-end";
-
-    let alignItems = "stretch";
-    if (bodyProps.anchorCtr) alignItems = "center";
-
-    const overlayStyle: React.CSSProperties = {
-      // Anchor the overlay to the same box the image is in by inheriting the
-      // base positioning and then forcing inset:0 to fill it (rather than
-      // another absolute-positioned element relative to the slide).
-      ...baseStyle,
-      position: "absolute",
-      left: 0,
-      top: 0,
-      right: 0,
-      bottom: 0,
-      width: "auto",
-      height: "auto",
-      padding: `${emuToCqw(tIns, slideWidth)} ${emuToCqw(rIns, slideWidth)} ${emuToCqw(bIns, slideWidth)} ${emuToCqw(lIns, slideWidth)}`,
-      display: "flex",
-      flexDirection: "column",
-      justifyContent,
-      alignItems,
-      boxSizing: "border-box",
-      wordWrap: "break-word",
-      overflowWrap: "break-word",
-      overflow: "visible",
-      whiteSpace: bodyProps.wrap === "none" ? "nowrap" : undefined,
-    };
-
-    const markers = buildParagraphMarkers(element.paragraphs!);
-
+    
     return (
       <div style={baseStyle}>
         <img
@@ -599,20 +475,6 @@ function RenderElement({
           style={imgStyle}
           onContextMenu={(e) => e.preventDefault()}
         />
-        <div style={overlayStyle}>
-          <div style={{ width: "100%" }}>
-            {element.paragraphs!.map((para, i) => (
-              <RenderParagraph
-                key={i}
-                para={para}
-                slideWidth={slideWidth}
-                isFirst={i === 0}
-                isLast={i === element.paragraphs!.length - 1}
-                listMarker={markers[i]}
-              />
-            ))}
-          </div>
-        </div>
       </div>
     );
   }

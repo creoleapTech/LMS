@@ -1,0 +1,7 @@
+- generic [active] [ref=e1]:
+  - heading "PPT Viewer Standalone Test" [level=1] [ref=e2]
+  - generic [ref=e3]:
+    - generic [ref=e6]: Parsing PPTX...
+    - generic [ref=e7]:
+      - button "← Previous" [disabled] [ref=e8]
+      - button "Next →" [disabled] [ref=e9]
