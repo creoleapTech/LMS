@@ -106,17 +106,17 @@ export interface FileRoutesByFullPath {
   '/examinations/$id': typeof ExaminationsIdRoute
   '/institutions/$id': typeof InstitutionsIdRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
-  '/courses': typeof CoursesIndexRoute
-  '/curriculum': typeof CurriculumIndexRoute
-  '/dashboard': typeof DashboardIndexRoute
-  '/examinations': typeof ExaminationsIndexRoute
-  '/institutions': typeof InstitutionsIndexRoute
-  '/lesson-plans': typeof LessonPlansIndexRoute
-  '/my-classes': typeof MyClassesIndexRoute
-  '/reports': typeof ReportsIndexRoute
-  '/settings': typeof SettingsIndexRoute
-  '/staff': typeof StaffIndexRoute
-  '/students': typeof StudentsIndexRoute
+  '/courses/': typeof CoursesIndexRoute
+  '/curriculum/': typeof CurriculumIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
+  '/examinations/': typeof ExaminationsIndexRoute
+  '/institutions/': typeof InstitutionsIndexRoute
+  '/lesson-plans/': typeof LessonPlansIndexRoute
+  '/my-classes/': typeof MyClassesIndexRoute
+  '/reports/': typeof ReportsIndexRoute
+  '/settings/': typeof SettingsIndexRoute
+  '/staff/': typeof StaffIndexRoute
+  '/students/': typeof StudentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -160,17 +160,17 @@ export interface FileRouteTypes {
     | '/examinations/$id'
     | '/institutions/$id'
     | '/lesson-plans/$id'
-    | '/courses'
-    | '/curriculum'
-    | '/dashboard'
-    | '/examinations'
-    | '/institutions'
-    | '/lesson-plans'
-    | '/my-classes'
-    | '/reports'
-    | '/settings'
-    | '/staff'
-    | '/students'
+    | '/courses/'
+    | '/curriculum/'
+    | '/dashboard/'
+    | '/examinations/'
+    | '/institutions/'
+    | '/lesson-plans/'
+    | '/my-classes/'
+    | '/reports/'
+    | '/settings/'
+    | '/staff/'
+    | '/students/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -237,77 +237,77 @@ declare module '@tanstack/react-router' {
     '/students/': {
       id: '/students/'
       path: '/students'
-      fullPath: '/students'
+      fullPath: '/students/'
       preLoaderRoute: typeof StudentsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/staff/': {
       id: '/staff/'
       path: '/staff'
-      fullPath: '/staff'
+      fullPath: '/staff/'
       preLoaderRoute: typeof StaffIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/': {
       id: '/settings/'
       path: '/settings'
-      fullPath: '/settings'
+      fullPath: '/settings/'
       preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reports/': {
       id: '/reports/'
       path: '/reports'
-      fullPath: '/reports'
+      fullPath: '/reports/'
       preLoaderRoute: typeof ReportsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/my-classes/': {
       id: '/my-classes/'
       path: '/my-classes'
-      fullPath: '/my-classes'
+      fullPath: '/my-classes/'
       preLoaderRoute: typeof MyClassesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lesson-plans/': {
       id: '/lesson-plans/'
       path: '/lesson-plans'
-      fullPath: '/lesson-plans'
+      fullPath: '/lesson-plans/'
       preLoaderRoute: typeof LessonPlansIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/institutions/': {
       id: '/institutions/'
       path: '/institutions'
-      fullPath: '/institutions'
+      fullPath: '/institutions/'
       preLoaderRoute: typeof InstitutionsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/examinations/': {
       id: '/examinations/'
       path: '/examinations'
-      fullPath: '/examinations'
+      fullPath: '/examinations/'
       preLoaderRoute: typeof ExaminationsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/': {
       id: '/dashboard/'
       path: '/dashboard'
-      fullPath: '/dashboard'
+      fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/curriculum/': {
       id: '/curriculum/'
       path: '/curriculum'
-      fullPath: '/curriculum'
+      fullPath: '/curriculum/'
       preLoaderRoute: typeof CurriculumIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/courses/': {
       id: '/courses/'
       path: '/courses'
-      fullPath: '/courses'
+      fullPath: '/courses/'
       preLoaderRoute: typeof CoursesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
