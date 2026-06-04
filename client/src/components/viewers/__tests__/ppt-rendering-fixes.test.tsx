@@ -19,8 +19,6 @@ import { SlideRenderer, buildParagraphMarkers } from "@/components/viewers/Slide
 const SLIDE_WIDTH = 9144000;
 const SLIDE_HEIGHT = 6858000;
 
-const px = (pt: number) => pt;
-const emu = (pt: number) => pt * 12700;
 
 function makePara(over: Partial<ParagraphData> = {}): ParagraphData {
   return {
