@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useAuthStore } from "@/store/userAuthStore";
+import { useCurriculumNavStore } from "@/store/curriculumNavStore";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Config } from "@/lib/config";
 import { Settings, LogOut, GraduationCap } from "lucide-react";
@@ -58,6 +60,13 @@ export function GlobalHeader() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { gradeNumber, bookTitle, chapterNumber, chapterTitle, clearCurriculumContext } = useCurriculumNavStore();
+
+  useEffect(() => {
+    if (!pathname.startsWith("/curriculum")) {
+      clearCurriculumContext();
+    }
+  }, [pathname, clearCurriculumContext]);
 
   const institutionId = user
     ? typeof user.institutionId === "object" && user.institutionId
@@ -130,6 +139,24 @@ export function GlobalHeader() {
               )
             )}
           </div>
+
+          {/* Curriculum context badges */}
+          {pathname.startsWith("/curriculum") && (gradeNumber || chapterNumber) && (
+            <div className="hidden sm:flex items-center gap-2 ml-2 pl-3 border-l border-slate-200 dark:border-slate-700">
+              {gradeNumber && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  Grade {gradeNumber}
+                  {bookTitle && <span className="font-normal text-blue-500">• {bookTitle}</span>}
+                </span>
+              )}
+              {chapterNumber && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  Chapter {chapterNumber}
+                  {chapterTitle && <span className="font-normal text-purple-500">• {chapterTitle}</span>}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right: Academic year + Profile */}

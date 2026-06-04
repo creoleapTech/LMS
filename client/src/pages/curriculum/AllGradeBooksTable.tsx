@@ -12,6 +12,7 @@ import { GradeBookFormDialogStandalone } from "./GradeBookFormDialogStandalone";
 import { PremiumGradeBookCard } from "./PremiumGradeBookCard";
 import { ChapterContentManager } from "./ChapterContentManager";
 import { ChapterManager } from "./ChapterManager";
+import { useCurriculumNavStore } from "@/store/curriculumNavStore";
 
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -53,6 +54,7 @@ export function AllGradeBooksTable() {
     const [selectedChapterNumber, setSelectedChapterNumber] = useState<number>(1);
     const debouncedSearch = useDebounce(search, 500);
     const queryClient = useQueryClient();
+    const { setCurriculumContext, clearChapterContext, clearGradeContext } = useCurriculumNavStore();
 
     const { data, isLoading } = useQuery({
         queryKey: ["all-gradebooks", page, debouncedSearch],
@@ -91,14 +93,17 @@ export function AllGradeBooksTable() {
         setDetailsGradeBook(null);
         setSelectedGradeBook(book);
         setSelectedGradeBookId(book.id);
+        setCurriculumContext({ gradeNumber: book.grade, bookTitle: book.bookTitle });
     };
 
     const handleBack = () => {
         if (selectedChapterId) {
             setSelectedChapterId(null);
+            clearChapterContext();
         } else {
             setSelectedGradeBookId(null);
             setSelectedGradeBook(null);
+            clearGradeContext();
         }
     };
 
@@ -129,9 +134,10 @@ export function AllGradeBooksTable() {
                     <CardContent>
                         <ChapterManager
                             gradeBookId={selectedGradeBookId}
-                            onChapterSelect={(chapterId, chapterNum) => {
+                            onChapterSelect={(chapterId, chapterNum, chapterTitle) => {
                                 setSelectedChapterId(chapterId);
                                 setSelectedChapterNumber(chapterNum || 1);
+                                setCurriculumContext({ chapterNumber: chapterNum || null, chapterTitle: chapterTitle || null });
                             }}
                         />
                     </CardContent>

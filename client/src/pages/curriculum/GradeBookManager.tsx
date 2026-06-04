@@ -24,7 +24,7 @@ interface GradeBook {
 
 interface Props {
   curriculumId: string;
-  onGradeSelect: (gradeBookId: string) => void;
+  onGradeSelect: (gradeBookId: string, gradeInfo?: { grade: number; bookTitle: string }) => void;
 }
 
 import { useAuthStore } from "@/store/userAuthStore";
@@ -98,7 +98,7 @@ export function GradeBookManager({ curriculumId, onGradeSelect }: Props) {
             <PremiumGradeBookCard
               key={gradeBook.id}
               gradeBook={gradeBook}
-              onView={() => onGradeSelect(gradeBook.id)}
+              onView={() => onGradeSelect(gradeBook.id, { grade: gradeBook.grade, bookTitle: gradeBook.bookTitle })}
               onEdit={isSuperAdmin ? () => handleEdit(gradeBook) : undefined}
               onDelete={isSuperAdmin ? () => handleDelete(gradeBook.id) : undefined}
             />

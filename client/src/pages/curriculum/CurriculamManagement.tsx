@@ -12,20 +12,25 @@ import { CurriculumTable } from "./CurriculumTable";
 import { GradeBookManager } from "./GradeBookManager";
 import { AllGradeBooksTable } from "./AllGradeBooksTable";
 import { AllChaptersTable } from "./AllChaptersTable";
+import { useCurriculumNavStore } from "@/store/curriculumNavStore";
 
 export default function CurriculumManagementPage() {
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
   const [selectedGradeBookId, setSelectedGradeBookId] = useState<string | null>(null);
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
   const [selectedChapterNumber, setSelectedChapterNumber] = useState<number>(1);
+  const { setCurriculumContext, clearCurriculumContext, clearChapterContext, clearGradeContext } = useCurriculumNavStore();
 
   const handleBack = () => {
     if (selectedChapterId) {
       setSelectedChapterId(null);
+      clearChapterContext();
     } else if (selectedGradeBookId) {
       setSelectedGradeBookId(null);
+      clearGradeContext();
     } else if (selectedCurriculumId) {
       setSelectedCurriculumId(null);
+      clearCurriculumContext();
     }
   };
 
@@ -83,7 +88,12 @@ export default function CurriculumManagementPage() {
           <CardContent>
             <GradeBookManager
               curriculumId={selectedCurriculumId}
-              onGradeSelect={setSelectedGradeBookId}
+              onGradeSelect={(id, info) => {
+                if (info) {
+                  setCurriculumContext({ gradeNumber: info.grade, bookTitle: info.bookTitle });
+                }
+                setSelectedGradeBookId(id);
+              }}
             />
           </CardContent>
         </Card>
@@ -103,9 +113,10 @@ export default function CurriculumManagementPage() {
           <CardContent>
             <ChapterManager
               gradeBookId={selectedGradeBookId}
-              onChapterSelect={(id, chapterNum) => {
+              onChapterSelect={(id, chapterNum, chapterTitle) => {
                 setSelectedChapterId(id);
                 if (chapterNum) setSelectedChapterNumber(chapterNum);
+                setCurriculumContext({ chapterNumber: chapterNum ?? null, chapterTitle: chapterTitle ?? null });
               }}
             />
           </CardContent>

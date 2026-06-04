@@ -26,7 +26,7 @@ interface Chapter {
 
 interface Props {
   gradeBookId: string;
-  onChapterSelect: (chapterId: string, chapterNumber?: number) => void;
+  onChapterSelect: (chapterId: string, chapterNumber?: number, chapterTitle?: string) => void;
 }
 
 const EMPTY_CHAPTERS: Chapter[] = [];
@@ -182,7 +182,7 @@ export function ChapterManager({ gradeBookId, onChapterSelect }: Props) {
               <SortableChapter
                 key={chapter.id}
                 chapter={chapter}
-                onView={() => onChapterSelect(chapter.id, chapter.chapterNumber)}
+                onView={() => onChapterSelect(chapter.id, chapter.chapterNumber, chapter.title)}
                 onEdit={isSuperAdmin ? () => handleEdit(chapter) : undefined as any}
                 onDelete={isSuperAdmin ? () => handleDelete(chapter.id) : undefined as any}
               />

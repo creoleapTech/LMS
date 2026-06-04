@@ -10,6 +10,7 @@ import { UnifiedChapterFormDialog } from "./UnifiedChapterFormDialog";
 import { PremiumChapterCard } from "./PremiumChapterCard";
 import { ChapterContentManager } from "./ChapterContentManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCurriculumNavStore } from "@/store/curriculumNavStore";
 
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -42,6 +43,7 @@ export function AllChaptersTable() {
     const [selectedChapterNumber, setSelectedChapterNumber] = useState<number>(1);
     const debouncedSearch = useDebounce(search, 500);
     const queryClient = useQueryClient();
+    const { setCurriculumContext, clearCurriculumContext } = useCurriculumNavStore();
 
     const { data, isLoading } = useQuery({
         queryKey: ["all-chapters", page, debouncedSearch],
@@ -64,7 +66,7 @@ export function AllChaptersTable() {
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
-                        onClick={() => setSelectedChapterId(null)}
+                        onClick={() => { setSelectedChapterId(null); clearCurriculumContext(); }}
                         className="gap-2"
                     >
                         <ArrowLeft className="h-4 w-4" />
@@ -126,6 +128,11 @@ export function AllChaptersTable() {
                                 onView={() => {
                                     setSelectedChapterId(chapter.id);
                                     setSelectedChapterNumber(chapter.chapterNumber);
+                                    setCurriculumContext({
+                                        chapterNumber: chapter.chapterNumber,
+                                        chapterTitle: chapter.title,
+                                        bookTitle: chapter.bookTitle,
+                                    });
                                 }}
                                 curriculumName={chapter.curriculumName}
                                 bookTitle={chapter.bookTitle}
