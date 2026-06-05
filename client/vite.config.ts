@@ -32,7 +32,8 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
+            // Only React core packages in vendor-react to avoid circular deps
+            if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) {
               return 'vendor-react';
             }
             if (id.includes('@tanstack')) {
@@ -65,7 +66,7 @@ export default defineConfig({
             if (id.includes('sonner') || id.includes('class-variance') || id.includes('tailwind-merge') || id.includes('clsx')) {
               return 'vendor-ui-utils';
             }
-            return 'vendor-other';
+            // No catch-all — remaining deps stay in their consuming chunks to avoid circular chunk deps
           }
         },
       },
