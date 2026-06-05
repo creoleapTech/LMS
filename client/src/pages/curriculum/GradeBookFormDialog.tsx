@@ -206,7 +206,7 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Cover Image</p>
             {coverImagePreview ? (
               <div className="relative group">
-                <img src={coverImagePreview} alt="Cover preview" className="w-full h-48 object-cover rounded-xl border" />
+                <img src={coverImagePreview} alt="Cover preview" loading="lazy" decoding="async" className="w-full h-48 object-cover rounded-xl border" />
                 <button
                   type="button"
                   onClick={removeCoverImage}

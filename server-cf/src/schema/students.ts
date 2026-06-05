@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 
 // ─── student_progress ───────────────────────────────
 export const studentProgress = sqliteTable("student_progress", {
@@ -17,4 +17,8 @@ export const studentProgress = sqliteTable("student_progress", {
     table.curriculumId,
     table.grade,
   ),
+  index("student_progress_user_id_idx").on(table.userId),
+  index("student_progress_curriculum_id_idx").on(table.curriculumId),
+  index("student_progress_grade_idx").on(table.grade),
+  index("student_progress_chapter_id_idx").on(table.chapterId),
 ]);

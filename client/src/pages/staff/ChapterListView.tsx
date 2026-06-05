@@ -93,6 +93,8 @@ export function ChapterListView({
                         <img
                           src={`${Config.proxyUrl}${chapter.thumbnail}`}
                           alt={`Chapter ${chapter.chapterNumber}`}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover"
                         />
                       ) : allComplete ? (

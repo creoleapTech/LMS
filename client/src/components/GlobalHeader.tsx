@@ -104,6 +104,8 @@ export function GlobalHeader() {
               <img
                 src={logoUrl}
                 alt={displayName}
+                loading="lazy"
+                decoding="async"
                 className="h-10 w-10 rounded-xl object-cover border border-white/60 shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light)] shrink-0"
               />
             ) : (

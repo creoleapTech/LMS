@@ -43,6 +43,13 @@
       "when": 1746403200000,
       "tag": "0005_examinations",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1780653176124,
+      "tag": "0006_wise_hiroim",
+      "breakpoints": true
     }
   ]
 }

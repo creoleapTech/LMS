@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, Suspense, lazy } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuthStore } from '../../store/userAuthStore';
 import { useDashboardStats } from '../../pages/dashboard/useDashboardStats';
-import { SuperAdminDashboard } from '../../pages/dashboard/SuperAdminDashboard';
-import { AdminDashboard } from '../../pages/dashboard/AdminDashboard';
-import { TeacherDashboard } from '../../pages/dashboard/TeacherDashboard';
 import { DashboardSkeleton } from '../../pages/dashboard/components/DashboardComponents';
 import { DashboardHeader } from '../../pages/dashboard/components/DashboardHeader';
 import { _axios } from '../../lib/axios';
+
+const SuperAdminDashboard = lazy(() => import('../../pages/dashboard/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+const AdminDashboard = lazy(() => import('../../pages/dashboard/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const TeacherDashboard = lazy(() => import('../../pages/dashboard/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })));
 
 // Prefetch function — same query as useDashboardStats with no filters
 async function prefetchDashboard(queryClient: any) {
@@ -61,13 +62,13 @@ function Dashboard() {
         <DashboardHeader />
 
         {stats ? (
-          <>
+          <Suspense fallback={<DashboardSkeleton />}>
             {effectiveRole === 'super_admin' && <SuperAdminDashboard data={stats} />}
             {effectiveRole === 'admin' && (
               <AdminDashboard data={stats} filters={filters} onFiltersChange={setFilters} />
             )}
             {(effectiveRole === 'teacher' || effectiveRole === 'staff') && <TeacherDashboard data={stats} />}
-          </>
+          </Suspense>
         ) : (
           <div className="neo-card bg-gradient-to-br from-amber-50 to-amber-100/50 p-6 text-center">
             <p className="text-sm text-amber-600 font-medium">

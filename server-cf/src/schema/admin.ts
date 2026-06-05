@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 
 // ─── admins ─────────────────────────────────────────
 export const admins = sqliteTable("admins", {
@@ -19,7 +19,11 @@ export const admins = sqliteTable("admins", {
   isDeleted: integer("is_deleted").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => [
+  index("admins_institution_id_idx").on(table.institutionId),
+  index("admins_is_deleted_idx").on(table.isDeleted),
+  index("admins_is_active_idx").on(table.isActive),
+]);
 
 // ─── institutions ───────────────────────────────────
 export const institutions = sqliteTable("institutions", {
@@ -36,7 +40,10 @@ export const institutions = sqliteTable("institutions", {
   isDeleted: integer("is_deleted").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => [
+  index("institutions_is_deleted_idx").on(table.isDeleted),
+  index("institutions_is_active_idx").on(table.isActive),
+]);
 
 // ─── staff ──────────────────────────────────────────
 export const staff = sqliteTable("staff", {
@@ -55,7 +62,12 @@ export const staff = sqliteTable("staff", {
   lastLogin: text("last_login"),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => [
+  index("staff_institution_id_idx").on(table.institutionId),
+  index("staff_is_deleted_idx").on(table.isDeleted),
+  index("staff_is_active_idx").on(table.isActive),
+  index("staff_type_idx").on(table.type),
+]);
 
 // ─── departments ────────────────────────────────────
 export const departments = sqliteTable("departments", {
@@ -66,7 +78,10 @@ export const departments = sqliteTable("departments", {
   isDeleted: integer("is_deleted").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => [
+  index("departments_institution_id_idx").on(table.institutionId),
+  index("departments_is_deleted_idx").on(table.isDeleted),
+]);
 
 // ─── classes ────────────────────────────────────────
 export const classes = sqliteTable("classes", {
@@ -80,7 +95,12 @@ export const classes = sqliteTable("classes", {
   isDeleted: integer("is_deleted").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => [
+  index("classes_institution_id_idx").on(table.institutionId),
+  index("classes_is_deleted_idx").on(table.isDeleted),
+  index("classes_is_active_idx").on(table.isActive),
+  index("classes_grade_idx").on(table.grade),
+]);
 
 // ─── students ───────────────────────────────────────
 export const students = sqliteTable("students", {
@@ -104,4 +124,10 @@ export const students = sqliteTable("students", {
   isDeleted: integer("is_deleted").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => [
+  index("students_institution_id_idx").on(table.institutionId),
+  index("students_class_id_idx").on(table.classId),
+  index("students_is_deleted_idx").on(table.isDeleted),
+  index("students_is_active_idx").on(table.isActive),
+  index("students_name_idx").on(table.name),
+]);

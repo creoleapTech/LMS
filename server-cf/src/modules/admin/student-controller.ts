@@ -519,6 +519,11 @@ studentController.get("/", async (c) => {
   const classId = c.req.query("classId");
   const institutionId = c.req.query("institutionId");
   const search = c.req.query("search");
+  const rawPage = parseInt(c.req.query("page") || "1", 10);
+  const page = Number.isNaN(rawPage) ? 1 : Math.max(1, rawPage);
+  const rawLimit = parseInt(c.req.query("limit") || "50", 10);
+  const limit = Number.isNaN(rawLimit) ? 50 : Math.max(1, Math.min(100, rawLimit));
+  const offset = (page - 1) * limit;
 
   const conditions: any[] = [eq(students.isDeleted, 0)];
 
@@ -542,54 +547,63 @@ studentController.get("/", async (c) => {
     );
   }
 
-  const studentRows = await db
-    .select()
+  // Count total matching rows
+  const [countResult] = await db
+    .select({ count: count() })
     .from(students)
     .where(and(...conditions));
+  const total = countResult?.count ?? 0;
 
-  // Enrich with class and institution info
-  const enriched = await Promise.all(
-    studentRows.map(async (s) => {
-      // Class info
-      let classInfo: any = null;
-      if (s.classId) {
-        const [cls] = await db
-          .select({
-            id: classes.id,
-            grade: classes.grade,
-            section: classes.section,
-            year: classes.year,
-          })
-          .from(classes)
-          .where(eq(classes.id, s.classId))
-          .limit(1);
-        classInfo = cls || null;
-      }
-
-      // Institution info
-      let institution: any = null;
-      if (s.institutionId) {
-        const [inst] = await db
-          .select({
-            id: institutions.id,
-            name: institutions.name,
-            type: institutions.type,
-          })
-          .from(institutions)
-          .where(eq(institutions.id, s.institutionId))
-          .limit(1);
-        institution = inst || null;
-      }
-
-      return {
-        ...s,
-        classId: classInfo || s.classId,
-        institutionId: institution || s.institutionId,
-      };
+  // Slim select for list view
+  const studentRows = await db
+    .select({
+      id: students.id,
+      name: students.name,
+      classId: students.classId,
+      admissionNumber: students.admissionNumber,
+      rollNumber: students.rollNumber,
+      email: students.email,
+      gender: students.gender,
+      institutionId: students.institutionId,
+      isActive: students.isActive,
     })
-  );
+    .from(students)
+    .where(and(...conditions))
+    .limit(limit)
+    .offset(offset);
 
-  return c.json({ success: true, data: enriched }, 200);
+  const classIds = [...new Set(studentRows.map((s) => s.classId).filter(Boolean))];
+  const institutionIds = [...new Set(studentRows.map((s) => s.institutionId).filter(Boolean))];
+
+  // Batch fetch classes
+  const classMap = new Map<string, any>();
+  if (classIds.length > 0) {
+    const classRows = await db
+      .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
+      .from(classes)
+      .where(inArray(classes.id, classIds as string[]));
+    for (const c of classRows) classMap.set(c.id, c);
+  }
+
+  // Batch fetch institutions
+  const institutionMap = new Map<string, any>();
+  if (institutionIds.length > 0) {
+    const instRows = await db
+      .select({ id: institutions.id, name: institutions.name, type: institutions.type })
+      .from(institutions)
+      .where(inArray(institutions.id, institutionIds as string[]));
+    for (const i of instRows) institutionMap.set(i.id, i);
+  }
+
+  const enriched = studentRows.map((s) => ({
+    ...s,
+    classId: (s.classId && classMap.get(s.classId)) || s.classId,
+    institutionId: (s.institutionId && institutionMap.get(s.institutionId)) || s.institutionId,
+  }));
+
+  const pages = Math.ceil(total / limit);
+
+  return c.json({ success: true, data: enriched, pagination: { total, page, limit, pages } }, 200);
 });
 
 // ─── GET Single Student ────────────────────────────

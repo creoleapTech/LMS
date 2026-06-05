@@ -1,14 +1,12 @@
 // src/components/staff/StaffTable.tsx
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useDeferredValue, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
   useReactTable,
   getSortedRowModel,
   type SortingState,
@@ -43,20 +41,40 @@ export function StaffTable({ institutionId, institutionName: _institutionName }:
   const [globalFilter, setGlobalFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const queryClient = useQueryClient();
 
+  const deferredSearch = useDeferredValue(globalFilter);
+  const typeParam = typeFilter !== "all" ? typeFilter : undefined;
+
   // Fetch Staff
-  const { data: staffs = [], isLoading } = useQuery<IStaff[]>({
-    queryKey: ["staff", institutionId],
+  const { data: staffData, isLoading } = useQuery<{ success: boolean; data: IStaff[]; pagination: { total: number; page: number; limit: number; pages: number } }>({
+    queryKey: ["staff", institutionId, page, pageSize, deferredSearch, typeParam],
     queryFn: async () => {
-      const { data } = await _axios.get<{ success: boolean; data: IStaff[] }>("/admin/staff", {
-        params: { institutionId },
+      const { data } = await _axios.get("/admin/staff", {
+        params: {
+          institutionId,
+          page,
+          limit: pageSize,
+          search: deferredSearch || undefined,
+          type: typeParam,
+        },
       });
-      return data.data;
+      return data;
     },
     enabled: !!institutionId,
+    placeholderData: (previousData) => previousData,
   });
+
+  const staffs = staffData?.data || [];
+  const paginationMeta = staffData?.pagination;
+
+  // Reset to page 1 when search or type filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [deferredSearch, typeFilter]);
 
   // Create Mutation
   const createMutation = useMutation({
@@ -243,32 +261,26 @@ export function StaffTable({ institutionId, institutionName: _institutionName }:
     }),
   ];
 
-  const filteredData = useMemo(() => {
-    let filtered = staffs;
-
-    if (typeFilter !== "all") {
-      filtered = filtered.filter(s => s.type === typeFilter);
-    }
-    // Simple subject filter? Or maybe remove department filter for now since it's subjects[]
-    // If we want to filter by subject, we'd need a multi-select or check if array includes.
-
-    return filtered;
-  }, [staffs, typeFilter]);
-
   const table = useReactTable({
-    data: filteredData,
+    data: staffs,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    manualPagination: true,
+    pageCount: paginationMeta?.pages ?? 1,
     state: {
-      globalFilter,
       sorting,
+      pagination: {
+        pageIndex: page - 1,
+        pageSize,
+      },
     },
-    onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
-    globalFilterFn: "includesString",
+    onPaginationChange: (updater) => {
+      const newState = typeof updater === 'function' ? updater({ pageIndex: page - 1, pageSize }) : updater;
+      setPage(newState.pageIndex + 1);
+      setPageSize(newState.pageSize);
+    },
   });
 
   return (
@@ -314,6 +326,7 @@ export function StaffTable({ institutionId, institutionName: _institutionName }:
                 onClick={() => {
                   setGlobalFilter("");
                   setTypeFilter("all");
+                  setPage(1);
                 }}
               >
                 Clear Filters
@@ -327,7 +340,7 @@ export function StaffTable({ institutionId, institutionName: _institutionName }:
           ) : (
             <div className="flex flex-col gap-4">
               <div className="text-sm text-muted-foreground">
-                Showing {table.getRowModel().rows.length} of {staffs.length} staff members
+                Showing {staffs.length} of {paginationMeta?.total ?? 0} staff members
               </div>
 
               <div className="neo-table-wrapper overflow-hidden">
@@ -369,6 +382,9 @@ export function StaffTable({ institutionId, institutionName: _institutionName }:
 
               {/* Pagination */}
               <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  Page {page} of {paginationMeta?.pages || 1}
+                </span>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="rounded-xl" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
                     Previous

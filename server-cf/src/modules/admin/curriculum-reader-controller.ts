@@ -3,7 +3,7 @@
 import { Hono } from "hono";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, inArray } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import { chapters, chapterContents } from "../../schema/books";
 import {
@@ -18,53 +18,78 @@ app.use("*", adminAuth);
 
 // ── quiz helper ────────────────────────────────────────────────────────────
 
-async function loadQuizQuestions(db: ReturnType<typeof getDb>, contentId: string) {
-  const questions = await db
-    .select()
-    .from(quizQuestions)
-    .where(eq(quizQuestions.contentId, contentId))
-    .orderBy(asc(quizQuestions.order));
-
-  const result = [];
-  for (const q of questions) {
-    const [options, matchPairsRows] = await Promise.all([
-      db
-        .select()
-        .from(quizQuestionOptions)
-        .where(eq(quizQuestionOptions.questionId, q.id))
-        .orderBy(asc(quizQuestionOptions.order)),
-      db
-        .select()
-        .from(quizMatchPairs)
-        .where(eq(quizMatchPairs.questionId, q.id))
-        .orderBy(asc(quizMatchPairs.order)),
-    ]);
-    result.push({
-      ...q,
-      options: options.map((o) => ({ label: o.label, value: o.value })),
-      matchPairs: matchPairsRows.map((m) => ({
-        leftItem: m.leftItem,
-        rightItem: m.rightItem,
-      })),
-    });
-  }
-  return result;
-}
-
-/** Attach quiz questions to content rows that are quizzes. */
 async function enrichContentWithQuizzes(
   db: ReturnType<typeof getDb>,
   rows: any[],
 ) {
-  return Promise.all(
-    rows.map(async (row) => {
-      if (row.type === "quiz") {
-        const questions = await loadQuizQuestions(db, row.id);
-        return { ...row, questions };
-      }
-      return row;
-    }),
-  );
+  const quizRows = rows.filter((r) => r.type === "quiz");
+  if (quizRows.length === 0) return rows;
+
+  const contentIds = quizRows.map((r) => r.id);
+
+  // Batch fetch all questions for these content items
+  const allQuestions = await db
+    .select()
+    .from(quizQuestions)
+    .where(inArray(quizQuestions.contentId, contentIds))
+    .orderBy(asc(quizQuestions.order));
+
+  const questionIds = allQuestions.map((q) => q.id);
+
+  // Batch fetch options and match pairs for all questions
+  const [allOptions, allMatchPairs] = await Promise.all([
+    questionIds.length > 0
+      ? db
+          .select()
+          .from(quizQuestionOptions)
+          .where(inArray(quizQuestionOptions.questionId, questionIds))
+          .orderBy(asc(quizQuestionOptions.order))
+      : Promise.resolve([]),
+    questionIds.length > 0
+      ? db
+          .select()
+          .from(quizMatchPairs)
+          .where(inArray(quizMatchPairs.questionId, questionIds))
+          .orderBy(asc(quizMatchPairs.order))
+      : Promise.resolve([]),
+  ]);
+
+  // Group options and match pairs by questionId
+  const optionsMap = new Map<string, typeof allOptions[0][]>();
+  for (const o of allOptions) {
+    const arr = optionsMap.get(o.questionId) || [];
+    arr.push(o);
+    optionsMap.set(o.questionId, arr);
+  }
+
+  const matchPairsMap = new Map<string, typeof allMatchPairs[0][]>();
+  for (const m of allMatchPairs) {
+    const arr = matchPairsMap.get(m.questionId) || [];
+    arr.push(m);
+    matchPairsMap.set(m.questionId, arr);
+  }
+
+  // Group questions by contentId
+  const questionsMap = new Map<string, any[]>();
+  for (const q of allQuestions) {
+    const arr = questionsMap.get(q.contentId) || [];
+    arr.push({
+      ...q,
+      options: (optionsMap.get(q.id) || []).map((o) => ({ label: o.label, value: o.value })),
+      matchPairs: (matchPairsMap.get(q.id) || []).map((m) => ({
+        leftItem: m.leftItem,
+        rightItem: m.rightItem,
+      })),
+    });
+    questionsMap.set(q.contentId, arr);
+  }
+
+  return rows.map((row) => {
+    if (row.type === "quiz") {
+      return { ...row, questions: questionsMap.get(row.id) || [] };
+    }
+    return row;
+  });
 }
 
 // GET chapters for a grade book (any authenticated role)
@@ -109,19 +134,31 @@ app.get("/gradebook/:gradeBookId/full", async (c) => {
     .where(eq(chapters.gradeBookId, gradeBookId))
     .orderBy(asc(chapters.order));
 
-  const chaptersWithContent = await Promise.all(
-    chapterRows.map(async (chapter) => {
-      const contentRows = await db
+  const chapterIds = chapterRows.map((c) => c.id);
+
+  // Batch fetch all content for all chapters
+  const allContentRows = chapterIds.length > 0
+    ? await db
         .select()
         .from(chapterContents)
-        .where(eq(chapterContents.chapterId, chapter.id))
-        .orderBy(asc(chapterContents.order));
+        .where(inArray(chapterContents.chapterId, chapterIds))
+        .orderBy(asc(chapterContents.order))
+    : [];
 
-      const content = await enrichContentWithQuizzes(db, contentRows);
+  const enrichedContent = await enrichContentWithQuizzes(db, allContentRows);
 
-      return { ...chapter, content };
-    }),
-  );
+  // Group content by chapterId
+  const contentByChapter = new Map<string, any[]>();
+  for (const content of enrichedContent) {
+    const arr = contentByChapter.get(content.chapterId) || [];
+    arr.push(content);
+    contentByChapter.set(content.chapterId, arr);
+  }
+
+  const chaptersWithContent = chapterRows.map((chapter) => ({
+    ...chapter,
+    content: contentByChapter.get(chapter.id) || [],
+  }));
 
   return c.json({ success: true, data: chaptersWithContent }, 200);
 });

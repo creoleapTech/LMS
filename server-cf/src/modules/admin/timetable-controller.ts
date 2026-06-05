@@ -65,6 +65,51 @@ async function getWorkingDays(db: any, institutionId: string): Promise<number[]>
   return rows.length > 0 ? rows.map((r: any) => r.day) : [1, 2, 3, 4, 5];
 }
 
+/** Batch-enrich timetable entries with class, gradeBook and topics. */
+async function batchEnrichTimetableEntries(db: any, entries: any[]) {
+  const classIds = [...new Set(entries.map((e) => e.classId).filter(Boolean))];
+  const gbIds = [...new Set(entries.map((e) => e.gradeBookId).filter(Boolean))];
+  const entryIds = entries.map((e) => e.id);
+
+  const classMap = new Map<string, any>();
+  if (classIds.length > 0) {
+    const rows = await db
+      .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
+      .from(classes)
+      .where(inArray(classes.id, classIds));
+    for (const r of rows) classMap.set(r.id, r);
+  }
+
+  const gbMap = new Map<string, any>();
+  if (gbIds.length > 0) {
+    const rows = await db
+      .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade })
+      .from(gradeBooks)
+      .where(inArray(gradeBooks.id, gbIds));
+    for (const r of rows) gbMap.set(r.id, r);
+  }
+
+  const topicsMap = new Map<string, string[]>();
+  if (entryIds.length > 0) {
+    const rows = await db
+      .select({ timetableEntryId: timetableTopicsCovered.timetableEntryId, topic: timetableTopicsCovered.topic })
+      .from(timetableTopicsCovered)
+      .where(inArray(timetableTopicsCovered.timetableEntryId, entryIds));
+    for (const r of rows) {
+      const arr = topicsMap.get(r.timetableEntryId) || [];
+      arr.push(r.topic);
+      topicsMap.set(r.timetableEntryId, arr);
+    }
+  }
+
+  return entries.map((entry) => ({
+    ...entry,
+    classId: entry.classId ? classMap.get(entry.classId) || null : null,
+    gradeBookId: entry.gradeBookId ? gbMap.get(entry.gradeBookId) || null : null,
+    topicsCovered: topicsMap.get(entry.id) || [],
+  }));
+}
+
 /** Build month summary dates from recurring + one-off entries. */
 function buildMonthSummary(
   recurringEntries: any[],
@@ -250,44 +295,7 @@ timetableController.get("/my-day", async (c) => {
     ...oneOffEntries,
   ].sort((a, b) => (a.periodNumber ?? 0) - (b.periodNumber ?? 0));
 
-  // Populate class and gradeBook info for each entry
-  const enriched = await Promise.all(
-    allEntries.map(async (entry) => {
-      let classInfo = null;
-      let gradeBookInfo = null;
-
-      if (entry.classId) {
-        const [cls] = await db
-          .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
-          .from(classes)
-          .where(eq(classes.id, entry.classId))
-          .limit(1);
-        classInfo = cls || null;
-      }
-
-      if (entry.gradeBookId) {
-        const [gb] = await db
-          .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade })
-          .from(gradeBooks)
-          .where(eq(gradeBooks.id, entry.gradeBookId))
-          .limit(1);
-        gradeBookInfo = gb || null;
-      }
-
-      // Get topics covered for this entry
-      const topics = await db
-        .select({ topic: timetableTopicsCovered.topic })
-        .from(timetableTopicsCovered)
-        .where(eq(timetableTopicsCovered.timetableEntryId, entry.id));
-
-      return {
-        ...entry,
-        classId: classInfo,
-        gradeBookId: gradeBookInfo,
-        topicsCovered: topics.map((t: any) => t.topic),
-      };
-    }),
-  );
+  const enriched = await batchEnrichTimetableEntries(db, allEntries);
 
   return c.json({ success: true, data: { entries: enriched, periodConfig } });
 });
@@ -822,43 +830,7 @@ timetableController.get("/staff-day", async (c) => {
     ...oneOffEntries,
   ].sort((a, b) => (a.periodNumber ?? 0) - (b.periodNumber ?? 0));
 
-  // Populate class and gradeBook info
-  const enriched = await Promise.all(
-    allEntries.map(async (entry) => {
-      let classInfo = null;
-      let gradeBookInfo = null;
-
-      if (entry.classId) {
-        const [cls] = await db
-          .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
-          .from(classes)
-          .where(eq(classes.id, entry.classId))
-          .limit(1);
-        classInfo = cls || null;
-      }
-
-      if (entry.gradeBookId) {
-        const [gb] = await db
-          .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade })
-          .from(gradeBooks)
-          .where(eq(gradeBooks.id, entry.gradeBookId))
-          .limit(1);
-        gradeBookInfo = gb || null;
-      }
-
-      const topics = await db
-        .select({ topic: timetableTopicsCovered.topic })
-        .from(timetableTopicsCovered)
-        .where(eq(timetableTopicsCovered.timetableEntryId, entry.id));
-
-      return {
-        ...entry,
-        classId: classInfo,
-        gradeBookId: gradeBookInfo,
-        topicsCovered: topics.map((t: any) => t.topic),
-      };
-    }),
-  );
+  const enriched = await batchEnrichTimetableEntries(db, allEntries);
 
   return c.json({ success: true, data: { entries: enriched, periodConfig } });
 });

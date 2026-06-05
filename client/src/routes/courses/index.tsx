@@ -1,12 +1,5 @@
-import { CourseTable } from '@/pages/course/CourseTable'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, lazyRouteComponent } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/courses/')({
-  component: RouteComponent,
+  component: lazyRouteComponent(() => import('@/pages/course/CourseTable'), 'CourseTable'),
 })
-
-function RouteComponent() {
-  return <>
-  <CourseTable institutionName={''} />
-  </>
-}

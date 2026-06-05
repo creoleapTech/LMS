@@ -453,6 +453,11 @@ staffController.get("/", async (c) => {
   const institutionId = c.req.query("institutionId");
   const type = c.req.query("type");
   const search = c.req.query("search");
+  const rawPage = parseInt(c.req.query("page") || "1", 10);
+  const page = Number.isNaN(rawPage) ? 1 : Math.max(1, rawPage);
+  const rawLimit = parseInt(c.req.query("limit") || "50", 10);
+  const limit = Number.isNaN(rawLimit) ? 50 : Math.max(1, Math.min(100, rawLimit));
+  const offset = (page - 1) * limit;
 
   // Build conditions
   const conditions: any[] = [eq(staff.isDeleted, 0)];
@@ -477,41 +482,66 @@ staffController.get("/", async (c) => {
     );
   }
 
-  const staffRows = await db
-    .select()
+  // Count total matching rows
+  const [countResult] = await db
+    .select({ count: count() })
     .from(staff)
     .where(and(...conditions));
+  const total = countResult?.count ?? 0;
 
-  // Enrich with institution info and relations
-  const enriched = await Promise.all(
-    staffRows.map(async (s) => {
-      // Get institution info
-      let institution: any = null;
-      if (s.institutionId) {
-        const [inst] = await db
-          .select({
-            id: institutions.id,
-            name: institutions.name,
-            type: institutions.type,
-          })
-          .from(institutions)
-          .where(eq(institutions.id, s.institutionId))
-          .limit(1);
-        institution = inst || null;
-      }
-
-      const relations = await getStaffRelations(db, s.id);
-
-      const { password: _, ...staffWithoutPassword } = s;
-      return {
-        ...staffWithoutPassword,
-        institutionId: institution || s.institutionId,
-        ...relations,
-      };
+  // Slim select for list view
+  const staffRows = await db
+    .select({
+      id: staff.id,
+      name: staff.name,
+      email: staff.email,
+      mobileNumber: staff.mobileNumber,
+      type: staff.type,
+      joiningDate: staff.joiningDate,
+      isActive: staff.isActive,
+      institutionId: staff.institutionId,
     })
-  );
+    .from(staff)
+    .where(and(...conditions))
+    .limit(limit)
+    .offset(offset);
 
-  return c.json({ success: true, data: enriched }, 200);
+  const staffIds = staffRows.map((s) => s.id);
+  const institutionIds = [...new Set(staffRows.map((s) => s.institutionId).filter(Boolean))];
+
+  // Batch fetch institutions
+  const institutionMap = new Map<string, any>();
+  if (institutionIds.length > 0) {
+    const instRows = await db
+      .select({ id: institutions.id, name: institutions.name, type: institutions.type })
+      .from(institutions)
+      .where(inArray(institutions.id, institutionIds as string[]));
+    for (const i of instRows) institutionMap.set(i.id, i);
+  }
+
+  // Batch fetch subjects
+  const subjectsMap = new Map<string, string[]>();
+  if (staffIds.length > 0) {
+    const subRows = await db
+      .select({ staffId: staffSubjects.staffId, subject: staffSubjects.subject })
+      .from(staffSubjects)
+      .where(inArray(staffSubjects.staffId, staffIds));
+    for (const r of subRows) {
+      const arr = subjectsMap.get(r.staffId) || [];
+      arr.push(r.subject);
+      subjectsMap.set(r.staffId, arr);
+    }
+  }
+
+  const enriched = staffRows.map((s) => ({
+    ...s,
+    institutionId: (s.institutionId && institutionMap.get(s.institutionId)) || s.institutionId,
+    subjects: subjectsMap.get(s.id) || [],
+  }));
+
+  const pages = Math.ceil(total / limit);
+
+  return c.json({ success: true, data: enriched, pagination: { total, page, limit, pages } }, 200);
 });
 
 // ─── GET Single Staff ──────────────────────────────

@@ -34,6 +34,8 @@ const Page = forwardRef<HTMLDivElement, { src: string; pageNum: number; totalPag
         <img
           src={src}
           alt={`Page ${pageNum}`}
+          loading="lazy"
+          decoding="async"
           draggable={false}
           className="w-full h-full object-contain select-none"
           onContextMenu={(e) => e.preventDefault()}

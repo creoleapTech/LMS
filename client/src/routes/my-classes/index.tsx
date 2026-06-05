@@ -1,6 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import MyClassesPage from '@/pages/my-classes/MyClassesPage'
+import { createFileRoute, lazyRouteComponent } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/my-classes/')({
-  component: () => <MyClassesPage />,
+  component: lazyRouteComponent(() => import('@/pages/my-classes/MyClassesPage'), 'default'),
 })

@@ -111,6 +111,8 @@ export function PremiumChapterCard({
                             <img
                                 src={thumbnailUrl}
                                 alt={`Chapter ${chapter.chapterNumber}`}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-cover"
                             />
                         ) : (

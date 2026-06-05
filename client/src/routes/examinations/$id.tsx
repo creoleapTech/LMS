@@ -1,5 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import ExaminationDetailPage from '@/pages/examinations/ExaminationDetailPage'
+import { Suspense, lazy } from 'react'
+
+const ExaminationDetailPage = lazy(() => import('@/pages/examinations/ExaminationDetailPage'))
 
 export const Route = createFileRoute('/examinations/$id')({
   component: RouteComponent,
@@ -7,5 +9,9 @@ export const Route = createFileRoute('/examinations/$id')({
 
 function RouteComponent() {
   const { id } = Route.useParams()
-  return <ExaminationDetailPage id={id} />
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading examination...</div>}>
+      <ExaminationDetailPage id={id} />
+    </Suspense>
+  )
 }

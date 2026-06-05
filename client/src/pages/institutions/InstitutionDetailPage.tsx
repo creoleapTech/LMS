@@ -148,6 +148,8 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
                 <img
                   src={`${Config.imgUrl}${institution.logo}`}
                   alt={institution.name}
+                  loading="lazy"
+                  decoding="async"
                   className="h-14 w-14 rounded-2xl object-cover border border-slate-200 shadow-lg"
                 />
               ) : (

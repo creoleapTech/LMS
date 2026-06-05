@@ -141,6 +141,7 @@ function LoginPage() {
             <img
               src="/thumbnail2.jpg"
               alt="3D Futuristic Background"
+              loading="lazy"
               className="!h-screen  object-cover opacity-20 -scale-x-100 -scale-y-100 "
             />
           </div>

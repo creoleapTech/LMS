@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, sql, count, gte, desc, ne } from "drizzle-orm";
+import { eq, and, sql, count, gte, desc, ne, inArray } from "drizzle-orm";
 import type { Bindings, Variables } from "../../env";
 import { getDb, type DB } from "../../db";
 import { institutions, students, staff, classes } from "../../schema/admin";
@@ -7,6 +7,7 @@ import { curricula, gradeBooks, chapters, chapterContents } from "../../schema/b
 import { classSessions, teachingProgress } from "../../schema/staff";
 import {
   institutionCurriculumAccess,
+  institutionAccessibleGradebooks,
   classTeacherIds,
   classStudentIds,
   teachingProgressContents,
@@ -263,18 +264,22 @@ async function adminStats(
     .from(classes)
     .where(and(eq(classes.institutionId, institutionId), eq(classes.isDeleted, 0)));
 
-  const classSizeDistribution = [];
-  for (const cls of classRows) {
-    const [sc] = await db
-      .select({ c: count() })
+  const classIds = classRows.map((c) => c.id);
+  const classSizeMap = new Map<string, number>();
+  if (classIds.length > 0) {
+    const countRows = await db
+      .select({ classId: classStudentIds.classId, c: count() })
       .from(classStudentIds)
-      .where(eq(classStudentIds.classId, cls.id));
-    classSizeDistribution.push({
-      id: cls.id,
-      class: `${cls.grade || "?"}–${cls.section}`,
-      students: sc.c,
-    });
+      .where(inArray(classStudentIds.classId, classIds))
+      .groupBy(classStudentIds.classId);
+    for (const r of countRows) classSizeMap.set(r.classId!, r.c);
   }
+
+  const classSizeDistribution = classRows.map((cls) => ({
+    id: cls.id,
+    class: `${cls.grade || "?"}–${cls.section}`,
+    students: classSizeMap.get(cls.id) || 0,
+  }));
 
   // Build classId -> label map for reuse
   const classIdToLabel: Record<string, string> = {};
@@ -300,20 +305,22 @@ async function adminStats(
     .orderBy(desc(sql`avg(${teachingProgress.overallPercentage})`))
     .limit(5);
 
-  const teacherLeaderboard = [];
-  for (const row of teacherProgressRows) {
-    if (!row.staffId) continue;
-    const [teacher] = await db
-      .select({ name: staff.name, profileImage: staff.profileImage })
+  const teacherIds = teacherProgressRows.map((r) => r.staffId).filter(Boolean) as string[];
+  const teacherMap = new Map<string, any>();
+  if (teacherIds.length > 0) {
+    const teacherRows = await db
+      .select({ id: staff.id, name: staff.name, profileImage: staff.profileImage })
       .from(staff)
-      .where(eq(staff.id, row.staffId));
-    teacherLeaderboard.push({
-      _id: row.staffId,
-      name: teacher?.name || "Unknown",
-      profileImage: teacher?.profileImage || "",
-      avgProgress: Math.round(row.avg || 0),
-    });
+      .where(inArray(staff.id, teacherIds));
+    for (const t of teacherRows) teacherMap.set(t.id, t);
   }
+
+  const teacherLeaderboard = teacherProgressRows.map((row) => ({
+    _id: row.staffId,
+    name: teacherMap.get(row.staffId!)?.name || "Unknown",
+    profileImage: teacherMap.get(row.staffId!)?.profileImage || "",
+    avgProgress: Math.round(row.avg || 0),
+  }));
 
   // Progress by grade book
   const progressByBookRows = await db
@@ -325,20 +332,22 @@ async function adminStats(
     .where(eq(teachingProgress.institutionId, institutionId))
     .groupBy(teachingProgress.gradeBookId);
 
-  const teachingProgressByBook = [];
-  for (const row of progressByBookRows) {
-    if (!row.gradeBookId) continue;
-    const [book] = await db
-      .select({ bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade })
+  const bookIds = progressByBookRows.map((r) => r.gradeBookId).filter(Boolean) as string[];
+  const bookMap = new Map<string, any>();
+  if (bookIds.length > 0) {
+    const bookRows = await db
+      .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade })
       .from(gradeBooks)
-      .where(eq(gradeBooks.id, row.gradeBookId));
-    teachingProgressByBook.push({
-      _id: row.gradeBookId,
-      bookTitle: book?.bookTitle || "Unknown",
-      grade: book?.grade || 0,
-      avgProgress: Math.round(row.avg || 0),
-    });
+      .where(inArray(gradeBooks.id, bookIds));
+    for (const b of bookRows) bookMap.set(b.id, b);
   }
+
+  const teachingProgressByBook = progressByBookRows.map((row) => ({
+    _id: row.gradeBookId,
+    bookTitle: bookMap.get(row.gradeBookId!)?.bookTitle || "Unknown",
+    grade: bookMap.get(row.gradeBookId!)?.grade || 0,
+    avgProgress: Math.round(row.avg || 0),
+  }));
 
   // Student growth (by month)
   const dateConditions = [
@@ -390,15 +399,25 @@ async function adminStats(
     .orderBy(desc(classSessions.startTime))
     .limit(8);
 
-  const recentSessions = [];
-  for (const s of recentSessionRows) {
-    const [teacher] = s.staffId
-      ? await db.select({ name: staff.name }).from(staff).where(eq(staff.id, s.staffId))
-      : [{ name: "Unknown" }];
-    const [cls] = s.classId
-      ? await db.select({ grade: classes.grade, section: classes.section }).from(classes).where(eq(classes.id, s.classId))
-      : [{ grade: "?", section: "?" }];
-    recentSessions.push({
+  const recentStaffIds = recentSessionRows.map((s) => s.staffId).filter(Boolean) as string[];
+  const recentClassIds = recentSessionRows.map((s) => s.classId).filter(Boolean) as string[];
+
+  const recentStaffMap = new Map<string, any>();
+  if (recentStaffIds.length > 0) {
+    const rows = await db.select({ id: staff.id, name: staff.name }).from(staff).where(inArray(staff.id, recentStaffIds));
+    for (const r of rows) recentStaffMap.set(r.id, r);
+  }
+
+  const recentClassMap = new Map<string, any>();
+  if (recentClassIds.length > 0) {
+    const rows = await db.select({ id: classes.id, grade: classes.grade, section: classes.section }).from(classes).where(inArray(classes.id, recentClassIds));
+    for (const r of rows) recentClassMap.set(r.id, r);
+  }
+
+  const recentSessions = recentSessionRows.map((s) => {
+    const teacher = recentStaffMap.get(s.staffId!);
+    const cls = recentClassMap.get(s.classId!);
+    return {
       _id: s.id,
       teacher: teacher?.name || "Unknown",
       class: `${cls?.grade || "?"}–${cls?.section || "?"}`,
@@ -406,8 +425,8 @@ async function adminStats(
       topics: [],
       status: s.status,
       time: relativeTime(s.startTime),
-    });
-  }
+    };
+  });
 
   // Sessions by month
   const sessionDateConditions: any[] = [
@@ -446,19 +465,23 @@ async function adminStats(
     .where(and(...sessionDateConditions))
     .groupBy(classSessions.classId);
 
-  const classActivity = [];
-  for (const row of classActivityRows) {
-    if (!row.classId) continue;
-    const [cls] = await db
-      .select({ grade: classes.grade, section: classes.section })
+  const activityClassIds = classActivityRows.map((r) => r.classId).filter(Boolean) as string[];
+  const activityClassMap = new Map<string, any>();
+  if (activityClassIds.length > 0) {
+    const rows = await db
+      .select({ id: classes.id, grade: classes.grade, section: classes.section })
       .from(classes)
-      .where(eq(classes.id, row.classId));
-    classActivity.push({
-      class: cls ? `${cls.grade || "?"}–${cls.section}` : "Unknown",
-      sessions: row.sessions,
-      minutes: row.totalMinutes,
-    });
+      .where(inArray(classes.id, activityClassIds));
+    for (const r of rows) activityClassMap.set(r.id, r);
   }
+
+  const classActivity = classActivityRows.map((row) => ({
+    class: activityClassMap.get(row.classId!)
+      ? `${activityClassMap.get(row.classId!).grade || "?"}–${activityClassMap.get(row.classId!).section}`
+      : "Unknown",
+    sessions: row.sessions,
+    minutes: row.totalMinutes,
+  }));
 
   // Classwise progress — avg teaching completion per class
   const classProgressRows = await db
@@ -473,18 +496,27 @@ async function adminStats(
     ))
     .groupBy(teachingProgress.classId);
 
+  const missingClassIds = classProgressRows
+    .map((r) => r.classId)
+    .filter((id): id is string => !!id && !classIdToLabel[id]);
+
+  const missingClassMap = new Map<string, any>();
+  if (missingClassIds.length > 0) {
+    const rows = await db
+      .select({ id: classes.id, grade: classes.grade, section: classes.section })
+      .from(classes)
+      .where(inArray(classes.id, missingClassIds));
+    for (const r of rows) missingClassMap.set(r.id, r);
+  }
+
   const classwiseProgress: { class: string; avgProgress: number }[] = [];
 
   if (classProgressRows.length > 0) {
     for (const row of classProgressRows) {
       if (!row.classId) continue;
-      // Use pre-fetched class label, or look up if not in institution's classes
       let label = classIdToLabel[row.classId];
       if (!label) {
-        const [cls] = await db
-          .select({ grade: classes.grade, section: classes.section })
-          .from(classes)
-          .where(eq(classes.id, row.classId));
+        const cls = missingClassMap.get(row.classId);
         label = cls ? `${cls.grade || "?"}–${cls.section}` : "Unknown";
       }
       classwiseProgress.push({ class: label, avgProgress: Math.round(row.avg || 0) });
@@ -502,27 +534,37 @@ async function adminStats(
   classwiseProgress.sort((a, b) => a.class.localeCompare(b.class));
 
   // Course distribution — grade books accessible to this institution (scoped)
-  const courseDistribution: { name: string; value: number }[] = [];
   const accessRows = await db
     .select({ id: institutionCurriculumAccess.id, curriculumId: institutionCurriculumAccess.curriculumId })
     .from(institutionCurriculumAccess)
     .where(eq(institutionCurriculumAccess.institutionId, institutionId));
 
-  for (const access of accessRows) {
-    const [curr] = await db
-      .select({ name: curricula.name })
+  const accessCurriculumIds = accessRows.map((a) => a.curriculumId);
+  const curriculumMap = new Map<string, any>();
+  if (accessCurriculumIds.length > 0) {
+    const rows = await db
+      .select({ id: curricula.id, name: curricula.name })
       .from(curricula)
-      .where(eq(curricula.id, access.curriculumId));
-    // Count accessible grade books for this access entry
-    const [gbCount] = await db
-      .select({ c: count() })
-      .from(sql`institution_accessible_gradebooks`)
-      .where(sql`access_id = ${access.id}`);
-    courseDistribution.push({
-      name: curr?.name || "Unknown",
-      value: (gbCount as any)?.c || 0,
-    });
+      .where(inArray(curricula.id, accessCurriculumIds));
+    for (const r of rows) curriculumMap.set(r.id, r);
   }
+
+  // Count accessible grade books for all access entries in one query
+  const accessIds = accessRows.map((a) => a.id);
+  const gbCountMap = new Map<string, number>();
+  if (accessIds.length > 0) {
+    const countRows = await db
+      .select({ accessId: institutionAccessibleGradebooks.accessId, c: count() })
+      .from(institutionAccessibleGradebooks)
+      .where(inArray(institutionAccessibleGradebooks.accessId, accessIds))
+      .groupBy(institutionAccessibleGradebooks.accessId);
+    for (const r of countRows) gbCountMap.set(r.accessId, r.c);
+  }
+
+  const courseDistribution = accessRows.map((access) => ({
+    name: curriculumMap.get(access.curriculumId)?.name || "Unknown",
+    value: gbCountMap.get(access.id) || 0,
+  }));
 
   return {
     totalStudents: totalStudentsR.c,
@@ -558,28 +600,24 @@ async function teacherStats(db: DB, staffId: string, institutionId: string) {
     .from(classTeacherIds)
     .where(eq(classTeacherIds.staffId, staffId));
 
-  const myClasses = [];
-  for (const row of myClassIds) {
-    const [cls] = await db
-      .select({
-        id: classes.id,
-        grade: classes.grade,
-        section: classes.section,
-        year: classes.year,
-      })
-      .from(classes)
-      .where(and(eq(classes.id, row.classId), eq(classes.isDeleted, 0)));
-    if (cls) myClasses.push(cls);
-  }
+  const myClassIdList = myClassIds.map((r) => r.classId);
+  const myClasses = myClassIdList.length > 0
+    ? await db
+        .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
+        .from(classes)
+        .where(and(inArray(classes.id, myClassIdList), eq(classes.isDeleted, 0)))
+    : [];
 
   // Count students per class
+  const myClassIdsForCount = myClasses.map((c) => c.id);
   const myClassStudentCounts: Record<string, number> = {};
-  for (const cls of myClasses) {
-    const [sc] = await db
-      .select({ c: count() })
+  if (myClassIdsForCount.length > 0) {
+    const countRows = await db
+      .select({ classId: classStudentIds.classId, c: count() })
       .from(classStudentIds)
-      .where(eq(classStudentIds.classId, cls.id));
-    myClassStudentCounts[cls.id] = sc.c;
+      .where(inArray(classStudentIds.classId, myClassIdsForCount))
+      .groupBy(classStudentIds.classId);
+    for (const r of countRows) myClassStudentCounts[r.classId!] = r.c;
   }
 
   const totalStudents = Object.values(myClassStudentCounts).reduce((a, b) => a + b, 0);
@@ -592,51 +630,52 @@ async function teacherStats(db: DB, staffId: string, institutionId: string) {
     .orderBy(desc(teachingProgress.lastAccessedAt));
 
   // Enrich progress records with gradebook + class info + content progress
-  const enrichedProgress: any[] = [];
-  for (const p of progressRecords) {
-    let gbInfo: { id: string; bookTitle: string | null; grade: number | null; totalChapters: number | null; coverImage: string | null } | null = null;
-    if (p.gradeBookId) {
-      const [gb] = await db
-        .select({
-          id: gradeBooks.id,
-          bookTitle: gradeBooks.bookTitle,
-          grade: gradeBooks.grade,
-          totalChapters: gradeBooks.totalChapters,
-          coverImage: gradeBooks.coverImage,
-        })
-        .from(gradeBooks)
-        .where(eq(gradeBooks.id, p.gradeBookId));
-      gbInfo = gb || null;
-    }
+  const progressIds = progressRecords.map((p) => p.id);
+  const gradeBookIds = [...new Set(progressRecords.map((p) => p.gradeBookId).filter(Boolean))] as string[];
+  const classIds = [...new Set(progressRecords.map((p) => p.classId).filter(Boolean))] as string[];
 
-    let clsInfo: { id: string; grade: string | null; section: string } | null = null;
-    if (p.classId) {
-      const [cls] = await db
-        .select({ id: classes.id, grade: classes.grade, section: classes.section })
-        .from(classes)
-        .where(eq(classes.id, p.classId));
-      clsInfo = cls || null;
-    }
-
-    // Content progress from junction
-    const contentProgressRows = await db
-      .select({
-        isCompleted: teachingProgressContents.isCompleted,
-      })
-      .from(teachingProgressContents)
-      .where(eq(teachingProgressContents.teachingProgressId, p.id));
-
-    const completedContent = contentProgressRows.filter((c) => c.isCompleted === 1).length;
-    const totalContent = contentProgressRows.length;
-
-    enrichedProgress.push({
-      ...p,
-      gradeBookInfo: gbInfo,
-      classInfo: clsInfo,
-      completedContent,
-      totalContent,
-    });
+  const gbMap = new Map<string, any>();
+  if (gradeBookIds.length > 0) {
+    const rows = await db
+      .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade, totalChapters: gradeBooks.totalChapters, coverImage: gradeBooks.coverImage })
+      .from(gradeBooks)
+      .where(inArray(gradeBooks.id, gradeBookIds));
+    for (const r of rows) gbMap.set(r.id, r);
   }
+
+  const classMap = new Map<string, any>();
+  if (classIds.length > 0) {
+    const rows = await db
+      .select({ id: classes.id, grade: classes.grade, section: classes.section })
+      .from(classes)
+      .where(inArray(classes.id, classIds));
+    for (const r of rows) classMap.set(r.id, r);
+  }
+
+  const contentProgressMap = new Map<string, { completed: number; total: number }>();
+  if (progressIds.length > 0) {
+    const rows = await db
+      .select({ teachingProgressId: teachingProgressContents.teachingProgressId, isCompleted: teachingProgressContents.isCompleted })
+      .from(teachingProgressContents)
+      .where(inArray(teachingProgressContents.teachingProgressId, progressIds));
+    for (const r of rows) {
+      const existing = contentProgressMap.get(r.teachingProgressId) || { completed: 0, total: 0 };
+      existing.total++;
+      if (r.isCompleted === 1) existing.completed++;
+      contentProgressMap.set(r.teachingProgressId, existing);
+    }
+  }
+
+  const enrichedProgress = progressRecords.map((p) => {
+    const contentStats = contentProgressMap.get(p.id) || { completed: 0, total: 0 };
+    return {
+      ...p,
+      gradeBookInfo: p.gradeBookId ? gbMap.get(p.gradeBookId) || null : null,
+      classInfo: p.classId ? classMap.get(p.classId) || null : null,
+      completedContent: contentStats.completed,
+      totalContent: contentStats.total,
+    };
+  });
 
   // Overall progress
   const overallProgress =
@@ -736,26 +775,28 @@ async function teacherStats(db: DB, staffId: string, institutionId: string) {
     .orderBy(desc(classSessions.startTime))
     .limit(5);
 
-  const recentSessions = [];
-  for (const s of recentSessionRows) {
-    let clsLabel = "?–?";
-    if (s.classId) {
-      const [cls] = await db
-        .select({ grade: classes.grade, section: classes.section })
-        .from(classes)
-        .where(eq(classes.id, s.classId));
-      if (cls) clsLabel = `${cls.grade || "?"}–${cls.section || "?"}`;
-    }
-    recentSessions.push({
+  const recentClassIds = recentSessionRows.map((s) => s.classId).filter(Boolean) as string[];
+  const recentClassMap = new Map<string, any>();
+  if (recentClassIds.length > 0) {
+    const rows = await db
+      .select({ id: classes.id, grade: classes.grade, section: classes.section })
+      .from(classes)
+      .where(inArray(classes.id, recentClassIds));
+    for (const r of rows) recentClassMap.set(r.id, r);
+  }
+
+  const recentSessions = recentSessionRows.map((s) => {
+    const cls = recentClassMap.get(s.classId!);
+    return {
       _id: s.id,
-      class: clsLabel,
+      class: cls ? `${cls.grade || "?"}–${cls.section || "?"}` : "?–?",
       duration: s.durationMinutes || 0,
       topics: [],
       status: s.status,
       time: relativeTime(s.startTime),
       startTime: s.startTime,
-    });
-  }
+    };
+  });
 
   // Progress by class (for RadarChart)
   const progressByClass = myClassesFormatted.map((c) => ({

@@ -3,7 +3,7 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
 import { nowISO } from "../../lib/utils";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, inArray } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import {
   classes,
@@ -196,51 +196,47 @@ classController.get("/", async (c) => {
     .limit(limit)
     .offset(offset);
 
-  // Enrich each class with department, institution info, and student count
-  const enriched = await Promise.all(
-    classRows.map(async (cls) => {
-      // Department info
-      let department: any = null;
-      if (cls.departmentId) {
-        const [dept] = await db
-          .select({ id: departments.id, name: departments.name })
-          .from(departments)
-          .where(eq(departments.id, cls.departmentId))
-          .limit(1);
-        department = dept || null;
-      }
+  const classIds = classRows.map((c) => c.id);
+  const departmentIds = [...new Set(classRows.map((c) => c.departmentId).filter(Boolean))];
+  const institutionIds = [...new Set(classRows.map((c) => c.institutionId).filter(Boolean))];
 
-      // Institution info
-      let institution: any = null;
-      if (cls.institutionId) {
-        const [inst] = await db
-          .select({
-            id: institutions.id,
-            name: institutions.name,
-            type: institutions.type,
-          })
-          .from(institutions)
-          .where(eq(institutions.id, cls.institutionId))
-          .limit(1);
-        institution = inst || null;
-      }
+  // Batch fetch departments
+  const departmentMap = new Map<string, any>();
+  if (departmentIds.length > 0) {
+    const deptRows = await db
+      .select({ id: departments.id, name: departments.name })
+      .from(departments)
+      .where(inArray(departments.id, departmentIds as string[]));
+    for (const d of deptRows) departmentMap.set(d.id, d);
+  }
 
-      // Student count
-      const [countResult] = await db
-        .select({ count: count() })
-        .from(students)
-        .where(
-          and(eq(students.classId, cls.id), eq(students.isDeleted, 0))
-        );
+  // Batch fetch institutions
+  const institutionMap = new Map<string, any>();
+  if (institutionIds.length > 0) {
+    const instRows = await db
+      .select({ id: institutions.id, name: institutions.name, type: institutions.type })
+      .from(institutions)
+      .where(inArray(institutions.id, institutionIds as string[]));
+    for (const i of instRows) institutionMap.set(i.id, i);
+  }
 
-      return {
-        ...cls,
-        departmentId: department || cls.departmentId,
-        institutionId: institution || cls.institutionId,
-        studentCount: countResult?.count ?? 0,
-      };
-    })
-  );
+  // Batch fetch student counts
+  const studentCountMap = new Map<string, number>();
+  if (classIds.length > 0) {
+    const countRows = await db
+      .select({ classId: students.classId, count: count() })
+      .from(students)
+      .where(and(inArray(students.classId, classIds), eq(students.isDeleted, 0)))
+      .groupBy(students.classId);
+    for (const r of countRows) studentCountMap.set(r.classId!, r.count);
+  }
+
+  const enriched = classRows.map((cls) => ({
+    ...cls,
+    departmentId: (cls.departmentId && departmentMap.get(cls.departmentId)) || cls.departmentId,
+    institutionId: (cls.institutionId && institutionMap.get(cls.institutionId)) || cls.institutionId,
+    studentCount: studentCountMap.get(cls.id) ?? 0,
+  }));
 
   return c.json({ success: true, data: enriched, meta: { total: totalRow?.count ?? 0, page, limit } }, 200);
 });

@@ -3,7 +3,7 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
 import { nowISO } from "../../lib/utils";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import { staff, classes } from "../../schema/admin";
 import { classSessions } from "../../schema/staff";
@@ -176,32 +176,38 @@ classSessionController.get("/my-history", async (c) => {
     .where(eq(classSessions.staffId, staffId))
     .orderBy(desc(classSessions.startTime));
 
-  // Populate class info for each session
-  const enriched = await Promise.all(
-    sessions.map(async (session) => {
-      let classInfo = null;
-      if (session.classId) {
-        const [cls] = await db
-          .select({ id: classes.id, grade: classes.grade, section: classes.section })
-          .from(classes)
-          .where(eq(classes.id, session.classId))
-          .limit(1);
-        classInfo = cls || null;
-      }
+  const sessionIds = sessions.map((s) => s.id);
+  const classIds = [...new Set(sessions.map((s) => s.classId).filter(Boolean))] as string[];
 
-      // Fetch topics for this session
-      const topics = await db
-        .select({ topic: classSessionTopics.topic })
-        .from(classSessionTopics)
-        .where(eq(classSessionTopics.sessionId, session.id));
+  // Batch fetch class info
+  const classMap = new Map<string, any>();
+  if (classIds.length > 0) {
+    const rows = await db
+      .select({ id: classes.id, grade: classes.grade, section: classes.section })
+      .from(classes)
+      .where(inArray(classes.id, classIds));
+    for (const r of rows) classMap.set(r.id, r);
+  }
 
-      return {
-        ...session,
-        classId: classInfo,
-        topicsCovered: topics.map((t: any) => t.topic),
-      };
-    }),
-  );
+  // Batch fetch topics
+  const topicsMap = new Map<string, string[]>();
+  if (sessionIds.length > 0) {
+    const rows = await db
+      .select({ sessionId: classSessionTopics.sessionId, topic: classSessionTopics.topic })
+      .from(classSessionTopics)
+      .where(inArray(classSessionTopics.sessionId, sessionIds));
+    for (const r of rows) {
+      const arr = topicsMap.get(r.sessionId) || [];
+      arr.push(r.topic);
+      topicsMap.set(r.sessionId, arr);
+    }
+  }
+
+  const enriched = sessions.map((session) => ({
+    ...session,
+    classId: session.classId ? classMap.get(session.classId) || null : null,
+    topicsCovered: topicsMap.get(session.id) || [],
+  }));
 
   return c.json({ success: true, data: enriched });
 });

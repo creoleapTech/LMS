@@ -258,6 +258,8 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                         <img
                           src={`${Config.imgUrl}${curriculum.banner || curriculum.thumbnail}`}
                           alt="Curriculum Cover"
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
@@ -339,6 +341,8 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                               <img
                                 src={`${Config.imgUrl}${group.coverImage}`}
                                 alt="Book Cover"
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                               />
                             ) : (

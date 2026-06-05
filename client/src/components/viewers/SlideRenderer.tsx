@@ -487,6 +487,8 @@ function RenderElement({
           <img
             src={element.imageData}
             alt=""
+            loading="lazy"
+            decoding="async"
             draggable={false}
             style={imgStyle}
             onContextMenu={(e) => e.preventDefault()}
@@ -509,6 +511,8 @@ function RenderElement({
           <img
             src={element.imageData}
             alt=""
+            loading="lazy"
+            decoding="async"
             draggable={false}
             style={{
               width: "100%",
@@ -528,6 +532,8 @@ function RenderElement({
         <img
           src={element.imageData}
           alt=""
+          loading="lazy"
+          decoding="async"
           draggable={false}
           style={{
             width: "100%",

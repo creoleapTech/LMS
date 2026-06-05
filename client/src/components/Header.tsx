@@ -21,6 +21,8 @@ export default function Header() {
             <img
               src="/tanstack-word-logo-white.svg"
               alt="TanStack Logo"
+              loading="lazy"
+              decoding="async"
               className="h-10"
             />
           </Link>

@@ -258,6 +258,8 @@ function ResizableImageView({ node, updateAttributes, selected }: any) {
           ref={imgRef}
           src={src}
           alt={node.attrs.alt || ""}
+          loading="lazy"
+          decoding="async"
           style={{
             width: typeof width === "number" ? `${width}px` : width,
             display: "block",

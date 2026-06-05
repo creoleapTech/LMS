@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 
 // ─── curricula ──────────────────────────────────────
 export const curricula = sqliteTable("curricula", {
@@ -12,7 +12,9 @@ export const curricula = sqliteTable("curricula", {
   order: integer("order"),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => [
+  index("curricula_is_published_idx").on(table.isPublished),
+]);
 
 // ─── grade_books ────────────────────────────────────
 export const gradeBooks = sqliteTable("grade_books", {
@@ -31,6 +33,9 @@ export const gradeBooks = sqliteTable("grade_books", {
   updatedAt: text("updated_at"),
 }, (table) => [
   uniqueIndex("grade_books_curriculum_grade_idx").on(table.curriculumId, table.grade),
+  index("grade_books_curriculum_id_idx").on(table.curriculumId),
+  index("grade_books_grade_idx").on(table.grade),
+  index("grade_books_is_published_idx").on(table.isPublished),
 ]);
 
 // ─── chapters ───────────────────────────────────────
@@ -49,6 +54,7 @@ export const chapters = sqliteTable("chapters", {
   updatedAt: text("updated_at"),
 }, (table) => [
   uniqueIndex("chapters_gradebook_order_idx").on(table.gradeBookId, table.order),
+  index("chapters_grade_book_id_idx").on(table.gradeBookId),
 ]);
 
 // ─── chapter_contents ───────────────────────────────
@@ -75,4 +81,6 @@ export const chapterContents = sqliteTable("chapter_contents", {
   updatedAt: text("updated_at"),
 }, (table) => [
   uniqueIndex("chapter_contents_chapter_order_idx").on(table.chapterId, table.order),
+  index("chapter_contents_chapter_id_idx").on(table.chapterId),
+  index("chapter_contents_type_idx").on(table.type),
 ]);

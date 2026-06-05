@@ -1,13 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useDeferredValue, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
   useReactTable,
   getSortedRowModel,
   type SortingState,
@@ -48,6 +46,8 @@ export function StudentTable({ institutionId }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadErrors, setUploadErrors] = useState<any[]>([]);
   const [uploadSummary, setUploadSummary] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Fetch Classes for logic and mapping
   const { data: classes = [] } = useQuery<IClass[]>({
@@ -61,16 +61,34 @@ export function StudentTable({ institutionId }: Props) {
     enabled: !!institutionId,
   });
 
-  const { data: students = [], isLoading } = useQuery<IStudent[]>({
-    queryKey: ["students", institutionId],
+  const deferredSearch = useDeferredValue(globalFilter);
+  const classFilterValue = columnFilters.find((f) => f.id === "classId")?.value as string | undefined;
+
+  const { data: studentData, isLoading } = useQuery<{ success: boolean; data: IStudent[]; pagination: { total: number; page: number; limit: number; pages: number } }>({
+    queryKey: ["students", institutionId, page, pageSize, deferredSearch, classFilterValue],
     queryFn: async () => {
-      const { data } = await _axios.get<{ success: boolean; data: IStudent[] }>("/admin/students", {
-        params: { institutionId },
+      const { data } = await _axios.get("/admin/students", {
+        params: {
+          institutionId,
+          page,
+          limit: pageSize,
+          search: deferredSearch || undefined,
+          classId: classFilterValue || undefined,
+        },
       });
-      return data.data;
+      return data;
     },
     enabled: !!institutionId,
+    placeholderData: (previousData) => previousData,
   });
+
+  const students = studentData?.data || [];
+  const paginationMeta = studentData?.pagination;
+
+  // Reset to page 1 when search or class filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [deferredSearch, classFilterValue]);
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateStudentDTO) => {
@@ -258,24 +276,24 @@ export function StudentTable({ institutionId }: Props) {
     data: students,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    manualPagination: true,
+    pageCount: paginationMeta?.pages ?? 1,
     state: {
-      globalFilter,
       sorting,
-      columnFilters,
+      pagination: {
+        pageIndex: page - 1,
+        pageSize,
+      },
     },
-    onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    globalFilterFn: "includesString",
-    initialState: {
-      pagination: { pageSize: 25 },
+    onPaginationChange: (updater) => {
+      const newState = typeof updater === 'function' ? updater({ pageIndex: page - 1, pageSize }) : updater;
+      setPage(newState.pageIndex + 1);
+      setPageSize(newState.pageSize);
     },
   });
 
-  const classFilterValue = columnFilters.find((f) => f.id === "classId")?.value as string | undefined;
   const setClassFilter = (value: string) => {
     setColumnFilters((prev) => {
       const without = prev.filter((f) => f.id !== "classId");
@@ -321,7 +339,7 @@ export function StudentTable({ institutionId }: Props) {
             </Select>
             {!isLoading && (
               <span className="text-sm text-muted-foreground whitespace-nowrap ml-auto">
-                {table.getFilteredRowModel().rows.length} of {students.length} students
+                {students.length} of {paginationMeta?.total ?? 0} students
               </span>
             )}
           </div>

@@ -242,7 +242,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                         <div className="flex items-center gap-4">
                             {thumbnailPreview ? (
                                 <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-200 shrink-0">
-                                    <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-full object-cover" />
+                                    <img src={thumbnailPreview} alt="Thumbnail" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                                     <button
                                         type="button"
                                         onClick={() => { setThumbnailFile(null); setThumbnailPreview(null); }}

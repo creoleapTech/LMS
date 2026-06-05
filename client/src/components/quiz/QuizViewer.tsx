@@ -206,6 +206,8 @@ export function QuizViewer({
                     <img
                       src={q.questionMedia.url}
                       alt="Question media"
+                      loading="lazy"
+                      decoding="async"
                       className="max-h-64 w-auto rounded-md object-contain"
                     />
                   ) : (

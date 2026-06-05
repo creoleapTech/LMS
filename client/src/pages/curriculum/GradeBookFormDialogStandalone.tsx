@@ -268,6 +268,8 @@ export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }:
                                     <img
                                         src={coverImagePreview}
                                         alt="Cover preview"
+                                        loading="lazy"
+                                        decoding="async"
                                         className="h-32 w-auto rounded-lg border object-cover"
                                     />
                                 </div>

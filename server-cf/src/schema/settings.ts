@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 import { institutions } from "./admin";
 
 // ─── academic_years ─────────────────────────────────
@@ -14,6 +14,7 @@ export const academicYears = sqliteTable("academic_years", {
   updatedAt: text("updated_at"),
 }, (table) => [
   uniqueIndex("academic_years_institution_label_idx").on(table.institutionId, table.label),
+  index("academic_years_institution_id_idx").on(table.institutionId),
 ]);
 
 // ─── period_configs ─────────────────────────────────
@@ -23,7 +24,10 @@ export const periodConfigs = sqliteTable("period_configs", {
   isDeleted: integer("is_deleted").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => [
+  index("period_configs_institution_id_idx").on(table.institutionId),
+  index("period_configs_is_deleted_idx").on(table.isDeleted),
+]);
 
 // ─── timetable_entries ──────────────────────────────
 export const timetableEntries = sqliteTable("timetable_entries", {
@@ -42,7 +46,14 @@ export const timetableEntries = sqliteTable("timetable_entries", {
   isDeleted: integer("is_deleted").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => [
+  index("timetable_entries_staff_id_idx").on(table.staffId),
+  index("timetable_entries_institution_id_idx").on(table.institutionId),
+  index("timetable_entries_is_deleted_idx").on(table.isDeleted),
+  index("timetable_entries_is_recurring_idx").on(table.isRecurring),
+  index("timetable_entries_day_of_week_idx").on(table.dayOfWeek),
+  index("timetable_entries_specific_date_idx").on(table.specificDate),
+]);
 
 // ─── institution_settings ───────────────────────────
 export const institutionSettings = sqliteTable("institution_settings", {
@@ -64,7 +75,9 @@ export const institutionSettings = sqliteTable("institution_settings", {
   isDeleted: integer("is_deleted").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => [
+  index("institution_settings_institution_id_idx").on(table.institutionId),
+]);
 
 // ─── user_preferences ───────────────────────────────
 export const userPreferences = sqliteTable("user_preferences", {

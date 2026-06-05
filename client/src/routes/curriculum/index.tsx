@@ -1,12 +1,14 @@
-import CurriculumManagementPage from '@/pages/curriculum/CurriculamManagement'
-import StaffCurriculumViewer from '@/pages/staff/StaffCurriculumViewer'
 import { createFileRoute } from '@tanstack/react-router'
+import { Suspense, lazy } from 'react'
 import { useAuthStore } from '@/store/userAuthStore'
 
+const CurriculumManagementPage = lazy(() => import('@/pages/curriculum/CurriculamManagement'))
+const StaffCurriculumViewer = lazy(() => import('@/pages/staff/StaffCurriculumViewer'))
+
 interface CurriculumSearch {
-  gradeBookId?: string;
-  classId?: string;
-  bookTitle?: string;
+  gradeBookId?: string
+  classId?: string
+  bookTitle?: string
 }
 
 export const Route = createFileRoute('/curriculum/')({
@@ -19,11 +21,17 @@ export const Route = createFileRoute('/curriculum/')({
 })
 
 function RouteComponent() {
-  const { user } = useAuthStore();
-  const { gradeBookId, classId, bookTitle } = Route.useSearch();
-  const isSuperAdmin = user?.role === 'super_admin';
+  const { user } = useAuthStore()
+  const { gradeBookId, classId, bookTitle } = Route.useSearch()
+  const isSuperAdmin = user?.role === 'super_admin'
 
-  return isSuperAdmin
-    ? <CurriculumManagementPage />
-    : <StaffCurriculumViewer resumeGradeBookId={gradeBookId} resumeClassId={classId} resumeBookTitle={bookTitle} />;
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading curriculum...</div>}>
+      {isSuperAdmin ? (
+        <CurriculumManagementPage />
+      ) : (
+        <StaffCurriculumViewer resumeGradeBookId={gradeBookId} resumeClassId={classId} resumeBookTitle={bookTitle} />
+      )}
+    </Suspense>
+  )
 }

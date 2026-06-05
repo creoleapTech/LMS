@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 import { staff } from "./admin";
 
 // ─── class_sessions ─────────────────────────────────
@@ -15,7 +15,12 @@ export const classSessions = sqliteTable("class_sessions", {
   status: text("status", { enum: ["ongoing", "completed"] }).default("ongoing"),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => [
+  index("class_sessions_staff_id_idx").on(table.staffId),
+  index("class_sessions_institution_id_idx").on(table.institutionId),
+  index("class_sessions_class_id_idx").on(table.classId),
+  index("class_sessions_status_idx").on(table.status),
+]);
 
 // ─── teaching_progress ──────────────────────────────
 export const teachingProgress = sqliteTable("teaching_progress", {
@@ -35,4 +40,8 @@ export const teachingProgress = sqliteTable("teaching_progress", {
     table.classId,
     table.gradeBookId,
   ),
+  index("teaching_progress_institution_id_idx").on(table.institutionId),
+  index("teaching_progress_staff_id_idx").on(table.staffId),
+  index("teaching_progress_class_id_idx").on(table.classId),
+  index("teaching_progress_grade_book_id_idx").on(table.gradeBookId),
 ]);

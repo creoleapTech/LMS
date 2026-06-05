@@ -279,7 +279,7 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
                 <Label className="text-sm font-medium">Thumbnail</Label>
                 {thumbnailPreview ? (
                   <div className="relative group">
-                    <img src={thumbnailPreview} alt="Thumbnail" className="h-36 w-full object-cover rounded-xl border" />
+                    <img src={thumbnailPreview} alt="Thumbnail" loading="lazy" decoding="async" className="h-36 w-full object-cover rounded-xl border" />
                     <button
                       type="button"
                       onClick={removeThumbnail}
@@ -304,7 +304,7 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
                 <Label className="text-sm font-medium">Banner</Label>
                 {bannerPreview ? (
                   <div className="relative group">
-                    <img src={bannerPreview} alt="Banner" className="h-36 w-full object-cover rounded-xl border" />
+                    <img src={bannerPreview} alt="Banner" loading="lazy" decoding="async" className="h-36 w-full object-cover rounded-xl border" />
                     <button
                       type="button"
                       onClick={removeBanner}

@@ -211,7 +211,7 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave,
             <div className="flex items-center gap-4">
               {logoPreview ? (
                 <div className="relative">
-                  <img src={logoPreview} alt="School logo" className="h-20 w-20 rounded-xl object-cover border border-white/20 shadow-sm" />
+                  <img src={logoPreview} alt="School logo" loading="lazy" decoding="async" className="h-20 w-20 rounded-xl object-cover border border-white/20 shadow-sm" />
                   <button
                     type="button"
                     onClick={removeLogo}
