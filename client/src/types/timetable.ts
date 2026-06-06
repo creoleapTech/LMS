@@ -51,6 +51,26 @@ export interface CreateTimetableEntryDTO {
 export interface CompleteTimetableEntryDTO {
   topicsCovered?: string[];
   notes?: string;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  durationMinutes?: number;
+}
+
+export interface IClassSession {
+  _id: string;
+  staffId: string;
+  institutionId: string;
+  classId: string | { _id: string; grade?: string; section?: string };
+  courseId?: string;
+  startTime: string;
+  endTime?: string;
+  durationMinutes?: number;
+  remarks?: string;
+  topicsCovered?: string[];
+  status: "ongoing" | "completed";
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface IClassOption {

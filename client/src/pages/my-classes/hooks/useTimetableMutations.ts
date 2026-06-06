@@ -13,6 +13,7 @@ export function useTimetableMutations() {
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["timetable-month"] });
     queryClient.invalidateQueries({ queryKey: ["timetable-day"] });
+    queryClient.invalidateQueries({ queryKey: ["class-sessions"] });
   };
 
   const createEntry = useMutation({

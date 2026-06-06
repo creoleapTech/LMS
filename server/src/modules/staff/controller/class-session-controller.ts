@@ -100,22 +100,63 @@ export const classSessionController = new Elysia({
     }
   )
 
+  // UPDATE SESSION
+  .patch(
+    "/:id",
+    async ({ params, body }) => {
+      const session = await ClassSessionModel.findById(params.id);
+      if (!session) throw new BadRequestError("Session not found");
+
+      if (body.startTime) session.startTime = new Date(body.startTime);
+      if (body.endTime) session.endTime = new Date(body.endTime);
+      if (body.durationMinutes !== undefined) session.durationMinutes = body.durationMinutes;
+      if (body.remarks !== undefined) session.remarks = body.remarks;
+      if (body.topicsCovered !== undefined) session.topicsCovered = body.topicsCovered;
+      if (body.status) session.status = body.status;
+
+      await session.save();
+
+      return { success: true, data: session };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      body: t.Object({
+        startTime: t.Optional(t.String()),
+        endTime: t.Optional(t.String()),
+        durationMinutes: t.Optional(t.Number()),
+        remarks: t.Optional(t.String()),
+        topicsCovered: t.Optional(t.Array(t.String())),
+        status: t.Optional(t.String()),
+      }),
+    }
+  )
+
   // GET SESSIONS (My History)
   .get(
     "/my-history",
     async ({ query, headers }) => {
-       // Extract staffId from token or pass as query (insecure if not validated)
-       // ideally extraction from token.
-       // For now, assume passed in query with some validation from macro
        if (!query.staffId) throw new BadRequestError("Staff ID required");
        
-       const sessions = await ClassSessionModel.find({ staffId: query.staffId })
+       const filter: any = { staffId: query.staffId };
+       if (query.date) {
+         const d = new Date(query.date);
+         const dayStart = new Date(d);
+         dayStart.setHours(0, 0, 0, 0);
+         const dayEnd = new Date(d);
+         dayEnd.setHours(23, 59, 59, 999);
+         filter.startTime = { $gte: dayStart, $lte: dayEnd };
+       }
+       
+       const sessions = await ClassSessionModel.find(filter)
          .populate("classId", "grade section")
          .sort({ startTime: -1 });
 
        return { success: true, data: sessions };
     },
     {
-      query: t.Object({ staffId: t.String() })
+      query: t.Object({
+        staffId: t.String(),
+        date: t.Optional(t.String()),
+      })
     }
   );

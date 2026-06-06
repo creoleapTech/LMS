@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTimetableDay } from "../hooks/useTimetableDay";
 import { useStaffTimetableDay } from "../hooks/useStaffTimetableDay";
+import { useClassSessions } from "../hooks/useClassSessions";
 import { ScheduleEntryDialog } from "./ScheduleEntryDialog";
 import { WorkDoneDialog } from "./WorkDoneDialog";
 import {
@@ -20,8 +21,12 @@ import {
   Coffee,
   CheckCircle2,
   Clock,
+  Timer,
+  GraduationCap,
 } from "lucide-react";
-import type { ITimetableEntry, IPeriodSlot, IPeriodConfig } from "@/types/timetable";
+import { useAuthStore } from "@/store/userAuthStore";
+import { useNavigate } from "@tanstack/react-router";
+import type { ITimetableEntry, IPeriodSlot, IPeriodConfig, IClassSession } from "@/types/timetable";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -77,6 +82,7 @@ export function DayView({
 }: DayViewProps) {
   const dateStr = formatDateString(date);
   const isAdminView = !!staffId && !!institutionId;
+  const currentUser = useAuthStore((s) => s.user);
 
   // Freeze past dates — always read-only regardless of prop
   const todayMidnight = new Date();
@@ -106,6 +112,7 @@ export function DayView({
   const [workDoneDialog, setWorkDoneDialog] = useState<{
     open: boolean;
     entry?: ITimetableEntry;
+    period?: IPeriodSlot;
   }>({ open: false });
 
   const periodConfig = data?.periodConfig;
@@ -121,6 +128,21 @@ export function DayView({
   for (const entry of entries) {
     entryMap.set(entry.periodNumber, entry);
   }
+
+  // Fetch class sessions for the day
+  const effectiveStaffId = isAdminView ? staffId : currentUser?._id;
+  const { data: daySessions } = useClassSessions(effectiveStaffId || null, dateStr);
+  const navigate = useNavigate();
+
+  const sessionMap = useMemo(() => {
+    const map = new Map<string, IClassSession>();
+    if (!daySessions) return map;
+    for (const session of daySessions) {
+      const classId = typeof session.classId === "object" ? session.classId?._id : session.classId;
+      if (classId) map.set(classId, session);
+    }
+    return map;
+  }, [daySessions]);
 
   const scheduledCount = entries.filter((e) => e.status === "scheduled").length;
   const completedCount = entries.filter((e) => e.status === "completed").length;
@@ -279,6 +301,9 @@ export function DayView({
                   );
                 }
 
+                const entryClassId = typeof entry.classId === "object" ? entry.classId?._id : entry.classId;
+                const matchedSession = entryClassId ? sessionMap.get(entryClassId) : undefined;
+
                 return (
                   <ScheduledRow
                     key={period.periodNumber}
@@ -287,6 +312,7 @@ export function DayView({
                     isCompleted={isCompleted}
                     colors={colors}
                     readOnly={effectiveReadOnly}
+                    session={matchedSession}
                     onEditClick={() =>
                       setScheduleDialog({
                         open: true,
@@ -296,8 +322,23 @@ export function DayView({
                       })
                     }
                     onCompleteClick={() =>
-                      setWorkDoneDialog({ open: true, entry })
+                      setWorkDoneDialog({ open: true, entry, period })
                     }
+                    onTeachClick={() => {
+                      const gbId = typeof entry.gradeBookId === "object" ? entry.gradeBookId?._id : entry.gradeBookId;
+                      const gbTitle = typeof entry.gradeBookId === "object" ? entry.gradeBookId?.bookTitle : "";
+                      const cId = typeof entry.classId === "object" ? entry.classId?._id : entry.classId;
+                      if (gbId && cId) {
+                        navigate({
+                          to: "/curriculum",
+                          search: {
+                            gradeBookId: gbId,
+                            classId: cId,
+                            bookTitle: gbTitle || undefined,
+                          },
+                        });
+                      }
+                    }}
                   />
                 );
               })}
@@ -323,6 +364,8 @@ export function DayView({
           setWorkDoneDialog((prev) => ({ ...prev, open }))
         }
         entry={workDoneDialog.entry}
+        date={dateStr}
+        period={workDoneDialog.period}
       />
     </>
   );
@@ -353,16 +396,20 @@ function ScheduledRow({
   isCompleted,
   colors,
   readOnly,
+  session,
   onEditClick,
   onCompleteClick,
+  onTeachClick,
 }: {
   period: IPeriodSlot;
   entry: ITimetableEntry;
   isCompleted: boolean;
   colors: { border: string; badge: string };
   readOnly?: boolean;
+  session?: IClassSession;
   onEditClick: () => void;
   onCompleteClick: () => void;
+  onTeachClick: () => void;
 }) {
   const borderColor = isCompleted ? COMPLETED_BORDER : colors.border;
   const badgeColor = isCompleted ? "bg-emerald-100 text-emerald-700" : colors.badge;
@@ -426,6 +473,12 @@ function ScheduledRow({
               ))}
             </div>
           )}
+          {isCompleted && session?.durationMinutes && (
+            <div className="flex items-center gap-1 text-[10px] text-emerald-700 font-semibold">
+              <Timer size={10} />
+              {session.durationMinutes} min session
+            </div>
+          )}
         </div>
       </TableCell>
 
@@ -449,19 +502,24 @@ function ScheduledRow({
             <button
               onClick={onEditClick}
               className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-indigo-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(99,102,241,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
-              title="Edit"
+              title="Edit schedule"
             >
               <Pencil size={14} />
             </button>
-            {!isCompleted && (
-              <button
-                onClick={onCompleteClick}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-emerald-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(16,185,129,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
-                title="Mark done"
-              >
-                <Check size={14} />
-              </button>
-            )}
+            <button
+              onClick={onCompleteClick}
+              className={`inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-emerald-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(16,185,129,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer`}
+              title={isCompleted ? "Edit work done" : "Mark done"}
+            >
+              {isCompleted ? <CheckCircle2 size={14} /> : <Check size={14} />}
+            </button>
+            <button
+              onClick={onTeachClick}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-violet-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(139,92,246,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
+              title="Teach"
+            >
+              <GraduationCap size={14} />
+            </button>
           </div>
         </TableCell>
       )}

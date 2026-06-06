@@ -6,6 +6,7 @@ import { ClassModel } from "@/schema/admin/class-model";
 import { GradeBookModel } from "@/schema/books/gradeBook-model";
 import { InstitutionModel } from "@/schema/admin/institution-model";
 import { StaffModel } from "@/schema/admin/staff-model";
+import { ClassSessionModel } from "@/schema/staff/class-session-model";
 import { Types } from "mongoose";
 import {
   generateMonthlyReportDocx,
@@ -361,6 +362,48 @@ export const timetableController = new Elysia({
 
       await entry.save();
 
+      // ── Upsert linked class session ──
+      const sessionDate = body.date ? new Date(body.date) : new Date();
+      const dayStart = new Date(sessionDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(sessionDate);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      let session = await ClassSessionModel.findOne({
+        staffId: entry.staffId,
+        classId: entry.classId,
+        startTime: { $gte: dayStart, $lte: dayEnd },
+      });
+
+      const startTime = body.startTime ? new Date(body.startTime) : dayStart;
+      const endTime = body.endTime ? new Date(body.endTime) : new Date();
+      const durationMinutes =
+        body.durationMinutes ?? Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+
+      if (!session) {
+        session = new ClassSessionModel({
+          staffId: entry.staffId,
+          institutionId: entry.institutionId,
+          classId: entry.classId,
+          courseId: entry.gradeBookId ?? undefined,
+          startTime,
+          endTime,
+          durationMinutes,
+          remarks: body.notes,
+          topicsCovered: body.topicsCovered,
+          status: "completed",
+        });
+      } else {
+        session.startTime = startTime;
+        session.endTime = endTime;
+        session.durationMinutes = durationMinutes;
+        session.remarks = body.notes;
+        session.topicsCovered = body.topicsCovered;
+        session.status = "completed";
+      }
+      await session.save();
+      // ── End class session link ──
+
       const populated = await TimetableEntryModel.findById(entry._id)
         .populate("classId", "grade section year")
         .populate("gradeBookId", "bookTitle grade");
@@ -372,6 +415,10 @@ export const timetableController = new Elysia({
       body: t.Object({
         topicsCovered: t.Optional(t.Array(t.String())),
         notes: t.Optional(t.String({ maxLength: 500 })),
+        date: t.Optional(t.String()),
+        startTime: t.Optional(t.String()),
+        endTime: t.Optional(t.String()),
+        durationMinutes: t.Optional(t.Number()),
       }),
     }
   )

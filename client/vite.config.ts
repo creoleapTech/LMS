@@ -32,6 +32,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+
             // Only React core packages in vendor-react to avoid circular deps
             if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) {
               return 'vendor-react';

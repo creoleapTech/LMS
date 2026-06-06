@@ -160,21 +160,102 @@ classSessionController.patch("/:id/end", async (c) => {
   });
 });
 
+// ─── PATCH /:id — update an existing session ──────
+
+classSessionController.patch("/:id", async (c) => {
+  const { id } = c.req.param();
+  const body = await c.req.json();
+  const db = getDb(c.env.DB);
+
+  const [session] = await db
+    .select()
+    .from(classSessions)
+    .where(eq(classSessions.id, id))
+    .limit(1);
+
+  if (!session) {
+    throw new BadRequestError("Session not found");
+  }
+
+  const updates: Record<string, any> = { updatedAt: nowISO() };
+  if (body.startTime) updates.startTime = new Date(body.startTime).toISOString();
+  if (body.endTime) updates.endTime = new Date(body.endTime).toISOString();
+  if (body.durationMinutes !== undefined) updates.durationMinutes = body.durationMinutes;
+  if (body.remarks !== undefined) updates.remarks = body.remarks;
+  if (body.status) updates.status = body.status;
+
+  await db.update(classSessions).set(updates).where(eq(classSessions.id, id));
+
+  if (body.topicsCovered !== undefined) {
+    await db.delete(classSessionTopics).where(eq(classSessionTopics.sessionId, id));
+    if (Array.isArray(body.topicsCovered)) {
+      for (const topic of body.topicsCovered) {
+        await db.insert(classSessionTopics).values({
+          id: uuid(),
+          sessionId: id,
+          topic,
+        });
+      }
+    }
+  }
+
+  const [updated] = await db
+    .select()
+    .from(classSessions)
+    .where(eq(classSessions.id, id))
+    .limit(1);
+
+  const topics = await db
+    .select({ topic: classSessionTopics.topic })
+    .from(classSessionTopics)
+    .where(eq(classSessionTopics.sessionId, id));
+
+  return c.json({
+    success: true,
+    data: {
+      ...updated,
+      topicsCovered: topics.map((t: any) => t.topic),
+    },
+  });
+});
+
 // ─── GET /my-history — session history for a staff member ─
 
 classSessionController.get("/my-history", async (c) => {
   const staffId = c.req.query("staffId");
+  const date = c.req.query("date");
   if (!staffId) {
     throw new BadRequestError("Staff ID required");
   }
 
   const db = getDb(c.env.DB);
 
-  const sessions = await db
-    .select()
-    .from(classSessions)
-    .where(eq(classSessions.staffId, staffId))
-    .orderBy(desc(classSessions.startTime));
+  let sessions;
+  if (date) {
+    const d = new Date(date);
+    const dayStart = new Date(d);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(d);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    sessions = await db
+      .select()
+      .from(classSessions)
+      .where(
+        and(
+          eq(classSessions.staffId, staffId),
+          sql`${classSessions.startTime} >= ${dayStart.toISOString()}`,
+          sql`${classSessions.startTime} <= ${dayEnd.toISOString()}`,
+        ),
+      )
+      .orderBy(desc(classSessions.startTime));
+  } else {
+    sessions = await db
+      .select()
+      .from(classSessions)
+      .where(eq(classSessions.staffId, staffId))
+      .orderBy(desc(classSessions.startTime));
+  }
 
   const sessionIds = sessions.map((s) => s.id);
   const classIds = [...new Set(sessions.map((s) => s.classId).filter(Boolean))] as string[];

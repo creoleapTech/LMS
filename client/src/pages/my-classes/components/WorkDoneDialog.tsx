@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,14 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Loader2, Tag } from "lucide-react";
+import { CheckCircle2, Loader2, Tag, Clock, Timer } from "lucide-react";
 import { useTimetableMutations } from "../hooks/useTimetableMutations";
-import type { ITimetableEntry } from "@/types/timetable";
+import { useClassSessions } from "../hooks/useClassSessions";
+import { useAuthStore } from "@/store/userAuthStore";
+import type { ITimetableEntry, IPeriodSlot } from "@/types/timetable";
 
 interface WorkDoneDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   entry?: ITimetableEntry;
+  date?: string;
+  period?: IPeriodSlot;
 }
 
 function getClassLabel(classId: ITimetableEntry["classId"]): string {
@@ -33,17 +37,74 @@ function getBookLabel(gradeBookId: ITimetableEntry["gradeBookId"]): string {
   return "";
 }
 
-export function WorkDoneDialog({ open, onOpenChange, entry }: WorkDoneDialogProps) {
+function parseTimeToMinutes(timeStr: string): number {
+  const [h, m] = timeStr.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function getPeriodDurationMinutes(period: IPeriodSlot): number {
+  return parseTimeToMinutes(period.endTime) - parseTimeToMinutes(period.startTime);
+}
+
+export function WorkDoneDialog({ open, onOpenChange, entry, date, period }: WorkDoneDialogProps) {
+  const user = useAuthStore((s) => s.user);
+  const staffId = user?._id;
   const { completeEntry } = useTimetableMutations();
   const [topicsInput, setTopicsInput] = useState("");
   const [notes, setNotes] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState<number | "">("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+
+  const isCompleted = entry?.status === "completed";
+
+  // Fetch existing class session for this entry + date
+  const { data: daySessions } = useClassSessions(
+    isCompleted && entry && date ? staffId : null,
+    date || null
+  );
+
+  const matchedSession = useMemo(() => {
+    if (!daySessions || !entry) return null;
+    // Match by classId (string comparison)
+    const entryClassId = typeof entry.classId === "object" ? entry.classId?._id : entry.classId;
+    return (
+      daySessions.find((s) => {
+        const sessionClassId = typeof s.classId === "object" ? s.classId?._id : s.classId;
+        return sessionClassId === entryClassId;
+      }) || null
+    );
+  }, [daySessions, entry]);
 
   useEffect(() => {
-    if (open) {
-      setTopicsInput(entry?.topicsCovered?.join(", ") || "");
-      setNotes(entry?.notes || "");
+    if (open && entry) {
+      if (matchedSession) {
+        setTopicsInput(matchedSession.topicsCovered?.join(", ") || "");
+        setNotes(matchedSession.remarks || entry.notes || "");
+        setDurationMinutes(matchedSession.durationMinutes ?? "");
+        const sStart = matchedSession.startTime
+          ? new Date(matchedSession.startTime).toTimeString().slice(0, 5)
+          : period?.startTime || "";
+        const sEnd = matchedSession.endTime
+          ? new Date(matchedSession.endTime).toTimeString().slice(0, 5)
+          : period?.endTime || "";
+        setStartTime(sStart);
+        setEndTime(sEnd);
+      } else {
+        setTopicsInput(entry.topicsCovered?.join(", ") || "");
+        setNotes(entry.notes || "");
+        if (period) {
+          setDurationMinutes(getPeriodDurationMinutes(period));
+          setStartTime(period.startTime);
+          setEndTime(period.endTime);
+        } else {
+          setDurationMinutes("");
+          setStartTime("");
+          setEndTime("");
+        }
+      }
     }
-  }, [open, entry]);
+  }, [open, entry, period, matchedSession]);
 
   const handleSubmit = () => {
     if (!entry) return;
@@ -53,17 +114,27 @@ export function WorkDoneDialog({ open, onOpenChange, entry }: WorkDoneDialogProp
       .map((t) => t.trim())
       .filter(Boolean);
 
+    const payload = {
+      topicsCovered: topics.length > 0 ? topics : undefined,
+      notes: notes || undefined,
+      date,
+      startTime: startTime || undefined,
+      endTime: endTime || undefined,
+      durationMinutes: typeof durationMinutes === "number" ? durationMinutes : undefined,
+    };
+
     completeEntry.mutate(
-      {
-        id: entry._id,
-        data: {
-          topicsCovered: topics.length > 0 ? topics : undefined,
-          notes: notes || undefined,
-        },
-      },
+      { id: entry._id, data: payload },
       { onSuccess: () => onOpenChange(false) }
     );
   };
+
+  const dialogTitle = isCompleted ? "Edit Work Done" : "Mark as Completed";
+  const submitLabel = completeEntry.isPending
+    ? "Saving..."
+    : isCompleted
+    ? "Save Changes"
+    : "Mark Completed";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -74,7 +145,7 @@ export function WorkDoneDialog({ open, onOpenChange, entry }: WorkDoneDialogProp
               <CheckCircle2 className="h-5 w-5" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-bold">Mark as Completed</DialogTitle>
+              <DialogTitle className="text-lg font-bold">{dialogTitle}</DialogTitle>
               <DialogDescription className="text-sm text-slate-500">
                 {entry && (
                   <>
@@ -107,7 +178,7 @@ export function WorkDoneDialog({ open, onOpenChange, entry }: WorkDoneDialogProp
           {/* Notes */}
           <div className="space-y-1.5">
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Additional Notes
+              Additional Notes / Remarks
             </Label>
             <Textarea
               value={notes}
@@ -116,6 +187,49 @@ export function WorkDoneDialog({ open, onOpenChange, entry }: WorkDoneDialogProp
               className="rounded-xl resize-none"
               rows={3}
             />
+          </div>
+
+          {/* Session timing */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                <Clock size={12} />
+                Start
+              </Label>
+              <Input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                <Clock size={12} />
+                End
+              </Label>
+              <Input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                <Timer size={12} />
+                Duration (min)
+              </Label>
+              <Input
+                type="number"
+                min={1}
+                value={durationMinutes}
+                onChange={(e) =>
+                  setDurationMinutes(e.target.value === "" ? "" : Number(e.target.value))
+                }
+                className="rounded-xl"
+              />
+            </div>
           </div>
 
           {/* Actions */}
@@ -136,7 +250,7 @@ export function WorkDoneDialog({ open, onOpenChange, entry }: WorkDoneDialogProp
               {completeEntry.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Mark Completed"
+                submitLabel
               )}
             </Button>
           </div>

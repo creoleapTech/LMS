@@ -8,6 +8,7 @@ import { adminAuth } from "../../middleware/admin-auth";
 import { institutions, staff, classes } from "../../schema/admin";
 import { gradeBooks, chapters } from "../../schema/books";
 import { timetableEntries, periodConfigs } from "../../schema/settings";
+import { classSessions, classSessionTopics } from "../../schema/staff";
 import {
   periodConfigPeriods,
   periodConfigWorkingDays,
@@ -588,6 +589,77 @@ timetableController.patch("/:id/complete", async (c) => {
       });
     }
   }
+
+  // ── Upsert linked class session ──
+  const sessionDate = body.date ? new Date(body.date) : new Date();
+  const dayStart = new Date(sessionDate);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(sessionDate);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  const existingSessions = await db
+    .select()
+    .from(classSessions)
+    .where(
+      and(
+        eq(classSessions.staffId, entry.staffId),
+        eq(classSessions.classId, entry.classId),
+        sql`${classSessions.startTime} >= ${dayStart.toISOString()}`,
+        sql`${classSessions.startTime} <= ${dayEnd.toISOString()}`,
+      ),
+    )
+    .limit(1);
+
+  const startTime = body.startTime ? new Date(body.startTime).toISOString() : now;
+  const endTime = body.endTime ? new Date(body.endTime).toISOString() : now;
+  const durationMinutes =
+    body.durationMinutes ?? Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000);
+
+  let sessionId: string;
+  if (existingSessions.length === 0) {
+    sessionId = uuid();
+    await db.insert(classSessions).values({
+      id: sessionId,
+      staffId: entry.staffId,
+      institutionId: entry.institutionId,
+      classId: entry.classId,
+      courseId: entry.gradeBookId || null,
+      startTime,
+      endTime,
+      durationMinutes,
+      remarks: body.notes || null,
+      status: "completed",
+      createdAt: now,
+      updatedAt: now,
+    });
+  } else {
+    sessionId = existingSessions[0].id;
+    await db
+      .update(classSessions)
+      .set({
+        startTime,
+        endTime,
+        durationMinutes,
+        remarks: body.notes || null,
+        status: "completed",
+        updatedAt: now,
+      })
+      .where(eq(classSessions.id, sessionId));
+
+    // Remove existing topics and re-insert
+    await db.delete(classSessionTopics).where(eq(classSessionTopics.sessionId, sessionId));
+  }
+
+  if (body.topicsCovered && Array.isArray(body.topicsCovered)) {
+    for (const topic of body.topicsCovered) {
+      await db.insert(classSessionTopics).values({
+        id: uuid(),
+        sessionId,
+        topic,
+      });
+    }
+  }
+  // ── End class session link ──
 
   // Fetch updated entry with populated info
   const [updated] = await db.select().from(timetableEntries).where(eq(timetableEntries.id, id)).limit(1);
