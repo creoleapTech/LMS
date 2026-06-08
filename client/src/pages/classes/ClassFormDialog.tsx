@@ -53,7 +53,7 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
     // Fetch enabled grades from curriculum access
     // Admin/teacher/staff: GET /admin/filtered-curriculum/ (auto-scoped to their institution)
     // Super admin: GET /admin/institutions/:id/curriculum-access (scoped to selected institution)
-    const { data: gradesData } = useQuery({
+    const { data: gradesData, isPending: gradesLoading } = useQuery({
         queryKey: isSuperAdmin
             ? ["institution-curriculum-access", institutionId]
             : ["filtered-curriculum"],
@@ -138,7 +138,16 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
 
                     <div className="space-y-1.5">
                         <Label className="text-sm font-medium">Grade / Standard</Label>
-                        {enabledGrades.length > 0 ? (
+                        {gradesLoading ? (
+                            <div className="relative">
+                                <Select disabled>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Loading grades..." />
+                                    </SelectTrigger>
+                                </Select>
+                                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : enabledGrades.length > 0 ? (
                             <Controller
                                 name="grade"
                                 control={control}
