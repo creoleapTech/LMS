@@ -313,7 +313,7 @@ function EditContentDialog({ item, onClose, onSaved }: EditContentDialogProps) {
                     type="file"
                     id="edit-file-upload"
                     className="hidden"
-                    accept={item.type === "file" ? undefined : ".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip,.webm"}
+                    accept={item.type === "file" ? undefined : ".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip,.webm,.leap"}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (!f) return;
@@ -1028,7 +1028,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                       <p className="text-lg mb-2">Drop your file here or click to browse</p>
                       {type !== "file" && (
                         <p className="text-sm text-muted-foreground mb-4">
-                          Supports: MP4, PDF, PPT, DOC, ZIP (Max 100MB)
+                          Supports: MP4, PDF, PPT, DOC, ZIP, LEAP (Max 100MB)
                         </p>
                       )}
                       <input
@@ -1037,7 +1037,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
                         className="hidden"
                         id="file-upload"
                         aria-label="Upload file"
-                        accept={type === "file" ? undefined : ".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip,.webm"}
+                        accept={type === "file" ? undefined : ".mp4,.pdf,.ppt,.pptx,.doc,.docx,.zip,.webm,.leap"}
                       />
                       <Button
                         type="button"
