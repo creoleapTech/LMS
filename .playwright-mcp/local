@@ -1,0 +1,12 @@
+{
+  "stage": {
+    "currentBackdropIndex": 0,
+    "backdrops": [
+      {
+        "name": "default",
+        "src": ""
+      }
+    ]
+  },
+  "sprites": []
+}

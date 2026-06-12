@@ -3,7 +3,7 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
 import { nowISO } from "../../lib/utils";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import { staff, classes } from "../../schema/admin";
 import { classSessions } from "../../schema/staff";

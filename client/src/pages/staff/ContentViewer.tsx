@@ -117,7 +117,7 @@ export function ContentViewer({
   );
 
   const fileUrl = content.videoUrl || content.fileUrl
-    ? `${Config.imgUrl}${content.videoUrl || content.fileUrl}`
+    ? `${Config.proxyUrl}${content.videoUrl || content.fileUrl}`
     : "";
 
   const Icon = typeIcons[content.type] || FileText;

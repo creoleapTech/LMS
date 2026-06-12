@@ -742,7 +742,7 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
 
   function getFileUrl(item: ContentItem) {
     const path = item.videoUrl || item.fileUrl || "";
-    return path ? `${Config.imgUrl}${path}` : "";
+    return path ? `${Config.proxyUrl}${path}` : "";
   }
 
   // ---------------------------------------------------------------------------

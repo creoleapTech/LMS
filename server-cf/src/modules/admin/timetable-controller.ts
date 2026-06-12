@@ -8,7 +8,8 @@ import { adminAuth } from "../../middleware/admin-auth";
 import { institutions, staff, classes } from "../../schema/admin";
 import { gradeBooks, chapters } from "../../schema/books";
 import { timetableEntries, periodConfigs } from "../../schema/settings";
-import { classSessions, classSessionTopics } from "../../schema/staff";
+import { classSessions } from "../../schema/staff";
+import { classSessionTopics } from "../../schema/junction";
 import {
   periodConfigPeriods,
   periodConfigWorkingDays,
@@ -596,6 +597,10 @@ timetableController.patch("/:id/complete", async (c) => {
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(sessionDate);
   dayEnd.setHours(23, 59, 59, 999);
+
+  if (!entry.staffId || !entry.classId) {
+    throw new BadRequestError("Timetable entry must have staff and class assigned");
+  }
 
   const existingSessions = await db
     .select()
