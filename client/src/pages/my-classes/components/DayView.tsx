@@ -328,11 +328,11 @@ export function DayView({
                       const gbId = typeof entry.gradeBookId === "object" ? entry.gradeBookId?._id : entry.gradeBookId;
                       const gbTitle = typeof entry.gradeBookId === "object" ? entry.gradeBookId?.bookTitle : "";
                       const cId = typeof entry.classId === "object" ? entry.classId?._id : entry.classId;
-                      if (gbId && cId) {
+                      if (cId) {
                         navigate({
                           to: "/curriculum",
                           search: {
-                            gradeBookId: gbId,
+                            gradeBookId: gbId || undefined,
                             classId: cId,
                             bookTitle: gbTitle || undefined,
                           },

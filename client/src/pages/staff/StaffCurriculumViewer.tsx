@@ -78,10 +78,10 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
     useState<CurriculumWithBooks | null>(null);
   const [selectedClassSection, setSelectedClassSection] =
     useState<SelectedClassSection | null>(() => {
-      if (resumeGradeBookId && resumeClassId) {
+      if (resumeClassId) {
         return {
           classId: resumeClassId,
-          gradeBookId: resumeGradeBookId,
+          gradeBookId: resumeGradeBookId || '',
           gradeBookTitle: resumeBookTitle || '',
           section: '',
           grade: '',
@@ -130,8 +130,8 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
     search ? c.name.toLowerCase().includes(search.toLowerCase()) : true
   );
 
-  // Once a class section is selected, switch to Coursera layout
-  if (selectedClassSection && (selectedCurriculum || resumeGradeBookId)) {
+  // Once a class section is selected with a gradeBookId, switch to Coursera layout
+  if (selectedClassSection && selectedClassSection.gradeBookId && (selectedCurriculum || resumeGradeBookId)) {
     return (
       <CourseraLayout
         gradeBookId={selectedClassSection.gradeBookId}

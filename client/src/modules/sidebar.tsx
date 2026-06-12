@@ -18,7 +18,6 @@ const navItems: NavItem[] = [
   // { name: 'Courses', path: '/courses', icon: <BookIcon className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Institutions', path: '/institutions', icon: <Building className="w-5 h-5" />, roles: ['super_admin'] },
   { name: 'My Classes', path: '/my-classes', icon: <Users className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
-  { name: 'Lesson Plans', path: '/lesson-plans', icon: <BookMarked className="w-5 h-5" />, roles: ['teacher', 'admin', 'super_admin'] },
   { name: 'Assessments', path: '/examinations', icon: <ClipboardList className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher', 'student'] },
   { name: 'Students', path: '/students', icon: <GraduationCap className="w-5 h-5" />, roles: ['admin', 'super_admin'] },
   { name: 'Reports', path: '/reports', icon: <BarChart className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
