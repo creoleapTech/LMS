@@ -42,8 +42,10 @@ export const fileController = new Elysia({
         const mimeType =
           mime.lookup(filePath) || "application/octet-stream";
 
+        const filename = filePath.slice(filePath.lastIndexOf("/") + 1);
+
         set.headers["Content-Type"] = mimeType;
-        set.headers["Content-Disposition"] = "inline";
+        set.headers["Content-Disposition"] = `attachment; filename="${filename}"`;
         set.headers["X-Content-Type-Options"] = "nosniff";
         set.headers["Cache-Control"] = "private, max-age=3600";
 

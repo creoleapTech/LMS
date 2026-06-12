@@ -1,0 +1,1026 @@
+{
+  "version": "1.0",
+  "projectName": "Online Quiz System with Timer",
+  "mode": "intermediate",
+  "timestamp": 1779952368478,
+  "sprites": [
+    {
+      "id": "stage",
+      "name": "Stage",
+      "spriteType": "cat",
+      "x": 0,
+      "y": 0,
+      "direction": 90,
+      "size": 100,
+      "visible": false,
+      "volume": 100,
+      "soundEffects": {
+        "pitch": 0,
+        "pan": 0
+      },
+      "sounds": [],
+      "costumes": []
+    },
+    {
+      "id": "sprite_1779881819202",
+      "name": "Devin",
+      "spriteType": "cat",
+      "x": -126.9998779296875,
+      "y": -80,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "volume": 100,
+      "soundEffects": {
+        "pitch": 0,
+        "pan": 0
+      },
+      "sounds": [
+        {
+          "name": "Pop",
+          "src": "assets/sounds/83a9787d4cb6f3b7632b4ddfebf74367.wav"
+        },
+        {
+          "name": "Pop",
+          "src": "assets/sounds/83a9787d4cb6f3b7632b4ddfebf74367.wav"
+        }
+      ],
+      "costumes": [
+        {
+          "name": "Devin",
+          "src": "https://leaplab.creoleap.com/assets/sprites/leap/devin_devin-a.svg"
+        },
+        {
+          "name": "Devin 2",
+          "src": "https://leaplab.creoleap.com/assets/sprites/leap/devin_devin-b.svg"
+        },
+        {
+          "name": "Devin 3",
+          "src": "https://leaplab.creoleap.com/assets/sprites/leap/devin_devin-c.svg"
+        },
+        {
+          "name": "Devin 4",
+          "src": "https://leaplab.creoleap.com/assets/sprites/leap/devin_devin-d.svg"
+        }
+      ]
+    },
+    {
+      "id": "sprite_1779881946768",
+      "name": "Bell",
+      "spriteType": "cat",
+      "x": 111.9998779296875,
+      "y": -10,
+      "direction": 100,
+      "size": 60,
+      "visible": true,
+      "volume": 100,
+      "soundEffects": {
+        "pitch": 0,
+        "pan": 0
+      },
+      "sounds": [
+        {
+          "name": "Pop",
+          "src": "assets/sounds/83a9787d4cb6f3b7632b4ddfebf74367.wav"
+        },
+        {
+          "name": "Pop",
+          "src": "assets/sounds/83a9787d4cb6f3b7632b4ddfebf74367.wav"
+        }
+      ],
+      "costumes": [
+        {
+          "name": "Bell",
+          "src": "https://leaplab.creoleap.com/assets/sprites/leap/bell_bell1.svg"
+        }
+      ]
+    }
+  ],
+  "workspaces": {
+    "stage": {
+      "variables": [
+        {
+          "name": "num1",
+          "id": "!YXyQ!ICzHF`n_%$!LoV",
+          "type": "Number"
+        },
+        {
+          "name": "variable",
+          "id": ":5Kc7$!0$71;)Gb;p2^k",
+          "type": "Number"
+        },
+        {
+          "name": "num2",
+          "id": "m?U|x(5@{gr*IlPKDG!o",
+          "type": "Number"
+        },
+        {
+          "name": "sum",
+          "id": "$ntgCe,KJKt98x$B09?)",
+          "type": "Number"
+        },
+        {
+          "name": "n",
+          "id": "^jQamqxn:C|}{*K@]SG5",
+          "type": "Number"
+        }
+      ]
+    },
+    "sprite_1779881819202": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "event_flag_clicked",
+            "id": "2bmV5?l*LM2o^H;AmpI^",
+            "x": 50,
+            "y": 90,
+            "next": {
+              "block": {
+                "type": "data_setvariableto",
+                "id": "2W3SYGoYn6{MZO`Vz)}R",
+                "fields": {
+                  "VARIABLE": {
+                    "id": "{IjK0ZQgW[z=@d-LTI$b"
+                  }
+                },
+                "inputs": {
+                  "VALUE": {
+                    "shadow": {
+                      "type": "arduino_number",
+                      "id": "KTHU=?=eJmO@=[G4oU;u",
+                      "fields": {
+                        "NUM": 0
+                      }
+                    }
+                  }
+                },
+                "next": {
+                  "block": {
+                    "type": "data_setvariableto",
+                    "id": "L_.UOO!44D_bLSh/(UQL",
+                    "fields": {
+                      "VARIABLE": {
+                        "id": "OeHM^|OH0)s*T*dr_Q:z"
+                      }
+                    },
+                    "inputs": {
+                      "VALUE": {
+                        "shadow": {
+                          "type": "arduino_number",
+                          "id": "_cENMuI?AsJ=)87WNX2v",
+                          "fields": {
+                            "NUM": 30
+                          }
+                        }
+                      }
+                    },
+                    "next": {
+                      "block": {
+                        "type": "data_setvariableto",
+                        "id": "QVi8UOcz%SXTYWd!}L=h",
+                        "fields": {
+                          "VARIABLE": {
+                            "id": "kk~xX.9jq{d],CraoYl?"
+                          }
+                        },
+                        "inputs": {
+                          "VALUE": {
+                            "shadow": {
+                              "type": "arduino_number",
+                              "id": "4ZbC0WcjV)NKzYBVTGx2",
+                              "fields": {
+                                "NUM": 1
+                              }
+                            }
+                          }
+                        },
+                        "next": {
+                          "block": {
+                            "type": "looks_say_for_secs",
+                            "id": "%a]Va*HU^(!Eg9qDw4Dy",
+                            "inputs": {
+                              "MESSAGE": {
+                                "shadow": {
+                                  "type": "text",
+                                  "id": "aWCU|l{SRn00B3pX+3Oq",
+                                  "fields": {
+                                    "TEXT": "Welcome to the Online Quiz"
+                                  }
+                                }
+                              },
+                              "SECS": {
+                                "shadow": {
+                                  "type": "math_number",
+                                  "id": "G@pDMZal;-~tp);A7GQF",
+                                  "fields": {
+                                    "NUM": 2
+                                  }
+                                }
+                              }
+                            },
+                            "next": {
+                              "block": {
+                                "type": "event_broadcast",
+                                "id": "h5#HuH_$=Fu?I8sOGRBw",
+                                "fields": {
+                                  "BROADCAST_INPUT": "message1"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "event_receive",
+            "id": "(kHTQI2g/z9%Hw%`TB=q",
+            "x": 550,
+            "y": 50,
+            "fields": {
+              "BROADCAST_OPTION": "message1"
+            },
+            "next": {
+              "block": {
+                "type": "sensing_ask",
+                "id": "iofKj|4+Pp{V6QrdlTAs",
+                "inputs": {
+                  "QUESTION": {
+                    "shadow": {
+                      "type": "text",
+                      "id": ",@E5C[,|OumeTK0$[#4q",
+                      "fields": {
+                        "TEXT": "1. What is the capital of India?"
+                      }
+                    }
+                  }
+                },
+                "next": {
+                  "block": {
+                    "type": "control_if_else",
+                    "id": "4(f6ce|$a{~5`m-$TtVv",
+                    "inputs": {
+                      "CONDITION": {
+                        "block": {
+                          "type": "operator_equals",
+                          "id": "Dp!CH7hYZ!)c0g0rzLo{",
+                          "inputs": {
+                            "OPERAND1": {
+                              "shadow": {
+                                "type": "text",
+                                "id": "|B/]E_8.hVK)?q=k?(AN",
+                                "fields": {
+                                  "TEXT": ""
+                                }
+                              },
+                              "block": {
+                                "type": "sensing_answer",
+                                "id": "m-=bMjsB7oTLW|j,Av`4"
+                              }
+                            },
+                            "OPERAND2": {
+                              "shadow": {
+                                "type": "text",
+                                "id": "nT0.eAly[,N7NFx_:Rng",
+                                "fields": {
+                                  "TEXT": "New Delhi"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "DO": {
+                        "block": {
+                          "type": "data_changevariableby",
+                          "id": "L$}rUu4CG=eV_txbs,2!",
+                          "fields": {
+                            "VARIABLE": {
+                              "id": "{IjK0ZQgW[z=@d-LTI$b"
+                            }
+                          },
+                          "inputs": {
+                            "VALUE": {
+                              "shadow": {
+                                "type": "arduino_number",
+                                "id": "GtHf^WOKMR^l!cXJlh8w",
+                                "fields": {
+                                  "NUM": 1
+                                }
+                              }
+                            }
+                          },
+                          "next": {
+                            "block": {
+                              "type": "looks_say_for_secs",
+                              "id": "wz)[b:5~L/$#frn:0;rt",
+                              "inputs": {
+                                "MESSAGE": {
+                                  "shadow": {
+                                    "type": "text",
+                                    "id": "n6xiqpK4]^a#T6fM(Se~",
+                                    "fields": {
+                                      "TEXT": "Correct!"
+                                    }
+                                  }
+                                },
+                                "SECS": {
+                                  "shadow": {
+                                    "type": "math_number",
+                                    "id": "~j(=?^|CflHh,IqZ~juI",
+                                    "fields": {
+                                      "NUM": 2
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "ELSE": {
+                        "block": {
+                          "type": "looks_say_for_secs",
+                          "id": "yU;I3e8Q_/2BvPsizT:*",
+                          "inputs": {
+                            "MESSAGE": {
+                              "shadow": {
+                                "type": "text",
+                                "id": "9gLoRL+N(eS=C-G(T;21",
+                                "fields": {
+                                  "TEXT": "Wrong Answer"
+                                }
+                              }
+                            },
+                            "SECS": {
+                              "shadow": {
+                                "type": "math_number",
+                                "id": "97+|ol-=A6z7Mm_c2qRJ",
+                                "fields": {
+                                  "NUM": 2
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "next": {
+                      "block": {
+                        "type": "data_changevariableby",
+                        "id": "XO3m/();)Cj_KBLXmH1/",
+                        "fields": {
+                          "VARIABLE": {
+                            "id": "kk~xX.9jq{d],CraoYl?"
+                          }
+                        },
+                        "inputs": {
+                          "VALUE": {
+                            "shadow": {
+                              "type": "arduino_number",
+                              "id": ";MV@67c3kTB|HLb)OV@.",
+                              "fields": {
+                                "NUM": 1
+                              }
+                            }
+                          }
+                        },
+                        "next": {
+                          "block": {
+                            "type": "sensing_ask",
+                            "id": "HWC6(sa[Il=z_CyvpxMT",
+                            "inputs": {
+                              "QUESTION": {
+                                "shadow": {
+                                  "type": "text",
+                                  "id": ".#}|9(O4Ob;PoMXS4o#r",
+                                  "fields": {
+                                    "TEXT": "What is 9 * 8"
+                                  }
+                                }
+                              }
+                            },
+                            "next": {
+                              "block": {
+                                "type": "control_if_else",
+                                "id": "Oji$Mw3PaE$Z0/p{y.L-",
+                                "inputs": {
+                                  "CONDITION": {
+                                    "block": {
+                                      "type": "operator_equals",
+                                      "id": "Q_Dr]!q9ni8g$B[j!qp#",
+                                      "inputs": {
+                                        "OPERAND1": {
+                                          "shadow": {
+                                            "type": "text",
+                                            "id": ".lQZW4@O#:Cd-MgnVH7y",
+                                            "fields": {
+                                              "TEXT": ""
+                                            }
+                                          },
+                                          "block": {
+                                            "type": "sensing_answer",
+                                            "id": "%),ZJrgv+=GK,yByob|Z"
+                                          }
+                                        },
+                                        "OPERAND2": {
+                                          "shadow": {
+                                            "type": "text",
+                                            "id": "Y5Cg2/}r-Z=WK:)rNZrY",
+                                            "fields": {
+                                              "TEXT": "72"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "DO": {
+                                    "block": {
+                                      "type": "data_changevariableby",
+                                      "id": "6_w`4jK;41@RGK_!$|%R",
+                                      "fields": {
+                                        "VARIABLE": {
+                                          "id": "{IjK0ZQgW[z=@d-LTI$b"
+                                        }
+                                      },
+                                      "inputs": {
+                                        "VALUE": {
+                                          "shadow": {
+                                            "type": "arduino_number",
+                                            "id": "in:Ei^V5r*5dFb37iWI`",
+                                            "fields": {
+                                              "NUM": 1
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "next": {
+                                        "block": {
+                                          "type": "looks_say_for_secs",
+                                          "id": "a0fyycAuo0uUlTS@RN=c",
+                                          "inputs": {
+                                            "MESSAGE": {
+                                              "shadow": {
+                                                "type": "text",
+                                                "id": "[cU,lq0IT1t~*COM1srV",
+                                                "fields": {
+                                                  "TEXT": "Correct !"
+                                                }
+                                              }
+                                            },
+                                            "SECS": {
+                                              "shadow": {
+                                                "type": "math_number",
+                                                "id": "=%$#9)J`87Cc1fq4cHQ~",
+                                                "fields": {
+                                                  "NUM": 2
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "ELSE": {
+                                    "block": {
+                                      "type": "looks_say_for_secs",
+                                      "id": "k.]!e%WOTM:JNGDo-J6u",
+                                      "inputs": {
+                                        "MESSAGE": {
+                                          "shadow": {
+                                            "type": "text",
+                                            "id": "ok{:-K%R2/zoI,lngbf9",
+                                            "fields": {
+                                              "TEXT": "Wrong Answer"
+                                            }
+                                          }
+                                        },
+                                        "SECS": {
+                                          "shadow": {
+                                            "type": "math_number",
+                                            "id": "eM?WaowJctnZ8RSzkwA]",
+                                            "fields": {
+                                              "NUM": 2
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "next": {
+                                  "block": {
+                                    "type": "data_changevariableby",
+                                    "id": "bPQ@l0R/]g4TylK:Xc;l",
+                                    "fields": {
+                                      "VARIABLE": {
+                                        "id": "kk~xX.9jq{d],CraoYl?"
+                                      }
+                                    },
+                                    "inputs": {
+                                      "VALUE": {
+                                        "shadow": {
+                                          "type": "arduino_number",
+                                          "id": "S=XQp}lXGkq=pRld1hVY",
+                                          "fields": {
+                                            "NUM": 1
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "next": {
+                                      "block": {
+                                        "type": "sensing_ask",
+                                        "id": ".W6;#FrO0:{#vY,kS@?U",
+                                        "inputs": {
+                                          "QUESTION": {
+                                            "shadow": {
+                                              "type": "text",
+                                              "id": "l7*etOlu2wC:hbKtUId0",
+                                              "fields": {
+                                                "TEXT": "Which Planet is known as the Red Planet?"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "next": {
+                                          "block": {
+                                            "type": "control_if_else",
+                                            "id": "-gVxN)eW4a$IRABX_h@A",
+                                            "inputs": {
+                                              "CONDITION": {
+                                                "block": {
+                                                  "type": "operator_equals",
+                                                  "id": "Caes`zu)/r5%r!e|IIy:",
+                                                  "inputs": {
+                                                    "OPERAND1": {
+                                                      "shadow": {
+                                                        "type": "text",
+                                                        "id": "_;)t9;y#V-=I!T4?Oae$",
+                                                        "fields": {
+                                                          "TEXT": ""
+                                                        }
+                                                      },
+                                                      "block": {
+                                                        "type": "sensing_answer",
+                                                        "id": "hFea-QSQk8uiD)CT{IZL"
+                                                      }
+                                                    },
+                                                    "OPERAND2": {
+                                                      "shadow": {
+                                                        "type": "text",
+                                                        "id": "^q-He1ZRSGKIb^1Z~sO0",
+                                                        "fields": {
+                                                          "TEXT": "Mars"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "DO": {
+                                                "block": {
+                                                  "type": "data_changevariableby",
+                                                  "id": "f3I5ni:A`*h+306_(L08",
+                                                  "fields": {
+                                                    "VARIABLE": {
+                                                      "id": "{IjK0ZQgW[z=@d-LTI$b"
+                                                    }
+                                                  },
+                                                  "inputs": {
+                                                    "VALUE": {
+                                                      "shadow": {
+                                                        "type": "arduino_number",
+                                                        "id": "Df2AXN34zX:F[x/6}#Iu",
+                                                        "fields": {
+                                                          "NUM": 1
+                                                        }
+                                                      }
+                                                    }
+                                                  },
+                                                  "next": {
+                                                    "block": {
+                                                      "type": "looks_say_for_secs",
+                                                      "id": ":/9i)=ZHqykRgJou![_V",
+                                                      "inputs": {
+                                                        "MESSAGE": {
+                                                          "shadow": {
+                                                            "type": "text",
+                                                            "id": "5q%R]Tl+Y5:L)H2gAdhD",
+                                                            "fields": {
+                                                              "TEXT": "Correct!"
+                                                            }
+                                                          }
+                                                        },
+                                                        "SECS": {
+                                                          "shadow": {
+                                                            "type": "math_number",
+                                                            "id": "~L44+m,RW4b(X@_c4Hbv",
+                                                            "fields": {
+                                                              "NUM": 2
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "ELSE": {
+                                                "block": {
+                                                  "type": "looks_say_for_secs",
+                                                  "id": "Z*#e7pyi`r.ci-J`9Bb%",
+                                                  "inputs": {
+                                                    "MESSAGE": {
+                                                      "shadow": {
+                                                        "type": "text",
+                                                        "id": "SXw3r}Ks=q4}J~AIESpO",
+                                                        "fields": {
+                                                          "TEXT": "Wrong Answer"
+                                                        }
+                                                      }
+                                                    },
+                                                    "SECS": {
+                                                      "shadow": {
+                                                        "type": "math_number",
+                                                        "id": "9{4u_~ZLPr#!r`cwp.E_",
+                                                        "fields": {
+                                                          "NUM": 2
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "variables": [
+        {
+          "name": "score",
+          "id": "{IjK0ZQgW[z=@d-LTI$b",
+          "type": "Number"
+        },
+        {
+          "name": "Timer",
+          "id": "OeHM^|OH0)s*T*dr_Q:z",
+          "type": "Number"
+        },
+        {
+          "name": "Question number",
+          "id": "kk~xX.9jq{d],CraoYl?",
+          "type": "Number"
+        }
+      ]
+    },
+    "sprite_1779881946768": {
+      "blocks": {
+        "languageVersion": 0,
+        "blocks": [
+          {
+            "type": "event_receive",
+            "id": "2=gcoBwI=zl1s]p|wzu*",
+            "x": 10,
+            "y": 70,
+            "fields": {
+              "BROADCAST_OPTION": "message1"
+            },
+            "next": {
+              "block": {
+                "type": "control_repeat_until",
+                "id": "5BM(`YSc^OxrXNO+:(k4",
+                "inputs": {
+                  "CONDITION": {
+                    "block": {
+                      "type": "operator_or",
+                      "id": "Lj0~*Mj+%29]lEa0h%l]",
+                      "inputs": {
+                        "OPERAND1": {
+                          "block": {
+                            "type": "operator_equals",
+                            "id": "VThadevS.bJAN$ag/u~Q",
+                            "inputs": {
+                              "OPERAND1": {
+                                "shadow": {
+                                  "type": "text",
+                                  "id": "rPBB,{d2jc(MsU{jO{Q_",
+                                  "fields": {
+                                    "TEXT": ""
+                                  }
+                                },
+                                "block": {
+                                  "type": "variable_reporter_checkbox",
+                                  "id": "DR{osvB|`hM/8(Rop`AV",
+                                  "fields": {
+                                    "CHECK": true,
+                                    "VARIABLE": "Timer"
+                                  }
+                                }
+                              },
+                              "OPERAND2": {
+                                "shadow": {
+                                  "type": "text",
+                                  "id": "@L1N(]}8(/5A|DNlqbUX",
+                                  "fields": {
+                                    "TEXT": "0"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "OPERAND2": {
+                          "block": {
+                            "type": "operator_equals",
+                            "id": "Sx7$qxv97smmC%{seqwd",
+                            "inputs": {
+                              "OPERAND1": {
+                                "shadow": {
+                                  "type": "text",
+                                  "id": "t]]H8j+KzGz-!@Gr$*YA",
+                                  "fields": {
+                                    "TEXT": ""
+                                  }
+                                },
+                                "block": {
+                                  "type": "variable_reporter_checkbox",
+                                  "id": "Ae5Zm)ta8-;56v^e_CtE",
+                                  "fields": {
+                                    "CHECK": true,
+                                    "VARIABLE": "score"
+                                  }
+                                }
+                              },
+                              "OPERAND2": {
+                                "shadow": {
+                                  "type": "text",
+                                  "id": "aFNlM~LRU?n$j3ZL8wuv",
+                                  "fields": {
+                                    "TEXT": "0"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "DO": {
+                    "block": {
+                      "type": "control_wait",
+                      "id": "9io_MN|^XyfIMiJ_3g/w",
+                      "inputs": {
+                        "SECS": {
+                          "shadow": {
+                            "type": "math_number",
+                            "id": "~ZAvG)v+sMikb4Dad@1q",
+                            "fields": {
+                              "NUM": 1
+                            }
+                          }
+                        }
+                      },
+                      "next": {
+                        "block": {
+                          "type": "data_changevariableby",
+                          "id": "S!HkuB[ea;D5+vZ0mg`~",
+                          "fields": {
+                            "VARIABLE": {
+                              "id": "J?2$zDs{YFQ}mLx|a(9L"
+                            }
+                          },
+                          "inputs": {
+                            "VALUE": {
+                              "shadow": {
+                                "type": "arduino_number",
+                                "id": "UQJxIh-Ztd2ZO8sP5D0)",
+                                "fields": {
+                                  "NUM": -1
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "next": {
+                  "block": {
+                    "type": "event_broadcast",
+                    "id": "(:m!V4wGPo$PE0pF;](,",
+                    "fields": {
+                      "BROADCAST_INPUT": "Game Over"
+                    },
+                    "next": {
+                      "block": {
+                        "type": "control_repeat",
+                        "id": "Ww^9EZc~?pkzeJj,Yt_*",
+                        "inputs": {
+                          "TIMES": {
+                            "shadow": {
+                              "type": "math_number",
+                              "id": "=GKEb*RB0!d!lqBTx!zy",
+                              "fields": {
+                                "NUM": 3
+                              }
+                            }
+                          },
+                          "DO": {
+                            "block": {
+                              "type": "motion_turn_right",
+                              "id": "w9_F?hcz3jexq}!w[)+$",
+                              "inputs": {
+                                "DEGREES": {
+                                  "shadow": {
+                                    "type": "math_number",
+                                    "id": "1mhqbBdzO}}_nz`C/b|H",
+                                    "fields": {
+                                      "NUM": 30
+                                    }
+                                  }
+                                }
+                              },
+                              "next": {
+                                "block": {
+                                  "type": "control_wait",
+                                  "id": "G/uL9K7MRw3^+2zNJ9aK",
+                                  "inputs": {
+                                    "SECS": {
+                                      "shadow": {
+                                        "type": "math_number",
+                                        "id": "-G9aiVv$Z6w6xp;+GH`I",
+                                        "fields": {
+                                          "NUM": 1
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "next": {
+                                    "block": {
+                                      "type": "motion_turn_left",
+                                      "id": "I+ua1tSpzikd-sjO}c,V",
+                                      "inputs": {
+                                        "DEGREES": {
+                                          "shadow": {
+                                            "type": "math_number",
+                                            "id": "rh@ZK/9MYvHbv-VIS-85",
+                                            "fields": {
+                                              "NUM": 60
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "event_receive",
+            "id": "($8sMx`:Z:3cXnz36qhL",
+            "x": 630,
+            "y": 410,
+            "fields": {
+              "BROADCAST_OPTION": "Game Over"
+            },
+            "next": {
+              "block": {
+                "type": "looks_say_for_secs",
+                "id": "Ay`G/{HjZ,UvreL]U;c6",
+                "inputs": {
+                  "MESSAGE": {
+                    "shadow": {
+                      "type": "text",
+                      "id": "Yx%jadDU.Gz4vo;__fp/",
+                      "fields": {
+                        "TEXT": "Game Over"
+                      }
+                    }
+                  },
+                  "SECS": {
+                    "shadow": {
+                      "type": "math_number",
+                      "id": "^jR1htdyZWGHmp=3D@QD",
+                      "fields": {
+                        "NUM": 2
+                      }
+                    }
+                  }
+                },
+                "next": {
+                  "block": {
+                    "type": "control_stop",
+                    "id": "W^]j60@oSsTOchzd_6zd",
+                    "fields": {
+                      "STOP_OPTION": "all"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "variables": [
+        {
+          "name": "score",
+          "id": "x{,B;U{4:8ioV;S1P8h{",
+          "type": "Number"
+        },
+        {
+          "name": "Timer",
+          "id": "J?2$zDs{YFQ}mLx|a(9L",
+          "type": "Number"
+        },
+        {
+          "name": "Question number",
+          "id": "7bE#v9mLEUa$*;!gD:YR",
+          "type": "Number"
+        }
+      ]
+    }
+  },
+  "monitors": {
+    "variables": [
+      {
+        "id": "var_1779881983954_l4k3j2u3s",
+        "name": "score",
+        "type": "Number",
+        "scope": "all_sprites",
+        "visible": true,
+        "value": 0,
+        "x": 10,
+        "y": 10,
+        "zIndex": 100,
+        "mode": "normal",
+        "sliderMin": 0,
+        "sliderMax": 100
+      },
+      {
+        "id": "var_1779881990194_26fbdc211",
+        "name": "Timer",
+        "type": "Number",
+        "scope": "all_sprites",
+        "visible": true,
+        "value": 30,
+        "x": 8,
+        "y": 42,
+        "zIndex": 103,
+        "mode": "normal",
+        "sliderMin": 0,
+        "sliderMax": 100
+      },
+      {
+        "id": "var_1779882006939_5ua03kb85",
+        "name": "Question number",
+        "type": "Number",
+        "scope": "all_sprites",
+        "visible": false,
+        "value": 1,
+        "x": 50,
+        "y": 70,
+        "zIndex": 102,
+        "mode": "normal",
+        "sliderMin": 0,
+        "sliderMax": 100
+      }
+    ],
+    "lists": [],
+    "tables": []
+  }
+}

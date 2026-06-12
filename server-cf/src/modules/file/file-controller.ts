@@ -45,10 +45,11 @@ fileController.get("/proxy", async (c) => {
 
     // Determine MIME type from the key path
     const mimeType = getMimeType(key);
+    const filename = key.slice(key.lastIndexOf("/") + 1);
 
     const headers = new Headers();
     headers.set("Content-Type", mimeType);
-    headers.set("Content-Disposition", "inline");
+    headers.set("Content-Disposition", `attachment; filename="${filename}"`);
     headers.set("X-Content-Type-Options", "nosniff");
     headers.set("Cache-Control", "private, max-age=3600");
 
