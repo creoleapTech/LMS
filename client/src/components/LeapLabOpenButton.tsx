@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { File } from "lucide-react";
+import { File, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { detectLeapMode, getLeapLabUrl, type LeapMode } from "@/lib/leaplab";
 
@@ -43,7 +43,7 @@ export function LeapLabOpenButton({ fileUrl, title }: LeapLabOpenButtonProps) {
   const leapUrl = getLeapLabUrl(fileUrl);
 
   const buttonLabel = detecting
-    ? "Open in LeapLab"
+    ? "Detecting mode…"
     : mode === "junior"
       ? "Open in LeapLab Ignite"
       : mode === "intermediate"
@@ -51,7 +51,7 @@ export function LeapLabOpenButton({ fileUrl, title }: LeapLabOpenButtonProps) {
         : "Open in LeapLab";
 
   const description = detecting
-    ? "Loading project details…"
+    ? "Reading LeapLab project mode…"
     : mode === "junior"
       ? "Junior block-coding workspace"
       : mode === "intermediate"
@@ -72,7 +72,8 @@ export function LeapLabOpenButton({ fileUrl, title }: LeapLabOpenButtonProps) {
         <p className="font-medium truncate">{title}</p>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
-      <Button variant="default" size="sm" className="shrink-0">
+      <Button variant="default" size="sm" className="shrink-0 gap-2" disabled={detecting}>
+        {detecting && <Loader2 className="h-4 w-4 animate-spin" />}
         {buttonLabel}
       </Button>
     </a>
