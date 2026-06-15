@@ -10,6 +10,8 @@ import { RichTextViewer } from "@/components/editors/RichTextViewer";
 import { QuizViewer } from "@/components/quiz/QuizViewer";
 import { useContentAutoSave } from "@/hooks/useContentAutoSave";
 import type { ContentProgressEntry } from "@/hooks/useTeachingProgress";
+import { LeapLabOpenButton } from "@/components/LeapLabOpenButton";
+import { isLeapFile } from "@/lib/leaplab";
 import type { TeachingMode } from "./types";
 import {
   Video,
@@ -321,25 +323,29 @@ export function ContentViewer({
           </ContentProtectionWrapper>
         )}
 
-        {/* Generic File — download card */}
-        {content.type === "file" && (
+        {/* Generic File — .leap opens in LeapLab, everything else downloads */}
+        {content.type === "file" && fileUrl && (
           <div className="max-w-2xl mx-auto">
-            <a
-              href={fileUrl}
-              download
-              className="flex items-center gap-4 p-6 border-2 border-dashed border-muted-foreground/25 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors group"
-            >
-              <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800 transition-colors">
-                <File className="h-8 w-8 text-indigo-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{content.title}</p>
-                <p className="text-sm text-muted-foreground">Click to download this file</p>
-              </div>
-              <Button variant="outline" size="sm" className="shrink-0">
-                Download
-              </Button>
-            </a>
+            {isLeapFile(fileUrl) ? (
+              <LeapLabOpenButton fileUrl={fileUrl} title={content.title} />
+            ) : (
+              <a
+                href={fileUrl}
+                download
+                className="flex items-center gap-4 p-6 border-2 border-dashed border-muted-foreground/25 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors group"
+              >
+                <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800 transition-colors">
+                  <File className="h-8 w-8 text-indigo-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{content.title}</p>
+                  <p className="text-sm text-muted-foreground">Click to download this file</p>
+                </div>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  Download
+                </Button>
+              </a>
+            )}
           </div>
         )}
 

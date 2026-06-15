@@ -59,6 +59,8 @@ import { RichTextEditor } from "@/components/editors/RichTextEditor";
 import { RichTextViewer } from "@/components/editors/RichTextViewer";
 import { YouTubePlayer } from "@/components/viewers/YouTubePlayer";
 import { PptViewer } from "@/components/viewers/PptViewer";
+import { LeapLabOpenButton } from "@/components/LeapLabOpenButton";
+import { isLeapFile } from "@/lib/leaplab";
 import type { Question } from "@/components/quiz/types";
 import { QuizBuilder } from "@/components/quiz/QuizBuilder";
 import { QuizViewer } from "@/components/quiz/QuizViewer";
@@ -855,36 +857,11 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
               </div>
             )}
 
-            {/* File (generic) */}
+            {/* File (generic) — .leap opens in LeapLab, everything else downloads */}
             {viewingContent.type === "file" && viewingContent.fileUrl && (
               <div className="space-y-4">
-                {viewingContent.fileUrl.endsWith(".leap") ? (
-                  <div className="flex flex-col gap-3">
-                    <a
-                      href={`https://leaplab.creoleap.com?project=${encodeURIComponent(fileUrl)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-4 p-6 border-2 border-dashed border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl hover:border-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 transition-colors group"
-                    >
-                      <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800 transition-colors">
-                        <File className="h-8 w-8 text-indigo-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{viewingContent.title}</p>
-                        <p className="text-sm text-muted-foreground">Open in LeapLab to view and edit</p>
-                      </div>
-                      <Button variant="default" size="sm" className="shrink-0">
-                        Open in LeapLab
-                      </Button>
-                    </a>
-                    <a
-                      href={fileUrl}
-                      download
-                      className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
-                    >
-                      Download file instead
-                    </a>
-                  </div>
+                {isLeapFile(fileUrl) ? (
+                  <LeapLabOpenButton fileUrl={fileUrl} title={viewingContent.title} />
                 ) : (
                   <a
                     href={fileUrl}
