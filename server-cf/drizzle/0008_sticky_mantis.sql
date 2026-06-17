@@ -1,0 +1,2 @@
+DROP INDEX `leaplab_credentials_institution_username_idx`;--> statement-breakpoint
+CREATE UNIQUE INDEX `leaplab_credentials_institution_username_idx` ON `leaplab_credentials` (`institution_id`,`username`) WHERE "is_deleted" = 0;

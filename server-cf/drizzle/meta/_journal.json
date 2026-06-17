@@ -50,6 +50,20 @@
       "when": 1780653176124,
       "tag": "0006_wise_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1781679933271,
+      "tag": "0007_nervous_sally_floyd",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1781680903901,
+      "tag": "0008_sticky_mantis",
+      "breakpoints": true
     }
   ]
 }

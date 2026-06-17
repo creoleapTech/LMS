@@ -5,6 +5,7 @@ import type { Bindings, Variables } from "../../env";
 import { adminAuthController } from "./adminAuth-controller";
 import { staffAuthController } from "./staffAuth-controller";
 import { institutionController } from "./institution-controller";
+import { leaplabCredentialController } from "./leaplab-credential-controller";
 import { departmentController } from "./department-controller";
 import { staffController } from "./staff-controller";
 import { classController } from "./class-controller";
@@ -41,6 +42,7 @@ adminBaseRouter.route("/staff/auth", staffAuthController);
 
 // Core entities
 adminBaseRouter.route("/institutions", institutionController);
+adminBaseRouter.route("/institutions", leaplabCredentialController);
 adminBaseRouter.route("/departments", departmentController);
 adminBaseRouter.route("/staff", staffController);
 adminBaseRouter.route("/classes", classController);
