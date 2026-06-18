@@ -11,7 +11,9 @@ import { QuizViewer } from "@/components/quiz/QuizViewer";
 import { useContentAutoSave } from "@/hooks/useContentAutoSave";
 import type { ContentProgressEntry } from "@/hooks/useTeachingProgress";
 import { LeapLabOpenButton } from "@/components/LeapLabOpenButton";
-import { isLeapFile } from "@/lib/leaplab";
+import { ProjectDownloadCard } from "@/components/ProjectDownloadCard";
+import { isLeapFile, isSb3File } from "@/lib/leaplab";
+import { useAuthStore } from "@/store/userAuthStore";
 import type { TeachingMode } from "./types";
 import {
   Video,
@@ -124,6 +126,9 @@ export function ContentViewer({
 
   const Icon = typeIcons[content.type] || FileText;
   const displayNum = `${chapterNumber}.${content.order}`;
+
+  const { user } = useAuthStore();
+  const isTeacherOrSuperAdmin = user?.role === "super_admin" || user?.role === "teacher";
 
   // Video: set initial time from progress
   useEffect(() => {
@@ -323,11 +328,17 @@ export function ContentViewer({
           </ContentProtectionWrapper>
         )}
 
-        {/* Generic File — .leap opens in LeapLab, everything else downloads */}
+        {/* Generic File — .leap opens in LeapLab, .sb3 downloads, everything else downloads */}
         {content.type === "file" && fileUrl && (
           <div className="max-w-2xl mx-auto">
             {isLeapFile(fileUrl) ? (
-              <LeapLabOpenButton fileUrl={fileUrl} title={content.title} />
+              <LeapLabOpenButton
+                fileUrl={fileUrl}
+                title={content.title}
+                showDownload={isTeacherOrSuperAdmin}
+              />
+            ) : isSb3File(fileUrl) && isTeacherOrSuperAdmin ? (
+              <ProjectDownloadCard fileUrl={fileUrl} title={content.title} extension=".sb3" />
             ) : (
               <a
                 href={fileUrl}

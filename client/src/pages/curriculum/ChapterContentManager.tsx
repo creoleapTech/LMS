@@ -48,6 +48,7 @@ import {
   ChevronDown,
   Loader2,
   File,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +61,8 @@ import { RichTextViewer } from "@/components/editors/RichTextViewer";
 import { YouTubePlayer } from "@/components/viewers/YouTubePlayer";
 import { PptViewer } from "@/components/viewers/PptViewer";
 import { LeapLabOpenButton } from "@/components/LeapLabOpenButton";
-import { isLeapFile } from "@/lib/leaplab";
+import { ProjectDownloadCard } from "@/components/ProjectDownloadCard";
+import { isLeapFile, isSb3File } from "@/lib/leaplab";
 import type { Question } from "@/components/quiz/types";
 import { QuizBuilder } from "@/components/quiz/QuizBuilder";
 import { QuizViewer } from "@/components/quiz/QuizViewer";
@@ -405,6 +407,10 @@ function SortableContentItem({
   const hasPreviewable =
     item.fileUrl || item.videoUrl || item.youtubeUrl || item.textContent || item.questions?.length;
 
+  const filePath = item.videoUrl || item.fileUrl || "";
+  const fileUrl = filePath ? `${Config.proxyUrl}${filePath}` : "";
+  const isDownloadableProject = fileUrl && (isLeapFile(fileUrl) || isSb3File(fileUrl));
+
   return (
     <div
       ref={setNodeRef}
@@ -456,6 +462,14 @@ function SortableContentItem({
         )}
         {isSuperAdmin && (
           <>
+            {isDownloadableProject && (
+              <Button variant="ghost" size="sm" asChild>
+                <a href={fileUrl} download>
+                  <Download className="h-4 w-4 mr-1" />
+                  Download
+                </a>
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={() => onOpenEditDialog(item)} className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
               <Pencil className="h-4 w-4 mr-1" />
               Edit
@@ -857,11 +871,17 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
               </div>
             )}
 
-            {/* File (generic) — .leap opens in LeapLab, everything else downloads */}
+            {/* File (generic) — .leap opens in LeapLab, .sb3 downloads, everything else downloads */}
             {viewingContent.type === "file" && viewingContent.fileUrl && (
               <div className="space-y-4">
                 {isLeapFile(fileUrl) ? (
-                  <LeapLabOpenButton fileUrl={fileUrl} title={viewingContent.title} />
+                  <LeapLabOpenButton
+                    fileUrl={fileUrl}
+                    title={viewingContent.title}
+                    showDownload={isSuperAdmin}
+                  />
+                ) : isSb3File(fileUrl) && isSuperAdmin ? (
+                  <ProjectDownloadCard fileUrl={fileUrl} title={viewingContent.title} extension=".sb3" />
                 ) : (
                   <a
                     href={fileUrl}

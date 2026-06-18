@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { File, Loader2 } from "lucide-react";
+import { File, Loader2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { detectLeapMode, getLeapLabUrl, type LeapMode } from "@/lib/leaplab";
 
@@ -8,6 +8,8 @@ interface LeapLabOpenButtonProps {
   fileUrl: string;
   /** Display title for the project. */
   title: string;
+  /** When true, also render a download button for the `.leap` file. */
+  showDownload?: boolean;
 }
 
 /**
@@ -18,7 +20,7 @@ interface LeapLabOpenButtonProps {
  * (intermediate). If detection fails, a generic "Open in LeapLab" label is
  * shown and LeapLab itself will route to the correct editor.
  */
-export function LeapLabOpenButton({ fileUrl, title }: LeapLabOpenButtonProps) {
+export function LeapLabOpenButton({ fileUrl, title, showDownload }: LeapLabOpenButtonProps) {
   const [mode, setMode] = useState<LeapMode | null>(null);
   const [detecting, setDetecting] = useState(true);
 
@@ -59,23 +61,49 @@ export function LeapLabOpenButton({ fileUrl, title }: LeapLabOpenButtonProps) {
         : "Open in LeapLab to view and edit";
 
   return (
-    <a
-      href={leapUrl}
-      target="_blank"
-      rel="noopener noreferrer"
+    <div
       className="flex items-center gap-4 p-6 border-2 border-dashed border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl hover:border-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 transition-colors group"
     >
-      <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800 transition-colors">
-        <File className="h-8 w-8 text-indigo-600" />
+      <a
+        href={leapUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-4 flex-1 min-w-0"
+      >
+        <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800 transition-colors">
+          <File className="h-8 w-8 text-indigo-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium truncate">{title}</p>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+      </a>
+      <div className="flex items-center gap-2 shrink-0">
+        {showDownload && (
+          <a
+            href={fileUrl}
+            download
+            className="inline-flex"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Button variant="outline" size="sm" className="gap-2">
+              <Download className="h-4 w-4" />
+              Download .leap
+            </Button>
+          </a>
+        )}
+        <a
+          href={leapUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex"
+        >
+          <Button variant="default" size="sm" className="shrink-0 gap-2" disabled={detecting}>
+            {detecting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {buttonLabel}
+          </Button>
+        </a>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium truncate">{title}</p>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-      <Button variant="default" size="sm" className="shrink-0 gap-2" disabled={detecting}>
-        {detecting && <Loader2 className="h-4 w-4 animate-spin" />}
-        {buttonLabel}
-      </Button>
-    </a>
+    </div>
   );
 }

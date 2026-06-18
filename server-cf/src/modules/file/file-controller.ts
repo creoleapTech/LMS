@@ -200,6 +200,8 @@ const MIME_MAP: Record<string, string> = {
   ".rar": "application/x-rar-compressed",
   ".tar": "application/x-tar",
   ".gz": "application/gzip",
+  ".leap": "application/json",
+  ".sb3": "application/octet-stream",
 };
 
 function getMimeType(key: string): string {

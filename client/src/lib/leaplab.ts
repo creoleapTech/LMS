@@ -26,6 +26,21 @@ export function isLeapFile(urlOrName: string): boolean {
 }
 
 /**
+ * Check whether a URL or filename represents a Scratch 3 project file.
+ */
+export function isSb3File(urlOrName: string): boolean {
+  return urlOrName.toLowerCase().endsWith(".sb3");
+}
+
+/**
+ * Check whether a URL or filename represents a downloadable project file
+ * (.leap or .sb3).
+ */
+export function isProjectFile(urlOrName: string): boolean {
+  return isLeapFile(urlOrName) || isSb3File(urlOrName);
+}
+
+/**
  * Detect the LeapLab mode from a remote `.leap` project file.
  * Returns `null` if the mode cannot be determined.
  */
