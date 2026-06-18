@@ -64,6 +64,20 @@
       "when": 1781680903901,
       "tag": "0008_sticky_mantis",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1781757230637,
+      "tag": "0009_living_captain_flint",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1781763491347,
+      "tag": "0010_last_robin_chapel",
+      "breakpoints": true
     }
   ]
 }

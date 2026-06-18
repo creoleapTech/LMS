@@ -123,6 +123,13 @@ export function ClassTable({ institutionId }: Props) {
                 </Button>
             ),
             cell: info => <span className="font-semibold">{info.getValue() || "-"}</span>,
+            sortingFn: (rowA, rowB, columnId) => {
+                const a = Number(rowA.getValue(columnId)) || 0;
+                const b = Number(rowB.getValue(columnId)) || 0;
+                if (a < b) return -1;
+                if (a > b) return 1;
+                return 0;
+            },
         }),
         columnHelper.accessor("section", {
             header: "Section",

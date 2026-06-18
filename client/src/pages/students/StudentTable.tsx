@@ -219,8 +219,11 @@ export function StudentTable({ institutionId }: Props) {
   // Build unique class options for filter
   const classOptions = classes
     .filter((c) => c.isActive)
-    .map((c) => ({ value: c._id, label: `${c.grade}-${c.section}` }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .map((c) => ({ value: c._id, label: `${c.grade}-${c.section}`, grade: Number(c.grade) || 0, section: c.section }))
+    .sort((a, b) => {
+      if (a.grade !== b.grade) return a.grade - b.grade;
+      return a.section.localeCompare(b.section);
+    });
 
   const columns = [
     columnHelper.accessor("name", {

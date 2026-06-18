@@ -8,6 +8,8 @@ import { errorHandler } from "./lib/errors/handler";
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 const DEFAULT_ALLOWED_ORIGINS = [
+	"http://localhost:3000",
+	"http://127.0.0.1:3000",
 	"http://localhost:3001",
 	"http://127.0.0.1:3001",
 	"https://leaplab.creoleap.com",

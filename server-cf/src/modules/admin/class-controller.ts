@@ -3,7 +3,7 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
 import { nowISO } from "../../lib/utils";
-import { eq, and, count, inArray } from "drizzle-orm";
+import { eq, and, count, inArray, sql } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import {
   classes,
@@ -192,7 +192,7 @@ classController.get("/", async (c) => {
     .select()
     .from(classes)
     .where(and(...conditions))
-    .orderBy(classes.grade, classes.section)
+    .orderBy(sql`CAST(${classes.grade} AS INTEGER)`, classes.section)
     .limit(limit)
     .offset(offset);
 

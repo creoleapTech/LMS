@@ -110,7 +110,7 @@ teachingProgressController.get("/classes/:curriculumId", async (c) => {
         eq(classes.isDeleted, 0),
       ),
     )
-    .orderBy(classes.grade, classes.section);
+    .orderBy(sql`CAST(${classes.grade} AS INTEGER)`, classes.section);
 
   if (classRows.length === 0) {
     return c.json({ success: true, data: [] });

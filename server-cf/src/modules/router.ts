@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import type { Bindings, Variables } from "../env";
 import { fileController } from "./file/file-controller";
 import { adminBaseRouter } from "./admin/admin-router";
+import { leaplabAuthController } from "./public/leaplab-auth-controller";
+import { leaplabProjectController } from "./public/leaplab-project-controller";
 
 export const baseRouter = new Hono<{
   Bindings: Bindings;
@@ -10,3 +12,5 @@ export const baseRouter = new Hono<{
 
 baseRouter.route("/file", fileController);
 baseRouter.route("/admin", adminBaseRouter);
+baseRouter.route("/leaplab/auth", leaplabAuthController);
+baseRouter.route("/leaplab/projects", leaplabProjectController);
