@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import {
@@ -69,6 +69,29 @@ export function ScheduleEntryDialog({
     enabled: open,
     staleTime: 5 * 60 * 1000,
   });
+
+  const filteredClasses = useMemo(() => {
+    const term = classSearch.trim().toLowerCase();
+    return (classes || [])
+      .filter((cls) => {
+        if (!term) return true;
+        return (
+          cls.grade.toLowerCase().includes(term) ||
+          cls.section.toLowerCase().includes(term) ||
+          (cls.year && cls.year.toLowerCase().includes(term))
+        );
+      })
+      .sort((a, b) => {
+        const gradeA = parseInt(a.grade, 10);
+        const gradeB = parseInt(b.grade, 10);
+        if (!Number.isNaN(gradeA) && !Number.isNaN(gradeB) && gradeA !== gradeB) {
+          return gradeA - gradeB;
+        }
+        const gradeCmp = String(a.grade).localeCompare(String(b.grade));
+        if (gradeCmp !== 0) return gradeCmp;
+        return a.section.localeCompare(b.section);
+      });
+  }, [classes, classSearch]);
 
   // Fetch gradebooks when grade is selected
   const { data: gradeBooks } = useQuery<IGradeBookOption[]>({
@@ -195,22 +218,12 @@ export function ScheduleEntryDialog({
                 <SelectValue placeholder="Select class" />
               </SelectTrigger>
               <SelectContent>
-                {classes
-                  ?.filter((cls) => {
-                    const term = classSearch.trim().toLowerCase();
-                    if (!term) return true;
-                    return (
-                      cls.grade.toLowerCase().includes(term) ||
-                      cls.section.toLowerCase().includes(term) ||
-                      (cls.year && cls.year.toLowerCase().includes(term))
-                    );
-                  })
-                  .map((cls) => (
-                    <SelectItem key={cls._id} value={cls._id}>
-                      Grade {cls.grade}–{cls.section}
-                      {cls.year ? ` (${cls.year})` : ""}
-                    </SelectItem>
-                  ))}
+                {filteredClasses.map((cls) => (
+                  <SelectItem key={cls._id} value={cls._id}>
+                    Grade {cls.grade}–{cls.section}
+                    {cls.year ? ` (${cls.year})` : ""}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
