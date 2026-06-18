@@ -185,6 +185,7 @@ const MIME_MAP: Record<string, string> = {
   ".ppt": "application/vnd.ms-powerpoint",
   ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   ".mp4": "video/mp4",
+  ".mov": "video/quicktime",
   ".webm": "video/webm",
   ".mp3": "audio/mpeg",
   ".wav": "audio/wav",

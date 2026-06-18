@@ -249,7 +249,7 @@ export function ContentViewer({
                 onTimeUpdate={handleVideoTimeUpdate}
                 onPause={handleVideoTimeUpdate}
               >
-                <source src={fileUrl} type="video/mp4" />
+                <source src={fileUrl} type={fileUrl.toLowerCase().endsWith(".mov") ? "video/quicktime" : "video/mp4"} />
                 Your browser does not support video.
               </video>
             </ContentProtectionWrapper>
