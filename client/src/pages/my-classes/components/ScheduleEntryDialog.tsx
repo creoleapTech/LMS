@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -18,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarDays, BookOpen, Repeat, Loader2 } from "lucide-react";
+import { CalendarDays, BookOpen, Repeat, Loader2, Search } from "lucide-react";
 import { useTimetableMutations } from "../hooks/useTimetableMutations";
 import type {
   ITimetableEntry,
@@ -53,6 +54,7 @@ export function ScheduleEntryDialog({
   const [notes, setNotes] = useState("");
   const [isRecurring, setIsRecurring] = useState(true);
   const [selectedGrade, setSelectedGrade] = useState("");
+  const [classSearch, setClassSearch] = useState("");
 
   // Fetch teacher's classes
   const { data: classes } = useQuery<IClassOption[]>({
@@ -108,6 +110,7 @@ export function ScheduleEntryDialog({
         setNotes("");
         setIsRecurring(true);
         setSelectedGrade("");
+        setClassSearch("");
       }
     }
   }, [open, entry]);
@@ -178,17 +181,36 @@ export function ScheduleEntryDialog({
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Class
             </Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                value={classSearch}
+                onChange={(e) => setClassSearch(e.target.value)}
+                placeholder="Search classes..."
+                className="pl-9 rounded-xl"
+              />
+            </div>
             <Select value={classId} onValueChange={handleClassChange}>
               <SelectTrigger className="rounded-xl">
                 <SelectValue placeholder="Select class" />
               </SelectTrigger>
               <SelectContent>
-                {classes?.map((cls) => (
-                  <SelectItem key={cls._id} value={cls._id}>
-                    Grade {cls.grade}–{cls.section}
-                    {cls.year ? ` (${cls.year})` : ""}
-                  </SelectItem>
-                ))}
+                {classes
+                  ?.filter((cls) => {
+                    const term = classSearch.trim().toLowerCase();
+                    if (!term) return true;
+                    return (
+                      cls.grade.toLowerCase().includes(term) ||
+                      cls.section.toLowerCase().includes(term) ||
+                      (cls.year && cls.year.toLowerCase().includes(term))
+                    );
+                  })
+                  .map((cls) => (
+                    <SelectItem key={cls._id} value={cls._id}>
+                      Grade {cls.grade}–{cls.section}
+                      {cls.year ? ` (${cls.year})` : ""}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

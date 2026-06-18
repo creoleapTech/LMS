@@ -2,8 +2,19 @@ import { useState, useMemo } from "react";
 import { useTimetableDay } from "../hooks/useTimetableDay";
 import { useStaffTimetableDay } from "../hooks/useStaffTimetableDay";
 import { useClassSessions } from "../hooks/useClassSessions";
+import { useTimetableMutations } from "../hooks/useTimetableMutations";
 import { ScheduleEntryDialog } from "./ScheduleEntryDialog";
 import { WorkDoneDialog } from "./WorkDoneDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -23,6 +34,7 @@ import {
   Clock,
   Timer,
   GraduationCap,
+  Trash2,
 } from "lucide-react";
 import { useAuthStore } from "@/store/userAuthStore";
 import { useNavigate } from "@tanstack/react-router";
@@ -73,6 +85,14 @@ function formatDateString(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function formatTime12Hour(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return time;
+  const suffix = h >= 12 ? "PM" : "AM";
+  const displayH = h % 12 || 12;
+  return `${displayH}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
 export function DayView({
   date,
   readOnly = false,
@@ -114,6 +134,21 @@ export function DayView({
     entry?: ITimetableEntry;
     period?: IPeriodSlot;
   }>({ open: false });
+
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    entry?: ITimetableEntry;
+  }>({ open: false });
+
+  const { deleteEntry } = useTimetableMutations();
+
+  const handleDelete = () => {
+    if (deleteDialog.entry) {
+      deleteEntry.mutate(deleteDialog.entry._id, {
+        onSuccess: () => setDeleteDialog({ open: false }),
+      });
+    }
+  };
 
   const periodConfig = data?.periodConfig;
   const entries = data?.entries || [];
@@ -276,8 +311,8 @@ export function DayView({
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm font-semibold text-slate-600">{period.startTime}</span>
-                        <span className="text-xs text-slate-500 ml-0.5">– {period.endTime}</span>
+                        <span className="text-sm font-semibold text-slate-600">{formatTime12Hour(period.startTime)}</span>
+                        <span className="text-xs text-slate-500 ml-0.5">– {formatTime12Hour(period.endTime)}</span>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-slate-400 italic">No class scheduled</span>
@@ -339,6 +374,7 @@ export function DayView({
                         });
                       }
                     }}
+                    onDeleteClick={() => setDeleteDialog({ open: true, entry })}
                   />
                 );
               })}
@@ -367,6 +403,35 @@ export function DayView({
         date={dateStr}
         period={workDoneDialog.period}
       />
+
+      <AlertDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
+      >
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete schedule?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the scheduled class from your timetable. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setDeleteDialog({ open: false })}
+              className="rounded-xl"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteEntry.isPending}
+              className="rounded-xl bg-rose-600 hover:bg-rose-700"
+            >
+              {deleteEntry.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -380,7 +445,7 @@ function BreakRow({ period, readOnly }: { period: IPeriodSlot; readOnly?: boolea
           <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-300/50 to-transparent" />
           <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5 shrink-0 bg-gradient-to-br from-amber-100 to-amber-50 px-4 py-1.5 rounded-full shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-amber-200/60">
             <Coffee size={12} />
-            {period.label || "Break"} &middot; {period.startTime}–{period.endTime}
+            {period.label || "Break"} &middot; {formatTime12Hour(period.startTime)}–{formatTime12Hour(period.endTime)}
           </span>
           <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-300/50 to-transparent" />
         </div>
@@ -400,6 +465,7 @@ function ScheduledRow({
   onEditClick,
   onCompleteClick,
   onTeachClick,
+  onDeleteClick,
 }: {
   period: IPeriodSlot;
   entry: ITimetableEntry;
@@ -410,6 +476,7 @@ function ScheduledRow({
   onEditClick: () => void;
   onCompleteClick: () => void;
   onTeachClick: () => void;
+  onDeleteClick: () => void;
 }) {
   const borderColor = isCompleted ? COMPLETED_BORDER : colors.border;
   const badgeColor = isCompleted ? "bg-emerald-100 text-emerald-700" : colors.badge;
@@ -433,8 +500,8 @@ function ScheduledRow({
 
       {/* Time */}
       <TableCell>
-        <span className="text-sm font-semibold text-slate-700">{period.startTime}</span>
-        <span className="text-xs text-slate-500 ml-0.5">– {period.endTime}</span>
+        <span className="text-sm font-semibold text-slate-700">{formatTime12Hour(period.startTime)}</span>
+        <span className="text-xs text-slate-500 ml-0.5">– {formatTime12Hour(period.endTime)}</span>
       </TableCell>
 
       {/* Class / Subject */}
@@ -520,6 +587,13 @@ function ScheduledRow({
             >
               <GraduationCap size={14} />
             </button>
+            <button
+              onClick={onDeleteClick}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-rose-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(225,29,72,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
+              title="Delete schedule"
+            >
+              <Trash2 size={14} />
+            </button>
           </div>
         </TableCell>
       )}
@@ -549,8 +623,8 @@ function EmptyRow({
 
       {/* Time */}
       <TableCell>
-        <span className="text-sm font-semibold text-slate-600">{period.startTime}</span>
-        <span className="text-xs text-slate-500 ml-0.5">– {period.endTime}</span>
+        <span className="text-sm font-semibold text-slate-600">{formatTime12Hour(period.startTime)}</span>
+        <span className="text-xs text-slate-500 ml-0.5">– {formatTime12Hour(period.endTime)}</span>
       </TableCell>
 
       {/* Empty label */}
