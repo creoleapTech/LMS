@@ -1288,21 +1288,21 @@ async function buildMonthlyReport(
   }
 
   // Fetch chapter and content titles for structured entries
-  const chapterMap = new Map<string, { title: string }>();
+  const chapterMap = new Map<string, { title: string; chapterNumber: number | null }>();
   if (chapterIdsSet.size > 0) {
     const chRows = await db
-      .select({ id: chapters.id, title: chapters.title })
+      .select({ id: chapters.id, title: chapters.title, chapterNumber: chapters.chapterNumber })
       .from(chapters)
       .where(inArray(chapters.id, [...chapterIdsSet]));
-    for (const ch of chRows) chapterMap.set(ch.id, { title: ch.title || "" });
+    for (const ch of chRows) chapterMap.set(ch.id, { title: ch.title || "", chapterNumber: ch.chapterNumber });
   }
-  const contentMap = new Map<string, { title: string; chapterId: string }>();
+  const contentMap = new Map<string, { title: string; chapterId: string; order: number | null }>();
   if (contentIdsSet.size > 0) {
     const ctRows = await db
-      .select({ id: chapterContents.id, title: chapterContents.title, chapterId: chapterContents.chapterId })
+      .select({ id: chapterContents.id, title: chapterContents.title, chapterId: chapterContents.chapterId, order: chapterContents.order })
       .from(chapterContents)
       .where(inArray(chapterContents.id, [...contentIdsSet]));
-    for (const ct of ctRows) contentMap.set(ct.id, { title: ct.title || "", chapterId: ct.chapterId });
+    for (const ct of ctRows) contentMap.set(ct.id, { title: ct.title || "", chapterId: ct.chapterId, order: ct.order });
   }
 
   // Batch fetch class and gradeBook info
@@ -1374,25 +1374,30 @@ async function buildMonthlyReport(
 
       // Collect chapter and content names from structured entries for this entry
       const entryTopicRows = entry.__omitTopicsCovered ? [] : topicsRows.filter((r: any) => r.timetableEntryId === entry.id);
-      const chapterNames = new Set<string>();
-      const contentNames: string[] = [];
+      const chapterLabels = new Set<string>();
+      const subtopicLabels: string[] = [];
       for (const tr of entryTopicRows) {
         if (tr.chapterId) {
           const ch = chapterMap.get(tr.chapterId);
-          if (ch?.title) chapterNames.add(ch.title);
+          if (ch) chapterLabels.add(`Chapter ${ch.chapterNumber ?? ""}: ${ch.title}`);
         }
         if (tr.contentId) {
           const ct = contentMap.get(tr.contentId);
-          if (ct?.title) contentNames.push(ct.title);
+          const ch = ct ? chapterMap.get(ct.chapterId) : null;
+          const chNum = ch?.chapterNumber;
+          if (ct) {
+            const subtopicNum = `${chNum != null ? chNum + "." : ""}${ct.order != null ? ct.order : ""}`;
+            subtopicLabels.push(`${subtopicNum} - ${ct.title}`);
+          }
         }
       }
 
-      const chapterName = chapterNames.size > 0
-        ? [...chapterNames].join(", ")
+      const chapterName = chapterLabels.size > 0
+        ? [...chapterLabels].join(", ")
         : bookTitle;
 
-      const topicName = contentNames.length > 0
-        ? contentNames.join(", ")
+      const topicName = subtopicLabels.length > 0
+        ? subtopicLabels.join(", ")
         : entryTopics.join(", ");
 
       rows.push({
@@ -1597,7 +1602,7 @@ timetableController.get("/work-done", async (c) => {
       ? db.select({ id: chapters.id, title: chapters.title, chapterNumber: chapters.chapterNumber }).from(chapters).where(inArray(chapters.id, allChapterIds))
       : [],
     allContentIds.length > 0
-      ? db.select({ id: chapterContents.id, title: chapterContents.title }).from(chapterContents).where(inArray(chapterContents.id, allContentIds))
+      ? db.select({ id: chapterContents.id, title: chapterContents.title, order: chapterContents.order }).from(chapterContents).where(inArray(chapterContents.id, allContentIds))
       : [],
   ]);
 
@@ -1611,8 +1616,11 @@ timetableController.get("/work-done", async (c) => {
     for (const t of rawTopics) {
       const ch = t.chapterId ? chapterMap.get(t.chapterId) : null;
       const ct = t.contentId ? contentMap.get(t.contentId) : null;
-      const chapterLabel = ch ? `Ch.${ch.chapterNumber ?? ""}: ${ch.title || ""}` : null;
-      const subtopic = ct?.title || t.topic;
+      const chNum = ch?.chapterNumber;
+      const chapterLabel = ch ? `Chapter ${chNum ?? ""}: ${ch.title || ""}` : null;
+      const subtopic = ct
+        ? `${chNum != null ? chNum + "." : ""}${ct.order != null ? ct.order : ""} - ${ct.title || t.topic}`
+        : t.topic;
       const key = t.chapterId || "__no_chapter__";
       const existing = chapterGroups.get(key);
       if (existing) {
