@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import {
@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -19,7 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarDays, BookOpen, Repeat, Loader2, Search, GraduationCap } from "lucide-react";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
+import { CalendarDays, BookOpen, Repeat, Loader2, GraduationCap, ChevronsUpDown } from "lucide-react";
 import { useTimetableMutations } from "../hooks/useTimetableMutations";
 import type {
   ITimetableEntry,
@@ -55,7 +62,8 @@ export function ScheduleEntryDialog({
   const [notes, setNotes] = useState("");
   const [isRecurring, setIsRecurring] = useState(true);
   const [selectedGrade, setSelectedGrade] = useState("");
-  const [classSearch, setClassSearch] = useState("");
+  const [classDropdownOpen, setClassDropdownOpen] = useState(false);
+  const classDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch teacher's classes
   const { data: classes } = useQuery<IClassOption[]>({
@@ -71,32 +79,38 @@ export function ScheduleEntryDialog({
     staleTime: 5 * 60 * 1000,
   });
 
+  const sortedClasses = useMemo(() => {
+    return [...(classes || [])].sort((a, b) => {
+      const gradeA = parseInt(a.grade, 10);
+      const gradeB = parseInt(b.grade, 10);
+      if (!Number.isNaN(gradeA) && !Number.isNaN(gradeB) && gradeA !== gradeB) {
+        return gradeA - gradeB;
+      }
+      const gradeCmp = String(a.grade).localeCompare(String(b.grade));
+      if (gradeCmp !== 0) return gradeCmp;
+      return a.section.localeCompare(b.section);
+    });
+  }, [classes]);
+
   const availableAdditionalClasses = useMemo(() => {
     return (classes || []).filter((c) => c._id !== classId);
   }, [classes, classId]);
 
-  const filteredClasses = useMemo(() => {
-    const term = classSearch.trim().toLowerCase();
-    return (classes || [])
-      .filter((cls) => {
-        if (!term) return true;
-        return (
-          cls.grade.toLowerCase().includes(term) ||
-          cls.section.toLowerCase().includes(term) ||
-          (cls.year && cls.year.toLowerCase().includes(term))
-        );
-      })
-      .sort((a, b) => {
-        const gradeA = parseInt(a.grade, 10);
-        const gradeB = parseInt(b.grade, 10);
-        if (!Number.isNaN(gradeA) && !Number.isNaN(gradeB) && gradeA !== gradeB) {
-          return gradeA - gradeB;
-        }
-        const gradeCmp = String(a.grade).localeCompare(String(b.grade));
-        if (gradeCmp !== 0) return gradeCmp;
-        return a.section.localeCompare(b.section);
-      });
-  }, [classes, classSearch]);
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (classDropdownRef.current && !classDropdownRef.current.contains(e.target as Node)) {
+        setClassDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const selectedClassLabel = useMemo(() => {
+    const cls = classes?.find((c) => c._id === classId);
+    return cls ? `Grade ${cls.grade}–${cls.section}${cls.year ? ` (${cls.year})` : ""}` : "Select class...";
+  }, [classes, classId]);
 
   // Fetch gradebooks when grade is selected
   const { data: gradeBooks } = useQuery<IGradeBookOption[]>({
@@ -144,7 +158,7 @@ export function ScheduleEntryDialog({
         setNotes("");
         setIsRecurring(true);
         setSelectedGrade("");
-        setClassSearch("");
+        setClassDropdownOpen(false);
       }
     }
   }, [open, entry]);
@@ -213,32 +227,50 @@ export function ScheduleEntryDialog({
 
         <div className="px-6 pb-6 pt-4 space-y-4">
           {/* Class select */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5" ref={classDropdownRef}>
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Class
             </Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                value={classSearch}
-                onChange={(e) => setClassSearch(e.target.value)}
-                placeholder="Search classes..."
-                className="pl-9 rounded-xl"
-              />
-            </div>
-            <Select value={classId} onValueChange={handleClassChange}>
-              <SelectTrigger className="rounded-xl">
-                <SelectValue placeholder="Select class" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredClasses.map((cls) => (
-                  <SelectItem key={cls._id} value={cls._id}>
-                    Grade {cls.grade}–{cls.section}
-                    {cls.year ? ` (${cls.year})` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              role="combobox"
+              aria-expanded={classDropdownOpen}
+              onClick={() => setClassDropdownOpen(!classDropdownOpen)}
+              className="w-full justify-between rounded-xl font-normal"
+            >
+              <span className={classId ? "text-slate-900" : "text-slate-400"}>
+                {selectedClassLabel}
+              </span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+            {classDropdownOpen && (
+              <div className="relative z-50">
+                <div className="absolute top-0 left-0 right-0 mt-1 rounded-xl border bg-white shadow-lg">
+                  <Command>
+                    <CommandInput placeholder="Search classes..." />
+                    <CommandList>
+                      <CommandEmpty>No classes found</CommandEmpty>
+                      <CommandGroup>
+                        {sortedClasses.map((cls) => (
+                          <CommandItem
+                            key={cls._id}
+                            value={`Grade ${cls.grade} ${cls.section} ${cls.year || ""}`}
+                            onSelect={() => {
+                              handleClassChange(cls._id);
+                              setClassDropdownOpen(false);
+                            }}
+                          >
+                            Grade {cls.grade}–{cls.section}
+                            {cls.year ? ` (${cls.year})` : ""}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Combined Class */}
@@ -248,12 +280,15 @@ export function ScheduleEntryDialog({
                 <GraduationCap size={12} />
                 Combined Class
               </Label>
-              <Select value={additionalClassId} onValueChange={setAdditionalClassId}>
+              <Select
+                value={additionalClassId || "__none__"}
+                onValueChange={(v) => setAdditionalClassId(v === "__none__" ? "" : v)}
+              >
                 <SelectTrigger className="rounded-xl">
                   <SelectValue placeholder="None (single class)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (single class)</SelectItem>
+                  <SelectItem value="__none__">None (single class)</SelectItem>
                   {availableAdditionalClasses.map((cls) => (
                     <SelectItem key={cls._id} value={cls._id}>
                       Grade {cls.grade}–{cls.section}

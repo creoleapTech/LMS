@@ -339,12 +339,15 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period }: Work
                 <GraduationCap size={12} />
                 Combined Class
               </Label>
-              <Select value={additionalClassId} onValueChange={setAdditionalClassId}>
+              <Select
+                value={additionalClassId || "__none__"}
+                onValueChange={(v) => setAdditionalClassId(v === "__none__" ? "" : v)}
+              >
                 <SelectTrigger className="rounded-xl">
                   <SelectValue placeholder="None (single class)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (single class)</SelectItem>
+                  <SelectItem value="__none__">None (single class)</SelectItem>
                   {availableClasses.map((cls) => (
                     <SelectItem key={cls._id} value={cls._id}>
                       {getClassOptionLabel(cls)}
