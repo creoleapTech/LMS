@@ -57,15 +57,18 @@ function toDateKey(value: string | Date): string {
 
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) throw new BadRequestError("Invalid date");
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+  // Use IST (UTC+5:30) calendar date, not UTC
+  const ist = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+  return `${ist.getUTCFullYear()}-${String(ist.getUTCMonth() + 1).padStart(2, "0")}-${String(ist.getUTCDate()).padStart(2, "0")}`;
 }
 
 function dateKeyToISOString(dateKey: string): string {
-  return `${dateKey}T00:00:00.000Z`;
+  // IST midnight in UTC = previous day 18:30 UTC
+  return new Date(`${dateKey}T00:00:00+05:30`).toISOString();
 }
 
 function dateKeyEndISOString(dateKey: string): string {
-  return `${dateKey}T23:59:59.999Z`;
+  return new Date(`${dateKey}T23:59:59.999+05:30`).toISOString();
 }
 
 function isSameDateKey(value: string | null | undefined, dateKey: string): boolean {
@@ -230,7 +233,7 @@ timetableController.get("/my-month", async (c) => {
 
   // Date range for the month
   const monthKey = `${year}-${String(month).padStart(2, "0")}`;
-  const startDate = `${monthKey}-01`;
+  const startDate = dateKeyToISOString(`${monthKey}-01`);
   const endDate = dateKeyEndISOString(`${monthKey}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`);
 
   // Get one-off entries in this month
@@ -275,8 +278,7 @@ timetableController.get("/my-day", async (c) => {
   const institutionId = resolveInstitutionId(user);
   const dateStr = c.req.query("date")!;
   const dateKey = toDateKey(dateStr);
-  const date = new Date(dateKeyToISOString(dateKey));
-  const dow = date.getDay();
+  const dow = new Date(`${dateKey}T12:00:00+05:30`).getUTCDay();
   const db = getDb(c.env.DB);
 
   // Get period config
@@ -328,7 +330,7 @@ timetableController.get("/my-day", async (c) => {
   const recurringEntries = rawRecurringEntries.map((entry: any) => recurringEntryForDate(entry, dateKey));
 
   // Get one-off entries for this specific date
-  const dayStart = dateKey;
+  const dayStart = dateKeyToISOString(dateKey);
   const dayEnd = dateKeyEndISOString(dateKey);
 
   const oneOffEntries = await db
@@ -745,18 +747,15 @@ timetableController.patch("/:id/complete", async (c) => {
   }
 
   // ── Upsert linked class session ──
-  const sessionDate = new Date(dateKeyToISOString(targetDateKey));
-  const dayStart = targetDateKey;
+  const dayStart = dateKeyToISOString(targetDateKey);
   const dayEnd = dateKeyEndISOString(targetDateKey);
 
   function resolveTime(time: string | undefined, fallback: string): string {
     if (!time) return fallback;
-    // If it's just HH:MM (time-only), combine with sessionDate
+    // If it's just HH:MM (time-only), combine with the IST date
     if (/^\d{1,2}:\d{2}$/.test(time)) {
-      const d = new Date(sessionDate);
-      const [h, m] = time.split(":").map(Number);
-      d.setUTCHours(h, m, 0, 0);
-      return d.toISOString();
+      // Interpret HH:MM as IST time on the target date
+      return new Date(`${targetDateKey}T${time.padStart(5, "0")}:00+05:30`).toISOString();
     }
     return new Date(time).toISOString();
   }
@@ -1068,7 +1067,7 @@ timetableController.get("/staff-month", async (c) => {
     );
 
   const monthKey = `${year}-${String(month).padStart(2, "0")}`;
-  const startDate = `${monthKey}-01`;
+  const startDate = dateKeyToISOString(`${monthKey}-01`);
   const endDate = dateKeyEndISOString(`${monthKey}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`);
 
   const oneOffEntries = await db
@@ -1120,8 +1119,7 @@ timetableController.get("/staff-day", async (c) => {
 
   const dateStr = c.req.query("date")!;
   const dateKey = toDateKey(dateStr);
-  const date = new Date(dateKeyToISOString(dateKey));
-  const dow = date.getDay();
+  const dow = new Date(`${dateKey}T12:00:00+05:30`).getUTCDay();
   const db = getDb(c.env.DB);
 
   // Get period config
@@ -1171,7 +1169,7 @@ timetableController.get("/staff-day", async (c) => {
     );
   const recurringEntries = rawRecurringEntries.map((entry: any) => recurringEntryForDate(entry, dateKey));
 
-  const dayStart = dateKey;
+  const dayStart = dateKeyToISOString(dateKey);
   const dayEnd = dateKeyEndISOString(dateKey);
 
   const oneOffEntries = await db
@@ -1257,7 +1255,7 @@ async function buildMonthlyReport(
           eq(timetableEntries.staffId, staffId),
           eq(timetableEntries.isRecurring, 0),
           eq(timetableEntries.isDeleted, 0),
-          sql`${timetableEntries.specificDate} >= ${`${year}-${String(month).padStart(2, "0")}-01`}`,
+          sql`${timetableEntries.specificDate} >= ${dateKeyToISOString(`${year}-${String(month).padStart(2, "0")}-01`)}`,
           sql`${timetableEntries.specificDate} <= ${dateKeyEndISOString(`${year}-${String(month).padStart(2, "0")}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`)}`,
         ),
       ),

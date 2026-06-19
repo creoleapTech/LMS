@@ -25,8 +25,15 @@ export function useTeachingDiary() {
   const today = new Date();
   const fromDate = new Date(today);
   fromDate.setDate(fromDate.getDate() - 30);
-  const toDateStr = today.toISOString().split("T")[0];
-  const fromDateStr = fromDate.toISOString().split("T")[0];
+
+  function localDateKey(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+  const toDateStr = localDateKey(today);
+  const fromDateStr = localDateKey(fromDate);
 
   const diaryQuery = useQuery<DiarySession[]>({
     queryKey: ["teaching-diary", staffId, fromDateStr, toDateStr],

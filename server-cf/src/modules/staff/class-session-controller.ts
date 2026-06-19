@@ -12,6 +12,13 @@ import { BadRequestError } from "../../lib/errors/bad-request";
 
 const STALE_SESSION_MINUTES = 2;
 
+// IST is UTC+5:30 — interpret date keys as Indian calendar days
+function istDayRange(dateKey: string): { start: string; end: string } {
+  const start = new Date(`${dateKey}T00:00:00+05:30`);
+  const end = new Date(`${dateKey}T23:59:59.999+05:30`);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
 const classSessionController = new Hono<{
   Bindings: Bindings;
   Variables: Variables;
@@ -266,11 +273,7 @@ classSessionController.get("/my-history", async (c) => {
 
   let sessions;
   if (date) {
-    const d = new Date(date);
-    const dayStart = new Date(d);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(d);
-    dayEnd.setHours(23, 59, 59, 999);
+    const { start: dayStart, end: dayEnd } = istDayRange(date);
 
     sessions = await db
       .select()
@@ -278,8 +281,8 @@ classSessionController.get("/my-history", async (c) => {
       .where(
         and(
           eq(classSessions.staffId, staffId),
-          sql`${classSessions.startTime} >= ${dayStart.toISOString()}`,
-          sql`${classSessions.startTime} <= ${dayEnd.toISOString()}`,
+          sql`${classSessions.startTime} >= ${dayStart}`,
+          sql`${classSessions.startTime} <= ${dayEnd}`,
         ),
       )
       .orderBy(desc(classSessions.startTime));
@@ -341,12 +344,12 @@ classSessionController.get("/diary", async (c) => {
 
   const conditions: any[] = [eq(classSessions.staffId, staffId)];
   if (fromDate) {
-    conditions.push(sql`${classSessions.startTime} >= ${new Date(fromDate).toISOString()}`);
+    const { start } = istDayRange(fromDate);
+    conditions.push(sql`${classSessions.startTime} >= ${start}`);
   }
   if (toDate) {
-    const d = new Date(toDate);
-    d.setHours(23, 59, 59, 999);
-    conditions.push(sql`${classSessions.startTime} <= ${d.toISOString()}`);
+    const { end } = istDayRange(toDate);
+    conditions.push(sql`${classSessions.startTime} <= ${end}`);
   }
 
   const sessions = await db
