@@ -3,12 +3,14 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
 import { nowISO } from "../../lib/utils";
-import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, desc, inArray, sql, lt } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import { staff, classes } from "../../schema/admin";
 import { classSessions } from "../../schema/staff";
 import { classSessionTopics } from "../../schema/junction";
 import { BadRequestError } from "../../lib/errors/bad-request";
+
+const STALE_SESSION_MINUTES = 2;
 
 const classSessionController = new Hono<{
   Bindings: Bindings;
@@ -18,6 +20,36 @@ const classSessionController = new Hono<{
 // Apply auth to all routes
 classSessionController.use("*", adminAuth);
 
+async function autoCloseStaleSessions(db: any, staffId: string) {
+  const cutoff = new Date(Date.now() - STALE_SESSION_MINUTES * 60 * 1000).toISOString();
+  const stale = await db
+    .select()
+    .from(classSessions)
+    .where(
+      and(
+        eq(classSessions.staffId, staffId),
+        eq(classSessions.status, "ongoing"),
+        lt(classSessions.updatedAt, cutoff),
+      ),
+    );
+
+  for (const s of stale) {
+    const startTime = new Date(s.startTime!);
+    const endTime = new Date();
+    const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+    await db
+      .update(classSessions)
+      .set({
+        endTime: endTime.toISOString(),
+        durationMinutes,
+        remarks: "[auto-closed: stale]",
+        status: "completed",
+        updatedAt: nowISO(),
+      })
+      .where(eq(classSessions.id, s.id));
+  }
+}
+
 // ─── POST /start — start a class session ──────────
 
 classSessionController.post("/start", async (c) => {
@@ -26,7 +58,6 @@ classSessionController.post("/start", async (c) => {
   const db = getDb(c.env.DB);
 
   const { classId, courseId } = body;
-  // Use staffId and institutionId from the auth token — don't trust body for these
   const staffId = (user._id || user.id)?.toString();
   const institutionId = typeof user.institutionId === "object"
     ? (user.institutionId as any)._id?.toString()
@@ -50,6 +81,9 @@ classSessionController.post("/start", async (c) => {
   if (!classRow || classRow.institutionId !== institutionId) {
     throw new BadRequestError("Invalid Class");
   }
+
+  // Auto-close any stale ongoing sessions for this staff
+  await autoCloseStaleSessions(db, staffId);
 
   // If there's already an ongoing session for this staff+class, return it
   const [existing] = await db
@@ -355,6 +389,106 @@ classSessionController.get("/diary", async (c) => {
   }));
 
   return c.json({ success: true, data: enriched });
+});
+
+// ─── GET /:id/end-quietly — end session via sendBeacon (no body) ─
+
+classSessionController.get("/:id/end-quietly", async (c) => {
+  const { id } = c.req.param();
+  const db = getDb(c.env.DB);
+
+  const [session] = await db
+    .select()
+    .from(classSessions)
+    .where(and(eq(classSessions.id, id), eq(classSessions.status, "ongoing")))
+    .limit(1);
+
+  if (!session) {
+    return c.json({ success: false }, 404);
+  }
+
+  const endTime = new Date();
+  const startTime = new Date(session.startTime!);
+  const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+  const now = nowISO();
+
+  await db
+    .update(classSessions)
+    .set({
+      endTime: endTime.toISOString(),
+      durationMinutes,
+      status: "completed",
+      remarks: session.remarks || "[auto-closed: tab closed]",
+      updatedAt: now,
+    })
+    .where(eq(classSessions.id, id));
+
+  return c.json({ success: true });
+});
+
+// ─── POST /heartbeat/:id — keep session alive ────
+
+classSessionController.post("/heartbeat/:id", async (c) => {
+  const { id } = c.req.param();
+  const db = getDb(c.env.DB);
+
+  const [session] = await db
+    .select()
+    .from(classSessions)
+    .where(and(eq(classSessions.id, id), eq(classSessions.status, "ongoing")))
+    .limit(1);
+
+  if (!session) {
+    return c.json({ success: false, message: "No ongoing session found" }, 404);
+  }
+
+  await db
+    .update(classSessions)
+    .set({ updatedAt: nowISO() })
+    .where(eq(classSessions.id, id));
+
+  return c.json({ success: true });
+});
+
+// ─── POST /:id/topics — add topics to a session ──
+
+classSessionController.post("/:id/topics", async (c) => {
+  const { id } = c.req.param();
+  const body = await c.req.json();
+  const db = getDb(c.env.DB);
+
+  const [session] = await db
+    .select()
+    .from(classSessions)
+    .where(eq(classSessions.id, id))
+    .limit(1);
+
+  if (!session) {
+    throw new BadRequestError("Session not found");
+  }
+
+  const topics: string[] = body.topics;
+  if (!Array.isArray(topics) || topics.length === 0) {
+    return c.json({ success: true, data: { topicsAdded: 0 } });
+  }
+
+  for (const topic of topics) {
+    await db.insert(classSessionTopics).values({
+      id: uuid(),
+      sessionId: id,
+      topic,
+    });
+  }
+
+  const allTopics = await db
+    .select({ topic: classSessionTopics.topic })
+    .from(classSessionTopics)
+    .where(eq(classSessionTopics.sessionId, id));
+
+  return c.json({
+    success: true,
+    data: { topicsAdded: topics.length, topicsCovered: allTopics.map((t: any) => t.topic) },
+  });
 });
 
 export { classSessionController };

@@ -7,11 +7,12 @@ import { eq, and, inArray, sql, count } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import { institutions, classes, students, staff } from "../../schema/admin";
 import { gradeBooks, chapters, chapterContents } from "../../schema/books";
-import { teachingProgress } from "../../schema/staff";
+import { teachingProgress, classSessions } from "../../schema/staff";
 import {
   institutionCurriculumAccess,
   institutionAccessibleGradebooks,
   teachingProgressContents,
+  classSessionTopics,
 } from "../../schema/junction";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
@@ -366,9 +367,9 @@ teachingProgressController.post("/:classId/:gradeBookId/content/:contentId/compl
   const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
 
-  // Get the chapter for this content
+  // Get the chapter + title for this content
   const [content] = await db
-    .select({ id: chapterContents.id, chapterId: chapterContents.chapterId })
+    .select({ id: chapterContents.id, chapterId: chapterContents.chapterId, title: chapterContents.title })
     .from(chapterContents)
     .where(eq(chapterContents.id, contentId))
     .limit(1);
@@ -460,6 +461,42 @@ teachingProgressController.post("/:classId/:gradeBookId/content/:contentId/compl
 
   // Recalculate percentage
   await recalculatePercentage(db, progress.id, gradeBookId);
+
+  // Auto-log completed content as a topic in the ongoing class session
+  if (newCompleted && content.title) {
+    const [ongoing] = await db
+      .select({ id: classSessions.id })
+      .from(classSessions)
+      .where(
+        and(
+          eq(classSessions.staffId, user.id),
+          eq(classSessions.classId, classId),
+          eq(classSessions.status, "ongoing"),
+        ),
+      )
+      .limit(1);
+
+    if (ongoing) {
+      const topicLabel = content.title;
+      const [dup] = await db
+        .select({ id: classSessionTopics.id })
+        .from(classSessionTopics)
+        .where(
+          and(
+            eq(classSessionTopics.sessionId, ongoing.id),
+            eq(classSessionTopics.topic, topicLabel),
+          ),
+        )
+        .limit(1);
+      if (!dup) {
+        await db.insert(classSessionTopics).values({
+          id: uuid(),
+          sessionId: ongoing.id,
+          topic: topicLabel,
+        });
+      }
+    }
+  }
 
   return c.json({ success: true, data: { isCompleted: newCompleted } });
 });

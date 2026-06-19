@@ -73,37 +73,72 @@ export function CourseraLayout({
 
   // Auto session tracking — start on mount in teach mode, end on unmount
   const sessionIdRef = useRef<string | null>(null);
+  const endedRef = useRef(false);
+  const heartbeatRef = useRef<any>(null);
 
   useEffect(() => {
     if (mode !== "teach") return;
 
-    let ended = false;
+    endedRef.current = false;
 
     const startSession = async () => {
       try {
         const res = await _axios.post("/admin/class-session/start", { classId });
         sessionIdRef.current = res.data?.data?.id || null;
-      } catch {
-        // Non-critical — don't block teaching if session tracking fails
-      }
+        if (sessionIdRef.current) {
+          heartbeatRef.current = setInterval(async () => {
+            try {
+              await _axios.post(`/admin/class-session/heartbeat/${sessionIdRef.current}`);
+            } catch {}
+          }, 30000);
+        }
+      } catch {}
     };
 
     const endSession = async () => {
-      if (!sessionIdRef.current || ended) return;
-      ended = true;
+      const id = sessionIdRef.current;
+      if (!id || endedRef.current) return;
+      endedRef.current = true;
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
       try {
-        await _axios.patch(`/admin/class-session/${sessionIdRef.current}/end`, {
+        await _axios.patch(`/admin/class-session/${id}/end`, {
           remarks: "",
           topicsCovered: [],
         });
-      } catch {
-        // Non-critical
+      } catch {}
+    };
+
+    // Tab close / browser navigate away — sendBeacon is the only reliable way
+    const handleUnload = () => {
+      const id = sessionIdRef.current;
+      if (!id || endedRef.current) return;
+      endedRef.current = true;
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+      navigator.sendBeacon(
+        `${_axios.defaults.baseURL?.replace(/\/api$/, "") || ""}/admin/class-session/${id}/end-quietly`,
+      );
+    };
+
+    // Tab hidden (user switches tabs/minimizes) — end session to prevent indefinite runs
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        handleUnload();
       }
     };
 
     startSession();
+    window.addEventListener("beforeunload", handleUnload);
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+      document.removeEventListener("visibilitychange", handleVisibility);
       endSession();
     };
   }, [classId, mode]);
@@ -168,6 +203,15 @@ export function CourseraLayout({
   const handleMarkComplete = async (contentId: string) => {
     if (isViewMode) return;
     await completeMutation.mutateAsync(contentId);
+    // Log content title as session topic (server also does this automatically as a fallback)
+    const content = chapters.flatMap((ch) => ch.content).find((c) => c._id === contentId);
+    if (content?.title && sessionIdRef.current) {
+      try {
+        await _axios.post(`/admin/class-session/${sessionIdRef.current}/topics`, {
+          topics: [content.title],
+        });
+      } catch {}
+    }
   };
 
   const handleProgressUpdate = (
