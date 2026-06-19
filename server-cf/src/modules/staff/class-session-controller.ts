@@ -293,4 +293,68 @@ classSessionController.get("/my-history", async (c) => {
   return c.json({ success: true, data: enriched });
 });
 
+// ─── GET /diary — sessions for date range (30-day diary) ─
+
+classSessionController.get("/diary", async (c) => {
+  const staffId = c.req.query("staffId");
+  const fromDate = c.req.query("fromDate");
+  const toDate = c.req.query("toDate");
+  if (!staffId) {
+    throw new BadRequestError("Staff ID required");
+  }
+
+  const db = getDb(c.env.DB);
+
+  const conditions: any[] = [eq(classSessions.staffId, staffId)];
+  if (fromDate) {
+    conditions.push(sql`${classSessions.startTime} >= ${new Date(fromDate).toISOString()}`);
+  }
+  if (toDate) {
+    const d = new Date(toDate);
+    d.setHours(23, 59, 59, 999);
+    conditions.push(sql`${classSessions.startTime} <= ${d.toISOString()}`);
+  }
+
+  const sessions = await db
+    .select()
+    .from(classSessions)
+    .where(and(...conditions))
+    .orderBy(desc(classSessions.startTime));
+
+  const sessionIds = sessions.map((s) => s.id);
+  const classIds = [...new Set(sessions.map((s) => s.classId).filter(Boolean))] as string[];
+
+  // Batch fetch class info
+  const classMap = new Map<string, any>();
+  if (classIds.length > 0) {
+    const rows = await db
+      .select({ id: classes.id, grade: classes.grade, section: classes.section })
+      .from(classes)
+      .where(inArray(classes.id, classIds));
+    for (const r of rows) classMap.set(r.id, r);
+  }
+
+  // Batch fetch topics
+  const topicsMap = new Map<string, string[]>();
+  if (sessionIds.length > 0) {
+    const rows = await db
+      .select({ sessionId: classSessionTopics.sessionId, topic: classSessionTopics.topic })
+      .from(classSessionTopics)
+      .where(inArray(classSessionTopics.sessionId, sessionIds));
+    for (const r of rows) {
+      const arr = topicsMap.get(r.sessionId) || [];
+      arr.push(r.topic);
+      topicsMap.set(r.sessionId, arr);
+    }
+  }
+
+  const enriched = sessions.map((session) => ({
+    ...session,
+    classId: session.classId ? classMap.get(session.classId) || null : null,
+    topicsCovered: topicsMap.get(session.id) || [],
+  }));
+
+  return c.json({ success: true, data: enriched });
+});
+
 export { classSessionController };

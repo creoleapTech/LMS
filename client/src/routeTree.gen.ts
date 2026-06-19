@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TeachingDiaryRouteImport } from './routes/teaching-diary'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentsIndexRouteImport } from './routes/students/index'
 import { Route as StaffIndexRouteImport } from './routes/staff/index'
@@ -25,6 +26,11 @@ import { Route as LessonPlansIdRouteImport } from './routes/lesson-plans/$id'
 import { Route as InstitutionsIdRouteImport } from './routes/institutions/$id'
 import { Route as ExaminationsIdRouteImport } from './routes/examinations/$id'
 
+const TeachingDiaryRoute = TeachingDiaryRouteImport.update({
+  id: '/teaching-diary',
+  path: '/teaching-diary',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -103,6 +109,7 @@ const ExaminationsIdRoute = ExaminationsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/teaching-diary': typeof TeachingDiaryRoute
   '/examinations/$id': typeof ExaminationsIdRoute
   '/institutions/$id': typeof InstitutionsIdRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/teaching-diary': typeof TeachingDiaryRoute
   '/examinations/$id': typeof ExaminationsIdRoute
   '/institutions/$id': typeof InstitutionsIdRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
@@ -138,6 +146,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/teaching-diary': typeof TeachingDiaryRoute
   '/examinations/$id': typeof ExaminationsIdRoute
   '/institutions/$id': typeof InstitutionsIdRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/teaching-diary'
     | '/examinations/$id'
     | '/institutions/$id'
     | '/lesson-plans/$id'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/teaching-diary'
     | '/examinations/$id'
     | '/institutions/$id'
     | '/lesson-plans/$id'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/teaching-diary'
     | '/examinations/$id'
     | '/institutions/$id'
     | '/lesson-plans/$id'
@@ -209,6 +221,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  TeachingDiaryRoute: typeof TeachingDiaryRoute
   ExaminationsIdRoute: typeof ExaminationsIdRoute
   InstitutionsIdRoute: typeof InstitutionsIdRoute
   LessonPlansIdRoute: typeof LessonPlansIdRoute
@@ -227,6 +240,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/teaching-diary': {
+      id: '/teaching-diary'
+      path: '/teaching-diary'
+      fullPath: '/teaching-diary'
+      preLoaderRoute: typeof TeachingDiaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -337,6 +357,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  TeachingDiaryRoute: TeachingDiaryRoute,
   ExaminationsIdRoute: ExaminationsIdRoute,
   InstitutionsIdRoute: InstitutionsIdRoute,
   LessonPlansIdRoute: LessonPlansIdRoute,
