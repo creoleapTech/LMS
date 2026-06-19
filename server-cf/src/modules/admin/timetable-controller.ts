@@ -1568,6 +1568,8 @@ timetableController.get("/work-done", async (c) => {
           .select({
             entryId: timetableTopicsCovered.timetableEntryId,
             topic: timetableTopicsCovered.topic,
+            chapterId: timetableTopicsCovered.chapterId,
+            contentId: timetableTopicsCovered.contentId,
           })
           .from(timetableTopicsCovered)
           .where(inArray(timetableTopicsCovered.timetableEntryId, entryIds))
@@ -1579,21 +1581,60 @@ timetableController.get("/work-done", async (c) => {
   const instMap = new Map(instRows.map((r) => [r.id, r]));
   const gbMap = new Map(gbRows.map((r) => [r.id, r]));
 
-  const topicsMap = new Map<string, string[]>();
+  const topicsMap = new Map<string, { topic: string; chapterId: string | null; contentId: string | null }[]>();
   for (const r of topicRows) {
     const arr = topicsMap.get(r.entryId) || [];
-    arr.push(r.topic);
+    arr.push({ topic: r.topic, chapterId: r.chapterId, contentId: r.contentId });
     topicsMap.set(r.entryId, arr);
   }
 
-  const enriched = entries.map((entry) => ({
-    ...entry,
-    staff: entry.staffId ? staffMap.get(entry.staffId) || null : null,
-    class: entry.classId ? classMap.get(entry.classId) || null : null,
-    institution: entry.institutionId ? instMap.get(entry.institutionId) || null : null,
-    gradeBook: entry.gradeBookId ? gbMap.get(entry.gradeBookId) || null : null,
-    topicsCovered: topicsMap.get(entry.id) || [],
-  }));
+  // Fetch chapter and content info for structured topic display
+  const allChapterIds = [...new Set(topicRows.map((r) => r.chapterId).filter(Boolean))] as string[];
+  const allContentIds = [...new Set(topicRows.map((r) => r.contentId).filter(Boolean))] as string[];
+
+  const [chapterRows, contentRows] = await Promise.all([
+    allChapterIds.length > 0
+      ? db.select({ id: chapters.id, title: chapters.title, chapterNumber: chapters.chapterNumber }).from(chapters).where(inArray(chapters.id, allChapterIds))
+      : [],
+    allContentIds.length > 0
+      ? db.select({ id: chapterContents.id, title: chapterContents.title }).from(chapterContents).where(inArray(chapterContents.id, allContentIds))
+      : [],
+  ]);
+
+  const chapterMap = new Map(chapterRows.map((r) => [r.id, r]));
+  const contentMap = new Map(contentRows.map((r) => [r.id, r]));
+
+  const enriched = entries.map((entry) => {
+    const rawTopics = topicsMap.get(entry.id) || [];
+    // Build structured chapter topics: group by chapterId
+    const chapterGroups = new Map<string | null, { chapterId: string | null; chapterLabel: string | null; subtopics: string[] }>();
+    for (const t of rawTopics) {
+      const ch = t.chapterId ? chapterMap.get(t.chapterId) : null;
+      const ct = t.contentId ? contentMap.get(t.contentId) : null;
+      const chapterLabel = ch ? `Ch.${ch.chapterNumber ?? ""}: ${ch.title || ""}` : null;
+      const subtopic = ct?.title || t.topic;
+      const key = t.chapterId || "__no_chapter__";
+      const existing = chapterGroups.get(key);
+      if (existing) {
+        existing.subtopics.push(subtopic);
+      } else {
+        chapterGroups.set(key, { chapterId: t.chapterId, chapterLabel, subtopics: [subtopic] });
+      }
+    }
+    const chapterTopics = [...chapterGroups.values()];
+    // Flat list for backwards compat (just subtopic titles, no book name)
+    const topicsCovered = chapterTopics.flatMap((g) => g.subtopics);
+
+    return {
+      ...entry,
+      staff: entry.staffId ? staffMap.get(entry.staffId) || null : null,
+      class: entry.classId ? classMap.get(entry.classId) || null : null,
+      institution: entry.institutionId ? instMap.get(entry.institutionId) || null : null,
+      gradeBook: entry.gradeBookId ? gbMap.get(entry.gradeBookId) || null : null,
+      topicsCovered,
+      chapterTopics,
+    };
+  });
 
   return c.json({
     success: true,

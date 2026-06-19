@@ -50,6 +50,12 @@ function formatTime(iso: string): string {
 
 const PAGE_SIZE = 30;
 
+interface ChapterTopicGroup {
+  chapterId: string | null;
+  chapterLabel: string | null;
+  subtopics: string[];
+}
+
 interface WorkDoneEntry {
   _id: string;
   id: string;
@@ -64,6 +70,7 @@ interface WorkDoneEntry {
   notes?: string;
   createdAt: string;
   topicsCovered: string[];
+  chapterTopics?: ChapterTopicGroup[];
   durationMinutes?: number;
   staff: { _id: string; name: string; email: string } | null;
   class: { _id: string; grade: string; section: string } | null;
@@ -380,7 +387,29 @@ export default function WorkDonePage() {
                       </span>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {entry.topicsCovered?.length > 0 ? (
+                      {entry.chapterTopics && entry.chapterTopics.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {entry.chapterTopics.map((ct, i) => (
+                            <div key={i}>
+                              {ct.chapterLabel && (
+                                <span className="text-[11px] font-bold text-slate-700 block">
+                                  {ct.chapterLabel}
+                                </span>
+                              )}
+                              <div className="flex flex-wrap gap-1">
+                                {ct.subtopics.map((st, j) => (
+                                  <span
+                                    key={j}
+                                    className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold"
+                                  >
+                                    {st}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : entry.topicsCovered?.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {entry.topicsCovered.map((t, i) => (
                             <span
