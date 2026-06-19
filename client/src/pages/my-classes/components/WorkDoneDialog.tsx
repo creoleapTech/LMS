@@ -22,7 +22,7 @@ import { useTimetableMutations } from "../hooks/useTimetableMutations";
 import { useClassSessions } from "../hooks/useClassSessions";
 import { useAuthStore } from "@/store/userAuthStore";
 import { _axios } from "@/lib/axios";
-import type { ITimetableEntry, IPeriodSlot, ChapterTopicItem } from "@/types/timetable";
+import type { ITimetableEntry, IPeriodSlot, ChapterTopicItem, IClassSession } from "@/types/timetable";
 
 interface WorkDoneDialogProps {
   open: boolean;
@@ -30,6 +30,7 @@ interface WorkDoneDialogProps {
   entry?: ITimetableEntry;
   date?: string;
   period?: IPeriodSlot;
+  session?: IClassSession;
 }
 
 interface Chapter {
@@ -48,7 +49,7 @@ interface ContentItem {
 }
 
 interface GradeBookFull {
-  chapters: (Chapter & { contents: ContentItem[] })[];
+  chapters: (Chapter & { content?: ContentItem[]; contents?: ContentItem[] })[];
 }
 
 function getClassLabel(classId: ITimetableEntry["classId"]): string {
@@ -78,7 +79,16 @@ function getPeriodDurationMinutes(period: IPeriodSlot): number {
   return parseTimeToMinutes(period.endTime) - parseTimeToMinutes(period.startTime);
 }
 
-export function WorkDoneDialog({ open, onOpenChange, entry, date, period }: WorkDoneDialogProps) {
+function sessionTimeForInput(iso: string | undefined, periodTime: string | undefined): string {
+  if (!iso) return periodTime || "";
+  const d = new Date(iso);
+  if (periodTime && d.getUTCHours() * 60 + d.getUTCMinutes() === parseTimeToMinutes(periodTime)) {
+    return periodTime;
+  }
+  return d.toTimeString().slice(0, 5);
+}
+
+export function WorkDoneDialog({ open, onOpenChange, entry, date, period, session }: WorkDoneDialogProps) {
   const user = useAuthStore((s) => s.user);
   const staffId = user?._id;
   const { completeEntry } = useTimetableMutations();
@@ -102,10 +112,10 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period }: Work
   const { data: gradeBookData } = useQuery<GradeBookFull>({
     queryKey: ["gradebook-full", gradeBookId],
     queryFn: async () => {
-      const { data: res } = await _axios.get<{ success: boolean; data: GradeBookFull }>(
+      const { data: res } = await _axios.get<{ success: boolean; data: (Chapter & { content?: ContentItem[]; contents?: ContentItem[] })[] }>(
         `/admin/curriculum-reader/gradebook/${gradeBookId}/full`
       );
-      return res.data;
+      return { chapters: res.data || [] };
     },
     enabled: !!gradeBookId && open,
     staleTime: 5 * 60 * 1000,
@@ -131,7 +141,7 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period }: Work
       id: ch.id || ch._id,
       title: ch.title || "",
       chapterNumber: ch.chapterNumber || 0,
-      contents: (ch.contents || []).map((c) => ({
+      contents: (ch.contents || ch.content || []).map((c) => ({
         _id: c._id || c.id,
         id: c.id || c._id,
         title: c.title || "",
@@ -155,15 +165,38 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period }: Work
   );
 
   const matchedSession = useMemo(() => {
-    if (!daySessions || !entry) return null;
+    if (session) return session;
+    if (!daySessions || !entry || !period) return null;
     const entryClassId = typeof entry.classId === "object" ? entry.classId?._id : entry.classId;
+    const [periodStartH, periodStartM] = period.startTime.split(":").map(Number);
+    const [periodEndH, periodEndM] = period.endTime.split(":").map(Number);
+    const periodStart = periodStartH * 60 + periodStartM;
+    const periodEnd = periodEndH * 60 + periodEndM;
+
     return (
       daySessions.find((s) => {
         const sessionClassId = typeof s.classId === "object" ? s.classId?._id : s.classId;
-        return sessionClassId === entryClassId;
+        if (sessionClassId !== entryClassId || !s.startTime) return false;
+        const start = new Date(s.startTime);
+        const end = s.endTime ? new Date(s.endTime) : start;
+        const sessionStarts = [
+          start.getUTCHours() * 60 + start.getUTCMinutes(),
+          start.getHours() * 60 + start.getMinutes(),
+        ];
+        const sessionEnds = [
+          end.getUTCHours() * 60 + end.getUTCMinutes(),
+          end.getHours() * 60 + end.getMinutes(),
+        ];
+        return sessionStarts.some((sessionStart, index) => {
+          const sessionEnd = sessionEnds[index] ?? sessionStart;
+          return (
+            (sessionStart >= periodStart && sessionStart < periodEnd) ||
+            (periodStart >= sessionStart && periodStart < Math.max(sessionEnd, sessionStart + 1))
+          );
+        });
       }) || null
     );
-  }, [daySessions, entry]);
+  }, [daySessions, entry, period, session]);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -180,12 +213,8 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period }: Work
         setTopicsInput(matchedSession.topicsCovered?.join(", ") || "");
         setNotes(matchedSession.remarks || entry.notes || "");
         setDurationMinutes(matchedSession.durationMinutes ?? "");
-        const sStart = matchedSession.startTime
-          ? new Date(matchedSession.startTime).toTimeString().slice(0, 5)
-          : period?.startTime || "";
-        const sEnd = matchedSession.endTime
-          ? new Date(matchedSession.endTime).toTimeString().slice(0, 5)
-          : period?.endTime || "";
+        const sStart = sessionTimeForInput(matchedSession.startTime, period?.startTime);
+        const sEnd = sessionTimeForInput(matchedSession.endTime, period?.endTime);
         setStartTime(sStart);
         setEndTime(sEnd);
       } else {
@@ -282,6 +311,7 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period }: Work
       endTime: endTime || undefined,
       durationMinutes: typeof durationMinutes === "number" ? durationMinutes : undefined,
       additionalClassId: additionalClassId || undefined,
+      sessionId: matchedSession?.id || matchedSession?._id || undefined,
     };
 
     // If chapter topics are selected, use those as the primary source

@@ -100,6 +100,49 @@ function formatTime12Hour(time: string): string {
   return `${displayH}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
+function parseTimeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function getSessionClassId(session: IClassSession): string {
+  if (typeof session.classId === "object" && session.classId) return session.classId._id;
+  return session.classId || "";
+}
+
+function getSessionMinuteCandidates(iso: string): number[] {
+  const d = new Date(iso);
+  return [
+    d.getUTCHours() * 60 + d.getUTCMinutes(),
+    d.getHours() * 60 + d.getMinutes(),
+  ];
+}
+
+function findSessionForEntryPeriod(
+  sessions: IClassSession[],
+  entry: ITimetableEntry,
+  period: IPeriodSlot,
+): IClassSession | undefined {
+  const entryClassId = typeof entry.classId === "object" ? entry.classId?._id : entry.classId;
+  if (!entryClassId) return undefined;
+
+  const periodStart = parseTimeToMinutes(period.startTime);
+  const periodEnd = parseTimeToMinutes(period.endTime);
+
+  return sessions.find((session) => {
+    if (getSessionClassId(session) !== entryClassId || !session.startTime) return false;
+    const sessionStarts = getSessionMinuteCandidates(session.startTime);
+    const sessionEnds = session.endTime ? getSessionMinuteCandidates(session.endTime) : sessionStarts;
+    return sessionStarts.some((sessionStart, index) => {
+      const sessionEnd = sessionEnds[index] ?? sessionStart;
+      return (
+        (sessionStart >= periodStart && sessionStart < periodEnd) ||
+        (periodStart >= sessionStart && periodStart < Math.max(sessionEnd, sessionStart + 1))
+      );
+    });
+  });
+}
+
 export function DayView({
   date,
   readOnly = false,
@@ -142,6 +185,7 @@ export function DayView({
     open: boolean;
     entry?: ITimetableEntry;
     period?: IPeriodSlot;
+    session?: IClassSession;
   }>({ open: false });
 
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -151,11 +195,16 @@ export function DayView({
 
   const { deleteEntry } = useTimetableMutations();
 
+  const isRecurringEntry = !!deleteDialog.entry?.isRecurring;
+
   const handleDelete = () => {
     if (deleteDialog.entry) {
-      deleteEntry.mutate(deleteDialog.entry._id, {
-        onSuccess: () => setDeleteDialog({ open: false }),
-      });
+      deleteEntry.mutate(
+        { id: deleteDialog.entry._id, date: isRecurringEntry ? dateStr : undefined },
+        {
+          onSuccess: () => setDeleteDialog({ open: false }),
+        },
+      );
     }
   };
 
@@ -178,15 +227,7 @@ export function DayView({
   const { data: daySessions } = useClassSessions(effectiveStaffId || null, dateStr);
   const navigate = useNavigate();
 
-  const sessionMap = useMemo(() => {
-    const map = new Map<string, IClassSession>();
-    if (!daySessions) return map;
-    for (const session of daySessions) {
-      const classId = typeof session.classId === "object" ? session.classId?._id : session.classId;
-      if (classId) map.set(classId, session);
-    }
-    return map;
-  }, [daySessions]);
+  const daySessionList = useMemo(() => daySessions || [], [daySessions]);
 
   const scheduledCount = entries.filter((e) => e.status === "scheduled").length;
   const completedCount = entries.filter((e) => e.status === "completed").length;
@@ -345,8 +386,7 @@ export function DayView({
                   );
                 }
 
-                const entryClassId = typeof entry.classId === "object" ? entry.classId?._id : entry.classId;
-                const matchedSession = entryClassId ? sessionMap.get(entryClassId) : undefined;
+                const matchedSession = findSessionForEntryPeriod(daySessionList, entry, period);
 
                 return (
                   <ScheduledRow
@@ -366,7 +406,7 @@ export function DayView({
                       })
                     }
                     onCompleteClick={() =>
-                      setWorkDoneDialog({ open: true, entry, period })
+                      setWorkDoneDialog({ open: true, entry, period, session: matchedSession })
                     }
                     onTeachClick={() => {
                       const gbId = typeof entry.gradeBookId === "object" ? entry.gradeBookId?._id : entry.gradeBookId;
@@ -411,6 +451,7 @@ export function DayView({
         entry={workDoneDialog.entry}
         date={dateStr}
         period={workDoneDialog.period}
+        session={workDoneDialog.session}
       />
 
       <AlertDialog
@@ -419,9 +460,13 @@ export function DayView({
       >
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete schedule?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {isRecurringEntry ? "Remove for this day?" : "Delete schedule?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the scheduled class from your timetable. This action cannot be undone.
+              {isRecurringEntry
+                ? "This is a recurring class. Only this day's instance will be removed — the recurring schedule and any workdone on other days will remain intact."
+                : "This will remove the scheduled class from your timetable. This action cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -436,7 +481,7 @@ export function DayView({
               disabled={deleteEntry.isPending}
               className="rounded-xl bg-rose-600 hover:bg-rose-700"
             >
-              {deleteEntry.isPending ? "Deleting..." : "Delete"}
+              {deleteEntry.isPending ? "Removing..." : isRecurringEntry ? "Remove for today" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

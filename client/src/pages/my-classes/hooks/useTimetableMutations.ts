@@ -68,8 +68,11 @@ export function useTimetableMutations() {
   });
 
   const deleteEntry = useMutation({
-    mutationFn: async (id: string) => {
-      await _axios.delete(`/admin/timetable/${id}`);
+    mutationFn: async ({ id, date }: { id: string; date?: string }) => {
+      const url = date
+        ? `/admin/timetable/${id}?date=${encodeURIComponent(date)}`
+        : `/admin/timetable/${id}`;
+      await _axios.delete(url);
     },
     onSuccess: () => {
       invalidateAll();

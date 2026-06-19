@@ -49,6 +49,35 @@ function resolveInstitutionId(user: Record<string, any>): string {
   return institutionId;
 }
 
+function toDateKey(value: string | Date): string {
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) throw new BadRequestError("Invalid date");
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function dateKeyToISOString(dateKey: string): string {
+  return `${dateKey}T00:00:00.000Z`;
+}
+
+function dateKeyEndISOString(dateKey: string): string {
+  return `${dateKey}T23:59:59.999Z`;
+}
+
+function isSameDateKey(value: string | null | undefined, dateKey: string): boolean {
+  return !!value && toDateKey(value) === dateKey;
+}
+
+function recurringEntryForDate(entry: any, dateKey: string) {
+  if (entry.status !== "completed") return entry;
+  if (isSameDateKey(entry.completedAt, dateKey)) return entry;
+  return { ...entry, status: "scheduled", completedAt: null, __omitTopicsCovered: true };
+}
+
 /** Fetch working days for an institution (defaults to Mon-Fri). */
 async function getWorkingDays(db: any, institutionId: string): Promise<number[]> {
   const [pc] = await db
@@ -106,13 +135,16 @@ async function batchEnrichTimetableEntries(db: any, entries: any[]) {
     }
   }
 
-  return entries.map((entry) => ({
-    ...entry,
-    classId: entry.classId ? classMap.get(entry.classId) || null : null,
-    additionalClassId: entry.additionalClassId ? classMap.get(entry.additionalClassId) || null : null,
-    gradeBookId: entry.gradeBookId ? gbMap.get(entry.gradeBookId) || null : null,
-    topicsCovered: topicsMap.get(entry.id) || [],
-  }));
+  return entries.map((entry) => {
+    const { __omitTopicsCovered, ...entryWithoutInternalFields } = entry;
+    return {
+      ...entryWithoutInternalFields,
+      classId: entry.classId ? classMap.get(entry.classId) || null : null,
+      additionalClassId: entry.additionalClassId ? classMap.get(entry.additionalClassId) || null : null,
+      gradeBookId: entry.gradeBookId ? gbMap.get(entry.gradeBookId) || null : null,
+      topicsCovered: __omitTopicsCovered ? [] : topicsMap.get(entry.id) || [],
+    };
+  });
 }
 
 /** Build month summary dates from recurring + one-off entries. */
@@ -123,6 +155,7 @@ function buildMonthSummary(
   year: number,
   month: number,
   topicsCoveredMap: Map<string, string[]>,
+  cancelledEntries: any[] = [],
 ) {
   const endDate = new Date(year, month, 0); // last day of month
   const daysInMonth = endDate.getDate();
@@ -136,25 +169,27 @@ function buildMonthSummary(
     const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
     // Recurring entries for this day of week
-    const recurringForDay = recurringEntries.filter(
-      (e) => e.dayOfWeek === dow,
-    );
+    const recurringForDay = recurringEntries
+      .filter((e) => e.dayOfWeek === dow)
+      .map((e) => recurringEntryForDate(e, dateStr));
 
     // One-off entries for this specific date
     const oneOffForDate = oneOffEntries.filter((e) => {
       if (!e.specificDate) return false;
-      const sd = new Date(e.specificDate);
-      return (
-        sd.getFullYear() === year &&
-        sd.getMonth() === month - 1 &&
-        sd.getDate() === d
-      );
+      return toDateKey(e.specificDate) === dateStr;
     });
 
-    // Merge: one-off overrides recurring for same periodNumber
+    // Cancelled periods for this specific date
+    const cancelledPeriods = new Set(
+      cancelledEntries
+        .filter((e) => e.specificDate && toDateKey(e.specificDate) === dateStr)
+        .map((e) => e.periodNumber),
+    );
+
+    // Merge: one-off overrides recurring for same periodNumber; cancelled periods excluded
     const overriddenPeriods = new Set(oneOffForDate.map((e: any) => e.periodNumber));
     const merged = [
-      ...recurringForDay.filter((e: any) => !overriddenPeriods.has(e.periodNumber)),
+      ...recurringForDay.filter((e: any) => !overriddenPeriods.has(e.periodNumber) && !cancelledPeriods.has(e.periodNumber)),
       ...oneOffForDate,
     ];
 
@@ -194,8 +229,9 @@ timetableController.get("/my-month", async (c) => {
     );
 
   // Date range for the month
-  const startDate = new Date(year, month - 1, 1).toISOString();
-  const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+  const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+  const startDate = `${monthKey}-01`;
+  const endDate = dateKeyEndISOString(`${monthKey}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`);
 
   // Get one-off entries in this month
   const oneOffEntries = await db
@@ -211,7 +247,22 @@ timetableController.get("/my-month", async (c) => {
       ),
     );
 
-  const dates = buildMonthSummary(recurringEntries, oneOffEntries, workingDays, year, month, new Map());
+  // Get cancelled (deleted for specific day) entries in this month
+  const cancelledEntries = await db
+    .select({ periodNumber: timetableEntries.periodNumber, specificDate: timetableEntries.specificDate })
+    .from(timetableEntries)
+    .where(
+      and(
+        eq(timetableEntries.staffId, staffId),
+        eq(timetableEntries.isRecurring, 0),
+        eq(timetableEntries.isDeleted, 1),
+        eq(timetableEntries.status, "cancelled"),
+        sql`${timetableEntries.specificDate} >= ${startDate}`,
+        sql`${timetableEntries.specificDate} <= ${endDate}`,
+      ),
+    );
+
+  const dates = buildMonthSummary(recurringEntries, oneOffEntries, workingDays, year, month, new Map(), cancelledEntries);
 
   return c.json({ success: true, data: { dates } });
 });
@@ -223,7 +274,8 @@ timetableController.get("/my-day", async (c) => {
   const staffId = user.id;
   const institutionId = resolveInstitutionId(user);
   const dateStr = c.req.query("date")!;
-  const date = new Date(dateStr);
+  const dateKey = toDateKey(dateStr);
+  const date = new Date(dateKeyToISOString(dateKey));
   const dow = date.getDay();
   const db = getDb(c.env.DB);
 
@@ -262,7 +314,7 @@ timetableController.get("/my-day", async (c) => {
   }
 
   // Get recurring entries for this day of week
-  const recurringEntries = await db
+  const rawRecurringEntries = await db
     .select()
     .from(timetableEntries)
     .where(
@@ -273,12 +325,11 @@ timetableController.get("/my-day", async (c) => {
         eq(timetableEntries.isDeleted, 0),
       ),
     );
+  const recurringEntries = rawRecurringEntries.map((entry: any) => recurringEntryForDate(entry, dateKey));
 
   // Get one-off entries for this specific date
-  const dayStart = new Date(date);
-  dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(date);
-  dayEnd.setHours(23, 59, 59, 999);
+  const dayStart = dateKey;
+  const dayEnd = dateKeyEndISOString(dateKey);
 
   const oneOffEntries = await db
     .select()
@@ -288,15 +339,31 @@ timetableController.get("/my-day", async (c) => {
         eq(timetableEntries.staffId, staffId),
         eq(timetableEntries.isRecurring, 0),
         eq(timetableEntries.isDeleted, 0),
-        sql`${timetableEntries.specificDate} >= ${dayStart.toISOString()}`,
-        sql`${timetableEntries.specificDate} <= ${dayEnd.toISOString()}`,
+        sql`${timetableEntries.specificDate} >= ${dayStart}`,
+        sql`${timetableEntries.specificDate} <= ${dayEnd}`,
       ),
     );
 
-  // Merge: one-off overrides recurring for same periodNumber
+  // Query cancelled (deleted for this day) one-off entries to exclude those periods
+  const cancelledEntries = await db
+    .select({ periodNumber: timetableEntries.periodNumber })
+    .from(timetableEntries)
+    .where(
+      and(
+        eq(timetableEntries.staffId, staffId),
+        eq(timetableEntries.isRecurring, 0),
+        eq(timetableEntries.isDeleted, 1),
+        eq(timetableEntries.status, "cancelled"),
+        sql`${timetableEntries.specificDate} >= ${dayStart}`,
+        sql`${timetableEntries.specificDate} <= ${dayEnd}`,
+      ),
+    );
+  const cancelledPeriods = new Set(cancelledEntries.map((e) => e.periodNumber));
+
+  // Merge: one-off overrides recurring for same periodNumber; cancelled periods excluded
   const overriddenPeriods = new Set(oneOffEntries.map((e) => e.periodNumber));
   const allEntries = [
-    ...recurringEntries.filter((e) => !overriddenPeriods.has(e.periodNumber)),
+    ...recurringEntries.filter((e) => !overriddenPeriods.has(e.periodNumber) && !cancelledPeriods.has(e.periodNumber)),
     ...oneOffEntries,
   ].sort((a, b) => (a.periodNumber ?? 0) - (b.periodNumber ?? 0));
 
@@ -573,26 +640,92 @@ timetableController.patch("/:id/complete", async (c) => {
   }
 
   const now = nowISO();
-  const updates: Record<string, any> = {
-    status: "completed",
-    completedAt: now,
-    updatedAt: now,
-  };
-  if (body.notes !== undefined) updates.notes = body.notes;
-  if (body.additionalClassId !== undefined) updates.additionalClassId = body.additionalClassId;
+  const targetDateSource = body.date || entry.specificDate || now;
+  const targetDateKey = toDateKey(targetDateSource);
+  const targetSpecificDate = dateKeyToISOString(targetDateKey);
 
-  await db.update(timetableEntries).set(updates).where(eq(timetableEntries.id, id));
+  if (!entry.staffId || !entry.classId || entry.periodNumber === null || entry.periodNumber === undefined) {
+    throw new BadRequestError("Timetable entry must have staff, class and period assigned");
+  }
+  const entryStaffId = entry.staffId;
+  const entryClassId = entry.classId;
+  const entryPeriodNumber = entry.periodNumber;
+
+  // ── Copy-on-complete for recurring entries ──
+  // Create a one-off instance so completing one date doesn't affect all recurring dates
+  const isRecurringInstance = entry.isRecurring === 1;
+  let targetId = id;
+
+  if (isRecurringInstance) {
+    const [existingOneOff] = await db
+      .select()
+      .from(timetableEntries)
+      .where(
+        and(
+          eq(timetableEntries.staffId, entryStaffId),
+          eq(timetableEntries.periodNumber, entryPeriodNumber),
+          eq(timetableEntries.isRecurring, 0),
+          eq(timetableEntries.isDeleted, 0),
+          sql`${timetableEntries.specificDate} >= ${targetDateKey}`,
+          sql`${timetableEntries.specificDate} <= ${dateKeyEndISOString(targetDateKey)}`,
+        ),
+      )
+      .limit(1);
+
+    targetId = existingOneOff?.id || uuid();
+
+    const completedValues = {
+      institutionId: entry.institutionId,
+      staffId: entryStaffId,
+      classId: entryClassId,
+      additionalClassId: body.additionalClassId !== undefined ? body.additionalClassId : entry.additionalClassId,
+      gradeBookId: entry.gradeBookId,
+      periodNumber: entry.periodNumber,
+      dayOfWeek: entry.dayOfWeek,
+      isRecurring: 0,
+      specificDate: targetSpecificDate,
+      notes: body.notes !== undefined ? body.notes : entry.notes,
+      status: "completed" as const,
+      completedAt: now,
+      updatedAt: now,
+    };
+
+    if (existingOneOff) {
+      await db.update(timetableEntries).set(completedValues).where(eq(timetableEntries.id, targetId));
+    } else {
+      await db.insert(timetableEntries).values({
+        id: targetId,
+        ...completedValues,
+        isDeleted: 0,
+        createdAt: now,
+      });
+    }
+
+    await db
+      .update(timetableEntries)
+      .set({ status: "scheduled", completedAt: null, updatedAt: now })
+      .where(eq(timetableEntries.id, id));
+  } else {
+    const updates: Record<string, any> = {
+      status: "completed",
+      completedAt: now,
+      specificDate: targetSpecificDate,
+      updatedAt: now,
+    };
+    if (body.notes !== undefined) updates.notes = body.notes;
+    if (body.additionalClassId !== undefined) updates.additionalClassId = body.additionalClassId;
+    await db.update(timetableEntries).set(updates).where(eq(timetableEntries.id, id));
+  }
 
   // Insert topics covered into junction table
-  // Remove existing topics first
-  await db.delete(timetableTopicsCovered).where(eq(timetableTopicsCovered.timetableEntryId, id));
+  await db.delete(timetableTopicsCovered).where(eq(timetableTopicsCovered.timetableEntryId, targetId));
 
   // Structured chapter/topic entries
   if (body.chapterTopics && Array.isArray(body.chapterTopics)) {
     for (const ct of body.chapterTopics) {
       await db.insert(timetableTopicsCovered).values({
         id: uuid(),
-        timetableEntryId: id,
+        timetableEntryId: targetId,
         topic: ct.contentTitle || ct.chapterTitle,
         chapterId: ct.chapterId || null,
         contentId: ct.contentId || null,
@@ -605,35 +738,16 @@ timetableController.patch("/:id/complete", async (c) => {
     for (const topic of body.topicsCovered) {
       await db.insert(timetableTopicsCovered).values({
         id: uuid(),
-        timetableEntryId: id,
+        timetableEntryId: targetId,
         topic,
       });
     }
   }
 
   // ── Upsert linked class session ──
-  const sessionDate = body.date ? new Date(body.date) : new Date();
-  const dayStart = new Date(sessionDate);
-  dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(sessionDate);
-  dayEnd.setHours(23, 59, 59, 999);
-
-  if (!entry.staffId || !entry.classId) {
-    throw new BadRequestError("Timetable entry must have staff and class assigned");
-  }
-
-  const existingSessions = await db
-    .select()
-    .from(classSessions)
-    .where(
-      and(
-        eq(classSessions.staffId, entry.staffId),
-        eq(classSessions.classId, entry.classId),
-        sql`${classSessions.startTime} >= ${dayStart.toISOString()}`,
-        sql`${classSessions.startTime} <= ${dayEnd.toISOString()}`,
-      ),
-    )
-    .limit(1);
+  const sessionDate = new Date(dateKeyToISOString(targetDateKey));
+  const dayStart = targetDateKey;
+  const dayEnd = dateKeyEndISOString(targetDateKey);
 
   function resolveTime(time: string | undefined, fallback: string): string {
     if (!time) return fallback;
@@ -641,7 +755,7 @@ timetableController.patch("/:id/complete", async (c) => {
     if (/^\d{1,2}:\d{2}$/.test(time)) {
       const d = new Date(sessionDate);
       const [h, m] = time.split(":").map(Number);
-      d.setHours(h, m, 0, 0);
+      d.setUTCHours(h, m, 0, 0);
       return d.toISOString();
     }
     return new Date(time).toISOString();
@@ -651,14 +765,47 @@ timetableController.patch("/:id/complete", async (c) => {
   const durationMinutes =
     body.durationMinutes ?? Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000);
 
+  let existingSessions: any[] = [];
+  if (body.sessionId) {
+    const [existingById] = await db
+      .select()
+      .from(classSessions)
+      .where(
+        and(
+          eq(classSessions.id, body.sessionId),
+          eq(classSessions.staffId, entryStaffId),
+          eq(classSessions.classId, entryClassId),
+          sql`${classSessions.startTime} >= ${dayStart}`,
+          sql`${classSessions.startTime} <= ${dayEnd}`,
+        ),
+      )
+      .limit(1);
+    if (existingById) existingSessions = [existingById];
+  }
+
+  if (existingSessions.length === 0) {
+    existingSessions = await db
+      .select()
+      .from(classSessions)
+      .where(
+        and(
+          eq(classSessions.staffId, entryStaffId),
+          eq(classSessions.classId, entryClassId),
+          sql`${classSessions.startTime} >= ${startTime}`,
+          sql`${classSessions.startTime} <= ${endTime}`,
+        ),
+      )
+      .limit(1);
+  }
+
   let sessionId: string;
   if (existingSessions.length === 0) {
     sessionId = uuid();
     await db.insert(classSessions).values({
       id: sessionId,
-      staffId: entry.staffId,
+      staffId: entryStaffId,
       institutionId: entry.institutionId,
-      classId: entry.classId,
+      classId: entryClassId,
       courseId: entry.gradeBookId || null,
       startTime,
       endTime,
@@ -697,8 +844,8 @@ timetableController.patch("/:id/complete", async (c) => {
   }
   // ── End class session link ──
 
-  // Fetch updated entry with populated info
-  const [updated] = await db.select().from(timetableEntries).where(eq(timetableEntries.id, id)).limit(1);
+  // Fetch updated/created entry with populated info
+  const [updated] = await db.select().from(timetableEntries).where(eq(timetableEntries.id, targetId)).limit(1);
 
   const allClassIds = [updated.classId, updated.additionalClassId].filter(Boolean);
   const classMap = new Map<string, any>();
@@ -727,7 +874,7 @@ timetableController.patch("/:id/complete", async (c) => {
       contentId: timetableTopicsCovered.contentId,
     })
     .from(timetableTopicsCovered)
-    .where(eq(timetableTopicsCovered.timetableEntryId, id));
+    .where(eq(timetableTopicsCovered.timetableEntryId, targetId));
 
   return c.json({
     success: true,
@@ -751,6 +898,7 @@ timetableController.patch("/:id/complete", async (c) => {
 
 timetableController.delete("/:id", async (c) => {
   const { id } = c.req.param();
+  const dateQuery = c.req.query("date");
   const db = getDb(c.env.DB);
 
   const [entry] = await db
@@ -763,12 +911,92 @@ timetableController.delete("/:id", async (c) => {
     throw new BadRequestError("Timetable entry not found");
   }
 
+  const now = nowISO();
+
+  // ── One-off entry: just soft-delete ──
+  if (entry.isRecurring === 0) {
+    await db
+      .update(timetableEntries)
+      .set({ isDeleted: 1, updatedAt: now })
+      .where(eq(timetableEntries.id, id));
+
+    return c.json({ success: true, message: "Timetable entry deleted" });
+  }
+
+  // ── Recurring entry ──
+  if (!entry.staffId || entry.periodNumber === null || entry.periodNumber === undefined) {
+    throw new BadRequestError("Recurring entry must have staff and period assigned");
+  }
+  const entryStaffId = entry.staffId;
+  const entryPeriodNumber = entry.periodNumber;
+
+  // Check for existing one-off (workdone) entries for this recurring template
+  const workdoneEntries = await db
+    .select({ id: timetableEntries.id, status: timetableEntries.status, specificDate: timetableEntries.specificDate })
+    .from(timetableEntries)
+    .where(
+      and(
+        eq(timetableEntries.staffId, entryStaffId),
+        eq(timetableEntries.periodNumber, entryPeriodNumber),
+        eq(timetableEntries.isRecurring, 0),
+        eq(timetableEntries.isDeleted, 0),
+      ),
+    );
+
+  // If a specific date is provided, delete only that day's instance
+  if (dateQuery) {
+    const targetDateKey = toDateKey(dateQuery);
+
+    // Check if there's a one-off entry for this date
+    const oneOffForDate = workdoneEntries.find(
+      (e: any) => e.specificDate && toDateKey(e.specificDate) === targetDateKey,
+    );
+
+    if (oneOffForDate) {
+      // Soft-delete the one-off entry for this date
+      await db
+        .update(timetableEntries)
+        .set({ isDeleted: 1, updatedAt: now })
+        .where(eq(timetableEntries.id, oneOffForDate.id));
+    } else {
+      // No one-off exists — create a "cancelled" one-off to void this date
+      const cancelId = uuid();
+      await db.insert(timetableEntries).values({
+        id: cancelId,
+        institutionId: entry.institutionId,
+        staffId: entryStaffId,
+        classId: entry.classId,
+        additionalClassId: entry.additionalClassId,
+        gradeBookId: entry.gradeBookId,
+        periodNumber: entryPeriodNumber,
+        dayOfWeek: entry.dayOfWeek,
+        isRecurring: 0,
+        specificDate: dateKeyToISOString(targetDateKey),
+        notes: entry.notes,
+        status: "cancelled",
+        isDeleted: 1,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return c.json({ success: true, message: "Removed for this day only" });
+  }
+
+  // No date provided — attempting to delete the recurring template
+  if (workdoneEntries.length > 0) {
+    throw new BadRequestError(
+      `Cannot delete this recurring schedule because ${workdoneEntries.length} workdone entry(ies) exist. Remove this period for a specific day instead.`,
+    );
+  }
+
+  // No workdone entries — safe to delete the recurring template
   await db
     .update(timetableEntries)
-    .set({ isDeleted: 1, updatedAt: nowISO() })
+    .set({ isDeleted: 1, updatedAt: now })
     .where(eq(timetableEntries.id, id));
 
-  return c.json({ success: true, message: "Timetable entry deleted" });
+  return c.json({ success: true, message: "Recurring schedule deleted" });
 });
 
 // ═══ Admin endpoints ═══════════════════════════════
@@ -839,8 +1067,9 @@ timetableController.get("/staff-month", async (c) => {
       ),
     );
 
-  const startDate = new Date(year, month - 1, 1).toISOString();
-  const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+  const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+  const startDate = `${monthKey}-01`;
+  const endDate = dateKeyEndISOString(`${monthKey}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`);
 
   const oneOffEntries = await db
     .select()
@@ -855,7 +1084,22 @@ timetableController.get("/staff-month", async (c) => {
       ),
     );
 
-  const dates = buildMonthSummary(recurringEntries, oneOffEntries, workingDays, year, month, new Map());
+  // Get cancelled (deleted for specific day) entries in this month
+  const cancelledEntries = await db
+    .select({ periodNumber: timetableEntries.periodNumber, specificDate: timetableEntries.specificDate })
+    .from(timetableEntries)
+    .where(
+      and(
+        eq(timetableEntries.staffId, staffId),
+        eq(timetableEntries.isRecurring, 0),
+        eq(timetableEntries.isDeleted, 1),
+        eq(timetableEntries.status, "cancelled"),
+        sql`${timetableEntries.specificDate} >= ${startDate}`,
+        sql`${timetableEntries.specificDate} <= ${endDate}`,
+      ),
+    );
+
+  const dates = buildMonthSummary(recurringEntries, oneOffEntries, workingDays, year, month, new Map(), cancelledEntries);
 
   return c.json({ success: true, data: { dates } });
 });
@@ -875,7 +1119,8 @@ timetableController.get("/staff-day", async (c) => {
   }
 
   const dateStr = c.req.query("date")!;
-  const date = new Date(dateStr);
+  const dateKey = toDateKey(dateStr);
+  const date = new Date(dateKeyToISOString(dateKey));
   const dow = date.getDay();
   const db = getDb(c.env.DB);
 
@@ -913,7 +1158,7 @@ timetableController.get("/staff-day", async (c) => {
     };
   }
 
-  const recurringEntries = await db
+  const rawRecurringEntries = await db
     .select()
     .from(timetableEntries)
     .where(
@@ -924,11 +1169,10 @@ timetableController.get("/staff-day", async (c) => {
         eq(timetableEntries.isDeleted, 0),
       ),
     );
+  const recurringEntries = rawRecurringEntries.map((entry: any) => recurringEntryForDate(entry, dateKey));
 
-  const dayStart = new Date(date);
-  dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(date);
-  dayEnd.setHours(23, 59, 59, 999);
+  const dayStart = dateKey;
+  const dayEnd = dateKeyEndISOString(dateKey);
 
   const oneOffEntries = await db
     .select()
@@ -938,14 +1182,30 @@ timetableController.get("/staff-day", async (c) => {
         eq(timetableEntries.staffId, staffId),
         eq(timetableEntries.isRecurring, 0),
         eq(timetableEntries.isDeleted, 0),
-        sql`${timetableEntries.specificDate} >= ${dayStart.toISOString()}`,
-        sql`${timetableEntries.specificDate} <= ${dayEnd.toISOString()}`,
+        sql`${timetableEntries.specificDate} >= ${dayStart}`,
+        sql`${timetableEntries.specificDate} <= ${dayEnd}`,
       ),
     );
 
+  // Query cancelled (deleted for this day) one-off entries to exclude those periods
+  const cancelledEntries = await db
+    .select({ periodNumber: timetableEntries.periodNumber })
+    .from(timetableEntries)
+    .where(
+      and(
+        eq(timetableEntries.staffId, staffId),
+        eq(timetableEntries.isRecurring, 0),
+        eq(timetableEntries.isDeleted, 1),
+        eq(timetableEntries.status, "cancelled"),
+        sql`${timetableEntries.specificDate} >= ${dayStart}`,
+        sql`${timetableEntries.specificDate} <= ${dayEnd}`,
+      ),
+    );
+  const cancelledPeriods = new Set(cancelledEntries.map((e) => e.periodNumber));
+
   const overriddenPeriods = new Set(oneOffEntries.map((e) => e.periodNumber));
   const allEntries = [
-    ...recurringEntries.filter((e) => !overriddenPeriods.has(e.periodNumber)),
+    ...recurringEntries.filter((e) => !overriddenPeriods.has(e.periodNumber) && !cancelledPeriods.has(e.periodNumber)),
     ...oneOffEntries,
   ].sort((a, b) => (a.periodNumber ?? 0) - (b.periodNumber ?? 0));
 
@@ -997,8 +1257,8 @@ async function buildMonthlyReport(
           eq(timetableEntries.staffId, staffId),
           eq(timetableEntries.isRecurring, 0),
           eq(timetableEntries.isDeleted, 0),
-          sql`${timetableEntries.specificDate} >= ${new Date(year, month - 1, 1).toISOString()}`,
-          sql`${timetableEntries.specificDate} <= ${new Date(year, month, 0, 23, 59, 59).toISOString()}`,
+          sql`${timetableEntries.specificDate} >= ${`${year}-${String(month).padStart(2, "0")}-01`}`,
+          sql`${timetableEntries.specificDate} <= ${dateKeyEndISOString(`${year}-${String(month).padStart(2, "0")}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`)}`,
         ),
       ),
   ]);
@@ -1085,11 +1345,13 @@ async function buildMonthlyReport(
     const dow = date.getDay();
     if (!workingDays.includes(dow)) continue;
 
-    const recurringForDay = recurringEntries.filter((e: any) => e.dayOfWeek === dow);
+    const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const recurringForDay = recurringEntries
+      .filter((e: any) => e.dayOfWeek === dow)
+      .map((e: any) => recurringEntryForDate(e, dateStr));
     const oneOffForDate = oneOffEntries.filter((e: any) => {
       if (!e.specificDate) return false;
-      const sd = new Date(e.specificDate);
-      return sd.getFullYear() === year && sd.getMonth() === month - 1 && sd.getDate() === d;
+      return toDateKey(e.specificDate) === dateStr;
     });
 
     const overriddenPeriods = new Set(oneOffForDate.map((e: any) => e.periodNumber));
@@ -1110,10 +1372,10 @@ async function buildMonthlyReport(
       if (bookTitle) subjectSet.add(bookTitle);
       if (entry.status === "completed") completedCount++;
 
-      const entryTopics = topicsMap.get(entry.id) || [];
+      const entryTopics = entry.__omitTopicsCovered ? [] : topicsMap.get(entry.id) || [];
 
       // Collect chapter and content names from structured entries for this entry
-      const entryTopicRows = topicsRows.filter((r: any) => r.timetableEntryId === entry.id);
+      const entryTopicRows = entry.__omitTopicsCovered ? [] : topicsRows.filter((r: any) => r.timetableEntryId === entry.id);
       const chapterNames = new Set<string>();
       const contentNames: string[] = [];
       for (const tr of entryTopicRows) {

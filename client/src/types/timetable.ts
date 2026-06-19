@@ -65,10 +65,12 @@ export interface CompleteTimetableEntryDTO {
   startTime?: string;
   endTime?: string;
   durationMinutes?: number;
+  sessionId?: string;
 }
 
 export interface IClassSession {
   _id: string;
+  id?: string;
   staffId: string;
   institutionId: string;
   classId: string | { _id: string; grade?: string; section?: string };
