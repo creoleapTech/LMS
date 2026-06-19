@@ -104,12 +104,14 @@ export function DayView({
   const isAdminView = !!staffId && !!institutionId;
   const currentUser = useAuthStore((s) => s.user);
 
-  // Freeze past dates — always read-only regardless of prop
+  // Freeze dates older than 30 days — always read-only regardless of prop
   const todayMidnight = new Date();
   todayMidnight.setHours(0, 0, 0, 0);
+  const thirtyDaysAgo = new Date(todayMidnight);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const dateMidnight = new Date(date);
   dateMidnight.setHours(0, 0, 0, 0);
-  const isPastDate = dateMidnight < todayMidnight;
+  const isPastDate = dateMidnight < thirtyDaysAgo;
   const effectiveReadOnly = readOnly || isPastDate;
 
   // Use the appropriate hook based on whether we're viewing own or staff timetable
