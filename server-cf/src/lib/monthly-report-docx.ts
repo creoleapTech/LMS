@@ -20,7 +20,7 @@ import {
 } from "docx";
 
 // Assets are imported as static modules (bundled by wrangler)
-import blueStripePng from "../assets/blue-stripe-clean.png";
+import blueStripePng from "../assets/monthly-report-design.jpeg";
 import logoPng from "../assets/creoleap-logo-final.png";
 
 export interface ReportRow {
@@ -58,7 +58,6 @@ const COMPACT_CELL_MARGINS = {
 };
 const PAGE_MARGINS = { top: 1440, bottom: 1440, left: 1440, right: 1440 };
 const PORTRAIT_LOGO_OFFSET = 3750000;
-const LANDSCAPE_LOGO_OFFSET = 6220000;
 
 // Load assets as ArrayBuffer at module level
 let blueStripeData: ArrayBuffer | null = null;
@@ -110,11 +109,11 @@ function makeBlueStripeImage(): ImageRun | null {
   if (!blueStripeData) return null;
   return new ImageRun({
     data: blueStripeData,
-    transformation: { width: 70, height: 1057 },
-    type: "png",
+    transformation: { width: 105, height: 1600 },
+    type: "jpg",
     floating: {
-      horizontalPosition: { relative: "page" as any, offset: 0 },
-      verticalPosition: { relative: "page" as any, offset: 0 },
+      horizontalPosition: { align: "left" as any },
+      verticalPosition: { align: "top" as any },
       wrap: { type: "square" as any, side: "bothSides" as any },
       allowOverlap: true,
       behindDocument: false,
@@ -126,11 +125,6 @@ function makeBlueStripeImage(): ImageRun | null {
 
 function buildCoverPage(params: ReportParams): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
-
-  const stripe1 = makeBlueStripeImage();
-  if (stripe1) {
-    elements.push(new Paragraph({ children: [stripe1] }));
-  }
 
   for (let i = 0; i < 4; i++) {
     elements.push(new Paragraph({ spacing: { after: 200 }, children: [] }));
@@ -237,9 +231,8 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
     }),
   );
 
-  const columns = ["Date", "Class", "Section", "Chapter Name", "Topic Name", "Remarks"];
+  const columns = ["Date", "Class/Section", "Chapter Name", "Topic Name", "Remarks"];
   const widths = [
-    { size: 0, type: WidthType.AUTO },
     { size: 0, type: WidthType.AUTO },
     { size: 0, type: WidthType.AUTO },
     { size: 23, type: WidthType.PERCENTAGE },
@@ -279,8 +272,9 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
   });
 
   const dataRows = rows.map((row) => {
+    const classSection = row.section ? `${row.className}–${row.section}` : row.className;
     const values = [
-      row.date, row.className, row.section,
+      row.date, classSection,
       row.chapterName, row.topicName, row.remarks,
     ];
 
@@ -292,7 +286,7 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
         borders: ALL_BORDERS,
         children: [
           new Paragraph({
-            alignment: i < 3 ? AlignmentType.CENTER : AlignmentType.LEFT,
+            alignment: i < 2 ? AlignmentType.CENTER : AlignmentType.LEFT,
             spacing: { before: 0, after: 0 },
             children: [
               new TextRun({ text: val || "", size: 28, font: "Times New Roman" }),
@@ -318,6 +312,11 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
 
 function buildHeader(horizontalOffset: number): Header {
   const children: (TextRun | ImageRun)[] = [];
+
+  const stripe = makeBlueStripeImage();
+  if (stripe) {
+    children.push(stripe);
+  }
 
   if (logoData) {
     children.push(
@@ -349,8 +348,7 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
   const coverElements = buildCoverPage(params);
   const tableElements = buildSessionTable(params.rows);
 
-  const portraitHeader = buildHeader(PORTRAIT_LOGO_OFFSET);
-  const landscapeHeader = buildHeader(LANDSCAPE_LOGO_OFFSET);
+  const header = buildHeader(PORTRAIT_LOGO_OFFSET);
 
   const doc = new Document({
     sections: [
@@ -361,18 +359,18 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
             margin: PAGE_MARGINS,
           },
         },
-        headers: { default: portraitHeader },
+        headers: { default: header },
         children: coverElements,
       },
       {
         properties: {
           type: SectionType.NEXT_PAGE,
           page: {
-            size: { orientation: PageOrientation.LANDSCAPE },
+            size: { orientation: PageOrientation.PORTRAIT },
             margin: PAGE_MARGINS,
           },
         },
-        headers: { default: landscapeHeader },
+        headers: { default: header },
         children: tableElements,
       },
     ],

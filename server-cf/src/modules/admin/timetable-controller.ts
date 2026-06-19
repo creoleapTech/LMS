@@ -615,8 +615,19 @@ timetableController.patch("/:id/complete", async (c) => {
     )
     .limit(1);
 
-  const startTime = body.startTime ? new Date(body.startTime).toISOString() : now;
-  const endTime = body.endTime ? new Date(body.endTime).toISOString() : now;
+  function resolveTime(time: string | undefined, fallback: string): string {
+    if (!time) return fallback;
+    // If it's just HH:MM (time-only), combine with sessionDate
+    if (/^\d{1,2}:\d{2}$/.test(time)) {
+      const d = new Date(sessionDate);
+      const [h, m] = time.split(":").map(Number);
+      d.setHours(h, m, 0, 0);
+      return d.toISOString();
+    }
+    return new Date(time).toISOString();
+  }
+  const startTime = resolveTime(body.startTime, now);
+  const endTime = resolveTime(body.endTime, now);
   const durationMinutes =
     body.durationMinutes ?? Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000);
 
@@ -1181,10 +1192,10 @@ timetableController.get("/work-done", async (c) => {
     .offset(offset);
 
   // Enrich with staff, class, institution, gradeBook topics
-  const staffIds = [...new Set(entries.map((e) => e.staffId).filter(Boolean))];
-  const classIds = [...new Set(entries.map((e) => e.classId).filter(Boolean))];
-  const instIds = [...new Set(entries.map((e) => e.institutionId).filter(Boolean))];
-  const gbIds = [...new Set(entries.map((e) => e.gradeBookId).filter(Boolean))];
+  const staffIds: string[] = [...new Set(entries.map((e) => e.staffId).filter(Boolean))] as string[];
+  const classIds: string[] = [...new Set(entries.map((e) => e.classId).filter(Boolean))] as string[];
+  const instIds: string[] = [...new Set(entries.map((e) => e.institutionId).filter(Boolean))] as string[];
+  const gbIds: string[] = [...new Set(entries.map((e) => e.gradeBookId).filter(Boolean))] as string[];
   const entryIds = entries.map((e) => e.id);
 
   const [staffRows, classRows, instRows, gbRows, topicRows] = await Promise.all([

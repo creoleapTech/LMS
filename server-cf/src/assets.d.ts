@@ -3,3 +3,7 @@ declare module "*.png" {
   const value: string | ArrayBuffer;
   export default value;
 }
+declare module "*.jpeg" {
+  const value: string | ArrayBuffer;
+  export default value;
+}

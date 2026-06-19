@@ -108,7 +108,7 @@ export function DayView({
   const todayMidnight = new Date();
   todayMidnight.setHours(0, 0, 0, 0);
   const thirtyDaysAgo = new Date(todayMidnight);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 15);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const dateMidnight = new Date(date);
   dateMidnight.setHours(0, 0, 0, 0);
   const isPastDate = dateMidnight < thirtyDaysAgo;

@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [[rules]]
 type = "Data"
-globs = ["**/*.png"]
+globs = ["**/*.png", "**/*.jpeg"]
 fallthrough = true
 
 [[d1_databases]]
