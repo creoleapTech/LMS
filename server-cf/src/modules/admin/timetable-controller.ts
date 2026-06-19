@@ -1127,4 +1127,130 @@ timetableController.get("/staff-monthly-report", async (c) => {
   });
 });
 
+// ─── GET /work-done — super admin / admin view of all completed entries ───
+
+timetableController.get("/work-done", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  if (user.role !== "super_admin" && user.role !== "admin") {
+    throw new BadRequestError("Only super_admin and admin can access this");
+  }
+
+  const institutionId = c.req.query("institutionId");
+  const staffId = c.req.query("staffId");
+  const startDate = c.req.query("startDate");
+  const endDate = c.req.query("endDate");
+  const page = Math.max(1, parseInt(c.req.query("page") || "1"));
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query("limit") || "50")));
+  const offset = (page - 1) * limit;
+
+  // Admin can only see their own institution
+  const effectiveInstitutionId =
+    user.role === "admin"
+      ? resolveInstitutionId(user)
+      : institutionId || undefined;
+
+  const db = getDb(c.env.DB);
+
+  const conditions: any[] = [
+    eq(timetableEntries.status, "completed"),
+    eq(timetableEntries.isDeleted, 0),
+  ];
+
+  if (effectiveInstitutionId) {
+    conditions.push(eq(timetableEntries.institutionId, effectiveInstitutionId));
+  }
+  if (staffId) conditions.push(eq(timetableEntries.staffId, staffId));
+  if (startDate) conditions.push(sql`${timetableEntries.completedAt} >= ${startDate}`);
+  if (endDate) conditions.push(sql`${timetableEntries.completedAt} <= ${endDate}T23:59:59.999Z`);
+
+  // Count total
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(timetableEntries)
+    .where(and(...conditions));
+
+  const total = Number(countResult?.count || 0);
+
+  // Fetch entries
+  const entries = await db
+    .select()
+    .from(timetableEntries)
+    .where(and(...conditions))
+    .orderBy(sql`${timetableEntries.completedAt} DESC`)
+    .limit(limit)
+    .offset(offset);
+
+  // Enrich with staff, class, institution, gradeBook topics
+  const staffIds = [...new Set(entries.map((e) => e.staffId).filter(Boolean))];
+  const classIds = [...new Set(entries.map((e) => e.classId).filter(Boolean))];
+  const instIds = [...new Set(entries.map((e) => e.institutionId).filter(Boolean))];
+  const gbIds = [...new Set(entries.map((e) => e.gradeBookId).filter(Boolean))];
+  const entryIds = entries.map((e) => e.id);
+
+  const [staffRows, classRows, instRows, gbRows, topicRows] = await Promise.all([
+    staffIds.length > 0
+      ? db
+          .select({ id: staff.id, name: staff.name, email: staff.email })
+          .from(staff)
+          .where(inArray(staff.id, staffIds))
+      : [],
+    classIds.length > 0
+      ? db
+          .select({ id: classes.id, grade: classes.grade, section: classes.section })
+          .from(classes)
+          .where(inArray(classes.id, classIds))
+      : [],
+    instIds.length > 0
+      ? db
+          .select({ id: institutions.id, name: institutions.name })
+          .from(institutions)
+          .where(inArray(institutions.id, instIds))
+      : [],
+    gbIds.length > 0
+      ? db
+          .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle })
+          .from(gradeBooks)
+          .where(inArray(gradeBooks.id, gbIds))
+      : [],
+    entryIds.length > 0
+      ? db
+          .select({
+            entryId: timetableTopicsCovered.timetableEntryId,
+            topic: timetableTopicsCovered.topic,
+          })
+          .from(timetableTopicsCovered)
+          .where(inArray(timetableTopicsCovered.timetableEntryId, entryIds))
+      : [],
+  ]);
+
+  const staffMap = new Map(staffRows.map((r) => [r.id, r]));
+  const classMap = new Map(classRows.map((r) => [r.id, r]));
+  const instMap = new Map(instRows.map((r) => [r.id, r]));
+  const gbMap = new Map(gbRows.map((r) => [r.id, r]));
+
+  const topicsMap = new Map<string, string[]>();
+  for (const r of topicRows) {
+    const arr = topicsMap.get(r.entryId) || [];
+    arr.push(r.topic);
+    topicsMap.set(r.entryId, arr);
+  }
+
+  const enriched = entries.map((entry) => ({
+    ...entry,
+    staff: entry.staffId ? staffMap.get(entry.staffId) || null : null,
+    class: entry.classId ? classMap.get(entry.classId) || null : null,
+    institution: entry.institutionId ? instMap.get(entry.institutionId) || null : null,
+    gradeBook: entry.gradeBookId ? gbMap.get(entry.gradeBookId) || null : null,
+    topicsCovered: topicsMap.get(entry.id) || [],
+  }));
+
+  return c.json({
+    success: true,
+    data: {
+      entries: enriched,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    },
+  });
+});
+
 export { timetableController };
