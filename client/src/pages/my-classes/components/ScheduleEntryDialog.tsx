@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarDays, BookOpen, Repeat, Loader2, Search } from "lucide-react";
+import { CalendarDays, BookOpen, Repeat, Loader2, Search, GraduationCap } from "lucide-react";
 import { useTimetableMutations } from "../hooks/useTimetableMutations";
 import type {
   ITimetableEntry,
@@ -51,6 +51,7 @@ export function ScheduleEntryDialog({
 
   const [classId, setClassId] = useState("");
   const [gradeBookId, setGradeBookId] = useState("");
+  const [additionalClassId, setAdditionalClassId] = useState("");
   const [notes, setNotes] = useState("");
   const [isRecurring, setIsRecurring] = useState(true);
   const [selectedGrade, setSelectedGrade] = useState("");
@@ -69,6 +70,10 @@ export function ScheduleEntryDialog({
     enabled: open,
     staleTime: 5 * 60 * 1000,
   });
+
+  const availableAdditionalClasses = useMemo(() => {
+    return (classes || []).filter((c) => c._id !== classId);
+  }, [classes, classId]);
 
   const filteredClasses = useMemo(() => {
     const term = classSearch.trim().toLowerCase();
@@ -121,6 +126,11 @@ export function ScheduleEntryDialog({
           : "";
         setClassId(cid);
         setGradeBookId(gbid);
+        setAdditionalClassId(
+          entry.additionalClassId
+            ? (typeof entry.additionalClassId === "object" ? entry.additionalClassId._id : entry.additionalClassId)
+            : ""
+        );
         setNotes(entry.notes || "");
         setIsRecurring(entry.isRecurring);
         // Set grade from classId
@@ -130,6 +140,7 @@ export function ScheduleEntryDialog({
       } else {
         setClassId("");
         setGradeBookId("");
+        setAdditionalClassId("");
         setNotes("");
         setIsRecurring(true);
         setSelectedGrade("");
@@ -156,6 +167,7 @@ export function ScheduleEntryDialog({
           data: {
             classId,
             gradeBookId: gradeBookId || undefined,
+            additionalClassId: additionalClassId || undefined,
             notes: notes || undefined,
           },
         },
@@ -166,6 +178,7 @@ export function ScheduleEntryDialog({
         {
           classId,
           gradeBookId: gradeBookId || undefined,
+          additionalClassId: additionalClassId || undefined,
           periodNumber,
           dayOfWeek,
           isRecurring,
@@ -227,6 +240,33 @@ export function ScheduleEntryDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Combined Class */}
+          {availableAdditionalClasses.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                <GraduationCap size={12} />
+                Combined Class
+              </Label>
+              <Select value={additionalClassId} onValueChange={setAdditionalClassId}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="None (single class)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None (single class)</SelectItem>
+                  {availableAdditionalClasses.map((cls) => (
+                    <SelectItem key={cls._id} value={cls._id}>
+                      Grade {cls.grade}–{cls.section}
+                      {cls.year ? ` (${cls.year})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-slate-400">
+                Select if two classes are combined into this period
+              </p>
+            </div>
+          )}
 
           {/* Subject / GradeBook select */}
           {selectedGrade && (

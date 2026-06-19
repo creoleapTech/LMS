@@ -35,6 +35,7 @@ export const timetableEntries = sqliteTable("timetable_entries", {
   institutionId: text("institution_id").references(() => institutions.id),
   staffId: text("staff_id"),
   classId: text("class_id"),
+  additionalClassId: text("additional_class_id"),
   gradeBookId: text("grade_book_id"),
   periodNumber: integer("period_number"),
   dayOfWeek: integer("day_of_week"),

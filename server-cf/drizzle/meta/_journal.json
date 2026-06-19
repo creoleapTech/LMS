@@ -78,6 +78,13 @@
       "when": 1781763491347,
       "tag": "0010_last_robin_chapel",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1781914800000,
+      "tag": "0011_combined_classes",
+      "breakpoints": true
     }
   ]
 }

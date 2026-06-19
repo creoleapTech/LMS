@@ -18,6 +18,7 @@ export interface ITimetableEntry {
   institutionId: string;
   staffId: string;
   classId: string | { _id: string; grade?: string; section?: string; year?: string };
+  additionalClassId?: string | { _id: string; grade?: string; section?: string; year?: string };
   gradeBookId?: string | { _id: string; bookTitle?: string; grade?: number };
   periodNumber: number;
   dayOfWeek: number;
@@ -40,6 +41,7 @@ export interface IMonthSummary {
 
 export interface CreateTimetableEntryDTO {
   classId: string;
+  additionalClassId?: string;
   gradeBookId?: string;
   periodNumber: number;
   dayOfWeek: number;
@@ -48,8 +50,16 @@ export interface CreateTimetableEntryDTO {
   notes?: string;
 }
 
+export interface ChapterTopicItem {
+  chapterId: string;
+  chapterTitle: string;
+  contentId?: string;
+  contentTitle?: string;
+}
+
 export interface CompleteTimetableEntryDTO {
   topicsCovered?: string[];
+  chapterTopics?: ChapterTopicItem[];
   notes?: string;
   date?: string;
   startTime?: string;

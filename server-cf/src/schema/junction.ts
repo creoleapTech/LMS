@@ -153,8 +153,12 @@ export const timetableTopicsCovered = sqliteTable("timetable_topics_covered", {
   id: text("id").primaryKey(),
   timetableEntryId: text("timetable_entry_id").notNull().references(() => timetableEntries.id, { onDelete: "cascade" }),
   topic: text("topic").notNull(),
+  chapterId: text("chapter_id"),
+  contentId: text("content_id"),
 }, (table) => [
   index("timetable_topics_covered_timetable_entry_id_idx").on(table.timetableEntryId),
+  index("timetable_topics_covered_chapter_id_idx").on(table.chapterId),
+  index("timetable_topics_covered_content_id_idx").on(table.contentId),
 ]);
 
 // ─── class_session_topics ───────────────────────────

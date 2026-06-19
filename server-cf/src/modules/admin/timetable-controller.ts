@@ -6,7 +6,7 @@ import { nowISO } from "../../lib/utils";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import { institutions, staff, classes } from "../../schema/admin";
-import { gradeBooks, chapters } from "../../schema/books";
+import { gradeBooks, chapters, chapterContents } from "../../schema/books";
 import { timetableEntries, periodConfigs } from "../../schema/settings";
 import { classSessions } from "../../schema/staff";
 import { classSessionTopics } from "../../schema/junction";
@@ -69,16 +69,18 @@ async function getWorkingDays(db: any, institutionId: string): Promise<number[]>
 
 /** Batch-enrich timetable entries with class, gradeBook and topics. */
 async function batchEnrichTimetableEntries(db: any, entries: any[]) {
-  const classIds = [...new Set(entries.map((e) => e.classId).filter(Boolean))];
+  const allClassIds = [
+    ...new Set(entries.flatMap((e) => [e.classId, e.additionalClassId].filter(Boolean))),
+  ];
   const gbIds = [...new Set(entries.map((e) => e.gradeBookId).filter(Boolean))];
   const entryIds = entries.map((e) => e.id);
 
   const classMap = new Map<string, any>();
-  if (classIds.length > 0) {
+  if (allClassIds.length > 0) {
     const rows = await db
       .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
       .from(classes)
-      .where(inArray(classes.id, classIds));
+      .where(inArray(classes.id, allClassIds as string[]));
     for (const r of rows) classMap.set(r.id, r);
   }
 
@@ -107,6 +109,7 @@ async function batchEnrichTimetableEntries(db: any, entries: any[]) {
   return entries.map((entry) => ({
     ...entry,
     classId: entry.classId ? classMap.get(entry.classId) || null : null,
+    additionalClassId: entry.additionalClassId ? classMap.get(entry.additionalClassId) || null : null,
     gradeBookId: entry.gradeBookId ? gbMap.get(entry.gradeBookId) || null : null,
     topicsCovered: topicsMap.get(entry.id) || [],
   }));
@@ -459,6 +462,7 @@ timetableController.post("/", async (c) => {
     institutionId,
     staffId,
     classId: body.classId,
+    additionalClassId: body.additionalClassId || null,
     gradeBookId: body.gradeBookId || null,
     periodNumber: body.periodNumber,
     dayOfWeek: body.dayOfWeek,
@@ -519,6 +523,7 @@ timetableController.patch("/:id", async (c) => {
 
   const updates: Record<string, any> = { updatedAt: nowISO() };
   if (body.classId) updates.classId = body.classId;
+  if (body.additionalClassId !== undefined) updates.additionalClassId = body.additionalClassId;
   if (body.gradeBookId) updates.gradeBookId = body.gradeBookId;
   if (body.notes !== undefined) updates.notes = body.notes;
 
@@ -574,14 +579,29 @@ timetableController.patch("/:id/complete", async (c) => {
     updatedAt: now,
   };
   if (body.notes !== undefined) updates.notes = body.notes;
+  if (body.additionalClassId !== undefined) updates.additionalClassId = body.additionalClassId;
 
   await db.update(timetableEntries).set(updates).where(eq(timetableEntries.id, id));
 
   // Insert topics covered into junction table
-  if (body.topicsCovered && Array.isArray(body.topicsCovered)) {
-    // Remove existing topics first
-    await db.delete(timetableTopicsCovered).where(eq(timetableTopicsCovered.timetableEntryId, id));
+  // Remove existing topics first
+  await db.delete(timetableTopicsCovered).where(eq(timetableTopicsCovered.timetableEntryId, id));
 
+  // Structured chapter/topic entries
+  if (body.chapterTopics && Array.isArray(body.chapterTopics)) {
+    for (const ct of body.chapterTopics) {
+      await db.insert(timetableTopicsCovered).values({
+        id: uuid(),
+        timetableEntryId: id,
+        topic: ct.contentTitle || ct.chapterTitle,
+        chapterId: ct.chapterId || null,
+        contentId: ct.contentId || null,
+      });
+    }
+  }
+
+  // Free-text topics (legacy / additional)
+  if (body.topicsCovered && Array.isArray(body.topicsCovered)) {
     for (const topic of body.topicsCovered) {
       await db.insert(timetableTopicsCovered).values({
         id: uuid(),
@@ -680,14 +700,14 @@ timetableController.patch("/:id/complete", async (c) => {
   // Fetch updated entry with populated info
   const [updated] = await db.select().from(timetableEntries).where(eq(timetableEntries.id, id)).limit(1);
 
-  let classInfo = null;
-  if (updated.classId) {
-    const [cls] = await db
+  const allClassIds = [updated.classId, updated.additionalClassId].filter(Boolean);
+  const classMap = new Map<string, any>();
+  if (allClassIds.length > 0) {
+    const classRows = await db
       .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
       .from(classes)
-      .where(eq(classes.id, updated.classId))
-      .limit(1);
-    classInfo = cls || null;
+      .where(inArray(classes.id, allClassIds as string[]));
+    for (const cls of classRows) classMap.set(cls.id, cls);
   }
 
   let gradeBookInfo = null;
@@ -700,8 +720,12 @@ timetableController.patch("/:id/complete", async (c) => {
     gradeBookInfo = gb || null;
   }
 
-  const topics = await db
-    .select({ topic: timetableTopicsCovered.topic })
+  const topicRows = await db
+    .select({
+      topic: timetableTopicsCovered.topic,
+      chapterId: timetableTopicsCovered.chapterId,
+      contentId: timetableTopicsCovered.contentId,
+    })
     .from(timetableTopicsCovered)
     .where(eq(timetableTopicsCovered.timetableEntryId, id));
 
@@ -709,9 +733,16 @@ timetableController.patch("/:id/complete", async (c) => {
     success: true,
     data: {
       ...updated,
-      classId: classInfo,
+      classId: updated.classId ? classMap.get(updated.classId) || null : null,
+      additionalClassId: updated.additionalClassId ? classMap.get(updated.additionalClassId) || null : null,
       gradeBookId: gradeBookInfo,
-      topicsCovered: topics.map((t: any) => t.topic),
+      topicsCovered: topicRows.map((t: any) => t.topic),
+      chapterTopics: topicRows
+        .filter((t: any) => t.chapterId)
+        .map((t: any) => ({
+          chapterId: t.chapterId,
+          contentId: t.contentId,
+        })),
     },
   });
 });
@@ -984,10 +1015,36 @@ async function buildMonthlyReport(
     : [];
 
   const topicsMap = new Map<string, string[]>();
+  const chapterIdsSet = new Set<string>();
+  const contentIdsSet = new Set<string>();
+  const topicChapterMap = new Map<string, { chapterId?: string; contentId?: string }>();
   for (const row of topicsRows) {
     const existing = topicsMap.get(row.timetableEntryId) || [];
     existing.push(row.topic);
     topicsMap.set(row.timetableEntryId, existing);
+    if (row.chapterId) {
+      chapterIdsSet.add(row.chapterId);
+      topicChapterMap.set(row.id, { chapterId: row.chapterId, contentId: row.contentId });
+    }
+    if (row.contentId) contentIdsSet.add(row.contentId);
+  }
+
+  // Fetch chapter and content titles for structured entries
+  const chapterMap = new Map<string, { title: string }>();
+  if (chapterIdsSet.size > 0) {
+    const chRows = await db
+      .select({ id: chapters.id, title: chapters.title })
+      .from(chapters)
+      .where(inArray(chapters.id, [...chapterIdsSet]));
+    for (const ch of chRows) chapterMap.set(ch.id, { title: ch.title || "" });
+  }
+  const contentMap = new Map<string, { title: string; chapterId: string }>();
+  if (contentIdsSet.size > 0) {
+    const ctRows = await db
+      .select({ id: chapterContents.id, title: chapterContents.title, chapterId: chapterContents.chapterId })
+      .from(chapterContents)
+      .where(inArray(chapterContents.id, [...contentIdsSet]));
+    for (const ct of ctRows) contentMap.set(ct.id, { title: ct.title || "", chapterId: ct.chapterId });
   }
 
   // Batch fetch class and gradeBook info
@@ -1055,12 +1112,35 @@ async function buildMonthlyReport(
 
       const entryTopics = topicsMap.get(entry.id) || [];
 
+      // Collect chapter and content names from structured entries for this entry
+      const entryTopicRows = topicsRows.filter((r: any) => r.timetableEntryId === entry.id);
+      const chapterNames = new Set<string>();
+      const contentNames: string[] = [];
+      for (const tr of entryTopicRows) {
+        if (tr.chapterId) {
+          const ch = chapterMap.get(tr.chapterId);
+          if (ch?.title) chapterNames.add(ch.title);
+        }
+        if (tr.contentId) {
+          const ct = contentMap.get(tr.contentId);
+          if (ct?.title) contentNames.push(ct.title);
+        }
+      }
+
+      const chapterName = chapterNames.size > 0
+        ? [...chapterNames].join(", ")
+        : bookTitle;
+
+      const topicName = contentNames.length > 0
+        ? contentNames.join(", ")
+        : entryTopics.join(", ");
+
       rows.push({
         date: `${d} ${monthName} ${year}`,
         className: grade,
         section,
-        chapterName: bookTitle,
-        topicName: entryTopics.join(", "),
+        chapterName,
+        topicName,
         remarks: "",
       });
     }
