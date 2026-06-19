@@ -1511,8 +1511,8 @@ timetableController.get("/work-done", async (c) => {
     conditions.push(eq(timetableEntries.institutionId, effectiveInstitutionId));
   }
   if (staffId) conditions.push(eq(timetableEntries.staffId, staffId));
-  if (startDate) conditions.push(sql`${timetableEntries.completedAt} >= ${startDate}`);
-  if (endDate) conditions.push(sql`${timetableEntries.completedAt} <= ${endDate}T23:59:59.999Z`);
+  if (startDate) conditions.push(sql`${timetableEntries.completedAt} >= ${dateKeyToISOString(startDate)}`);
+  if (endDate) conditions.push(sql`${timetableEntries.completedAt} <= ${dateKeyEndISOString(endDate)}`);
 
   // Count total
   const [countResult] = await db

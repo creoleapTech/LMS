@@ -154,7 +154,7 @@ export default function WorkDonePage() {
     queryFn: async () => {
       const res = await _axios.get<{ success: boolean; data: any[] }>(
         "/admin/timetable/staff-list",
-        { params: { institutionId: applied.institutionId } }
+        { params: { institutionId: applied.institutionId === "all" ? "" : applied.institutionId } }
       );
       return res.data?.data ?? [];
     },
@@ -172,12 +172,12 @@ export default function WorkDonePage() {
 
   // Auto-fetch institution ID for admin
   const effectiveInstitutionId = isSuperAdmin
-    ? applied.institutionId
+    ? (applied.institutionId === "all" ? "" : applied.institutionId)
     : adminInstitutionId || "";
 
   const { data, isLoading } = useWorkDone({
     institutionId: effectiveInstitutionId,
-    staffId: applied.staffId,
+    staffId: applied.staffId === "all" ? "" : applied.staffId,
     startDate: applied.startDate,
     endDate: applied.endDate,
     page: applied.page,
@@ -188,8 +188,8 @@ export default function WorkDonePage() {
 
   const handleSearch = () => {
     setApplied({
-      institutionId: selectedInstitutionId,
-      staffId: selectedStaffId,
+      institutionId: selectedInstitutionId === "all" ? "" : selectedInstitutionId,
+      staffId: selectedStaffId === "all" ? "" : selectedStaffId,
       startDate,
       endDate,
       page: 1,
@@ -237,7 +237,7 @@ export default function WorkDonePage() {
                   <SelectValue placeholder="All Institutions" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Institutions</SelectItem>
+                  <SelectItem value="all">All Institutions</SelectItem>
                   {institutions.map((inst) => (
                     <SelectItem key={inst._id} value={inst._id}>
                       {inst.name}
@@ -258,7 +258,7 @@ export default function WorkDonePage() {
                 <SelectValue placeholder="All Teachers" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Teachers</SelectItem>
+                <SelectItem value="all">All Teachers</SelectItem>
                 {staffList.map((s) => (
                   <SelectItem key={s._id} value={s._id}>
                     {s.name}
