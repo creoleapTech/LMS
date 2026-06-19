@@ -149,7 +149,19 @@ classSessionController.patch("/:id/end", async (c) => {
   }
 
   if (session.status === "completed") {
-    throw new BadRequestError("Session already completed");
+    // Idempotent: return existing completed session instead of erroring
+    const topics = await db
+      .select({ topic: classSessionTopics.topic })
+      .from(classSessionTopics)
+      .where(eq(classSessionTopics.sessionId, id));
+
+    return c.json({
+      success: true,
+      data: {
+        ...session,
+        topicsCovered: topics.map((t: any) => t.topic),
+      },
+    });
   }
 
   const endTime = new Date();
@@ -403,11 +415,16 @@ classSessionController.get("/:id/end-quietly", async (c) => {
   const [session] = await db
     .select()
     .from(classSessions)
-    .where(and(eq(classSessions.id, id), eq(classSessions.status, "ongoing")))
+    .where(eq(classSessions.id, id))
     .limit(1);
 
   if (!session) {
     return c.json({ success: false }, 404);
+  }
+
+  // Already completed — no-op
+  if (session.status === "completed") {
+    return c.json({ success: true });
   }
 
   const endTime = new Date();
@@ -438,11 +455,16 @@ classSessionController.post("/heartbeat/:id", async (c) => {
   const [session] = await db
     .select()
     .from(classSessions)
-    .where(and(eq(classSessions.id, id), eq(classSessions.status, "ongoing")))
+    .where(eq(classSessions.id, id))
     .limit(1);
 
   if (!session) {
-    return c.json({ success: false, message: "No ongoing session found" }, 404);
+    return c.json({ success: false, message: "Session not found" }, 404);
+  }
+
+  // No-op if session is already completed — don't error
+  if (session.status === "completed") {
+    return c.json({ success: true });
   }
 
   await db

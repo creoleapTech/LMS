@@ -307,6 +307,7 @@ export default function TeachingDiaryPage() {
 
   const handleStopTeaching = async () => {
     if (!ongoingSession) return;
+    if (stoppedRef.current) return;
     stoppedRef.current = true;
     try {
       await _axios.patch(`/admin/class-session/${ongoingSession.id}/end`, {
