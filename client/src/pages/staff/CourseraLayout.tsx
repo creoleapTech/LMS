@@ -125,20 +125,11 @@ export function CourseraLayout({
       );
     };
 
-    // Tab hidden (user switches tabs/minimizes) — end session to prevent indefinite runs
-    const handleVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        handleUnload();
-      }
-    };
-
     startSession();
     window.addEventListener("beforeunload", handleUnload);
-    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       window.removeEventListener("beforeunload", handleUnload);
-      document.removeEventListener("visibilitychange", handleVisibility);
       endSession();
     };
   }, [classId, mode]);

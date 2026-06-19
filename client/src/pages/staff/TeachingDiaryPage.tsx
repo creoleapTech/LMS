@@ -34,7 +34,6 @@ import {
   Square,
   Tag,
   RefreshCw,
-  AlertTriangle,
   Pencil,
 } from "lucide-react";
 
@@ -220,7 +219,7 @@ export default function TeachingDiaryPage() {
       return res.data || [];
     },
     enabled: !!staffId,
-    staleTime: 15 * 1000,
+    staleTime: 60 * 1000,
   });
 
   const todaySessions = useMemo(
@@ -233,18 +232,27 @@ export default function TeachingDiaryPage() {
     [sessions],
   );
 
-  const isStale = useMemo(() => {
-    if (!ongoingSession) return false;
-    const age = Date.now() - new Date(ongoingSession.updatedAt).getTime();
-    return age > STALE_THRESHOLD_MINUTES * 60 * 1000;
-  }, [ongoingSession]);
-
   const stoppedRef = useRef(false);
   const [elapsed, setElapsed] = useState("00:00");
 
+  // Auto-close stale sessions silently on mount
+  useEffect(() => {
+    if (!ongoingSession) return;
+    const age = Date.now() - new Date(ongoingSession.updatedAt).getTime();
+    if (age > STALE_THRESHOLD_MINUTES * 60 * 1000) {
+      stoppedRef.current = true;
+      _axios.patch(`/admin/class-session/${ongoingSession.id}/end`, {
+        remarks: "[auto-closed: stale on page load]",
+        topicsCovered: [],
+      }).then(() => refetch()).catch(() => {});
+    }
+  }, []); // only on mount
+
   // Heartbeat timer
   useEffect(() => {
-    if (!ongoingSession || isStale) return;
+    if (!ongoingSession) return;
+    const age = Date.now() - new Date(ongoingSession.updatedAt).getTime();
+    if (age > STALE_THRESHOLD_MINUTES * 60 * 1000) return;
     stoppedRef.current = false;
 
     const beat = async () => {
@@ -259,7 +267,7 @@ export default function TeachingDiaryPage() {
     beat();
     const interval = setInterval(beat, HEARTBEAT_INTERVAL);
     return () => clearInterval(interval);
-  }, [ongoingSession, isStale]);
+  }, [ongoingSession]);
 
   // Elapsed timer
   useEffect(() => {
@@ -273,28 +281,18 @@ export default function TeachingDiaryPage() {
     return () => clearInterval(interval);
   }, [ongoingSession]);
 
-  // Flush on tab close / visibility change — end session reliably
+  // End session on actual tab close (sendBeacon is the only reliable way)
   useEffect(() => {
+    if (!ongoingSession) return;
     const handleUnload = () => {
-      if (!ongoingSession || stoppedRef.current) return;
+      if (stoppedRef.current) return;
       stoppedRef.current = true;
       navigator.sendBeacon(
         `${_axios.defaults.baseURL?.replace(/\/api$/, "") || ""}/admin/class-session/${ongoingSession.id}/end-quietly`,
       );
     };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "hidden" && ongoingSession && !stoppedRef.current) {
-        handleUnload();
-      }
-    };
-
     window.addEventListener("beforeunload", handleUnload);
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      window.removeEventListener("beforeunload", handleUnload);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
+    return () => window.removeEventListener("beforeunload", handleUnload);
   }, [ongoingSession]);
 
   // ── Actions ──
@@ -313,20 +311,6 @@ export default function TeachingDiaryPage() {
     try {
       await _axios.patch(`/admin/class-session/${ongoingSession.id}/end`, {
         remarks: "",
-        topicsCovered: [],
-      });
-      refetch();
-    } catch {
-      // silent
-    }
-  };
-
-  const handleRecoverSession = async () => {
-    if (!ongoingSession) return;
-    stoppedRef.current = true;
-    try {
-      await _axios.patch(`/admin/class-session/${ongoingSession.id}/end`, {
-        remarks: "[recovered: stale]",
         topicsCovered: [],
       });
       refetch();
@@ -395,31 +379,6 @@ export default function TeachingDiaryPage() {
             </div>
           </div>
         </div>
-
-        {/* ── Stale session banner ── */}
-        {ongoingSession && isStale && (
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-800">
-                Stale session detected
-              </p>
-              <p className="text-xs text-amber-600">
-                {getClassLabel(ongoingSession.classId)} — started{" "}
-                {formatTime(ongoingSession.startTime)}
-              </p>
-            </div>
-            <Button
-              onClick={handleRecoverSession}
-              size="sm"
-              variant="outline"
-              className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-100 rounded-xl"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Close & Recover
-            </Button>
-          </div>
-        )}
 
         {/* ── Controls ── */}
         <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-white rounded-2xl shadow-sm border">
@@ -538,7 +497,7 @@ export default function TeachingDiaryPage() {
         )}
 
         {/* ── Ongoing session indicator (global) ── */}
-        {ongoingSession && !isStale && selectedClassId === "all" && (
+        {ongoingSession && Date.now() - new Date(ongoingSession.updatedAt).getTime() < STALE_THRESHOLD_MINUTES * 60 * 1000 && selectedClassId === "all" && (
           <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl flex items-center gap-3">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
