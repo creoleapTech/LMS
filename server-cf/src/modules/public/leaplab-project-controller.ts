@@ -5,7 +5,7 @@ import { eq, and, desc, count } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
-import { leaplabProjects } from "../../schema/leaplab";
+import { leaplabCredentials, leaplabProjects } from "../../schema/leaplab";
 import { saveFile, deleteFile, deliverFile } from "../../lib/file";
 import { nowISO } from "../../lib/utils";
 import { userAuth } from "../../middleware/user-auth";
@@ -210,23 +210,32 @@ app.post("/", zValidator("form", createSchema), async (c) => {
     throw new BadRequestError("Project file is required");
   }
 
-  // Enforce a 50-project limit per module (mode) for this user.
-  const [{ projectCount }] = await getDb(c.env.DB)
-    .select({ projectCount: count() })
-    .from(leaplabProjects)
-    .where(
-      and(
-        eq(leaplabProjects.credentialId, credentialId),
-        eq(leaplabProjects.mode, body.mode),
-        eq(leaplabProjects.isDeleted, 0),
-      ),
-    );
+  // Check if this credential has unlimited access (skip project limit)
+  const [cred] = await getDb(c.env.DB)
+    .select({ isUnlimited: leaplabCredentials.isUnlimited })
+    .from(leaplabCredentials)
+    .where(eq(leaplabCredentials.id, credentialId))
+    .limit(1);
 
-  const PROJECT_LIMIT_PER_MODULE = 50;
-  if (projectCount >= PROJECT_LIMIT_PER_MODULE) {
-    throw new BadRequestError(
-      `You have reached the limit of ${PROJECT_LIMIT_PER_MODULE} projects for this module. Please delete an existing project before saving a new one.`
-    );
+  if (!cred?.isUnlimited) {
+    // Enforce a 50-project limit per module (mode) for this user.
+    const [{ projectCount }] = await getDb(c.env.DB)
+      .select({ projectCount: count() })
+      .from(leaplabProjects)
+      .where(
+        and(
+          eq(leaplabProjects.credentialId, credentialId),
+          eq(leaplabProjects.mode, body.mode),
+          eq(leaplabProjects.isDeleted, 0),
+        ),
+      );
+
+    const PROJECT_LIMIT_PER_MODULE = 50;
+    if (projectCount >= PROJECT_LIMIT_PER_MODULE) {
+      throw new BadRequestError(
+        `You have reached the limit of ${PROJECT_LIMIT_PER_MODULE} projects for this module. Please delete an existing project before saving a new one.`
+      );
+    }
   }
 
   const projectId = uuid();

@@ -10,6 +10,7 @@ export const leaplabCredentials = sqliteTable(
     username: text("username").notNull(),
     password: text("password").notNull(),
     isActive: integer("is_active").default(1),
+    isUnlimited: integer("is_unlimited").default(0),
     isDeleted: integer("is_deleted").default(0),
     createdAt: text("created_at"),
     updatedAt: text("updated_at"),
