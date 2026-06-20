@@ -13,6 +13,12 @@ export interface IPeriodConfig {
   workingDays: number[];
 }
 
+export interface IChapterTopicGroup {
+  chapterId: string | null;
+  chapterTitle: string | null;
+  subtopics: { contentId: string | null; title: string }[];
+}
+
 export interface ITimetableEntry {
   _id: string;
   institutionId: string;
@@ -27,6 +33,7 @@ export interface ITimetableEntry {
   notes?: string;
   status: "scheduled" | "completed" | "cancelled";
   topicsCovered?: string[];
+  chapterTopics?: IChapterTopicGroup[];
   completedAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -41,7 +48,7 @@ export interface IMonthSummary {
 
 export interface CreateTimetableEntryDTO {
   classId: string;
-  additionalClassId?: string;
+  additionalClassId?: string | null;
   gradeBookId?: string;
   periodNumber: number;
   dayOfWeek: number;

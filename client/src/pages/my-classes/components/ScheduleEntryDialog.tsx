@@ -93,8 +93,12 @@ export function ScheduleEntryDialog({
   }, [classes]);
 
   const availableAdditionalClasses = useMemo(() => {
-    return (classes || []).filter((c) => c._id !== classId);
-  }, [classes, classId]);
+    return (classes || []).filter((c) => {
+      if (c._id === classId) return false;
+      if (selectedGrade && c.grade) return c.grade === selectedGrade;
+      return true;
+    });
+  }, [classes, classId, selectedGrade]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -181,7 +185,7 @@ export function ScheduleEntryDialog({
           data: {
             classId,
             gradeBookId: gradeBookId || undefined,
-            additionalClassId: additionalClassId || undefined,
+            additionalClassId: additionalClassId || null,
             notes: notes || undefined,
           },
         },
@@ -192,7 +196,7 @@ export function ScheduleEntryDialog({
         {
           classId,
           gradeBookId: gradeBookId || undefined,
-          additionalClassId: additionalClassId || undefined,
+          additionalClassId: additionalClassId || null,
           periodNumber,
           dayOfWeek,
           isRecurring,
@@ -274,7 +278,7 @@ export function ScheduleEntryDialog({
           </div>
 
           {/* Combined Class */}
-          {availableAdditionalClasses.length > 0 && (
+          {(isEdit || availableAdditionalClasses.length > 0) && (
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                 <GraduationCap size={12} />

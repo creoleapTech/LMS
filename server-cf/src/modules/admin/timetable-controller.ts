@@ -125,27 +125,71 @@ async function batchEnrichTimetableEntries(db: any, entries: any[]) {
     for (const r of rows) gbMap.set(r.id, r);
   }
 
-  const topicsMap = new Map<string, string[]>();
+  const topicsMap = new Map<string, { topic: string; chapterId: string | null; contentId: string | null }[]>();
   if (entryIds.length > 0) {
     const rows = await db
-      .select({ timetableEntryId: timetableTopicsCovered.timetableEntryId, topic: timetableTopicsCovered.topic })
+      .select({
+        timetableEntryId: timetableTopicsCovered.timetableEntryId,
+        topic: timetableTopicsCovered.topic,
+        chapterId: timetableTopicsCovered.chapterId,
+        contentId: timetableTopicsCovered.contentId,
+      })
       .from(timetableTopicsCovered)
       .where(inArray(timetableTopicsCovered.timetableEntryId, entryIds));
     for (const r of rows) {
       const arr = topicsMap.get(r.timetableEntryId) || [];
-      arr.push(r.topic);
+      arr.push({ topic: r.topic, chapterId: r.chapterId, contentId: r.contentId });
       topicsMap.set(r.timetableEntryId, arr);
     }
   }
 
+  // Batch fetch chapter and content names
+  const allChapterIds = [...new Set(entryIds.flatMap((id) => (topicsMap.get(id) || []).map((t) => t.chapterId).filter(Boolean)))] as string[];
+  const allContentIds = [...new Set(entryIds.flatMap((id) => (topicsMap.get(id) || []).map((t) => t.contentId).filter(Boolean)))] as string[];
+
+  const [chapterRows, contentRows] = await Promise.all([
+    allChapterIds.length > 0
+      ? db.select({ id: chapters.id, title: chapters.title, chapterNumber: chapters.chapterNumber }).from(chapters).where(inArray(chapters.id, allChapterIds))
+      : ([] as any[]),
+    allContentIds.length > 0
+      ? db.select({ id: chapterContents.id, title: chapterContents.title }).from(chapterContents).where(inArray(chapterContents.id, allContentIds))
+      : ([] as any[]),
+  ]);
+
+  const chapterMap = new Map<string, any>(chapterRows.map((r: any) => [r.id, r]));
+  const contentMap = new Map<string, any>(contentRows.map((r: any) => [r.id, r]));
+
   return entries.map((entry) => {
     const { __omitTopicsCovered, ...entryWithoutInternalFields } = entry;
+    const rawTopics = topicsMap.get(entry.id) || [];
+
+    // Build structured chapter topics
+    const chapterGroups = new Map<string | null, { chapterId: string | null; chapterTitle: string | null; subtopics: { contentId: string | null; title: string }[] }>();
+    for (const t of rawTopics) {
+      const ch = t.chapterId ? chapterMap.get(t.chapterId) : null;
+      const ct = t.contentId ? contentMap.get(t.contentId) : null;
+      const key = t.chapterId || "__no_chapter__";
+      const existing = chapterGroups.get(key);
+      const subtopic = { contentId: t.contentId, title: ct?.title || t.topic };
+      if (existing) {
+        existing.subtopics.push(subtopic);
+      } else {
+        chapterGroups.set(key, {
+          chapterId: t.chapterId,
+          chapterTitle: ch ? `Chapter ${ch.chapterNumber ?? ""}: ${ch.title || ""}` : null,
+          subtopics: [subtopic],
+        });
+      }
+    }
+    const chapterTopics = [...chapterGroups.values()];
+
     return {
       ...entryWithoutInternalFields,
       classId: entry.classId ? classMap.get(entry.classId) || null : null,
       additionalClassId: entry.additionalClassId ? classMap.get(entry.additionalClassId) || null : null,
       gradeBookId: entry.gradeBookId ? gbMap.get(entry.gradeBookId) || null : null,
-      topicsCovered: __omitTopicsCovered ? [] : topicsMap.get(entry.id) || [],
+      topicsCovered: __omitTopicsCovered ? [] : rawTopics.map((t: any) => t.topic),
+      chapterTopics: __omitTopicsCovered ? [] : chapterTopics,
     };
   });
 }

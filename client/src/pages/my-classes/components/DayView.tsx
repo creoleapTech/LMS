@@ -588,7 +588,27 @@ function ScheduledRow({
               {entry.notes}
             </p>
           )}
-          {entry.topicsCovered && entry.topicsCovered.length > 0 && (
+          {entry.chapterTopics && entry.chapterTopics.length > 0 ? (
+            <div className="space-y-1.5">
+              {entry.chapterTopics.map((group) => (
+                <div key={group.chapterId || "__no_chapter__"}>
+                  {group.chapterTitle && (
+                    <p className="text-[10px] font-bold text-indigo-600 mb-0.5">{group.chapterTitle}</p>
+                  )}
+                  <div className="flex flex-wrap gap-1">
+                    {group.subtopics.map((st, j) => (
+                      <span
+                        key={j}
+                        className="text-[10px] bg-[var(--neo-bg)] shadow-[inset_1px_1px_3px_var(--neo-shadow-dark),inset_-1px_-1px_3px_var(--neo-shadow-light)] text-slate-600 px-2 py-0.5 rounded-full font-semibold"
+                      >
+                        {st.title}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : entry.topicsCovered && entry.topicsCovered.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {entry.topicsCovered.map((t, i) => (
                 <span
@@ -599,7 +619,7 @@ function ScheduledRow({
                 </span>
               ))}
             </div>
-          )}
+          ) : null}
           {isCompleted && session?.durationMinutes && (
             <div className="flex items-center gap-1 text-[10px] text-emerald-700 font-semibold">
               <Timer size={10} />

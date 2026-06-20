@@ -155,8 +155,16 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period, sessio
     ? typeof entry.classId === "object" ? entry.classId._id : entry.classId
     : null;
 
-  // Filter out current class from additional class options
-  const availableClasses = teacherClasses.filter((c) => c._id !== currentClassId);
+  const currentClassGrade = entry?.classId && typeof entry.classId === "object"
+    ? entry.classId.grade
+    : null;
+
+  // Filter: same grade only, exclude current class
+  const availableClasses = teacherClasses.filter((c) => {
+    if (c._id === currentClassId) return false;
+    if (currentClassGrade && c.grade) return c.grade === currentClassGrade;
+    return true;
+  });
 
   // Fetch existing class session for this entry + date
   const { data: daySessions } = useClassSessions(
@@ -310,7 +318,7 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period, sessio
       startTime: startTime || undefined,
       endTime: endTime || undefined,
       durationMinutes: typeof durationMinutes === "number" ? durationMinutes : undefined,
-      additionalClassId: additionalClassId || undefined,
+      additionalClassId: additionalClassId || null,
       sessionId: matchedSession?.id || matchedSession?._id || undefined,
     };
 
@@ -363,7 +371,7 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period, sessio
         <div className="px-6 pb-6 pt-4 space-y-5">
 
           {/* ── Additional Class ── */}
-          {availableClasses.length > 0 && (
+          {(isCompleted || availableClasses.length > 0) && (
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                 <GraduationCap size={12} />
