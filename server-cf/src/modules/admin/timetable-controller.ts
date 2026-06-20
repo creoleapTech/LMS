@@ -99,10 +99,43 @@ async function getWorkingDays(db: any, institutionId: string): Promise<number[]>
   return rows.length > 0 ? rows.map((r: any) => r.day) : [1, 2, 3, 4, 5];
 }
 
+/** Parse additional_class_id which may be a JSON array or a legacy single ID. */
+function parseAdditionalClassIds(val: any): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  try {
+    const p = JSON.parse(val);
+    if (Array.isArray(p)) return p;
+  } catch {}
+  return [val];
+}
+
+/** Serialize additional class IDs to JSON array string for DB storage. */
+function serializeAdditionalClassIds(ids: string[] | undefined | null): string | null {
+  if (!ids || ids.length === 0) return null;
+  return JSON.stringify(ids);
+}
+
+/** Resolve additional class IDs from body (supports `additionalClassIds` array or legacy `additionalClassId`), falling back to a default. */
+function resolveAdditionalClassIds(body: any, fallback: any): string | null {
+  if (body.additionalClassIds !== undefined) {
+    return serializeAdditionalClassIds(body.additionalClassIds);
+  }
+  if (body.additionalClassId !== undefined) {
+    return serializeAdditionalClassIds(parseAdditionalClassIds(body.additionalClassId));
+  }
+  return fallback;
+}
+
 /** Batch-enrich timetable entries with class, gradeBook and topics. */
 async function batchEnrichTimetableEntries(db: any, entries: any[]) {
   const allClassIds = [
-    ...new Set(entries.flatMap((e) => [e.classId, e.additionalClassId].filter(Boolean))),
+    ...new Set(
+      entries.flatMap((e) => [
+        e.classId,
+        ...parseAdditionalClassIds(e.additionalClassId),
+      ].filter(Boolean)),
+    ),
   ];
   const gbIds = [...new Set(entries.map((e) => e.gradeBookId).filter(Boolean))];
   const entryIds = entries.map((e) => e.id);
@@ -186,7 +219,10 @@ async function batchEnrichTimetableEntries(db: any, entries: any[]) {
     return {
       ...entryWithoutInternalFields,
       classId: entry.classId ? classMap.get(entry.classId) || null : null,
-      additionalClassId: entry.additionalClassId ? classMap.get(entry.additionalClassId) || null : null,
+      additionalClassId: entry.additionalClassId,
+      additionalClasses: parseAdditionalClassIds(entry.additionalClassId)
+        .map((id: string) => classMap.get(id))
+        .filter(Boolean),
       gradeBookId: entry.gradeBookId ? gbMap.get(entry.gradeBookId) || null : null,
       topicsCovered: __omitTopicsCovered ? [] : rawTopics.map((t: any) => t.topic),
       chapterTopics: __omitTopicsCovered ? [] : chapterTopics,
@@ -575,7 +611,7 @@ timetableController.post("/", async (c) => {
     institutionId,
     staffId,
     classId: body.classId,
-    additionalClassId: body.additionalClassId || null,
+    additionalClassId: serializeAdditionalClassIds(body.additionalClassIds ?? (body.additionalClassId ? [body.additionalClassId] : undefined)),
     gradeBookId: body.gradeBookId || null,
     periodNumber: body.periodNumber,
     dayOfWeek: body.dayOfWeek,
@@ -665,7 +701,7 @@ timetableController.patch("/:id", async (c) => {
       institutionId: entry.institutionId,
       staffId: entry.staffId,
       classId: body.classId || entry.classId,
-      additionalClassId: body.additionalClassId !== undefined ? body.additionalClassId : entry.additionalClassId,
+      additionalClassId: resolveAdditionalClassIds(body, entry.additionalClassId),
       gradeBookId: body.gradeBookId !== undefined ? body.gradeBookId : entry.gradeBookId,
       periodNumber: entry.periodNumber,
       dayOfWeek: entry.dayOfWeek,
@@ -716,7 +752,9 @@ timetableController.patch("/:id", async (c) => {
   // ── Non-recurring or no date: direct update ──
   const updates: Record<string, any> = { updatedAt: now };
   if (body.classId) updates.classId = body.classId;
-  if (body.additionalClassId !== undefined) updates.additionalClassId = body.additionalClassId;
+  if (body.additionalClassIds !== undefined || body.additionalClassId !== undefined) {
+    updates.additionalClassId = resolveAdditionalClassIds(body, null);
+  }
   if (body.gradeBookId !== undefined) updates.gradeBookId = body.gradeBookId;
   if (body.notes !== undefined) updates.notes = body.notes;
 
@@ -804,7 +842,7 @@ timetableController.patch("/:id/complete", async (c) => {
       institutionId: entry.institutionId,
       staffId: entryStaffId,
       classId: entryClassId,
-      additionalClassId: body.additionalClassId !== undefined ? body.additionalClassId : entry.additionalClassId,
+      additionalClassId: resolveAdditionalClassIds(body, entry.additionalClassId),
       gradeBookId: entry.gradeBookId,
       periodNumber: entry.periodNumber,
       dayOfWeek: entry.dayOfWeek,
@@ -839,7 +877,9 @@ timetableController.patch("/:id/complete", async (c) => {
       updatedAt: now,
     };
     if (body.notes !== undefined) updates.notes = body.notes;
-    if (body.additionalClassId !== undefined) updates.additionalClassId = body.additionalClassId;
+    if (body.additionalClassIds !== undefined || body.additionalClassId !== undefined) {
+      updates.additionalClassId = resolveAdditionalClassIds(body, null);
+    }
     await db.update(timetableEntries).set(updates).where(eq(timetableEntries.id, id));
   }
 
@@ -970,7 +1010,8 @@ timetableController.patch("/:id/complete", async (c) => {
   // Fetch updated/created entry with populated info
   const [updated] = await db.select().from(timetableEntries).where(eq(timetableEntries.id, targetId)).limit(1);
 
-  const allClassIds = [updated.classId, updated.additionalClassId].filter(Boolean);
+  const additionalClassIds = parseAdditionalClassIds(updated.additionalClassId);
+  const allClassIds = [updated.classId, ...additionalClassIds].filter(Boolean);
   const classMap = new Map<string, any>();
   if (allClassIds.length > 0) {
     const classRows = await db
@@ -1004,7 +1045,8 @@ timetableController.patch("/:id/complete", async (c) => {
     data: {
       ...updated,
       classId: updated.classId ? classMap.get(updated.classId) || null : null,
-      additionalClassId: updated.additionalClassId ? classMap.get(updated.additionalClassId) || null : null,
+      additionalClassId: updated.additionalClassId,
+      additionalClasses: additionalClassIds.map((id: string) => classMap.get(id)).filter(Boolean),
       gradeBookId: gradeBookInfo,
       topicsCovered: topicRows.map((t: any) => t.topic),
       chapterTopics: topicRows
@@ -1662,7 +1704,9 @@ timetableController.get("/work-done", async (c) => {
 
   // Enrich with staff, class, institution, gradeBook topics
   const staffIds: string[] = [...new Set(entries.map((e) => e.staffId).filter(Boolean))] as string[];
-  const classIds: string[] = [...new Set(entries.map((e) => e.classId).filter(Boolean))] as string[];
+  const classIds: string[] = [...new Set(
+    entries.flatMap((e) => [e.classId, ...parseAdditionalClassIds(e.additionalClassId)].filter(Boolean)),
+  )] as string[];
   const instIds: string[] = [...new Set(entries.map((e) => e.institutionId).filter(Boolean))] as string[];
   const gbIds: string[] = [...new Set(entries.map((e) => e.gradeBookId).filter(Boolean))] as string[];
   const entryIds = entries.map((e) => e.id);
@@ -1761,6 +1805,9 @@ timetableController.get("/work-done", async (c) => {
       ...entry,
       staff: entry.staffId ? staffMap.get(entry.staffId) || null : null,
       class: entry.classId ? classMap.get(entry.classId) || null : null,
+      additionalClasses: parseAdditionalClassIds(entry.additionalClassId)
+        .map((id: string) => classMap.get(id))
+        .filter(Boolean),
       institution: entry.institutionId ? instMap.get(entry.institutionId) || null : null,
       gradeBook: entry.gradeBookId ? gbMap.get(entry.gradeBookId) || null : null,
       topicsCovered,

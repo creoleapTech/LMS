@@ -99,7 +99,7 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period, sessio
   const [endTime, setEndTime] = useState("");
   const [selectedChapterIds, setSelectedChapterIds] = useState<Set<string>>(new Set());
   const [selectedContentIds, setSelectedContentIds] = useState<Set<string>>(new Set());
-  const [additionalClassId, setAdditionalClassId] = useState("");
+  const [additionalClassIds, setAdditionalClassIds] = useState<string[]>([]);
 
   const isCompleted = entry?.status === "completed";
 
@@ -211,11 +211,13 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period, sessio
     if (open && entry) {
       setSelectedChapterIds(new Set());
       setSelectedContentIds(new Set());
-      setAdditionalClassId(
-        entry.additionalClassId
-          ? (typeof entry.additionalClassId === "object" ? entry.additionalClassId._id : entry.additionalClassId)
-          : ""
-      );
+        setAdditionalClassIds(
+          entry.additionalClasses
+            ? entry.additionalClasses.map((c) => c._id)
+            : entry.additionalClassId
+              ? (() => { try { const p = JSON.parse(entry.additionalClassId!); return Array.isArray(p) ? p : [entry.additionalClassId!]; } catch { return [entry.additionalClassId!]; } })()
+              : []
+        );
 
       if (matchedSession) {
         setTopicsInput(matchedSession.topicsCovered?.join(", ") || "");
@@ -318,7 +320,7 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period, sessio
       startTime: startTime || undefined,
       endTime: endTime || undefined,
       durationMinutes: typeof durationMinutes === "number" ? durationMinutes : undefined,
-      additionalClassId: additionalClassId || null,
+      additionalClassIds: additionalClassIds.length > 0 ? additionalClassIds : [],
       sessionId: matchedSession?.id || matchedSession?._id || undefined,
     };
 
@@ -370,31 +372,62 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period, sessio
 
         <div className="px-6 pb-6 pt-4 space-y-5">
 
-          {/* ── Additional Class ── */}
+          {/* ── Combined Classes (multi-select with tags) ── */}
           {(isCompleted || availableClasses.length > 0) && (
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                 <GraduationCap size={12} />
-                Combined Class
+                Combined Classes
               </Label>
+              {additionalClassIds.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  {additionalClassIds.map((id) => {
+                    const cls = teacherClasses.find((c) => c._id === id);
+                    return (
+                      <span
+                        key={id}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full"
+                      >
+                        {cls ? getClassOptionLabel(cls) : id}
+                        <button
+                          type="button"
+                          onClick={() => setAdditionalClassIds((prev) => prev.filter((c) => c !== id))}
+                          className="cursor-pointer hover:text-amber-900"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
               <Select
-                value={additionalClassId || "__none__"}
-                onValueChange={(v) => setAdditionalClassId(v === "__none__" ? "" : v)}
+                onValueChange={(v) => {
+                  if (!additionalClassIds.includes(v)) {
+                    setAdditionalClassIds((prev) => [...prev, v]);
+                  }
+                }}
               >
                 <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="None (single class)" />
+                  <SelectValue placeholder="Add a class..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">None (single class)</SelectItem>
-                  {availableClasses.map((cls) => (
-                    <SelectItem key={cls._id} value={cls._id}>
-                      {getClassOptionLabel(cls)}
+                  {availableClasses
+                    .filter((cls) => !additionalClassIds.includes(cls._id))
+                    .map((cls) => (
+                      <SelectItem key={cls._id} value={cls._id}>
+                        {getClassOptionLabel(cls)}
+                      </SelectItem>
+                    ))}
+                  {availableClasses.filter((cls) => !additionalClassIds.includes(cls._id)).length === 0 && (
+                    <SelectItem value="__none__" disabled>
+                      No more classes available
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
               <p className="text-[10px] text-slate-400">
-                Select if two classes were combined into this period
+                Select one or more classes combined into this period
               </p>
             </div>
           )}

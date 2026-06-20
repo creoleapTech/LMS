@@ -63,11 +63,8 @@ function getClassLabel(classId: ITimetableEntry["classId"]): string {
   return "";
 }
 
-function getAdditionalClassLabel(additionalClassId: ITimetableEntry["additionalClassId"]): string {
-  if (typeof additionalClassId === "object" && additionalClassId) {
-    return `${additionalClassId.grade || ""}–${additionalClassId.section || ""}`.replace(/^–|–$/g, "");
-  }
-  return "";
+function getAdditionalClassLabel(cls: { grade?: string; section?: string }): string {
+  return `${cls.grade || ""}–${cls.section || ""}`.replace(/^–|–$/g, "");
 }
 
 function getBookLabel(gradeBookId: ITimetableEntry["gradeBookId"]): string {
@@ -535,7 +532,7 @@ function ScheduledRow({
   const borderColor = isCompleted ? COMPLETED_BORDER : colors.border;
   const badgeColor = isCompleted ? "bg-emerald-100 text-emerald-700" : colors.badge;
   const classLabel = getClassLabel(entry.classId);
-  const additionalClassLabel = getAdditionalClassLabel(entry.additionalClassId);
+  const additionalClasses = entry.additionalClasses || [];
   const bookLabel = getBookLabel(entry.gradeBookId);
 
   return (
@@ -566,11 +563,14 @@ function ScheduledRow({
             <span className="text-sm font-bold text-slate-800">
               {classLabel || "Class"}
             </span>
-            {additionalClassLabel && (
-              <span className="text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
-                + {additionalClassLabel}
+            {additionalClasses.map((cls) => (
+              <span
+                key={cls._id}
+                className="text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full"
+              >
+                + {getAdditionalClassLabel(cls)}
               </span>
-            )}
+            ))}
             {bookLabel && (
               <span className="text-[11px] font-semibold text-slate-600 neo-inset-sm px-2.5 py-1 flex items-center gap-1">
                 <BookOpen size={10} />

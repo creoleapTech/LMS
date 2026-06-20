@@ -19,12 +19,20 @@ export interface IChapterTopicGroup {
   subtopics: { contentId: string | null; title: string }[];
 }
 
+export interface IAdditionalClass {
+  _id: string;
+  grade?: string;
+  section?: string;
+  year?: string;
+}
+
 export interface ITimetableEntry {
   _id: string;
   institutionId: string;
   staffId: string;
   classId: string | { _id: string; grade?: string; section?: string; year?: string };
-  additionalClassId?: string | { _id: string; grade?: string; section?: string; year?: string };
+  additionalClassId?: string;
+  additionalClasses?: IAdditionalClass[];
   gradeBookId?: string | { _id: string; bookTitle?: string; grade?: number };
   periodNumber: number;
   dayOfWeek: number;
@@ -48,6 +56,7 @@ export interface IMonthSummary {
 
 export interface CreateTimetableEntryDTO {
   classId: string;
+  additionalClassIds?: string[];
   additionalClassId?: string | null;
   gradeBookId?: string;
   periodNumber: number;

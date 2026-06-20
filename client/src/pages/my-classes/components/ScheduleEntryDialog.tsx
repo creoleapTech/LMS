@@ -36,6 +36,14 @@ import type {
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+function safeParseClassIds(val: string): string[] {
+  try {
+    const p = JSON.parse(val);
+    if (Array.isArray(p)) return p;
+  } catch {}
+  return val ? [val] : [];
+}
+
 interface ScheduleEntryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -58,7 +66,7 @@ export function ScheduleEntryDialog({
 
   const [classId, setClassId] = useState("");
   const [gradeBookId, setGradeBookId] = useState("");
-  const [additionalClassId, setAdditionalClassId] = useState("");
+  const [additionalClassIds, setAdditionalClassIds] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [isRecurring, setIsRecurring] = useState(true);
   const [selectedGrade, setSelectedGrade] = useState("");
@@ -145,10 +153,12 @@ export function ScheduleEntryDialog({
           : "";
         setClassId(cid);
         setGradeBookId(gbid);
-        setAdditionalClassId(
-          entry.additionalClassId
-            ? (typeof entry.additionalClassId === "object" ? entry.additionalClassId._id : entry.additionalClassId)
-            : ""
+        setAdditionalClassIds(
+          entry.additionalClasses
+            ? entry.additionalClasses.map((c) => c._id)
+            : entry.additionalClassId
+              ? safeParseClassIds(entry.additionalClassId)
+              : []
         );
         setNotes(entry.notes || "");
         setIsRecurring(entry.isRecurring);
@@ -160,7 +170,7 @@ export function ScheduleEntryDialog({
       } else {
         setClassId("");
         setGradeBookId("");
-        setAdditionalClassId("");
+        setAdditionalClassIds([]);
         setNotes("");
         setIsRecurring(true);
         setSelectedGrade("");
@@ -188,7 +198,7 @@ export function ScheduleEntryDialog({
           data: {
             classId,
             gradeBookId: gradeBookId || undefined,
-            additionalClassId: additionalClassId || null,
+            additionalClassIds: additionalClassIds.length > 0 ? additionalClassIds : [],
             notes: notes || undefined,
             date: entry.isRecurring && editScope === "day" ? specificDate : undefined,
           },
@@ -200,7 +210,7 @@ export function ScheduleEntryDialog({
         {
           classId,
           gradeBookId: gradeBookId || undefined,
-          additionalClassId: additionalClassId || null,
+          additionalClassIds: additionalClassIds.length > 0 ? additionalClassIds : [],
           periodNumber,
           dayOfWeek,
           isRecurring,
@@ -311,32 +321,63 @@ export function ScheduleEntryDialog({
             )}
           </div>
 
-          {/* Combined Class */}
+          {/* Combined Classes (multi-select with tags) */}
           {(isEdit || availableAdditionalClasses.length > 0) && (
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                 <GraduationCap size={12} />
-                Combined Class
+                Combined Classes
               </Label>
+              {additionalClassIds.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  {additionalClassIds.map((id) => {
+                    const cls = classes?.find((c) => c._id === id);
+                    return (
+                      <span
+                        key={id}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full"
+                      >
+                        {cls ? `Grade ${cls.grade}–${cls.section}` : id}
+                        <button
+                          type="button"
+                          onClick={() => setAdditionalClassIds((prev) => prev.filter((c) => c !== id))}
+                          className="cursor-pointer hover:text-amber-900"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
               <Select
-                value={additionalClassId || "__none__"}
-                onValueChange={(v) => setAdditionalClassId(v === "__none__" ? "" : v)}
+                onValueChange={(v) => {
+                  if (!additionalClassIds.includes(v)) {
+                    setAdditionalClassIds((prev) => [...prev, v]);
+                  }
+                }}
               >
                 <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="None (single class)" />
+                  <SelectValue placeholder="Add a class..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">None (single class)</SelectItem>
-                  {availableAdditionalClasses.map((cls) => (
-                    <SelectItem key={cls._id} value={cls._id}>
-                      Grade {cls.grade}–{cls.section}
-                      {cls.year ? ` (${cls.year})` : ""}
+                  {availableAdditionalClasses
+                    .filter((cls) => !additionalClassIds.includes(cls._id))
+                    .map((cls) => (
+                      <SelectItem key={cls._id} value={cls._id}>
+                        Grade {cls.grade}–{cls.section}
+                        {cls.year ? ` (${cls.year})` : ""}
+                      </SelectItem>
+                    ))}
+                  {availableAdditionalClasses.filter((cls) => !additionalClassIds.includes(cls._id)).length === 0 && (
+                    <SelectItem value="__none__" disabled>
+                      No more classes available
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
               <p className="text-[10px] text-slate-400">
-                Select if two classes are combined into this period
+                Select one or more classes combined into this period
               </p>
             </div>
           )}
