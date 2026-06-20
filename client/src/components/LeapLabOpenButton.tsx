@@ -42,7 +42,7 @@ export function LeapLabOpenButton({ fileUrl, title, showDownload }: LeapLabOpenB
     };
   }, [fileUrl]);
 
-  const leapUrl = getLeapLabUrl(fileUrl);
+  const leapUrl = mode === null ? getLeapLabUrl(fileUrl) : getLeapLabUrl(fileUrl, mode);
 
   const buttonLabel = detecting
     ? "Detecting mode…"
@@ -50,7 +50,9 @@ export function LeapLabOpenButton({ fileUrl, title, showDownload }: LeapLabOpenB
       ? "Open in LeapLab Ignite"
       : mode === "intermediate"
         ? "Open in LeapLab Embed"
-        : "Open in LeapLab";
+        : mode === "electra"
+          ? "Open in Electra"
+          : "Open in LeapLab";
 
   const description = detecting
     ? "Reading LeapLab project mode…"
@@ -58,7 +60,9 @@ export function LeapLabOpenButton({ fileUrl, title, showDownload }: LeapLabOpenB
       ? "Junior block-coding workspace"
       : mode === "intermediate"
         ? "Intermediate embedded programming workspace"
-        : "Open in LeapLab to view and edit";
+        : mode === "electra"
+          ? "Electra circuit design workspace"
+          : "Open in LeapLab to view and edit";
 
   return (
     <div

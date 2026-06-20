@@ -6,7 +6,7 @@ import { v4 as uuid } from "uuid";
 import { nowISO, slugify } from "../../lib/utils";
 import { eq, and, like, sql, count, max, asc, desc } from "drizzle-orm";
 import { superAdminAuth } from "../../middleware/super-admin-auth";
-import { saveFile, deleteFile } from "../../lib/file";
+import { saveFile, deleteFile, isPptFile } from "../../lib/file";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import {
@@ -855,6 +855,9 @@ app.post("/chapter/:chapterId/content", async (c) => {
   // Handle file upload
   let fileKey = "";
   if (file) {
+    if (type === "ppt" && !isPptFile(file)) {
+      throw new BadRequestError("Only .ppt and .pptx files are allowed for PPT content");
+    }
     const folder = type === "video" ? "content/videos" : "content/docs";
     const result = await saveFile(c.env.BUCKET, file, folder);
     if (result.ok) fileKey = result.key;
@@ -963,6 +966,9 @@ app.patch("/content/:id", async (c) => {
 
     // Replace file if provided
     if (file && file.size > 0) {
+      if (existing.type === "ppt" && !isPptFile(file)) {
+        throw new BadRequestError("Only .ppt and .pptx files are allowed for PPT content");
+      }
       const folder = existing.type === "video" ? "content/videos" : "content/docs";
       // Delete old file
       if (existing.videoUrl) await deleteFile(c.env.BUCKET, existing.videoUrl);

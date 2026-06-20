@@ -10,7 +10,7 @@ import { adminAuth } from "../../middleware/admin-auth";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { chapters, chapterContents } from "../../schema/books";
-import { saveFile, deleteFile } from "../../lib/file";
+import { saveFile, deleteFile, isPptFile } from "../../lib/file";
 import {
   quizQuestions,
   quizQuestionOptions,
@@ -113,6 +113,9 @@ app.post(
     let fileUrl: string | null = null;
 
     if (file && typeof file !== "string") {
+      if (type === "ppt" && !isPptFile(file as unknown as File)) {
+        throw new BadRequestError("Only .ppt and .pptx files are allowed for PPT content");
+      }
       const folder = type === "video" ? "content/videos" : "content/docs";
       const result = await saveFile(c.env.BUCKET, file as unknown as File, folder);
       if (result.ok) {
@@ -223,6 +226,9 @@ app.patch(
     // Handle file upload
     if (file && typeof file !== "string") {
       const contentType = type || existing.type;
+      if (contentType === "ppt" && !isPptFile(file as unknown as File)) {
+        throw new BadRequestError("Only .ppt and .pptx files are allowed for PPT content");
+      }
       const folder = contentType === "video" ? "content/videos" : "content/docs";
 
       // Delete old file from R2

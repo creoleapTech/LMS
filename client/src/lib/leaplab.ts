@@ -9,13 +9,20 @@
 
 export const LEAPLAB_BASE_URL = "https://leaplab.creoleap.com";
 
-export type LeapMode = "junior" | "intermediate";
+export type LeapMode = "junior" | "intermediate" | "electra";
 
 /**
  * Build a LeapLab URL that opens the given project file.
+ *
+ * When the mode is known upfront, it is passed as the `mode` query parameter
+ * so LeapLab can route immediately without waiting for the project JSON to be
+ * fetched (this avoids a flash of the home screen).
  */
-export function getLeapLabUrl(projectUrl: string): string {
-  return `${LEAPLAB_BASE_URL}?project=${encodeURIComponent(projectUrl)}`;
+export function getLeapLabUrl(projectUrl: string, mode?: LeapMode): string {
+  const url = new URL(LEAPLAB_BASE_URL);
+  url.searchParams.set("project", projectUrl);
+  if (mode) url.searchParams.set("mode", mode);
+  return url.toString();
 }
 
 /**
@@ -51,6 +58,7 @@ export async function detectLeapMode(projectUrl: string): Promise<LeapMode | nul
     const data = await resp.json();
     if (data?.mode === "junior") return "junior";
     if (data?.mode === "intermediate") return "intermediate";
+    if (data?.mode === "electra") return "electra";
     return null;
   } catch {
     return null;

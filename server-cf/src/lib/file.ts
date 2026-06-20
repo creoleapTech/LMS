@@ -58,3 +58,17 @@ export async function getFile(
 export function deliverFile(key: string): string {
   return `/api/file/proxy?key=${encodeURIComponent(key)}`;
 }
+
+const PPT_EXTENSIONS = new Set([".ppt", ".pptx"]);
+const PPT_MIME_TYPES = new Set([
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]);
+
+export function isPptFile(file: File): boolean {
+  const name = file.name?.toLowerCase() || "";
+  const ext = "." + (name.split(".").pop() || "");
+  if (PPT_EXTENSIONS.has(ext)) return true;
+  if (PPT_MIME_TYPES.has(file.type)) return true;
+  return false;
+}
