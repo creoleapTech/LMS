@@ -55,6 +55,7 @@ export interface CreateTimetableEntryDTO {
   isRecurring: boolean;
   specificDate?: string;
   notes?: string;
+  date?: string;
 }
 
 export interface ChapterTopicItem {

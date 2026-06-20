@@ -26,7 +26,7 @@ import {
   CommandGroup,
   CommandItem,
 } from "@/components/ui/command";
-import { CalendarDays, BookOpen, Repeat, Loader2, GraduationCap, ChevronsUpDown } from "lucide-react";
+import { CalendarDays, BookOpen, Repeat, Loader2, GraduationCap, ChevronsUpDown, Calendar, RefreshCw } from "lucide-react";
 import { useTimetableMutations } from "../hooks/useTimetableMutations";
 import type {
   ITimetableEntry,
@@ -63,6 +63,7 @@ export function ScheduleEntryDialog({
   const [isRecurring, setIsRecurring] = useState(true);
   const [selectedGrade, setSelectedGrade] = useState("");
   const [classDropdownOpen, setClassDropdownOpen] = useState(false);
+  const [editScope, setEditScope] = useState<"day" | "all">("day");
   const classDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch teacher's classes
@@ -151,6 +152,7 @@ export function ScheduleEntryDialog({
         );
         setNotes(entry.notes || "");
         setIsRecurring(entry.isRecurring);
+        setEditScope("day");
         // Set grade from classId
         if (typeof entry.classId === "object" && entry.classId.grade) {
           setSelectedGrade(entry.classId.grade);
@@ -163,6 +165,7 @@ export function ScheduleEntryDialog({
         setIsRecurring(true);
         setSelectedGrade("");
         setClassDropdownOpen(false);
+        setEditScope("day");
       }
     }
   }, [open, entry]);
@@ -187,6 +190,7 @@ export function ScheduleEntryDialog({
             gradeBookId: gradeBookId || undefined,
             additionalClassId: additionalClassId || null,
             notes: notes || undefined,
+            date: entry.isRecurring && editScope === "day" ? specificDate : undefined,
           },
         },
         { onSuccess: () => onOpenChange(false) }
@@ -230,6 +234,36 @@ export function ScheduleEntryDialog({
         </div>
 
         <div className="px-6 pb-6 pt-4 space-y-4">
+          {/* Edit scope toggle (recurring entries only) */}
+          {isEdit && entry?.isRecurring && (
+            <div className="flex rounded-xl border border-slate-200 p-0.5 bg-slate-100">
+              <button
+                type="button"
+                onClick={() => setEditScope("day")}
+                className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2 px-3 rounded-[10px] transition-all cursor-pointer ${
+                  editScope === "day"
+                    ? "bg-white text-indigo-700 shadow-sm border border-slate-200"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <Calendar size={13} />
+                This day only
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditScope("all")}
+                className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2 px-3 rounded-[10px] transition-all cursor-pointer ${
+                  editScope === "all"
+                    ? "bg-white text-violet-700 shadow-sm border border-slate-200"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <RefreshCw size={13} />
+                All recurring days
+              </button>
+            </div>
+          )}
+
           {/* Class select */}
           <div className="space-y-1.5" ref={classDropdownRef}>
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">

@@ -634,10 +634,90 @@ timetableController.patch("/:id", async (c) => {
     throw new BadRequestError("Timetable entry not found");
   }
 
-  const updates: Record<string, any> = { updatedAt: nowISO() };
+  const now = nowISO();
+
+  // ── Recurring entry with date → create/update one-off copy ──
+  if (entry.isRecurring === 1 && body.date) {
+    if (!entry.staffId || entry.periodNumber === null || entry.periodNumber === undefined) {
+      throw new BadRequestError("Recurring entry must have staff and period assigned");
+    }
+    const targetDateKey = toDateKey(body.date);
+    const targetSpecificDate = dateKeyToISOString(targetDateKey);
+
+    // Check for existing one-off for this date
+    const [existingOneOff] = await db
+      .select()
+      .from(timetableEntries)
+      .where(
+        and(
+          eq(timetableEntries.staffId, entry.staffId),
+          eq(timetableEntries.periodNumber, entry.periodNumber),
+          eq(timetableEntries.isRecurring, 0),
+          eq(timetableEntries.isDeleted, 0),
+          sql`${timetableEntries.specificDate} >= ${targetDateKey}`,
+          sql`${timetableEntries.specificDate} <= ${dateKeyEndISOString(targetDateKey)}`,
+        ),
+      )
+      .limit(1);
+
+    const targetId = existingOneOff?.id || uuid();
+    const oneOffValues: Record<string, any> = {
+      institutionId: entry.institutionId,
+      staffId: entry.staffId,
+      classId: body.classId || entry.classId,
+      additionalClassId: body.additionalClassId !== undefined ? body.additionalClassId : entry.additionalClassId,
+      gradeBookId: body.gradeBookId !== undefined ? body.gradeBookId : entry.gradeBookId,
+      periodNumber: entry.periodNumber,
+      dayOfWeek: entry.dayOfWeek,
+      isRecurring: 0,
+      specificDate: targetSpecificDate,
+      notes: body.notes !== undefined ? body.notes : entry.notes,
+      status: entry.status,
+      updatedAt: now,
+    };
+
+    if (existingOneOff) {
+      await db.update(timetableEntries).set(oneOffValues).where(eq(timetableEntries.id, targetId));
+    } else {
+      await db.insert(timetableEntries).values({
+        id: targetId,
+        ...oneOffValues,
+        isDeleted: 0,
+        createdAt: now,
+      });
+    }
+
+    // Fetch updated entry with populated info
+    const [updated] = await db.select().from(timetableEntries).where(eq(timetableEntries.id, targetId)).limit(1);
+
+    let classInfo = null;
+    if (updated.classId) {
+      const [cls] = await db
+        .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
+        .from(classes)
+        .where(eq(classes.id, updated.classId))
+        .limit(1);
+      classInfo = cls || null;
+    }
+
+    let gradeBookInfo = null;
+    if (updated.gradeBookId) {
+      const [gb] = await db
+        .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade })
+        .from(gradeBooks)
+        .where(eq(gradeBooks.id, updated.gradeBookId))
+        .limit(1);
+      gradeBookInfo = gb || null;
+    }
+
+    return c.json({ success: true, data: { ...updated, classId: classInfo, gradeBookId: gradeBookInfo } });
+  }
+
+  // ── Non-recurring or no date: direct update ──
+  const updates: Record<string, any> = { updatedAt: now };
   if (body.classId) updates.classId = body.classId;
   if (body.additionalClassId !== undefined) updates.additionalClassId = body.additionalClassId;
-  if (body.gradeBookId) updates.gradeBookId = body.gradeBookId;
+  if (body.gradeBookId !== undefined) updates.gradeBookId = body.gradeBookId;
   if (body.notes !== undefined) updates.notes = body.notes;
 
   await db.update(timetableEntries).set(updates).where(eq(timetableEntries.id, id));
