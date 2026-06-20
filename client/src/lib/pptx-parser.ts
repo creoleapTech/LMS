@@ -122,6 +122,7 @@ export interface TextRunData {
   letterSpacing?: number; // in points (can be negative)
   baseline?: number; // superscript/subscript offset
   caps?: "all" | "small" | "none";
+  hyperlink?: string;
 }
 
 export interface TableData {
@@ -471,6 +472,19 @@ function resolveRel(rels: Document, rId: string): string | null {
   return null;
 }
 
+/** Build a map of relationship IDs to target URLs from rels XML */
+function buildRelMap(rels: Document | null): Record<string, string> {
+  const map: Record<string, string> = {};
+  if (!rels) return map;
+  const relEls = rels.getElementsByTagName("Relationship");
+  for (let i = 0; i < relEls.length; i++) {
+    const id = relEls[i].getAttribute("Id");
+    const target = relEls[i].getAttribute("Target");
+    if (id && target) map[id] = target;
+  }
+  return map;
+}
+
 /** Get MIME type from file extension */
 function getMimeFromExt(filePath: string): string {
   const ext = filePath.split(".").pop()?.toLowerCase() || "";
@@ -749,6 +763,8 @@ async function parseSlide(
   const relsXml = await readZipText(zip, relsPath);
   const relDoc = relsXml ? parseXml(relsXml) : null;
 
+  const relMap = relDoc ? buildRelMap(relDoc) : {};
+
   const slide: SlideData = { elements: [] };
 
   // ── Background ──
@@ -851,7 +867,7 @@ async function parseSlide(
 
   // Process shapes (sp)
   for (const sp of getElementsByLocal(spTree, "sp")) {
-    const element = await parseShape(sp, themeColors, zip, relDoc);
+    const element = await parseShape(sp, themeColors, zip, relDoc, relMap);
     if (element) slide.elements.push(element);
   }
 
@@ -872,14 +888,14 @@ async function parseSlide(
     // Only handle direct children of spTree
     if (grpSp.parentElement?.localName !== "spTree") continue;
     
-    const groupElements = await parseGroupShape(grpSp, themeColors, zip, relDoc);
+        const groupElements = await parseGroupShape(grpSp, themeColors, zip, relDoc, relMap);
     slide.elements.push(...groupElements);
   }
   
   // Process tables (graphicFrame with a:tbl)
   for (const graphicFrame of getElementsByLocal(spTree, "graphicFrame")) {
     if (graphicFrame.parentElement?.localName !== "spTree") continue;
-    const element = await parseTable(graphicFrame, themeColors);
+    const element = await parseTable(graphicFrame, themeColors, relMap);
     if (element) slide.elements.push(element);
   }
 
@@ -921,7 +937,8 @@ async function parseGroupShape(
   grpSp: Element,
   themeColors: Map<string, string>,
   zip: JSZip,
-  relDoc: Document | null
+  relDoc: Document | null,
+  relMap: Record<string, string> = {},
 ): Promise<SlideElement[]> {
   const elements: SlideElement[] = [];
   
@@ -966,7 +983,7 @@ async function parseGroupShape(
   
   // Process direct child shapes
   for (const sp of Array.from(grpSp.children).filter(el => el.localName === "sp")) {
-    const element = await parseShape(sp as Element, themeColors, zip, relDoc);
+    const element = await parseShape(sp as Element, themeColors, zip, relDoc, relMap);
     if (element) {
       // Transform position relative to group
       element.position = {
@@ -995,7 +1012,7 @@ async function parseGroupShape(
   
   // Process nested groups recursively
   for (const childGrp of Array.from(grpSp.children).filter(el => el.localName === "grpSp")) {
-    const childElements = await parseGroupShape(childGrp as Element, themeColors, zip, relDoc);
+    const childElements = await parseGroupShape(childGrp as Element, themeColors, zip, relDoc, relMap);
     for (const el of childElements) {
       el.position = {
         x: grpOffX + (el.position.x - chOffX) * scaleX,
@@ -1013,7 +1030,8 @@ async function parseGroupShape(
 /** Parse a table from graphicFrame */
 async function parseTable(
   graphicFrame: Element,
-  themeColors: Map<string, string>
+  themeColors: Map<string, string>,
+  relMap: Record<string, string> = {},
 ): Promise<SlideElement | null> {
   // Find the table element
   const tbl = getFirstByLocal(graphicFrame, "tbl");
@@ -1061,7 +1079,7 @@ async function parseTable(
       
       // Parse cell text
       const txBody = getFirstByLocal(tc, "txBody");
-      const paragraphs = txBody ? parseParagraphs(txBody, themeColors) : [];
+      const paragraphs = txBody ? parseParagraphs(txBody, themeColors, relMap) : [];
       
       // Grid span and row span
       const gridSpan = parseInt(tc.getAttribute("gridSpan") || "1");
@@ -1148,7 +1166,8 @@ async function parseShape(
   sp: Element,
   themeColors: Map<string, string>,
   zip: JSZip,
-  relDoc: Document | null
+  relDoc: Document | null,
+  relMap: Record<string, string> = {},
 ): Promise<SlideElement | null> {
   const spPr = getFirstByLocal(sp, "spPr");
   if (!spPr) return null;
@@ -1204,7 +1223,7 @@ async function parseShape(
 
   // Parse text body
   const txBody = getFirstByLocal(sp, "txBody");
-  const paragraphs = txBody ? parseParagraphs(txBody, themeColors) : undefined;
+  const paragraphs = txBody ? parseParagraphs(txBody, themeColors, relMap) : undefined;
   const bodyProps = txBody ? parseBodyProps(txBody) : undefined;
 
   const hasText = paragraphs && paragraphs.some((p) => p.runs.some((r) => r.text.trim()));
@@ -1516,7 +1535,7 @@ function applyParagraphProperties(
 }
 
 /** Parse paragraphs from txBody */
-function parseParagraphs(txBody: Element, themeColors: Map<string, string>): ParagraphData[] {
+function parseParagraphs(txBody: Element, themeColors: Map<string, string>, relMap: Record<string, string> = {}): ParagraphData[] {
   const paragraphs: ParagraphData[] = [];
   const lstStyle = getDirectChildByLocal(txBody, "lstStyle");
 
@@ -1555,7 +1574,7 @@ function parseParagraphs(txBody: Element, themeColors: Map<string, string>): Par
     // Text runs
     for (const r of getElementsByLocal(p, "r")) {
       if (r.parentElement !== p) continue;
-      const run = parseTextRun(r, themeColors, defaultRunProps);
+      const run = parseTextRun(r, themeColors, relMap, defaultRunProps);
       if (run) para.runs.push(run);
     }
 
@@ -1640,7 +1659,7 @@ function parseRunProperties(rPr: Element | null, themeColors: Map<string, string
 }
 
 /** Parse a single text run */
-function parseTextRun(r: Element, themeColors: Map<string, string>, defaults?: Partial<TextRunData>): TextRunData | null {
+function parseTextRun(r: Element, themeColors: Map<string, string>, relMap: Record<string, string>, defaults?: Partial<TextRunData>): TextRunData | null {
   const tEl = getFirstByLocal(r, "t");
   if (!tEl) return null;
 
@@ -1648,6 +1667,17 @@ function parseTextRun(r: Element, themeColors: Map<string, string>, defaults?: P
   const run: TextRunData = { text };
 
   const rPr = getFirstByLocal(r, "rPr");
+
+  // Hyperlink
+  if (rPr) {
+    const hlinkClick = getFirstByLocal(rPr, "hlinkClick");
+    if (hlinkClick) {
+      const rId = hlinkClick.getAttributeNS(NS.r, "id") || hlinkClick.getAttribute("r:id");
+      if (rId && relMap[rId]) {
+        run.hyperlink = relMap[rId];
+      }
+    }
+  }
 
   const getBool = (attr: string, defaultKey: "bold" | "italic"): boolean | undefined => {
     if (rPr) {

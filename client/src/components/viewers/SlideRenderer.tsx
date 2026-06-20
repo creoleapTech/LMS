@@ -225,6 +225,10 @@ function RenderRun({ run, slideWidth, preserveWords }: { run: TextRunData; slide
     overflowWrap: preserveWords ? "normal" : undefined,
   };
 
+  if (run.hyperlink) {
+    return <a href={run.hyperlink} target="_blank" rel="noopener noreferrer" style={style}>{run.text}</a>;
+  }
+
   return <span style={style}>{run.text}</span>;
 }
 
