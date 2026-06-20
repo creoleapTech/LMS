@@ -26,6 +26,11 @@ invocation_logs = true
 [observability.traces]
 enabled = false
 
+# Close abandoned class sessions every minute.
+# A session is abandoned when it has not received a heartbeat for STALE_SESSION_MINUTES.
+[[triggers.crons]]
+cron = "* * * * *"
+
 
 [vars]
 CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-weld-psi.vercel.app,https://lms.creoleap.com"
@@ -49,6 +54,9 @@ CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-weld-psi
 
 [env.staging]
 name = "lms-api-staging"
+
+[[env.staging.triggers.crons]]
+cron = "* * * * *"
 
 [[env.staging.d1_databases]]
 binding = "DB"

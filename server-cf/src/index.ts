@@ -4,6 +4,7 @@ import { logger } from "hono/logger";
 import type { Bindings, Variables } from "./env";
 import { baseRouter } from "./modules/router";
 import { errorHandler } from "./lib/errors/handler";
+import { sweepAllStaleSessions } from "./modules/staff/class-session-controller";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -50,4 +51,9 @@ app.get("/health", (c) => c.json({ success: true, message: "Server is running" }
 
 app.route("/api", baseRouter);
 
-export default app;
+export default {
+	fetch: app.fetch,
+	scheduled: async (_event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) => {
+		ctx.waitUntil(sweepAllStaleSessions(env));
+	},
+};

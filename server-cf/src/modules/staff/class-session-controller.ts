@@ -10,7 +10,7 @@ import { classSessions } from "../../schema/staff";
 import { classSessionTopics } from "../../schema/junction";
 import { BadRequestError } from "../../lib/errors/bad-request";
 
-const STALE_SESSION_MINUTES = 2;
+export const STALE_SESSION_MINUTES = 5;
 
 // IST is UTC+5:30 — interpret date keys as Indian calendar days
 function istDayRange(dateKey: string): { start: string; end: string } {
@@ -27,18 +27,20 @@ const classSessionController = new Hono<{
 // Apply auth to all routes
 classSessionController.use("*", adminAuth);
 
-async function autoCloseStaleSessions(db: any, staffId: string) {
+async function autoCloseStaleSessions(db: any, staffId?: string) {
   const cutoff = new Date(Date.now() - STALE_SESSION_MINUTES * 60 * 1000).toISOString();
-  const stale = await db
-    .select()
-    .from(classSessions)
-    .where(
-      and(
+  const conditions = staffId
+    ? and(
         eq(classSessions.staffId, staffId),
         eq(classSessions.status, "ongoing"),
         lt(classSessions.updatedAt, cutoff),
-      ),
-    );
+      )
+    : and(
+        eq(classSessions.status, "ongoing"),
+        lt(classSessions.updatedAt, cutoff),
+      );
+
+  const stale = await db.select().from(classSessions).where(conditions);
 
   for (const s of stale) {
     const startTime = new Date(s.startTime!);
@@ -49,12 +51,25 @@ async function autoCloseStaleSessions(db: any, staffId: string) {
       .set({
         endTime: endTime.toISOString(),
         durationMinutes,
-        remarks: "[auto-closed: stale]",
+        remarks: s.remarks || "[auto-closed: stale]",
         status: "completed",
         updatedAt: nowISO(),
       })
       .where(eq(classSessions.id, s.id));
   }
+
+  return stale.length;
+}
+
+/**
+ * Sweep all stale sessions across the whole database.
+ * Exported for the cron scheduled handler.
+ */
+export async function sweepAllStaleSessions(env: Record<string, any>) {
+  const db = getDb(env.DB);
+  const closed = await autoCloseStaleSessions(db);
+  console.log(`[class-session sweep] closed ${closed} stale session(s)`);
+  return closed;
 }
 
 // ─── POST /start — start a class session ──────────

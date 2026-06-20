@@ -7,6 +7,7 @@ import { ChevronLeft, BookOpen, Loader2, Eye, GraduationCap } from "lucide-react
 import { useTeachingProgress } from "@/hooks/useTeachingProgress";
 import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
+import { getAuthToken } from "@/lib/auth-token";
 import type { TeachingMode } from "./types";
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text" | "file";
@@ -111,7 +112,10 @@ export function CourseraLayout({
       } catch {}
     };
 
-    // Tab close / browser navigate away — sendBeacon is the only reliable way
+    // Browser close / refresh / back button — use fetch with keepalive so we can
+    // send the Authorization header. navigator.sendBeacon cannot set headers, so
+    // the previous beacon was rejected by admin-auth as 401 Unauthorized.
+    const baseUrl = _axios.defaults.baseURL?.replace(/\/api$/, "") || "";
     const handleUnload = () => {
       const id = sessionIdRef.current;
       if (!id || endedRef.current) return;
@@ -120,16 +124,22 @@ export function CourseraLayout({
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
       }
-      navigator.sendBeacon(
-        `${_axios.defaults.baseURL?.replace(/\/api$/, "") || ""}/admin/class-session/${id}/end-quietly`,
-      );
+      const token = getAuthToken();
+      if (!token) return;
+      fetch(`${baseUrl}/admin/class-session/${id}/end-quietly`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        keepalive: true,
+      }).catch(() => {});
     };
 
     startSession();
     window.addEventListener("beforeunload", handleUnload);
+    window.addEventListener("pagehide", handleUnload);
 
     return () => {
       window.removeEventListener("beforeunload", handleUnload);
+      window.removeEventListener("pagehide", handleUnload);
       endSession();
     };
   }, [classId, mode]);

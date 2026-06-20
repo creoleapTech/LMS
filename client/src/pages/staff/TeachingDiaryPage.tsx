@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
+import { getAuthToken } from "@/lib/auth-token";
 import { useAuthStore } from "@/store/userAuthStore";
 import type { DiarySession } from "./hooks/useTeachingDiary";
 import { Badge } from "@/components/ui/badge";
@@ -31,14 +32,15 @@ import {
   Loader2,
   AlertCircle,
   Play,
-  Square,
   Tag,
   RefreshCw,
   Pencil,
 } from "lucide-react";
 
 const HEARTBEAT_INTERVAL = 30000;
-const STALE_THRESHOLD_MINUTES = 4;
+// Must stay in sync with the server-side STALE_SESSION_MINUTES in
+// server-cf/src/modules/staff/class-session-controller.ts
+const STALE_THRESHOLD_MINUTES = 5;
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -242,7 +244,7 @@ export default function TeachingDiaryPage() {
     if (age > STALE_THRESHOLD_MINUTES * 60 * 1000) {
       stoppedRef.current = true;
       _axios.patch(`/admin/class-session/${ongoingSession.id}/end`, {
-        remarks: "[auto-closed: stale on page load]",
+        remarks: "[auto-closed: abandoned]",
         topicsCovered: [],
       }).then(() => refetch()).catch(() => {});
     }
@@ -281,39 +283,35 @@ export default function TeachingDiaryPage() {
     return () => clearInterval(interval);
   }, [ongoingSession]);
 
-  // End session on actual tab close (sendBeacon is the only reliable way)
+  // End session on actual tab close / refresh. Use fetch with keepalive + auth
+  // header because navigator.sendBeacon cannot set the Authorization header and
+  // the quiet-end endpoint is protected by admin-auth.
   useEffect(() => {
     if (!ongoingSession) return;
+    const baseUrl = _axios.defaults.baseURL?.replace(/\/api$/, "") || "";
     const handleUnload = () => {
       if (stoppedRef.current) return;
       stoppedRef.current = true;
-      navigator.sendBeacon(
-        `${_axios.defaults.baseURL?.replace(/\/api$/, "") || ""}/admin/class-session/${ongoingSession.id}/end-quietly`,
-      );
+      const token = getAuthToken();
+      if (!token) return;
+      fetch(`${baseUrl}/admin/class-session/${ongoingSession.id}/end-quietly`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        keepalive: true,
+      }).catch(() => {});
     };
     window.addEventListener("beforeunload", handleUnload);
-    return () => window.removeEventListener("beforeunload", handleUnload);
+    window.addEventListener("pagehide", handleUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+      window.removeEventListener("pagehide", handleUnload);
+    };
   }, [ongoingSession]);
 
   // ── Actions ──
   const handleStartTeaching = async (classId: string) => {
     try {
       await _axios.post("/admin/class-session/start", { classId });
-      refetch();
-    } catch {
-      // silent
-    }
-  };
-
-  const handleStopTeaching = async () => {
-    if (!ongoingSession) return;
-    if (stoppedRef.current) return;
-    stoppedRef.current = true;
-    try {
-      await _axios.patch(`/admin/class-session/${ongoingSession.id}/end`, {
-        remarks: "",
-        topicsCovered: [],
-      });
       refetch();
     } catch {
       // silent
@@ -435,15 +433,6 @@ export default function TeachingDiaryPage() {
                   <span className="text-sm font-medium text-red-700 tabular-nums">
                     Teaching · {elapsed}
                   </span>
-                  <Button
-                    onClick={handleStopTeaching}
-                    size="sm"
-                    variant="outline"
-                    className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50 rounded-xl"
-                  >
-                    <Square className="h-3.5 w-3.5" />
-                    Stop
-                  </Button>
                 </div>
               ) : (
                 <Button
@@ -510,15 +499,9 @@ export default function TeachingDiaryPage() {
               </p>
               <p className="text-xs text-green-600 tabular-nums">{elapsed} elapsed</p>
             </div>
-            <Button
-              onClick={handleStopTeaching}
-              size="sm"
-              variant="outline"
-              className="gap-1.5 border-green-300 text-green-700 hover:bg-green-100 rounded-xl"
-            >
-              <Square className="h-3.5 w-3.5" />
-              Stop
-            </Button>
+            <span className="text-xs text-green-700 font-medium">
+              Auto-closes when you leave this page
+            </span>
           </div>
         )}
 
