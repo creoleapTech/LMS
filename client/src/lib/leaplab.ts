@@ -59,6 +59,20 @@ export async function detectLeapMode(projectUrl: string): Promise<LeapMode | nul
     if (data?.mode === "junior") return "junior";
     if (data?.mode === "intermediate") return "intermediate";
     if (data?.mode === "electra") return "electra";
+
+    // Electra projects saved before the wrapper was introduced are stored as raw
+    // circuit payloads without a mode field. They may be flat (nodes/edges/board)
+    // or nested under a `circuit` key, so we check both shapes to cover all
+    // already-uploaded trainer projects. Only the two supported Electra boards count.
+    const ELECTRA_BOARDS = ["arduino-uno", "esp32-c3"] as const;
+    const hasElectraBoard = ELECTRA_BOARDS.includes(data?.board);
+    const hasElectraCircuit =
+      (Array.isArray(data?.nodes) && Array.isArray(data?.edges)) ||
+      (Array.isArray(data?.circuit?.nodes) && Array.isArray(data?.circuit?.edges));
+    if (hasElectraCircuit && hasElectraBoard) {
+      return "electra";
+    }
+
     return null;
   } catch {
     return null;
