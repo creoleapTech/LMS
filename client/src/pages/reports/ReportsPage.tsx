@@ -8,6 +8,7 @@ import { useReportEditor, type BodyItem, type ReportTable, type ReportParams } f
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ReportBodyEditor } from "@/components/editors/ReportBodyEditor";
 import {
   Select,
   SelectContent,
@@ -58,7 +59,7 @@ export default function ReportsPage() {
     year: today.getFullYear(),
     month: today.getMonth() + 1,
   });
-  const [previewMode, setPreviewMode] = useState(false);
+  const [previewMode] = useState(false);
   const [showAddTableDialog, setShowAddTableDialog] = useState(false);
   const [newTableCols, setNewTableCols] = useState("");
   const [newTableTitle, setNewTableTitle] = useState("");
@@ -240,6 +241,7 @@ export default function ReportsPage() {
           <SubmittedReportsView
             institutionId={effectiveInstitutionId || undefined}
             isSuperAdmin={isSuperAdmin}
+            staffList={staffList}
           />
         ) : (
           <MySubmissionsView
@@ -397,6 +399,7 @@ export default function ReportsPage() {
               </div>
               <div className="h-5 w-px bg-slate-300 mx-1 shrink-0" />
               <div className="flex items-center gap-1.5">
+                {/* Preview disabled — uncomment to re-enable
                 <Button
                   onClick={() => setPreviewMode(!previewMode)}
                   variant={previewMode ? "default" : "outline"}
@@ -406,6 +409,7 @@ export default function ReportsPage() {
                   {previewMode ? <Pencil size={14} /> : <Eye size={14} />}
                   {previewMode ? "Edit" : "Preview"}
                 </Button>
+                */}
                 <Button
                   onClick={handleRegenerate}
                   disabled={isGenerating}
@@ -441,7 +445,7 @@ export default function ReportsPage() {
                       src={signatureUrl}
                       alt="Signature"
                       onError={() => setSignatureLoadError(true)}
-                      className="h-8 w-auto object-contain border border-slate-200 rounded"
+                      className="h-10 w-24 object-contain border border-slate-200 rounded"
                     />
                   )}
                 </>
@@ -841,21 +845,22 @@ function BodyItemEditor({
             Same page
           </label>
         </div>
-        {content.type === "heading" ? (
-          <Input
-            value={content.text}
-            onChange={(e) => updateText(e.target.value)}
-            placeholder="Heading text..."
-            className="flex-1 rounded-lg font-bold text-base"
-          />
-        ) : (
-          <Textarea
-            value={content.text}
-            onChange={(e) => updateText(e.target.value)}
-            placeholder="Paragraph text..."
-            className="flex-1 rounded-lg text-sm min-h-[60px] resize-y"
-          />
-        )}
+        <div className="flex-1 flex flex-col gap-1.5">
+          {content.type === "heading" ? (
+            <Input
+              value={content.text}
+              onChange={(e) => updateText(e.target.value)}
+              placeholder="Heading text..."
+              className="flex-1 rounded-lg font-bold text-base"
+            />
+          ) : (
+            <ReportBodyEditor
+              content={content.text}
+              onChange={updateText}
+              placeholder="Write here..."
+            />
+          )}
+        </div>
         <button
           onClick={onRemove}
           className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors shrink-0 mt-1"
@@ -901,9 +906,11 @@ const BORDER_CSS = "1px solid #999999";
 
 interface Unit {
   id: string;
-  type: "heading" | "paragraph" | "table-title" | "table-header" | "table-row";
+  type: "heading" | "paragraph" | "table-title" | "table-header" | "table-row" | "signature-section";
   tableId?: number;
   text?: string;
+  format?: "plain" | "bullet" | "number";
+  bold?: boolean;
   columns?: string[];
   cells?: string[];
   style?: React.CSSProperties;
@@ -959,6 +966,10 @@ function buildUnits(data: ReportParams): Unit[] {
         units.push({ id: `body-table-row-${bi}-${ri}`, type: "table-row", tableId: tableCounter, cells: item.table.rows[ri] });
       }
     } else if (item.kind === "content" && item.content) {
+      // Check if the next item wants to stay on same page — if so, this item must keepTogether with it
+      const nextItem = bi + 1 < (data.bodyItems || []).length ? data.bodyItems![bi + 1] : null;
+      const nextWantsSamePage = !!nextItem?.keepOnSamePage;
+
       if (item.content.type === "heading") {
         units.push({
           id: `body-heading-${bi}`,
@@ -966,13 +977,15 @@ function buildUnits(data: ReportParams): Unit[] {
           text: item.content.text,
           style: { fontWeight: "bold", fontSize: hp(32), color: "#000000", marginTop: tw(300), marginBottom: tw(120) },
           forceNewPage,
-          keepTogether: item.keepOnSamePage,
+          keepTogether: item.keepOnSamePage || nextWantsSamePage,
         });
       } else {
         units.push({
           id: `body-paragraph-${bi}`,
           type: "paragraph",
           text: item.content.text,
+          format: item.content.format,
+          bold: item.content.bold,
           style: { fontSize: hp(28), marginTop: tw(80), marginBottom: tw(80), lineHeight: LINE_276 },
           forceNewPage,
           keepTogether: item.keepOnSamePage,
@@ -980,6 +993,12 @@ function buildUnits(data: ReportParams): Unit[] {
       }
     }
   }
+
+  units.push({
+    id: "signature-section",
+    type: "signature-section",
+    keepTogether: true,
+  });
 
   return units;
 }
@@ -1010,62 +1029,63 @@ function paginateUnits(units: Unit[], availableHeight: number): Unit[][] {
         while (groupStart > 0 && currentPage[groupStart - 1].keepTogether) {
           groupStart--;
         }
-        // Move the keepTogether group to the new page
-        const keepTogetherGroup = currentPage.splice(groupStart);
+        
+        // Only move the group if it doesn't take up the entire page,
+        // otherwise we would just get an infinite loop of pushing and overflowing.
+        if (groupStart > 0) {
+          // Move the keepTogether group to the new page
+          const keepTogetherGroup = currentPage.splice(groupStart);
 
-        // Also move table headers that these table rows belong to
-        // (don't move the group's own headers, just ensure rows have their header on the new page)
-
-        // End current page if it has content, otherwise just reset height
-        if (currentPage.length > 0) {
-          // Check for orphaned table headers before ending page
-          const lastItem = currentPage[currentPage.length - 1];
-          if (lastItem.type === "table-header") {
-            currentPage.pop();
-            currentHeight -= lastItem.measuredHeight || 0;
-            if (currentPage.length > 0) {
+          // End current page if it has content, otherwise just reset height
+          if (currentPage.length > 0) {
+            const lastItem = currentPage[currentPage.length - 1];
+            if (lastItem.type === "table-header") {
+              currentPage.pop();
+              currentHeight -= lastItem.measuredHeight || 0;
+              if (currentPage.length > 0) {
+                pages.push(currentPage);
+              }
+              currentPage = [];
+              currentHeight = 0;
+              currentPage.push(lastItem);
+              currentHeight += lastItem.measuredHeight || 0;
+            } else {
               pages.push(currentPage);
+              currentPage = [];
+              currentHeight = 0;
             }
-            currentPage = [];
-            currentHeight = 0;
-            currentPage.push(lastItem);
-            currentHeight += lastItem.measuredHeight || 0;
           } else {
-            pages.push(currentPage);
             currentPage = [];
             currentHeight = 0;
           }
-        } else {
-          currentPage = [];
-          currentHeight = 0;
-        }
 
-        // Repeat table headers on new page for any table rows in the group
-        const tableIdsInGroup = new Set(
-          keepTogetherGroup
-            .filter(u => u.type === "table-row" && u.tableId)
-            .map(u => u.tableId)
-        );
-        for (const tid of tableIdsInGroup) {
-          if (!currentPage.some(u => u.type === "table-header" && u.tableId === tid)) {
-            const header = units.find(u => u.type === "table-header" && u.tableId === tid);
-            if (header) {
-              currentPage.push({ ...header });
-              currentHeight += header.measuredHeight || 0;
+          // Repeat table headers on new page for any table rows in the group
+          const tableIdsInGroup = new Set(
+            keepTogetherGroup
+              .filter(u => u.type === "table-row" && u.tableId)
+              .map(u => u.tableId)
+          );
+          for (const tid of tableIdsInGroup) {
+            if (!currentPage.some(u => u.type === "table-header" && u.tableId === tid)) {
+              const header = units.find(u => u.type === "table-header" && u.tableId === tid);
+              if (header) {
+                currentPage.push({ ...header });
+                currentHeight += header.measuredHeight || 0;
+              }
             }
           }
-        }
 
-        // Add the keepTogether group to the new page
-        for (const gUnit of keepTogetherGroup) {
-          currentPage.push(gUnit);
-          currentHeight += gUnit.measuredHeight || 0;
-        }
+          // Add the keepTogether group to the new page
+          for (const gUnit of keepTogetherGroup) {
+            currentPage.push(gUnit);
+            currentHeight += gUnit.measuredHeight || 0;
+          }
 
-        // Add the current unit that triggered the overflow
-        currentPage.push(unit);
-        currentHeight += unitHeight;
-        continue;
+          // Add the current unit that triggered the overflow
+          currentPage.push(unit);
+          currentHeight += unitHeight;
+          continue;
+        }
       }
 
       // Don't orphan a table header at the bottom of a page
@@ -1160,6 +1180,129 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
 
 // ─── Render content for hidden measurement container ───
 
+function renderSignatureSection(dataUnitId?: string): React.ReactNode {
+  return (
+    <div data-unit-id={dataUnitId} style={{ marginTop: tw(100) }}>
+      <div style={{ fontWeight: "bold", fontSize: hp(28) }}>
+        Submitted on: {new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: tw(40) }}>
+        <div style={{ width: "45%" }}>
+          <div style={{ fontSize: hp(24), marginBottom: tw(40) }}>Principal's Signature</div>
+          <div style={{ borderTop: "1px solid #000000", height: "1px", width: "100%" }} />
+        </div>
+        <div style={{ width: "45%", textAlign: "left" }}>
+          <div style={{ height: "100px", width: "180px" }} />
+          <div style={{ fontSize: hp(24) }}>Trainer's Signature</div>
+          <div style={{ borderTop: "1px solid #000000", height: "1px", width: "100%", marginTop: "4px" }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function renderSignatureSectionWithData(signatureUrl: string | null | undefined, dataUnitId?: string): React.ReactNode {
+  return (
+    <div data-unit-id={dataUnitId} style={{ marginTop: tw(100) }}>
+      <div style={{ fontWeight: "bold", fontSize: hp(28) }}>
+        Submitted on: {new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: tw(40) }}>
+        <div style={{ width: "45%" }}>
+          <div style={{ fontSize: hp(24), marginBottom: tw(40) }}>Principal's Signature</div>
+          <div style={{ borderTop: "1px solid #000000", height: "1px", width: "100%" }} />
+        </div>
+        <div style={{ width: "45%", textAlign: "left" }}>
+          {signatureUrl ? (
+            <img src={signatureUrl} alt="Signature" style={{ height: "100px", width: "180px", objectFit: "contain" }} />
+          ) : (
+            <div style={{ height: "100px", width: "180px" }} />
+          )}
+          <div style={{ fontSize: hp(24) }}>Trainer's Signature</div>
+          {!signatureUrl && <div style={{ borderTop: "1px solid #000000", height: "1px", width: "100%", marginTop: "4px" }} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function parseInlineBold(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /\*\*(.*?)\*\*/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(<strong key={parts.length}>{match[1]}</strong>);
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts.length > 0 ? parts : [text];
+}
+
+function renderParagraphContent(text: string, format?: "plain" | "bullet" | "number", bold?: boolean): React.ReactNode {
+  if (!text) return null;
+
+  // HTML from Tiptap editor — render directly
+  if (text.startsWith("<")) {
+    return (
+      <div
+        className="prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_p]:my-1"
+        dangerouslySetInnerHTML={{ __html: text }}
+      />
+    );
+  }
+
+  // Legacy plain text with **bold** markdown
+  const normalized = text.replace(/\r\n/g, "\n");
+  const renderInline = (line: string) => {
+    if (bold) return <strong>{line}</strong>;
+    if (line.includes("**")) return <>{parseInlineBold(line)}</>;
+    return line;
+  };
+
+  const renderMultiline = (block: string) => {
+    const lines = block.split("\n");
+    if (lines.length === 1) return renderInline(lines[0]);
+    return (
+      <>
+        {lines.map((line, idx) => (
+          <span key={idx}>
+            {idx > 0 && <br />}
+            {renderInline(line)}
+          </span>
+        ))}
+      </>
+    );
+  };
+
+  if (format === "bullet") {
+    const items = normalized.split(/\n\n+|\n(?=\s*[•●◦▪➢►‣⁃\-*])\s*/).map(s => s.replace(/^\s*[•●◦▪➢►‣⁃\-*]\s*/, "").trim()).filter(l => l);
+    return (
+      <ul style={{ margin: 0, paddingLeft: "20px", listStyleType: "disc" }}>
+        {items.map((item, idx) => (
+          <li key={idx} style={{ marginBottom: "6px" }}>{renderMultiline(item)}</li>
+        ))}
+      </ul>
+    );
+  }
+  if (format === "number") {
+    const items = normalized.split(/\n\n+|\n(?=\s*\d+[.)]\s)/).map(s => s.replace(/^\s*\d+[.)]\s*/, "").trim()).filter(l => l);
+    return (
+      <ol style={{ margin: 0, paddingLeft: "20px" }}>
+        {items.map((item, idx) => (
+          <li key={idx} style={{ marginBottom: "6px" }}>{renderMultiline(item)}</li>
+        ))}
+      </ol>
+    );
+  }
+  return <div style={{ whiteSpace: "pre-wrap" }}>{renderInline(normalized)}</div>;
+}
+
 function renderMeasurementContent(units: Unit[]): React.ReactNode {
   const elements: React.ReactNode[] = [];
   let i = 0;
@@ -1167,7 +1310,10 @@ function renderMeasurementContent(units: Unit[]): React.ReactNode {
   while (i < units.length) {
     const unit = units[i];
 
-    if (unit.type === "table-header" || unit.type === "table-row") {
+    if (unit.type === "signature-section") {
+      elements.push(renderSignatureSection(unit.id));
+      i++;
+    } else if (unit.type === "table-header" || unit.type === "table-row") {
       const tableUnits: Unit[] = [];
       let j = i;
       while (j < units.length && (units[j].type === "table-header" || units[j].type === "table-row") && units[j].tableId === unit.tableId) {
@@ -1178,7 +1324,11 @@ function renderMeasurementContent(units: Unit[]): React.ReactNode {
       i = j;
     } else {
       elements.push(
-        <div key={unit.id} data-unit-id={unit.id} style={unit.style}>{unit.text}</div>
+        <div key={unit.id} data-unit-id={unit.id} style={unit.style}>
+          {unit.type === "paragraph"
+            ? renderParagraphContent(unit.text || "", unit.format, unit.bold)
+            : unit.text}
+        </div>
       );
       i++;
     }
@@ -1187,16 +1337,17 @@ function renderMeasurementContent(units: Unit[]): React.ReactNode {
   return elements;
 }
 
-// ─── Render content for a visible page ───
-
-function renderPageContent(units: Unit[]): React.ReactNode {
+function renderPageContent(units: Unit[], signatureUrl?: string | null): React.ReactNode {
   const elements: React.ReactNode[] = [];
   let i = 0;
 
   while (i < units.length) {
     const unit = units[i];
 
-    if (unit.type === "table-header" || unit.type === "table-row") {
+    if (unit.type === "signature-section") {
+      elements.push(renderSignatureSectionWithData(signatureUrl, unit.id));
+      i++;
+    } else if (unit.type === "table-header" || unit.type === "table-row") {
       const tableUnits: Unit[] = [];
       let j = i;
       while (j < units.length && (units[j].type === "table-header" || units[j].type === "table-row") && units[j].tableId === unit.tableId) {
@@ -1207,7 +1358,11 @@ function renderPageContent(units: Unit[]): React.ReactNode {
       i = j;
     } else {
       elements.push(
-        <div key={unit.id} style={unit.style}>{unit.text}</div>
+        <div key={unit.id} style={unit.style}>
+          {unit.type === "paragraph"
+            ? renderParagraphContent(unit.text || "", unit.format, unit.bold)
+            : unit.text}
+        </div>
       );
       i++;
     }
@@ -1221,8 +1376,8 @@ function renderPageContent(units: Unit[]): React.ReactNode {
 function CoverPage({ data }: { data: ReportParams }) {
   return (
     <div style={{
-      width: `${PAGE_W}px`, minHeight: `${PAGE_H}px`, padding: `${MARGIN}px`, paddingLeft: `${LEFT_MARGIN}px`,
-      boxSizing: "border-box", fontFamily: "'Times New Roman', serif", color: "#000000",
+      width: `${PAGE_W}px`, height: `${PAGE_H}px`, padding: `${MARGIN}px`, paddingLeft: `${LEFT_MARGIN}px`,
+      boxSizing: "border-box", fontFamily: "'Times New Roman', serif", color: "#000000", overflow: "hidden",
     }}>
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} style={{ marginBottom: tw(200), fontSize: hp(22), lineHeight: LINE_SINGLE }}>&nbsp;</div>
@@ -1377,9 +1532,9 @@ function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUr
   return (
     <div ref={containerRef} className="w-full flex flex-col items-center">
       {/* Cover Page — scaled */}
-      <div style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px` }}>
+      <div style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px`, overflow: "hidden" }}>
         <div style={{ width: `${PAGE_W}px`, transformOrigin: "top left", transform: `scale(${scale})` }}>
-          <div style={{ position: "relative", width: `${PAGE_W}px`, minHeight: `${PAGE_H}px`, background: "white", boxShadow: PAGE_SHADOW, overflow: "hidden" }}>
+          <div style={{ position: "relative", width: `${PAGE_W}px`, height: `${PAGE_H}px`, background: "white", boxShadow: PAGE_SHADOW, overflow: "hidden" }}>
             <PageHeader assets={assets} />
             <CoverPage data={data} />
           </div>
@@ -1388,62 +1543,27 @@ function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUr
 
       {/* Content Pages — scaled */}
       {pages ? (
-        pages.map((pageUnits, i) => (
-          <div key={i} style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px` }}>
+        pages.map((pageUnits, i) => {
+          return (
+          <div key={i} style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px`, overflow: "hidden" }}>
             <div style={{ width: `${PAGE_W}px`, transformOrigin: "top left", transform: `scale(${scale})` }}>
-              <div style={{ position: "relative", width: `${PAGE_W}px`, minHeight: `${PAGE_H}px`, background: "white", boxShadow: PAGE_SHADOW, overflow: "hidden" }}>
+              <div style={{ position: "relative", width: `${PAGE_W}px`, height: `${PAGE_H}px`, background: "white", boxShadow: PAGE_SHADOW, overflow: "hidden" }}>
                 <PageHeader assets={assets} />
                 <div style={{
                   position: "relative", zIndex: 1,
-                  width: `${PAGE_W}px`, minHeight: `${PAGE_H}px`, padding: `${MARGIN}px`, paddingLeft: `${LEFT_MARGIN}px`,
-                  boxSizing: "border-box", fontFamily: "'Times New Roman', serif", color: "#000000",
+                  width: `${PAGE_W}px`, height: `${PAGE_H}px`, padding: `${MARGIN}px`, paddingLeft: `${LEFT_MARGIN}px`,
+                  boxSizing: "border-box", fontFamily: "'Times New Roman', serif", color: "#000000", overflow: "hidden",
                 }}>
-                  {renderPageContent(pageUnits)}
+                  {renderPageContent(pageUnits, signatureUrl)}
                 </div>
               </div>
             </div>
           </div>
-        ))
+          );
+        })
       ) : (
         <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
           <Loader2 className="animate-spin mx-auto" size={24} />
-        </div>
-      )}
-
-      {/* Signature Page — always last page */}
-      {pages && (
-        <div style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px` }}>
-          <div style={{ width: `${PAGE_W}px`, transformOrigin: "top left", transform: `scale(${scale})` }}>
-            <div style={{ position: "relative", width: `${PAGE_W}px`, minHeight: `${PAGE_H}px`, background: "white", boxShadow: PAGE_SHADOW, overflow: "hidden" }}>
-              <PageHeader assets={assets} />
-              <div style={{
-                position: "relative", zIndex: 1,
-                width: `${PAGE_W}px`, height: `${PAGE_H}px`, padding: `${MARGIN}px`, paddingLeft: `${LEFT_MARGIN}px`,
-                paddingBottom: `${MARGIN}px`,
-                boxSizing: "border-box", fontFamily: "'Times New Roman', serif", color: "#000000",
-                display: "flex", flexDirection: "column", justifyContent: "space-between",
-              }}>
-                <div style={{ fontWeight: "bold", fontSize: hp(28) }}>
-                  Submitted on: {new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                  <div style={{ width: "45%" }}>
-                    <div style={{ fontSize: hp(24), marginBottom: tw(40) }}>Principal's Signature</div>
-                    <div style={{ borderTop: "1px solid #000000", height: "1px", width: "100%" }} />
-                  </div>
-                  <div style={{ width: "45%", textAlign: "left" }}>
-                    {signatureUrl ? (
-                      <img src={signatureUrl} alt="Signature" style={{ height: "120px", width: "auto", objectFit: "contain", marginBottom: "4px" }} />
-                    ) : (
-                      <div style={{ height: "120px" }} />
-                    )}
-                    <div style={{ fontSize: hp(24), marginTop: tw(40) }}>Trainer's Signature</div>
-                    {!signatureUrl && <div style={{ borderTop: "1px solid #000000", height: "1px", width: "100%", marginTop: "4px" }} />}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
@@ -1463,17 +1583,23 @@ function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUr
 function SubmittedReportsView({
   institutionId,
   isSuperAdmin,
+  staffList,
 }: {
   institutionId?: string;
   isSuperAdmin: boolean;
+  staffList: { _id: string; name: string; salutation?: string; type?: string }[];
 }) {
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [filterStaffId, setFilterStaffId] = useState<string>("");
 
   useEffect(() => {
     setLoading(true);
-    const url = `/admin/timetable/submitted-reports${institutionId ? `?institutionId=${institutionId}` : ""}`;
+    let url = `/admin/timetable/submitted-reports${institutionId ? `?institutionId=${institutionId}` : ""}`;
+    if (filterStaffId && filterStaffId !== "all") {
+      url += institutionId ? `&staffId=${filterStaffId}` : `?staffId=${filterStaffId}`;
+    }
     _axios.get(url)
       .then((res) => {
         if (res.data?.success) {
@@ -1484,7 +1610,7 @@ function SubmittedReportsView({
         setReports([]);
       })
       .finally(() => setLoading(false));
-  }, [institutionId]);
+  }, [institutionId, filterStaffId]);
 
   const handleDownload = async (id: string) => {
     setDownloadingId(id);
@@ -1498,8 +1624,8 @@ function SubmittedReportsView({
       a.download = "Monthly_Report.docx";
       document.body.appendChild(a);
       a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch {
       toast.error("Failed to download report");
     } finally {
@@ -1533,6 +1659,36 @@ function SubmittedReportsView({
           {isSuperAdmin ? "All schools" : "Your school"} — {reports.length} report{reports.length !== 1 ? "s" : ""}
         </p>
       </div>
+      {staffList.length > 0 && (
+        <div className="px-5 py-3 border-b border-slate-200 bg-slate-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-violet-100 rounded-lg text-violet-600">
+              <Users size={16} />
+            </div>
+            <Select value={filterStaffId} onValueChange={setFilterStaffId}>
+              <SelectTrigger className="w-64 rounded-xl">
+                <SelectValue placeholder="All Teachers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Teachers</SelectItem>
+                {staffList.map((s) => (
+                  <SelectItem key={s._id} value={s._id}>
+                    {s.salutation ? `${s.salutation} ` : ""}{s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {filterStaffId && (
+              <button
+                onClick={() => setFilterStaffId("")}
+                className="text-xs text-slate-500 hover:text-slate-700 underline"
+              >
+                Clear filter
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -1613,8 +1769,8 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
       a.download = "Monthly_Report.docx";
       document.body.appendChild(a);
       a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch {
       toast.error("Failed to download report");
     } finally {

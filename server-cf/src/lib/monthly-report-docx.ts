@@ -41,6 +41,8 @@ export interface ReportTable {
 export interface ContentBlock {
   type: "heading" | "paragraph";
   text: string;
+  format?: "plain" | "bullet" | "number";
+  bold?: boolean;
 }
 
 export type BodyItem =
@@ -387,7 +389,7 @@ function buildSignatureSection(params: ReportParams): (Paragraph | Table)[] {
 
   elements.push(
     new Paragraph({
-      spacing: { before: 240, after: 240 },
+      spacing: { before: 60, after: 60 },
       children: [
         new TextRun({
           text: `Submitted on: ${params.submittedOn || ""}`,
@@ -412,7 +414,7 @@ function buildSignatureSection(params: ReportParams): (Paragraph | Table)[] {
         children: [
           new ImageRun({
             data: params.signatureData,
-            transformation: { width: 240, height: 80 },
+            transformation: { width: 270, height: 90 },
             type: signatureImageType,
           }),
         ],
@@ -432,7 +434,6 @@ function buildSignatureSection(params: ReportParams): (Paragraph | Table)[] {
     },
     rows: [
       new TableRow({
-        cantSplit: true,
         children: [
           new TableCell({
             width: { size: 50, type: WidthType.PERCENTAGE },
@@ -449,7 +450,6 @@ function buildSignatureSection(params: ReportParams): (Paragraph | Table)[] {
         ],
       }),
       new TableRow({
-        cantSplit: true,
         children: [
           new TableCell({
             width: { size: 50, type: WidthType.PERCENTAGE },
@@ -497,6 +497,75 @@ function buildSignatureSection(params: ReportParams): (Paragraph | Table)[] {
   return elements;
 }
 
+function parseInlineBold(text: string, baseBold: boolean): TextRun[] {
+  const runs: TextRun[] = [];
+  const regex = /\*\*(.*?)\*\*/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      runs.push(new TextRun({ text: text.slice(lastIndex, match.index), bold: baseBold, size: 28, font: "Times New Roman" }));
+    }
+    runs.push(new TextRun({ text: match[1], bold: true, size: 28, font: "Times New Roman" }));
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    runs.push(new TextRun({ text: text.slice(lastIndex), bold: baseBold, size: 28, font: "Times New Roman" }));
+  }
+  if (runs.length === 0) {
+    runs.push(new TextRun({ text, bold: baseBold, size: 28, font: "Times New Roman" }));
+  }
+  return runs;
+}
+
+// Parse HTML text from Tiptap editor into TextRun[]
+function parseHtmlInlineRuns(html: string): TextRun[] {
+  const runs: TextRun[] = [];
+  // Split by HTML tags, keeping the tags as separators
+  const parts = html.split(/(<[^>]+>)/);
+  let inBold = false;
+  let inItalic = false;
+  let inStrikethrough = false;
+
+  for (const part of parts) {
+    if (part === "<strong>" || part === "<b>") { inBold = true; continue; }
+    if (part === "</strong>" || part === "</b>") { inBold = false; continue; }
+    if (part === "<em>" || part === "<i>") { inItalic = true; continue; }
+    if (part === "</em>" || part === "</i>") { inItalic = false; continue; }
+    if (part === "<s>" || part === "<strike>" || part === "<del>") { inStrikethrough = true; continue; }
+    if (part === "</s>" || part === "</strike>" || part === "</del>") { inStrikethrough = false; continue; }
+    if (part.startsWith("<")) continue; // skip any other tags
+    if (!part) continue;
+
+    // Decode common HTML entities
+    const decoded = part
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"');
+
+    if (decoded) {
+      runs.push(new TextRun({
+        text: decoded,
+        bold: inBold,
+        italics: inItalic,
+        strike: inStrikethrough,
+        size: 28,
+        font: "Times New Roman",
+      }));
+    }
+  }
+
+  if (runs.length === 0) {
+    // Strip any remaining tags and return plain text
+    const plain = html.replace(/<[^>]+>/g, "").trim();
+    runs.push(new TextRun({ text: plain, size: 28, font: "Times New Roman" }));
+  }
+  return runs;
+}
+
 export async function generateMonthlyReportDocx(params: ReportParams): Promise<Uint8Array> {
   await loadAssets();
 
@@ -506,8 +575,12 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
   // Build body items (tables & content blocks) after the session table
   const bodyElements: (Paragraph | Table)[] = [];
   if (params.bodyItems && params.bodyItems.length > 0) {
-    for (const item of params.bodyItems) {
+    for (let bi = 0; bi < params.bodyItems.length; bi++) {
+      const item = params.bodyItems[bi];
+      const nextItem = bi + 1 < params.bodyItems.length ? params.bodyItems[bi + 1] : null;
       const pageBreakBefore = !item.keepOnSamePage;
+      // If next item wants to stay on same page, this item should keepNext
+      const keepNext = !!nextItem?.keepOnSamePage;
       if (item.kind === "table" && item.table) {
         bodyElements.push(...buildStyledTable(item.table.title, item.table.columns, item.table.rows, pageBreakBefore));
       } else if (item.kind === "content" && item.content) {
@@ -515,6 +588,7 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
           bodyElements.push(
             new Paragraph({
               heading: HeadingLevel.HEADING_2,
+              keepNext,
               spacing: { before: 300, after: 120 },
               pageBreakBefore,
               children: [
@@ -529,19 +603,84 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
             }),
           );
         } else {
-          bodyElements.push(
-            new Paragraph({
-              spacing: { before: 80, after: 80, line: 276 },
-              pageBreakBefore,
-              children: [
-                new TextRun({
-                  text: item.content.text,
-                  size: 28,
-                  font: "Times New Roman",
+          const text = item.content.text;
+          const isHtml = text.startsWith("<");
+
+          if (isHtml) {
+            // Tiptap HTML — parse structure
+            const ulMatch = text.match(/^<ul>(.*)<\/ul>$/s);
+            const olMatch = text.match(/^<ol>(.*)<\/ol>$/s);
+
+            if (ulMatch || olMatch) {
+              // List: extract <li> contents
+              const listHtml = ulMatch ? ulMatch[1] : olMatch![1];
+              const liItems = listHtml.match(/<li>(.*?)<\/li>/gs) || [];
+              for (let li = 0; li < liItems.length; li++) {
+                const inner = liItems[li].replace(/^<li>/, "").replace(/<\/li>$/, "");
+                bodyElements.push(
+                  new Paragraph({
+                    bullet: ulMatch ? { level: 0 } : undefined,
+                    numbering: olMatch ? { reference: "report-numbering", level: 0 } : undefined,
+                    spacing: { before: li === 0 ? 80 : 40, after: li === liItems.length - 1 ? 80 : 40, line: 276 },
+                    pageBreakBefore: li === 0 ? pageBreakBefore : false,
+                    children: parseHtmlInlineRuns(inner),
+                  }),
+                );
+              }
+            } else {
+              // Paragraph(s): split by </p><p> or just render as one
+              const pContents = text.match(/<p>(.*?)<\/p>/gs) || [text];
+              for (let pi = 0; pi < pContents.length; pi++) {
+                const inner = pContents[pi].replace(/^<p>/, "").replace(/<\/p>$/, "");
+                const isLast = pi === pContents.length - 1;
+                bodyElements.push(
+                  new Paragraph({
+                    spacing: { before: pi === 0 ? 80 : 40, after: isLast ? 80 : 40, line: 276 },
+                    pageBreakBefore: pi === 0 ? pageBreakBefore : false,
+                    children: parseHtmlInlineRuns(inner),
+                  }),
+                );
+              }
+            }
+          } else {
+            // Legacy plain text
+            const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+            const lines = normalized.split("\n").filter(l => l.trim());
+            const isList = item.content.format === "bullet" || item.content.format === "number";
+            const isBold = !!item.content.bold;
+
+            if (isList && lines.length > 0) {
+              for (let li = 0; li < lines.length; li++) {
+                const isFirst = li === 0;
+                const isLast = li === lines.length - 1;
+                let itemText = lines[li].trim();
+                if (item.content.format === "bullet") {
+                  itemText = itemText.replace(/^[•●◦▪➢►‣⁃\-*]\s*/, "");
+                } else if (item.content.format === "number") {
+                  itemText = itemText.replace(/^\d+[.)]\s*/, "");
+                }
+                bodyElements.push(
+                  new Paragraph({
+                    numbering: item.content.format === "number"
+                      ? { reference: "report-numbering", level: 0 }
+                      : undefined,
+                    bullet: item.content.format === "bullet" ? { level: 0 } : undefined,
+                    spacing: { before: isFirst ? 80 : 40, after: isLast ? 80 : 40, line: 276 },
+                    pageBreakBefore: isFirst ? pageBreakBefore : false,
+                    children: parseInlineBold(itemText, isBold),
+                  }),
+                );
+              }
+            } else {
+              bodyElements.push(
+                new Paragraph({
+                  spacing: { before: 80, after: 80, line: 276 },
+                  pageBreakBefore,
+                  children: parseInlineBold(text, isBold),
                 }),
-              ],
-            }),
-          );
+              );
+            }
+          }
         }
       }
     }
@@ -551,6 +690,22 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
   const signatureElements = buildSignatureSection(params);
 
   const doc = new Document({
+    numbering: {
+      config: [
+        {
+          reference: "report-numbering",
+          levels: [
+            {
+              level: 0,
+              format: "decimal",
+              text: "%1.",
+              alignment: AlignmentType.LEFT,
+              style: { paragraph: { indent: { left: 720, hanging: 360 } } },
+            },
+          ],
+        },
+      ],
+    },
     sections: [
       {
         properties: {

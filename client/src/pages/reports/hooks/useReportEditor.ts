@@ -21,6 +21,8 @@ export interface ReportTable {
 export interface ContentBlock {
   type: "heading" | "paragraph";
   text: string;
+  format?: "plain" | "bullet" | "number";
+  bold?: boolean;
 }
 
 export type BodyItem =
@@ -49,7 +51,7 @@ export function useReportEditor() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reportData, setReportData] = useState<ReportParams | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
-  const [submissionStatus, setSubmissionStatus] = useState<{ submitted: boolean; submittedAt?: string } | null>(null);
+  const [submissionStatus, setSubmissionStatus] = useState<{ submitted: boolean; submittedAt?: string; submissionId?: string } | null>(null);
 
   const generateReport = useCallback(async (params: {
     year: number;
@@ -95,11 +97,11 @@ export function useReportEditor() {
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.setAttribute("download", `Monthly_Report_${data.monthName}_${data.year}.docx`);
+      link.download = `Monthly_Report_${data.monthName}_${data.year}.docx`;
       document.body.appendChild(link);
       link.click();
-      link.remove();
-      window.URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
 
       toast.success("Report downloaded successfully");
     } catch {
@@ -233,7 +235,7 @@ export function useReportEditor() {
       const res = await _axios.post("/admin/timetable/submit-report", data);
       if (res.data?.success) {
         toast.success("Report submitted successfully");
-        setSubmissionStatus({ submitted: true, submittedAt: res.data.data?.submittedAt });
+        setSubmissionStatus({ submitted: true, submittedAt: res.data.data?.submittedAt, submissionId: res.data.data?.id });
       } else {
         throw new Error("Submit failed");
       }
@@ -256,7 +258,7 @@ export function useReportEditor() {
       if (res.data?.success) {
         const sub = res.data.data;
         if (sub) {
-          setSubmissionStatus({ submitted: true, submittedAt: sub.submittedAt });
+          setSubmissionStatus({ submitted: true, submittedAt: sub.submittedAt, submissionId: sub.id });
         } else {
           setSubmissionStatus({ submitted: false });
         }
@@ -273,7 +275,7 @@ export function useReportEditor() {
         const rd = res.data.data.reportData;
         if (rd && typeof rd === "object") {
           setReportData(rd as ReportParams);
-          setSubmissionStatus({ submitted: true, submittedAt: res.data.data.submittedAt });
+          setSubmissionStatus({ submitted: true, submittedAt: res.data.data.submittedAt, submissionId });
         }
       }
     } catch {

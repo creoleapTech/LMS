@@ -1796,6 +1796,7 @@ timetableController.post("/generate-report-docx", async (c) => {
     const body = await c.req.json<ReportParams>();
     const db = getDb(c.env.DB);
     const targetStaffId = body.staffId || (user.role === "admin" || user.role === "super_admin" ? null : user.id);
+
     const { signatureData, signatureImageType } = await loadStaffSignature(db, c.env.BUCKET, targetStaffId);
     const buffer = await generateMonthlyReportDocx({
       ...body,
@@ -2344,6 +2345,7 @@ timetableController.get("/submitted-reports", async (c) => {
 
     const db = getDb(c.env.DB);
     const queryInstitutionId = c.req.query("institutionId");
+    const queryStaffId = c.req.query("staffId");
 
     // Admin sees only their institution; super_admin can filter
     const effectiveInstitutionId =
@@ -2354,6 +2356,9 @@ timetableController.get("/submitted-reports", async (c) => {
     const conditions = [eq(reportSubmissions.isDeleted, 0)];
     if (effectiveInstitutionId) {
       conditions.push(eq(reportSubmissions.institutionId, effectiveInstitutionId));
+    }
+    if (queryStaffId) {
+      conditions.push(eq(reportSubmissions.staffId, queryStaffId));
     }
 
     const submissions = await db
