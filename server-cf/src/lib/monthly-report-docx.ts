@@ -32,6 +32,21 @@ export interface ReportRow {
   remarks: string;
 }
 
+export interface ReportTable {
+  title: string;
+  columns: string[];
+  rows: string[][];
+}
+
+export interface ContentBlock {
+  type: "heading" | "paragraph";
+  text: string;
+}
+
+export type BodyItem =
+  | { kind: "table"; table: ReportTable; keepOnSamePage?: boolean }
+  | { kind: "content"; content: ContentBlock; keepOnSamePage?: boolean };
+
 export interface ReportParams {
   monthName: string;
   year: number;
@@ -42,6 +57,12 @@ export interface ReportParams {
   sessionsPlanned: number;
   sessionsCompleted: number;
   rows: ReportRow[];
+  sessionColumns?: string[];
+  bodyItems?: BodyItem[];
+  signatureData?: ArrayBuffer | null;
+  signatureImageType?: "png" | "jpg";
+  submittedOn?: string;
+  staffId?: string | null;
 }
 
 const FROM_ORG = "CREOLEAP TECHNOLOGIES PVT LTD";
@@ -213,36 +234,40 @@ function buildCoverPage(params: ReportParams): (Paragraph | Table)[] {
   return elements;
 }
 
-function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
+function buildStyledTable(
+  title: string,
+  columns: string[],
+  dataRows: string[][],
+  pageBreakBefore = false,
+): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
 
   elements.push(
     new Paragraph({
       heading: HeadingLevel.HEADING_1,
       spacing: { after: 300 },
+      pageBreakBefore,
       children: [
         new TextRun({
-          text: "Session Summary",
+          text: title,
           bold: true,
           size: 32,
           font: "Times New Roman",
+          color: "000000",
         }),
       ],
     }),
   );
 
-  const columns = ["Date", "Class/Section", "Chapter Name", "Topic Name", "Remarks"];
-  const widths = [
-    { size: 0, type: WidthType.AUTO },
-    { size: 0, type: WidthType.AUTO },
-    { size: 23, type: WidthType.PERCENTAGE },
-    { size: 37, type: WidthType.PERCENTAGE },
-    { size: 25, type: WidthType.PERCENTAGE },
-  ] as const;
+  const colCount = columns.length;
+  const widths = Array.from({ length: colCount }, (_, i) => {
+    if (colCount <= 2) return { size: 0, type: WidthType.AUTO };
+    return { size: Math.floor(100 / colCount), type: WidthType.PERCENTAGE };
+  });
 
   const headerCells = columns.map((col, i) =>
     new TableCell({
-      width: widths[i],
+      width: widths[i] as any,
       margins: COMPACT_CELL_MARGINS,
       shading: { type: ShadingType.SOLID, color: HEADER_BLUE, fill: HEADER_BLUE },
       verticalAlign: VerticalAlign.CENTER,
@@ -271,16 +296,10 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
     children: headerCells,
   });
 
-  const dataRows = rows.map((row) => {
-    const classSection = row.section ? `${row.className}–${row.section}` : row.className;
-    const values = [
-      row.date, classSection,
-      row.chapterName, row.topicName, row.remarks,
-    ];
-
-    const cells = values.map((val, i) =>
+  const rows = dataRows.map((row) => {
+    const cells = row.map((val, i) =>
       new TableCell({
-        width: widths[i],
+        width: widths[i] as any,
         margins: COMPACT_CELL_MARGINS,
         verticalAlign: VerticalAlign.CENTER,
         borders: ALL_BORDERS,
@@ -303,11 +322,27 @@ function buildSessionTable(rows: ReportRow[]): (Paragraph | Table)[] {
     width: { size: 100, type: WidthType.PERCENTAGE },
     margins: COMPACT_CELL_MARGINS,
     layout: TableLayoutType.AUTOFIT,
-    rows: [headerRow, ...dataRows],
+    rows: [headerRow, ...rows],
   });
 
   elements.push(table);
   return elements;
+}
+
+function buildSessionTable(
+  rows: ReportRow[],
+  columnNames?: string[],
+): (Paragraph | Table)[] {
+  const columns = columnNames?.length === 5
+    ? columnNames
+    : ["Date", "Class/Section", "Chapter Name", "Topic Name", "Remarks"];
+
+  const dataRows = rows.map((row) => {
+    const classSection = row.section ? `${row.className}–${row.section}` : row.className;
+    return [row.date, classSection, row.chapterName, row.topicName, row.remarks];
+  });
+
+  return buildStyledTable("Session Summary", columns, dataRows);
 }
 
 function buildHeader(horizontalOffset: number): Header {
@@ -342,13 +377,178 @@ function buildHeader(horizontalOffset: number): Header {
   });
 }
 
+function buildSignatureSection(params: ReportParams): (Paragraph | Table)[] {
+  const elements: (Paragraph | Table)[] = [];
+
+  const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  const noBorders = { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER };
+  const signatureCellMargins = { top: 0, bottom: 0, left: 0, right: 0, marginUnitType: WidthType.DXA };
+  const signatureImageType = params.signatureImageType === "jpg" ? "jpg" : "png";
+
+  elements.push(
+    new Paragraph({
+      spacing: { before: 240, after: 240 },
+      children: [
+        new TextRun({
+          text: `Submitted on: ${params.submittedOn || ""}`,
+          bold: true,
+          size: 28,
+          font: "Times New Roman",
+          color: "000000",
+        }),
+      ],
+    }),
+  );
+
+  const blankParagraph = () => new Paragraph({
+    spacing: { before: 0, after: 0 },
+    children: [],
+  });
+
+  const signatureImageParagraph = params.signatureData
+    ? new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        spacing: { before: 0, after: 0 },
+        children: [
+          new ImageRun({
+            data: params.signatureData,
+            transformation: { width: 240, height: 80 },
+            type: signatureImageType,
+          }),
+        ],
+      })
+    : blankParagraph();
+
+  const sigTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    layout: TableLayoutType.FIXED,
+    borders: {
+      top: noBorders.top,
+      bottom: noBorders.bottom,
+      left: noBorders.left,
+      right: noBorders.right,
+      insideHorizontal: noBorders.top,
+      insideVertical: noBorders.left,
+    },
+    rows: [
+      new TableRow({
+        cantSplit: true,
+        children: [
+          new TableCell({
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            margins: signatureCellMargins,
+            borders: noBorders,
+            children: [blankParagraph()],
+          }),
+          new TableCell({
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            margins: signatureCellMargins,
+            borders: noBorders,
+            children: [signatureImageParagraph],
+          }),
+        ],
+      }),
+      new TableRow({
+        cantSplit: true,
+        children: [
+          new TableCell({
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            margins: signatureCellMargins,
+            borders: noBorders,
+            children: [
+              new Paragraph({
+                spacing: { before: 40, after: 0 },
+                children: [
+                  new TextRun({
+                    text: "Principal's Signature",
+                    size: 24,
+                    font: "Times New Roman",
+                    color: "000000",
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            margins: signatureCellMargins,
+            borders: noBorders,
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                spacing: { before: 40, after: 0 },
+                children: [
+                  new TextRun({
+                    text: "Trainer's Signature",
+                    size: 24,
+                    font: "Times New Roman",
+                    color: "000000",
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+
+  elements.push(sigTable);
+  return elements;
+}
+
 export async function generateMonthlyReportDocx(params: ReportParams): Promise<Uint8Array> {
   await loadAssets();
 
   const coverElements = buildCoverPage(params);
-  const tableElements = buildSessionTable(params.rows);
+  const tableElements = buildSessionTable(params.rows, params.sessionColumns);
+
+  // Build body items (tables & content blocks) after the session table
+  const bodyElements: (Paragraph | Table)[] = [];
+  if (params.bodyItems && params.bodyItems.length > 0) {
+    for (const item of params.bodyItems) {
+      const pageBreakBefore = !item.keepOnSamePage;
+      if (item.kind === "table" && item.table) {
+        bodyElements.push(...buildStyledTable(item.table.title, item.table.columns, item.table.rows, pageBreakBefore));
+      } else if (item.kind === "content" && item.content) {
+        if (item.content.type === "heading") {
+          bodyElements.push(
+            new Paragraph({
+              heading: HeadingLevel.HEADING_2,
+              spacing: { before: 300, after: 120 },
+              pageBreakBefore,
+              children: [
+                new TextRun({
+                  text: item.content.text,
+                  bold: true,
+                  size: 32,
+                  font: "Times New Roman",
+                  color: "000000",
+                }),
+              ],
+            }),
+          );
+        } else {
+          bodyElements.push(
+            new Paragraph({
+              spacing: { before: 80, after: 80, line: 276 },
+              pageBreakBefore,
+              children: [
+                new TextRun({
+                  text: item.content.text,
+                  size: 28,
+                  font: "Times New Roman",
+                }),
+              ],
+            }),
+          );
+        }
+      }
+    }
+  }
 
   const header = buildHeader(PORTRAIT_LOGO_OFFSET);
+  const signatureElements = buildSignatureSection(params);
 
   const doc = new Document({
     sections: [
@@ -371,7 +571,7 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
           },
         },
         headers: { default: header },
-        children: tableElements,
+        children: [...tableElements, ...bodyElements, ...signatureElements],
       },
     ],
   });

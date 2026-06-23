@@ -162,7 +162,7 @@ export function DayView({
   const effectiveReadOnly = readOnly || isPastDate;
 
   // Use the appropriate hook based on whether we're viewing own or staff timetable
-  const ownData = useTimetableDay(isAdminView ? null : dateStr);
+  const ownData = useTimetableDay(isAdminView ? null : dateStr, isAdminView ? undefined : institutionId || undefined);
   const staffData = useStaffTimetableDay(
     isAdminView ? staffId : null,
     isAdminView ? institutionId : null,
@@ -577,7 +577,7 @@ function ScheduledRow({
                 {bookLabel}
               </span>
             )}
-            {entry.isRecurring && (
+            {!!entry.isRecurring && (
               <span className="text-[9px] font-bold text-violet-700 bg-violet-100 px-1.5 py-0.5 rounded-full uppercase">
                 Recurring
               </span>

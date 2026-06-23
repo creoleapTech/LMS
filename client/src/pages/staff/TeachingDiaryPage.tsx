@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { getAuthToken } from "@/lib/auth-token";
 import { useAuthStore } from "@/store/userAuthStore";
+import { useStaffList } from "@/pages/my-classes/hooks/useStaffList";
 import type { DiarySession } from "./hooks/useTeachingDiary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,8 @@ import {
   Tag,
   RefreshCw,
   Pencil,
+  Building2,
+  Users,
 } from "lucide-react";
 
 const HEARTBEAT_INTERVAL = 30000;
@@ -183,17 +186,61 @@ export default function TeachingDiaryPage() {
   const staffId = user?._id;
   const queryClient = useQueryClient();
 
+  const role = user?.role;
+  const isAdminRole = role === "admin" || role === "super_admin";
+  const isSuperAdmin = role === "super_admin";
+
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>("");
+  const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [selectedClassId, setSelectedClassId] = useState<string>("all");
   const [editingSession, setEditingSession] = useState<DiarySession | null>(null);
 
+  const adminInstitutionId = !isSuperAdmin
+    ? (typeof user?.institutionId === "object" ? user?.institutionId?._id : user?.institutionId) || ""
+    : "";
+  const effectiveInstitutionId = isSuperAdmin ? selectedInstitutionId : adminInstitutionId;
+
+  // ── Fetch institutions (super_admin only) ──
+  const { data: institutions = [] } = useQuery<{ _id: string; name: string }[]>({
+    queryKey: ["institutions-list"],
+    queryFn: async () => {
+      const res = await _axios.get("/admin/institutions");
+      return res.data?.data ?? [];
+    },
+    enabled: isSuperAdmin,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // ── Fetch staff list (admin/super_admin only) ──
+  const { data: staffList = [], isLoading: staffLoading } = useStaffList(
+    isAdminRole ? effectiveInstitutionId || null : null
+  );
+
+  // Auto-select first institution for super_admin
+  useEffect(() => {
+    if (isSuperAdmin && institutions.length > 0 && !selectedInstitutionId) {
+      setSelectedInstitutionId(institutions[0]._id);
+    }
+  }, [isSuperAdmin, institutions, selectedInstitutionId]);
+
+  // Auto-select first staff for admin/super_admin
+  useEffect(() => {
+    if (isAdminRole && staffList.length > 0 && !selectedStaffId) {
+      setSelectedStaffId(staffList[0]._id);
+    }
+  }, [isAdminRole, staffList, selectedStaffId]);
+
+  // Determine the effective staffId to query
+  const effectiveStaffId = isAdminRole ? selectedStaffId || staffId : staffId;
+
   // ── Fetch classes ──
   const { data: classes = [] } = useQuery<{ _id: string; grade: string; section: string }[]>({
-    queryKey: ["my-classes-list", staffId],
+    queryKey: ["my-classes-list", effectiveStaffId],
     queryFn: async () => {
       const res = await _axios.get("/admin/timetable/my-classes-list");
       return res.data?.data || [];
     },
-    enabled: !!staffId,
+    enabled: !!effectiveStaffId,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -204,23 +251,25 @@ export default function TeachingDiaryPage() {
   const toDateStr = today.toISOString().split("T")[0];
   const fromDateStr = fromDate.toISOString().split("T")[0];
 
+  const diaryParams: Record<string, string> = { fromDate: fromDateStr, toDate: toDateStr };
+  if (effectiveStaffId) diaryParams.staffId = effectiveStaffId;
+  if (isSuperAdmin && selectedInstitutionId) diaryParams.institutionId = selectedInstitutionId;
+
   const {
     data: sessions = [],
     isLoading,
     isError,
     refetch,
   } = useQuery<DiarySession[]>({
-    queryKey: ["teaching-diary", staffId, fromDateStr, toDateStr],
+    queryKey: ["teaching-diary", effectiveStaffId, selectedInstitutionId, fromDateStr, toDateStr],
     queryFn: async () => {
       const { data: res } = await _axios.get<{
         success: boolean;
         data: DiarySession[];
-      }>("/admin/class-session/diary", {
-        params: { staffId, fromDate: fromDateStr, toDate: toDateStr },
-      });
+      }>("/admin/class-session/diary", { params: diaryParams });
       return res.data || [];
     },
-    enabled: !!staffId,
+    enabled: isAdminRole ? !!effectiveStaffId : !!staffId,
     staleTime: 60 * 1000,
   });
 
@@ -373,7 +422,9 @@ export default function TeachingDiaryPage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Teaching Diary</h1>
               <p className="text-sm text-slate-500">
-                Track every class you teach — auto-logged topics, precise timing, no data loss
+                {isAdminRole
+                  ? "View teaching diary for yourself and your teachers"
+                  : "Track every class you teach — auto-logged topics, precise timing, no data loss"}
               </p>
             </div>
           </div>
@@ -381,6 +432,61 @@ export default function TeachingDiaryPage() {
 
         {/* ── Controls ── */}
         <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-white rounded-2xl shadow-sm border">
+          {/* Admin/Super Admin selectors */}
+          {isAdminRole && (
+            <>
+              {isSuperAdmin && (
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-slate-400" />
+                  <Select
+                    value={selectedInstitutionId}
+                    onValueChange={(v) => {
+                      setSelectedInstitutionId(v);
+                      setSelectedStaffId("");
+                      setSelectedClassId("all");
+                    }}
+                  >
+                    <SelectTrigger className="w-56 rounded-xl">
+                      <SelectValue placeholder="Select Institution" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {institutions.map((inst) => (
+                        <SelectItem key={inst._id} value={inst._id}>
+                          {inst.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {(isSuperAdmin && selectedInstitutionId) || adminInstitutionId ? (
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-slate-400" />
+                  <Select
+                    value={selectedStaffId}
+                    onValueChange={(v) => {
+                      setSelectedStaffId(v);
+                      setSelectedClassId("all");
+                    }}
+                    disabled={staffLoading}
+                  >
+                    <SelectTrigger className="w-56 rounded-xl">
+                      <SelectValue placeholder={staffLoading ? "Loading teachers..." : "Select Teacher"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staffList.map((s) => (
+                        <SelectItem key={s._id} value={s._id}>
+                          {s.name} {s._id === staffId ? "(You)" : ""} — {s.type === "teacher" ? "Teacher" : "Admin"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+            </>
+          )}
+
           <div className="flex items-center gap-2">
             <GraduationCap className="h-4 w-4 text-slate-400" />
             <Select value={selectedClassId} onValueChange={setSelectedClassId}>
@@ -506,7 +612,19 @@ export default function TeachingDiaryPage() {
         )}
 
         {/* ── Diary entries ── */}
-        {grouped.length === 0 ? (
+        {isAdminRole && !effectiveStaffId ? (
+          <div className="text-center py-16">
+            <Users className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-slate-400 mb-2">
+              Select a teacher to view their diary
+            </h3>
+            <p className="text-slate-400">
+              {isSuperAdmin && !selectedInstitutionId
+                ? "Select an institution first, then choose a teacher."
+                : "Choose a teacher from the dropdown above to view their teaching diary."}
+            </p>
+          </div>
+        ) : grouped.length === 0 ? (
           <div className="text-center py-16">
             <CalendarDays className="h-16 w-16 text-slate-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-slate-400 mb-2">

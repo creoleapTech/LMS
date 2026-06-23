@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, real, uniqueIndex, index } from "drizzle-orm/sqlite-core";
-import { institutions } from "./admin";
+import { institutions, staff } from "./admin";
 
 // ─── academic_years ─────────────────────────────────
 export const academicYears = sqliteTable("academic_years", {
@@ -107,3 +107,23 @@ export const otpCounts = sqliteTable("otp_counts", {
   year: integer("year"),
   count: integer("count").default(0),
 });
+
+// ─── report_submissions ─────────────────────────────
+export const reportSubmissions = sqliteTable("report_submissions", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id").notNull().references(() => staff.id),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(),
+  status: text("status", { enum: ["submitted"] }).default("submitted"),
+  reportData: text("report_data"),
+  docxKey: text("docx_key"),
+  submittedAt: text("submitted_at"),
+  isDeleted: integer("is_deleted").default(0),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
+}, (table) => [
+  uniqueIndex("report_submissions_staff_year_month_idx").on(table.staffId, table.year, table.month),
+  index("report_submissions_institution_id_idx").on(table.institutionId),
+  index("report_submissions_staff_id_idx").on(table.staffId),
+]);

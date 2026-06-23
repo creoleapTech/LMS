@@ -14,15 +14,17 @@ function normalizePeriodConfig(periodConfig: IPeriodConfig | null | undefined): 
   };
 }
 
-export function useTimetableDay(date: string | null) {
+export function useTimetableDay(date: string | null, institutionId?: string) {
   return useQuery<{ entries: ITimetableEntry[]; periodConfig: IPeriodConfig | null }>({
-    queryKey: ["timetable-day", date],
+    queryKey: ["timetable-day", date, institutionId || "own"],
     queryFn: async () => {
+      const params: Record<string, string> = { date: date! };
+      if (institutionId) params.institutionId = institutionId;
       const { data: res } = await _axios.get<{
         success: boolean;
         data: { entries: ITimetableEntry[]; periodConfig: IPeriodConfig | null };
       }>("/admin/timetable/my-day", {
-        params: { date },
+        params,
       });
 
       return {

@@ -47,9 +47,11 @@ fileController.get("/proxy", async (c) => {
     const mimeType = getMimeType(key);
     const filename = key.slice(key.lastIndexOf("/") + 1);
 
+    const isImage = mimeType.startsWith("image/");
+
     const headers = new Headers();
     headers.set("Content-Type", mimeType);
-    headers.set("Content-Disposition", `attachment; filename="${filename}"`);
+    headers.set("Content-Disposition", isImage ? "inline" : `attachment; filename="${filename}"`);
     headers.set("X-Content-Type-Options", "nosniff");
     headers.set("Cache-Control", "private, max-age=3600");
 

@@ -3,11 +3,11 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
 import { nowISO } from "../../lib/utils";
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { eq, and, sql, inArray, desc } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import { institutions, staff, classes } from "../../schema/admin";
 import { gradeBooks, chapters, chapterContents } from "../../schema/books";
-import { timetableEntries, periodConfigs } from "../../schema/settings";
+import { timetableEntries, periodConfigs, reportSubmissions } from "../../schema/settings";
 import { classSessions } from "../../schema/staff";
 import { classSessionTopics } from "../../schema/junction";
 import {
@@ -20,10 +20,14 @@ import {
 } from "../../schema/junction";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
+import { saveFile, deleteFile, getFile, deliverFile } from "../../lib/file";
 import {
   generateMonthlyReportDocx,
   type ReportRow,
+  type ReportParams,
 } from "../../lib/monthly-report-docx";
+import blueStripeAsset from "../../assets/monthly-report-design.jpeg";
+import logoAsset from "../../assets/creoleap-logo-final.png";
 
 const timetableController = new Hono<{
   Bindings: Bindings;
@@ -39,6 +43,65 @@ const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
+
+async function assetToBase64(asset: string | ArrayBuffer): Promise<string | null> {
+  try {
+    let buffer: ArrayBuffer;
+    if (asset instanceof ArrayBuffer) {
+      buffer = asset;
+    } else if (typeof asset === "string") {
+      const res = await fetch(asset);
+      if (!res.ok) return null;
+      buffer = await res.arrayBuffer();
+    } else {
+      return null;
+    }
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  } catch (err) {
+    console.error("Failed to load report asset:", err);
+    return null;
+  }
+}
+
+function formatSubmittedOn(): string {
+  return new Date().toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function signatureImageTypeFromKey(signatureKey: string | null | undefined): "png" | "jpg" {
+  const key = signatureKey?.toLowerCase() || "";
+  return key.endsWith(".jpg") || key.endsWith(".jpeg") ? "jpg" : "png";
+}
+
+async function loadStaffSignature(
+  db: any,
+  bucket: R2Bucket | undefined,
+  staffId: string | null | undefined,
+): Promise<{ signatureData: ArrayBuffer | null; signatureImageType: "png" | "jpg" }> {
+  if (!staffId) return { signatureData: null, signatureImageType: "png" };
+
+  const [staffRow] = await db
+    .select({ signatureKey: staff.signatureKey })
+    .from(staff)
+    .where(eq(staff.id, staffId))
+    .limit(1);
+
+  const signatureImageType = signatureImageTypeFromKey(staffRow?.signatureKey);
+  if (!staffRow?.signatureKey) return { signatureData: null, signatureImageType };
+
+  const sigFile = await getFile(bucket, staffRow.signatureKey);
+  if (!sigFile) return { signatureData: null, signatureImageType };
+
+  return { signatureData: await sigFile.arrayBuffer(), signatureImageType };
+}
 
 function resolveInstitutionId(user: Record<string, any>): string {
   const institutionId =
@@ -292,7 +355,8 @@ function buildMonthSummary(
 timetableController.get("/my-month", async (c) => {
   const user = c.get("user") as Record<string, any>;
   const staffId = user.id;
-  const institutionId = resolveInstitutionId(user);
+  const queryInstitutionId = c.req.query("institutionId");
+  const institutionId = queryInstitutionId || resolveInstitutionId(user);
   const year = Number(c.req.query("year"));
   const month = Number(c.req.query("month"));
   const db = getDb(c.env.DB);
@@ -355,7 +419,8 @@ timetableController.get("/my-month", async (c) => {
 timetableController.get("/my-day", async (c) => {
   const user = c.get("user") as Record<string, any>;
   const staffId = user.id;
-  const institutionId = resolveInstitutionId(user);
+  const queryInstitutionId = c.req.query("institutionId");
+  const institutionId = queryInstitutionId || resolveInstitutionId(user);
   const dateStr = c.req.query("date")!;
   const dateKey = toDateKey(dateStr);
   const dow = new Date(`${dateKey}T12:00:00+05:30`).getUTCDay();
@@ -1380,13 +1445,13 @@ timetableController.get("/staff-day", async (c) => {
 
 // ═══ Monthly Report endpoints ═════════════════════
 
-async function buildMonthlyReport(
+async function buildMonthlyReportData(
   db: any,
   staffId: string,
   institutionId: string,
   year: number,
   month: number,
-): Promise<Uint8Array> {
+): Promise<ReportParams> {
   const workingDays = await getWorkingDays(db, institutionId);
 
   // Fetch all needed data in parallel
@@ -1577,7 +1642,7 @@ async function buildMonthlyReport(
     }
   }
 
-  const buffer = await generateMonthlyReportDocx({
+  return {
     monthName,
     year,
     staffNames: [trainerName],
@@ -1587,9 +1652,21 @@ async function buildMonthlyReport(
     sessionsPlanned: rows.length,
     sessionsCompleted: completedCount,
     rows,
-  });
+    sessionColumns: ["Date", "Class/Section", "Chapter Name", "Topic Name", "Remarks"],
+    bodyItems: [],
+    staffId,
+  };
+}
 
-  return buffer;
+async function buildMonthlyReport(
+  db: any,
+  staffId: string,
+  institutionId: string,
+  year: number,
+  month: number,
+): Promise<Uint8Array> {
+  const data = await buildMonthlyReportData(db, staffId, institutionId, year, month);
+  return generateMonthlyReportDocx(data);
 }
 
 // ─── GET /my-monthly-report — teacher's DOCX ──────
@@ -1598,7 +1675,8 @@ timetableController.get("/my-monthly-report", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
     const staffId = user.id;
-    const institutionId = resolveInstitutionId(user);
+    const queryInstitutionId = c.req.query("institutionId");
+    const institutionId = queryInstitutionId || resolveInstitutionId(user);
     const year = Number(c.req.query("year"));
     const month = Number(c.req.query("month"));
     const db = getDb(c.env.DB);
@@ -1647,6 +1725,98 @@ timetableController.get("/staff-monthly-report", async (c) => {
       "Content-Disposition": `attachment; filename="Monthly_Report_${monthName}_${year}.docx"`,
     },
   });
+});
+
+// ─── GET /my-monthly-report-data — teacher's report data as JSON ──
+
+timetableController.get("/my-monthly-report-data", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const staffId = user.id;
+    const queryInstitutionId = c.req.query("institutionId");
+    const institutionId = queryInstitutionId || resolveInstitutionId(user);
+    const year = Number(c.req.query("year"));
+    const month = Number(c.req.query("month"));
+    const db = getDb(c.env.DB);
+
+    const data = await buildMonthlyReportData(db, staffId, institutionId, year, month);
+    return c.json({ success: true, data });
+  } catch (err) {
+    console.error("Monthly report data error:", err);
+    return c.json({ success: false, message: "Failed to generate report data" }, 500);
+  }
+});
+
+// ─── GET /report-assets — header images for preview ───────────────
+
+timetableController.get("/report-assets", async (c) => {
+  const [blueStripe, logo] = await Promise.all([
+    assetToBase64(blueStripeAsset),
+    assetToBase64(logoAsset),
+  ]);
+  return c.json({
+    success: true,
+    data: {
+      blueStripe: blueStripe ? `data:image/jpeg;base64,${blueStripe}` : null,
+      logo: logo ? `data:image/png;base64,${logo}` : null,
+      blueStripeSize: { width: 105, height: 1600 },
+      logoSize: { width: 380, height: 100 },
+      logoOffset: 3750000 / 9525, // EMUs → px
+    },
+  });
+});
+
+// ─── GET /staff-monthly-report-data — admin's report data as JSON ──
+
+timetableController.get("/staff-monthly-report-data", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  if (user.role !== "admin" && user.role !== "super_admin") {
+    throw new BadRequestError("Only admin/super_admin can access this");
+  }
+
+  const staffId = c.req.query("staffId");
+  const institutionId = c.req.query("institutionId");
+  if (!staffId || !institutionId) {
+    throw new BadRequestError("staffId and institutionId are required");
+  }
+
+  const year = Number(c.req.query("year"));
+  const month = Number(c.req.query("month"));
+  const db = getDb(c.env.DB);
+
+  const data = await buildMonthlyReportData(db, staffId, institutionId, year, month);
+  return c.json({ success: true, data });
+});
+
+// ─── POST /generate-report-docx — generate docx from edited report data ──
+
+timetableController.post("/generate-report-docx", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const body = await c.req.json<ReportParams>();
+    const db = getDb(c.env.DB);
+    const targetStaffId = body.staffId || (user.role === "admin" || user.role === "super_admin" ? null : user.id);
+    const { signatureData, signatureImageType } = await loadStaffSignature(db, c.env.BUCKET, targetStaffId);
+    const buffer = await generateMonthlyReportDocx({
+      ...body,
+      signatureData,
+      signatureImageType,
+      submittedOn: body.submittedOn || formatSubmittedOn(),
+    });
+    const monthName = body.monthName || "Report";
+    const year = body.year || "";
+
+    return new Response(buffer, {
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": `attachment; filename="Monthly_Report_${monthName}_${year}.docx"`,
+      },
+    });
+  } catch (err) {
+    console.error("Generate report docx error:", err);
+    return c.json({ success: false, message: "Failed to generate docx" }, 500);
+  }
 });
 
 // ─── GET /work-done — super admin / admin view of all completed entries ───
@@ -1822,6 +1992,444 @@ timetableController.get("/work-done", async (c) => {
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     },
   });
+});
+
+// ═══ Signature endpoints ══════════════════════════
+
+// ─── POST /signature — upload teacher signature ────
+
+timetableController.post("/signature", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const staffId = user.id;
+    const db = getDb(c.env.DB);
+
+    const formData = await c.req.formData();
+    const file = formData.get("signature");
+    if (!file || typeof file === "string") {
+      throw new BadRequestError("Signature image file is required");
+    }
+
+    const sigFile = file as unknown as File;
+    if (!sigFile.type?.startsWith("image/")) {
+      throw new BadRequestError("Only image files are allowed");
+    }
+    if (sigFile.size > 5 * 1024 * 1024) {
+      throw new BadRequestError("Signature image must be 5MB or smaller");
+    }
+
+    // Delete old signature if exists
+    const [existing] = await db
+      .select({ signatureKey: staff.signatureKey })
+      .from(staff)
+      .where(eq(staff.id, staffId))
+      .limit(1);
+    if (existing?.signatureKey) {
+      await deleteFile(c.env.BUCKET, existing.signatureKey);
+    }
+
+    const result = await saveFile(c.env.BUCKET, sigFile, `staff/signatures/${staffId}`);
+    if (!result.ok) {
+      throw new BadRequestError("Failed to upload signature");
+    }
+
+    await db
+      .update(staff)
+      .set({ signatureKey: result.key, updatedAt: nowISO() })
+      .where(eq(staff.id, staffId));
+
+    return c.json({ success: true, data: { signatureKey: result.key } });
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("Signature upload error:", err);
+    return c.json({ success: false, message: "Failed to upload signature" }, 500);
+  }
+});
+
+// ─── GET /signature — get teacher's signature key ──
+
+timetableController.get("/signature", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const staffId = user.id;
+    const db = getDb(c.env.DB);
+
+    const [row] = await db
+      .select({ signatureKey: staff.signatureKey })
+      .from(staff)
+      .where(eq(staff.id, staffId))
+      .limit(1);
+
+    const signatureKey = row?.signatureKey || null;
+    return c.json({
+      success: true,
+      data: {
+        signatureKey,
+        signatureUrl: signatureKey ? deliverFile(signatureKey) : null,
+      },
+    });
+  } catch (err) {
+    console.error("Get signature error:", err);
+    return c.json({ success: false, message: "Failed to get signature" }, 500);
+  }
+});
+
+// ─── GET /staff-signature — admin fetches a teacher's signature ──
+
+timetableController.get("/staff-signature", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    if (user.role !== "admin" && user.role !== "super_admin") {
+      throw new BadRequestError("Only admin/super_admin can access this");
+    }
+    const staffId = c.req.query("staffId");
+    if (!staffId) throw new BadRequestError("staffId is required");
+
+    const db = getDb(c.env.DB);
+    const [row] = await db
+      .select({ signatureKey: staff.signatureKey })
+      .from(staff)
+      .where(eq(staff.id, staffId))
+      .limit(1);
+
+    const signatureKey = row?.signatureKey || null;
+    return c.json({
+      success: true,
+      data: {
+        signatureKey,
+        signatureUrl: signatureKey ? deliverFile(signatureKey) : null,
+      },
+    });
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("Get staff signature error:", err);
+    return c.json({ success: false, message: "Failed to get signature" }, 500);
+  }
+});
+
+// ═══ Report Submission endpoints ═══════════════════
+
+// ─── POST /submit-report — teacher submits report ──
+
+timetableController.post("/submit-report", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const staffId = user.id;
+    const institutionId = resolveInstitutionId(user);
+    const body = await c.req.json<ReportParams>();
+    const db = getDb(c.env.DB);
+
+    const year = body.year;
+    const monthNum = MONTH_NAMES.indexOf(body.monthName) + 1;
+    if (!year || !monthNum) {
+      throw new BadRequestError("year and monthName are required");
+    }
+
+    // Generate DOCX with signature
+    const { signatureData, signatureImageType } = await loadStaffSignature(db, c.env.BUCKET, staffId);
+
+    if (!signatureData) {
+      return c.json({ success: false, message: "Please upload your signature before submitting a report." }, 400);
+    }
+
+    const submittedOn = formatSubmittedOn();
+
+    const docxBuffer = await generateMonthlyReportDocx({
+      ...body,
+      signatureData,
+      signatureImageType,
+      submittedOn,
+    });
+
+    // Store DOCX in R2
+    const docxKey = `reports/${staffId}/${year}-${String(monthNum).padStart(2, "0")}.docx`;
+    if (c.env.BUCKET) {
+      await c.env.BUCKET.put(docxKey, docxBuffer);
+    }
+
+    const now = nowISO();
+    const reportDataJson = JSON.stringify(body);
+
+    // Check if submission already exists (upsert)
+    const [existing] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(
+        and(
+          eq(reportSubmissions.staffId, staffId),
+          eq(reportSubmissions.year, year),
+          eq(reportSubmissions.month, monthNum),
+          eq(reportSubmissions.isDeleted, 0),
+        ),
+      )
+      .limit(1);
+
+    if (existing) {
+      // Delete old DOCX from R2 if key changed
+      if (existing.docxKey && existing.docxKey !== docxKey) {
+        await deleteFile(c.env.BUCKET, existing.docxKey);
+      }
+      const [updated] = await db
+        .update(reportSubmissions)
+        .set({
+          reportData: reportDataJson,
+          docxKey,
+          submittedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(reportSubmissions.id, existing.id))
+        .returning();
+      return c.json({ success: true, data: updated });
+    } else {
+      const id = uuid();
+      const [created] = await db
+        .insert(reportSubmissions)
+        .values({
+          id,
+          staffId,
+          institutionId,
+          year,
+          month: monthNum,
+          status: "submitted",
+          reportData: reportDataJson,
+          docxKey,
+          submittedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      return c.json({ success: true, data: created });
+    }
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("Submit report error:", err);
+    return c.json({ success: false, message: "Failed to submit report" }, 500);
+  }
+});
+
+// ─── GET /report-submission — check submission status ──
+
+timetableController.get("/report-submission", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const year = Number(c.req.query("year"));
+    const month = Number(c.req.query("month"));
+    const queryStaffId = c.req.query("staffId");
+
+    if (!year || !month) {
+      throw new BadRequestError("year and month are required");
+    }
+
+    const db = getDb(c.env.DB);
+
+    // If admin/super_admin querying for a specific staff member
+    const staffId = queryStaffId || user.id;
+    if (queryStaffId && user.role !== "admin" && user.role !== "super_admin") {
+      throw new BadRequestError("Only admin/super_admin can query other staff submissions");
+    }
+
+    const [submission] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(
+        and(
+          eq(reportSubmissions.staffId, staffId),
+          eq(reportSubmissions.year, year),
+          eq(reportSubmissions.month, month),
+          eq(reportSubmissions.isDeleted, 0),
+        ),
+      )
+      .limit(1);
+
+    if (!submission) {
+      return c.json({ success: true, data: null });
+    }
+
+    return c.json({ success: true, data: submission });
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("Check submission error:", err);
+    return c.json({ success: false, message: "Failed to check submission" }, 500);
+  }
+});
+
+// ─── GET /my-submissions — teacher lists their own submitted reports ──
+
+timetableController.get("/my-submissions", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    if (user.role !== "teacher" && user.role !== "admin" && user.role !== "super_admin") {
+      throw new BadRequestError("Access denied");
+    }
+
+    const db = getDb(c.env.DB);
+    const staffId = user.role === "teacher" ? user.id : c.req.query("staffId");
+    if (!staffId) throw new BadRequestError("staffId is required");
+
+    const submissions = await db
+      .select({
+        id: reportSubmissions.id,
+        year: reportSubmissions.year,
+        month: reportSubmissions.month,
+        status: reportSubmissions.status,
+        submittedAt: reportSubmissions.submittedAt,
+        docxKey: reportSubmissions.docxKey,
+      })
+      .from(reportSubmissions)
+      .where(and(
+        eq(reportSubmissions.staffId, staffId),
+        eq(reportSubmissions.isDeleted, 0),
+      ))
+      .orderBy(desc(reportSubmissions.submittedAt));
+
+    return c.json({ success: true, data: submissions });
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("List my submissions error:", err);
+    return c.json({ success: false, message: "Failed to list submissions" }, 500);
+  }
+});
+
+// ─── GET /submission-data — get reportData for a submitted report ──
+
+timetableController.get("/submission-data", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const submissionId = c.req.query("id");
+    if (!submissionId) throw new BadRequestError("id is required");
+
+    const db = getDb(c.env.DB);
+    const [submission] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(eq(reportSubmissions.id, submissionId))
+      .limit(1);
+
+    if (!submission || submission.isDeleted) {
+      throw new BadRequestError("Submission not found");
+    }
+
+    // Permission: teacher can only see their own, admin only their institution
+    if (user.role === "teacher" && submission.staffId !== user.id) {
+      throw new ForbiddenError("Access denied");
+    }
+    if (user.role === "admin") {
+      const adminInstId = resolveInstitutionId(user);
+      if (submission.institutionId !== adminInstId) {
+        throw new ForbiddenError("Access denied");
+      }
+    }
+
+    let reportData = submission.reportData;
+    if (typeof reportData === "string") {
+      try { reportData = JSON.parse(reportData); } catch { /* keep as string */ }
+    }
+
+    return c.json({ success: true, data: { reportData, submittedAt: submission.submittedAt, year: submission.year, month: submission.month } });
+  } catch (err: any) {
+    if (err instanceof BadRequestError || err instanceof ForbiddenError) throw err;
+    console.error("Get submission data error:", err);
+    return c.json({ success: false, message: "Failed to get submission data" }, 500);
+  }
+});
+
+// ─── GET /submitted-reports — list submitted reports ──
+
+timetableController.get("/submitted-reports", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    if (user.role !== "admin" && user.role !== "super_admin") {
+      throw new BadRequestError("Only admin/super_admin can access this");
+    }
+
+    const db = getDb(c.env.DB);
+    const queryInstitutionId = c.req.query("institutionId");
+
+    // Admin sees only their institution; super_admin can filter
+    const effectiveInstitutionId =
+      user.role === "admin"
+        ? resolveInstitutionId(user)
+        : queryInstitutionId || undefined;
+
+    const conditions = [eq(reportSubmissions.isDeleted, 0)];
+    if (effectiveInstitutionId) {
+      conditions.push(eq(reportSubmissions.institutionId, effectiveInstitutionId));
+    }
+
+    const submissions = await db
+      .select({
+        id: reportSubmissions.id,
+        staffId: reportSubmissions.staffId,
+        institutionId: reportSubmissions.institutionId,
+        year: reportSubmissions.year,
+        month: reportSubmissions.month,
+        status: reportSubmissions.status,
+        submittedAt: reportSubmissions.submittedAt,
+        docxKey: reportSubmissions.docxKey,
+        staffName: staff.name,
+        staffSalutation: staff.salutation,
+        institutionName: institutions.name,
+      })
+      .from(reportSubmissions)
+      .innerJoin(staff, eq(reportSubmissions.staffId, staff.id))
+      .innerJoin(institutions, eq(reportSubmissions.institutionId, institutions.id))
+      .where(and(...conditions));
+
+    return c.json({ success: true, data: submissions });
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("List submitted reports error:", err);
+    return c.json({ success: false, message: "Failed to list submitted reports" }, 500);
+  }
+});
+
+// ─── GET /download-submitted-report — download DOCX from R2 ──
+
+timetableController.get("/download-submitted-report", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const submissionId = c.req.query("id");
+    if (!submissionId) throw new BadRequestError("id is required");
+
+    const db = getDb(c.env.DB);
+    const [submission] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(eq(reportSubmissions.id, submissionId))
+      .limit(1);
+
+    if (!submission || submission.isDeleted) {
+      throw new BadRequestError("Submission not found");
+    }
+
+    // Permission check: admin can only download their institution's reports
+    if (user.role === "admin") {
+      const adminInstId = resolveInstitutionId(user);
+      if (submission.institutionId !== adminInstId) {
+        throw new ForbiddenError("Access denied");
+      }
+    }
+
+    if (!submission.docxKey) {
+      throw new BadRequestError("No DOCX file associated with this submission");
+    }
+
+    const file = await getFile(c.env.BUCKET, submission.docxKey);
+    if (!file) {
+      throw new BadRequestError("File not found in storage");
+    }
+
+    const monthName = MONTH_NAMES[submission.month - 1] || "Report";
+    const headers = new Headers();
+    headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    headers.set("Content-Disposition", `attachment; filename="Monthly_Report_${monthName}_${submission.year}.docx"`);
+
+    return new Response(file.body, { headers });
+  } catch (err: any) {
+    if (err instanceof BadRequestError || err instanceof ForbiddenError) throw err;
+    console.error("Download submitted report error:", err);
+    return c.json({ success: false, message: "Failed to download report" }, 500);
+  }
 });
 
 export { timetableController };

@@ -56,6 +56,7 @@ export const staff = sqliteTable("staff", {
   type: text("type", { enum: ["teacher", "admin"] }),
   joiningDate: text("joining_date"),
   profileImage: text("profile_image"),
+  signatureKey: text("signature_key"),
   institutionId: text("institution_id").references(() => institutions.id),
   isActive: integer("is_active").default(1),
   isDeleted: integer("is_deleted").default(0),

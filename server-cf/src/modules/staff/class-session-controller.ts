@@ -358,18 +358,77 @@ classSessionController.get("/my-history", async (c) => {
 });
 
 // ─── GET /diary — sessions for date range (30-day diary) ─
+// Supports:
+//   • Teachers/staff: always see their own diary.
+//   • Admins: see their own diary (staffId === me) OR any teacher in their institution.
+//   • Super admins: see any teacher's diary, optionally filtered by institutionId.
 
 classSessionController.get("/diary", async (c) => {
-  const staffId = c.req.query("staffId");
+  const user = c.get("user") as Record<string, any>;
+  const userId = user.id;
+  const userRole = user.role;
+  const userInstitutionId = typeof user.institutionId === "object"
+    ? (user.institutionId as any)._id?.toString()
+    : user.institutionId?.toString();
+
+  const requestedStaffId = c.req.query("staffId");
+  const requestedInstitutionId = c.req.query("institutionId");
   const fromDate = c.req.query("fromDate");
   const toDate = c.req.query("toDate");
-  if (!staffId) {
-    throw new BadRequestError("Staff ID required");
-  }
 
   const db = getDb(c.env.DB);
 
-  const conditions: any[] = [eq(classSessions.staffId, staffId)];
+  // Resolve the target staffId and permission scope.
+  let targetStaffId: string | undefined = requestedStaffId;
+  let targetInstitutionId: string | undefined = requestedInstitutionId;
+
+  // Teachers/staff can only view themselves.
+  if (userRole === "teacher" || userRole === "staff") {
+    if (requestedStaffId && requestedStaffId !== userId) {
+      throw new ForbiddenError("You can only view your own teaching diary");
+    }
+    targetStaffId = userId;
+  }
+  // Admins can view their own diary or any staff in their institution.
+  else if (userRole === "admin") {
+    if (!userInstitutionId) {
+      throw new ForbiddenError("No institution associated with this account");
+    }
+
+    if (targetStaffId && targetStaffId !== userId) {
+      // Verify the requested staff belongs to the admin's institution.
+      const [staffRow] = await db
+        .select({ id: staff.id, institutionId: staff.institutionId })
+        .from(staff)
+        .where(and(eq(staff.id, targetStaffId), eq(staff.isDeleted, 0)))
+        .limit(1);
+
+      if (!staffRow || staffRow.institutionId !== userInstitutionId) {
+        throw new ForbiddenError("You can only view staff in your institution");
+      }
+    }
+
+    // If no staffId provided, scope to the admin's institution.
+    if (!targetStaffId) {
+      targetInstitutionId = userInstitutionId;
+    }
+  }
+  // Super admins can view anyone; optionally scope by institutionId.
+  else if (userRole === "super_admin") {
+    // No extra restrictions.
+  }
+  else {
+    throw new ForbiddenError("Invalid user role");
+  }
+
+  // Build query conditions.
+  const conditions: any[] = [];
+  if (targetStaffId) {
+    conditions.push(eq(classSessions.staffId, targetStaffId));
+  }
+  if (targetInstitutionId) {
+    conditions.push(eq(classSessions.institutionId, targetInstitutionId));
+  }
   if (fromDate) {
     const { start } = istDayRange(fromDate);
     conditions.push(sql`${classSessions.startTime} >= ${start}`);
@@ -377,6 +436,10 @@ classSessionController.get("/diary", async (c) => {
   if (toDate) {
     const { end } = istDayRange(toDate);
     conditions.push(sql`${classSessions.startTime} <= ${end}`);
+  }
+
+  if (conditions.length === 0) {
+    return c.json({ success: true, data: [] });
   }
 
   const sessions = await db
@@ -387,6 +450,7 @@ classSessionController.get("/diary", async (c) => {
 
   const sessionIds = sessions.map((s) => s.id);
   const classIds = [...new Set(sessions.map((s) => s.classId).filter(Boolean))] as string[];
+  const staffIds = [...new Set(sessions.map((s) => s.staffId).filter(Boolean))] as string[];
 
   // Batch fetch class info
   const classMap = new Map<string, any>();
@@ -396,6 +460,16 @@ classSessionController.get("/diary", async (c) => {
       .from(classes)
       .where(inArray(classes.id, classIds));
     for (const r of rows) classMap.set(r.id, r);
+  }
+
+  // Batch fetch staff info (for "all teachers" views)
+  const staffMap = new Map<string, any>();
+  if (staffIds.length > 0) {
+    const rows = await db
+      .select({ id: staff.id, name: staff.name, email: staff.email })
+      .from(staff)
+      .where(inArray(staff.id, staffIds));
+    for (const r of rows) staffMap.set(r.id, r);
   }
 
   // Batch fetch topics
@@ -415,6 +489,7 @@ classSessionController.get("/diary", async (c) => {
   const enriched = sessions.map((session) => ({
     ...session,
     classId: session.classId ? classMap.get(session.classId) || null : null,
+    staff: session.staffId ? staffMap.get(session.staffId) || null : null,
     topicsCovered: topicsMap.get(session.id) || [],
   }));
 

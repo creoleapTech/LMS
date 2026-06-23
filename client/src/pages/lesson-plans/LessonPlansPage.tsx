@@ -108,6 +108,13 @@ export default function LessonPlansPage() {
     ? selectedInstitutionId
     : adminInstitutionId;
 
+  // For teachers, extract institutionId from auth store
+  const teacherInstitutionId = !isAdminRole
+    ? (typeof user?.institutionId === "object"
+        ? (user?.institutionId as { _id: string })?._id
+        : user?.institutionId) ?? ""
+    : "";
+
   const { data: institutions = [] } = useQuery<{ _id: string; name: string }[]>({
     queryKey: ["institutions-list"],
     queryFn: async () => {
@@ -183,7 +190,7 @@ export default function LessonPlansPage() {
   );
 
   // ── Timetable periods for the selected day ─────────────────────────────
-  const ownDayData = useTimetableDay(isAdminRole ? null : selectedDateKey);
+  const ownDayData = useTimetableDay(isAdminRole ? null : selectedDateKey, isAdminRole ? undefined : teacherInstitutionId);
   const staffDayData = useStaffTimetableDay(
     isAdminRole ? selectedStaffId || null : null,
     isAdminRole ? effectiveInstitutionId || null : null,

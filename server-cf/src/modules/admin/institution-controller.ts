@@ -20,7 +20,7 @@ function isJsonRequest(contentType: string | undefined): boolean {
 
 async function parseJsonBody(c: any): Promise<Record<string, unknown>> {
   try {
-    return await c.req.json<Record<string, unknown>>();
+    return await c.req.json() as Record<string, unknown>;
   } catch {
     throw new BadRequestError("Invalid JSON body");
   }
@@ -91,7 +91,7 @@ app.post("/", async (c) => {
     contactDetailsRaw = formData.get("contactDetails");
 
     const logoInput = formData.get("logo");
-    logoFile = logoInput instanceof File ? logoInput : null;
+    logoFile = (logoInput && typeof logoInput === "object") ? logoInput as File : null;
   }
 
   if (!name || !type) {
@@ -133,7 +133,7 @@ app.post("/", async (c) => {
       isDeleted: 0,
       createdAt: now,
       updatedAt: now,
-    })
+    } as any)
     .returning();
 
   return c.json({ success: true, data: institution }, 201);
@@ -394,7 +394,7 @@ app.patch("/:id", async (c) => {
     isActiveRaw = formData.get("isActive");
 
     const logoInput = formData.get("logo");
-    logoFile = logoInput instanceof File ? logoInput : null;
+    logoFile = (logoInput && typeof logoInput === "object") ? logoInput as File : null;
   }
 
   if (name !== undefined) updateData.name = name;

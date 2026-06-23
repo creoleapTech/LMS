@@ -161,7 +161,7 @@ export function ScheduleEntryDialog({
               : []
         );
         setNotes(entry.notes || "");
-        setIsRecurring(entry.isRecurring);
+        setIsRecurring(!!entry.isRecurring);
         setEditScope("day");
         // Set grade from classId
         if (typeof entry.classId === "object" && entry.classId.grade) {
@@ -245,7 +245,7 @@ export function ScheduleEntryDialog({
 
         <div className="px-6 pb-6 pt-4 space-y-4">
           {/* Edit scope toggle (recurring entries only) */}
-          {isEdit && entry?.isRecurring && (
+          {isEdit && !!entry?.isRecurring && (
             <div className="flex rounded-xl border border-slate-200 p-0.5 bg-slate-100">
               <button
                 type="button"

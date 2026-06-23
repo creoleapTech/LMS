@@ -49,6 +49,11 @@ export default function MyClassesPage() {
     : "";
   const effectiveInstitutionId = isSuperAdmin ? selectedInstitutionId : adminInstitutionId;
 
+  // For teachers, extract institutionId from auth store
+  const teacherInstitutionId = !isAdminRole
+    ? (typeof user?.institutionId === "object" ? user?.institutionId?._id : user?.institutionId) || ""
+    : "";
+
   // Institutions list (super admin only)
   const { data: institutions = [] } = useQuery<{ _id: string; name: string }[]>({
     queryKey: ["institutions-list"],
@@ -80,10 +85,13 @@ export default function MyClassesPage() {
   }, [isAdminRole, staffList, selectedStaffId]);
 
   // Teacher mode hooks
-  const { data: periodConfig, isLoading: configLoading } = usePeriodConfig();
+  const { data: periodConfig, isLoading: configLoading } = usePeriodConfig(
+    !isAdminRole ? teacherInstitutionId : undefined
+  );
   const { data: ownMonthData, isLoading: ownMonthLoading } = useTimetableMonth(
     currentMonth.year,
-    currentMonth.month
+    currentMonth.month,
+    !isAdminRole ? teacherInstitutionId : undefined
   );
 
   // Admin mode hooks
@@ -297,7 +305,7 @@ export default function MyClassesPage() {
                   year: currentMonth.year,
                   month: currentMonth.month,
                   staffId: isAdminRole ? selectedStaffId : null,
-                  institutionId: isAdminRole ? effectiveInstitutionId : null,
+                  institutionId: isAdminRole ? effectiveInstitutionId : teacherInstitutionId || null,
                 })
               }
               disabled={isDownloading}
@@ -318,7 +326,7 @@ export default function MyClassesPage() {
               date={selectedDate}
               readOnly={isAdminRole}
               staffId={isAdminRole ? selectedStaffId : undefined}
-              institutionId={isAdminRole ? effectiveInstitutionId : undefined}
+              institutionId={isAdminRole ? effectiveInstitutionId : teacherInstitutionId || undefined}
               fallbackPeriodConfig={periodConfig}
             />
           </div>

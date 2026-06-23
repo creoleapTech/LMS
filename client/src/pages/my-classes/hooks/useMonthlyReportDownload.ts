@@ -16,7 +16,7 @@ export function useMonthlyReportDownload() {
       const isAdminView = !!params.staffId && !!params.institutionId;
       const url = isAdminView
         ? `/admin/timetable/staff-monthly-report?staffId=${params.staffId}&institutionId=${params.institutionId}&year=${params.year}&month=${params.month}`
-        : `/admin/timetable/my-monthly-report?year=${params.year}&month=${params.month}`;
+        : `/admin/timetable/my-monthly-report?year=${params.year}&month=${params.month}${params.institutionId ? `&institutionId=${params.institutionId}` : ""}`;
 
       const response = await _axios.get(url, { responseType: "blob" });
 
