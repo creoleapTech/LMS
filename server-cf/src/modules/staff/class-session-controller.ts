@@ -438,10 +438,6 @@ classSessionController.get("/diary", async (c) => {
     conditions.push(sql`${classSessions.startTime} <= ${end}`);
   }
 
-  if (conditions.length === 0) {
-    return c.json({ success: true, data: [] });
-  }
-
   const sessions = await db
     .select()
     .from(classSessions)

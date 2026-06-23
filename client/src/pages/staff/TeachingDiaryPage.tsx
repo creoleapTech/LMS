@@ -41,8 +41,6 @@ import {
 } from "lucide-react";
 
 const HEARTBEAT_INTERVAL = 30000;
-// Must stay in sync with the server-side STALE_SESSION_MINUTES in
-// server-cf/src/modules/staff/class-session-controller.ts
 const STALE_THRESHOLD_MINUTES = 5;
 
 function formatTime(iso: string): string {
@@ -187,18 +185,19 @@ export default function TeachingDiaryPage() {
   const queryClient = useQueryClient();
 
   const role = user?.role;
-  const isAdminRole = role === "admin" || role === "super_admin";
+  const isTeacher = role === "teacher" || role === "staff";
+  const isAdmin = role === "admin";
   const isSuperAdmin = role === "super_admin";
+  const isAdminRole = isAdmin || isSuperAdmin;
 
-  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>("");
-  const [selectedStaffId, setSelectedStaffId] = useState<string>("");
-  const [selectedClassId, setSelectedClassId] = useState<string>("all");
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>("__all__");
+  const [selectedStaffId, setSelectedStaffId] = useState<string>("__all__");
+  const [selectedClassId, setSelectedClassId] = useState<string>("__all__");
   const [editingSession, setEditingSession] = useState<DiarySession | null>(null);
 
-  const adminInstitutionId = !isSuperAdmin
+  const adminInstitutionId = isAdmin
     ? (typeof user?.institutionId === "object" ? user?.institutionId?._id : user?.institutionId) || ""
     : "";
-  const effectiveInstitutionId = isSuperAdmin ? selectedInstitutionId : adminInstitutionId;
 
   // ── Fetch institutions (super_admin only) ──
   const { data: institutions = [] } = useQuery<{ _id: string; name: string }[]>({
@@ -212,37 +211,26 @@ export default function TeachingDiaryPage() {
   });
 
   // ── Fetch staff list (admin/super_admin only) ──
+  const staffInstitutionId = isSuperAdmin
+    ? (selectedInstitutionId !== "__all__" ? selectedInstitutionId : null)
+    : adminInstitutionId || null;
+
   const { data: staffList = [], isLoading: staffLoading } = useStaffList(
-    isAdminRole ? effectiveInstitutionId || null : null
+    isAdminRole ? staffInstitutionId : null
   );
 
-  // Auto-select first institution for super_admin
-  useEffect(() => {
-    if (isSuperAdmin && institutions.length > 0 && !selectedInstitutionId) {
-      setSelectedInstitutionId(institutions[0]._id);
-    }
-  }, [isSuperAdmin, institutions, selectedInstitutionId]);
+  // ── Determine effective filters for the diary query ──
+  const effectiveStaffId = isTeacher
+    ? staffId
+    : selectedStaffId !== "__all__"
+      ? selectedStaffId
+      : undefined;
 
-  // Auto-select first staff for admin/super_admin
-  useEffect(() => {
-    if (isAdminRole && staffList.length > 0 && !selectedStaffId) {
-      setSelectedStaffId(staffList[0]._id);
-    }
-  }, [isAdminRole, staffList, selectedStaffId]);
-
-  // Determine the effective staffId to query
-  const effectiveStaffId = isAdminRole ? selectedStaffId || staffId : staffId;
-
-  // ── Fetch classes ──
-  const { data: classes = [] } = useQuery<{ _id: string; grade: string; section: string }[]>({
-    queryKey: ["my-classes-list", effectiveStaffId],
-    queryFn: async () => {
-      const res = await _axios.get("/admin/timetable/my-classes-list");
-      return res.data?.data || [];
-    },
-    enabled: !!effectiveStaffId,
-    staleTime: 5 * 60 * 1000,
-  });
+  const effectiveInstitutionId = isSuperAdmin
+    ? (selectedInstitutionId !== "__all__" ? selectedInstitutionId : undefined)
+    : isAdmin
+      ? adminInstitutionId
+      : undefined;
 
   // ── Fetch sessions (last 30 days) ──
   const today = new Date();
@@ -253,7 +241,7 @@ export default function TeachingDiaryPage() {
 
   const diaryParams: Record<string, string> = { fromDate: fromDateStr, toDate: toDateStr };
   if (effectiveStaffId) diaryParams.staffId = effectiveStaffId;
-  if (isSuperAdmin && selectedInstitutionId) diaryParams.institutionId = selectedInstitutionId;
+  if (effectiveInstitutionId) diaryParams.institutionId = effectiveInstitutionId;
 
   const {
     data: sessions = [],
@@ -261,7 +249,7 @@ export default function TeachingDiaryPage() {
     isError,
     refetch,
   } = useQuery<DiarySession[]>({
-    queryKey: ["teaching-diary", effectiveStaffId, selectedInstitutionId, fromDateStr, toDateStr],
+    queryKey: ["teaching-diary", effectiveStaffId, effectiveInstitutionId, fromDateStr, toDateStr],
     queryFn: async () => {
       const { data: res } = await _axios.get<{
         success: boolean;
@@ -269,9 +257,42 @@ export default function TeachingDiaryPage() {
       }>("/admin/class-session/diary", { params: diaryParams });
       return res.data || [];
     },
-    enabled: isAdminRole ? !!effectiveStaffId : !!staffId,
     staleTime: 60 * 1000,
   });
+
+  // ── Determine if viewing own diary ──
+  const isViewingOwnDiary = isTeacher || (isAdminRole && effectiveStaffId === staffId);
+
+  // ── Fetch classes for the selected teacher (or own classes) ──
+  const classesQueryStaffId = isViewingOwnDiary ? staffId : effectiveStaffId;
+  const { data: classes = [] } = useQuery<{ _id: string; grade: string; section: string }[]>({
+    queryKey: ["my-classes-list", classesQueryStaffId],
+    queryFn: async () => {
+      const res = await _axios.get("/admin/timetable/my-classes-list");
+      return res.data?.data || [];
+    },
+    enabled: !!classesQueryStaffId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // ── Extract unique classes from sessions for "all teachers" view ──
+  const sessionClasses = useMemo(() => {
+    const map = new Map<string, { _id: string; grade: string; section: string }>();
+    for (const s of sessions) {
+      if (typeof s.classId === "object" && s.classId && s.classId._id) {
+        if (!map.has(s.classId._id)) {
+          map.set(s.classId._id, {
+            _id: s.classId._id,
+            grade: s.classId.grade || "?",
+            section: s.classId.section || "?",
+          });
+        }
+      }
+    }
+    return Array.from(map.values());
+  }, [sessions]);
+
+  const availableClasses = classesQueryStaffId ? classes : sessionClasses;
 
   const todaySessions = useMemo(
     () => sessions.filter((s) => s.startTime?.startsWith(toDateStr)),
@@ -297,7 +318,7 @@ export default function TeachingDiaryPage() {
         topicsCovered: [],
       }).then(() => refetch()).catch(() => {});
     }
-  }, []); // only on mount
+  }, []);
 
   // Heartbeat timer
   useEffect(() => {
@@ -310,9 +331,7 @@ export default function TeachingDiaryPage() {
       if (stoppedRef.current) return;
       try {
         await _axios.post(`/admin/class-session/heartbeat/${ongoingSession.id}`);
-      } catch {
-        // silent
-      }
+      } catch {}
     };
 
     beat();
@@ -332,9 +351,7 @@ export default function TeachingDiaryPage() {
     return () => clearInterval(interval);
   }, [ongoingSession]);
 
-  // End session on actual tab close / refresh. Use fetch with keepalive + auth
-  // header because navigator.sendBeacon cannot set the Authorization header and
-  // the quiet-end endpoint is protected by admin-auth.
+  // End session on tab close
   useEffect(() => {
     if (!ongoingSession) return;
     const baseUrl = _axios.defaults.baseURL?.replace(/\/api$/, "") || "";
@@ -362,9 +379,7 @@ export default function TeachingDiaryPage() {
     try {
       await _axios.post("/admin/class-session/start", { classId });
       refetch();
-    } catch {
-      // silent
-    }
+    } catch {}
   };
 
   const invalidate = useCallback(() => {
@@ -374,7 +389,7 @@ export default function TeachingDiaryPage() {
   // ── Group & filter ──
   const grouped = useMemo(() => {
     let list = [...sessions];
-    if (selectedClassId !== "all") {
+    if (selectedClassId !== "__all__") {
       list = list.filter((s) => getClassIdString(s.classId) === selectedClassId);
     }
     const map: Record<string, DiarySession[]> = {};
@@ -387,6 +402,9 @@ export default function TeachingDiaryPage() {
       ([a], [b]) => new Date(b).getTime() - new Date(a).getTime(),
     );
   }, [sessions, selectedClassId]);
+
+  // ── Show staff name when viewing all teachers ──
+  const showStaffName = isAdminRole && selectedStaffId === "__all__";
 
   if (isLoading) {
     return (
@@ -422,87 +440,91 @@ export default function TeachingDiaryPage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Teaching Diary</h1>
               <p className="text-sm text-slate-500">
-                {isAdminRole
-                  ? "View teaching diary for yourself and your teachers"
-                  : "Track every class you teach — auto-logged topics, precise timing, no data loss"}
+                {isSuperAdmin
+                  ? "View teaching diary across all schools and teachers"
+                  : isAdmin
+                    ? "View teaching diary for teachers in your school"
+                    : "Track every class you teach — auto-logged topics, precise timing, no data loss"}
               </p>
             </div>
           </div>
         </div>
 
         {/* ── Controls ── */}
-        <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-white rounded-2xl shadow-sm border">
-          {/* Admin/Super Admin selectors */}
-          {isAdminRole && (
-            <>
-              {isSuperAdmin && (
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-slate-400" />
-                  <Select
-                    value={selectedInstitutionId}
-                    onValueChange={(v) => {
-                      setSelectedInstitutionId(v);
-                      setSelectedStaffId("");
-                      setSelectedClassId("all");
-                    }}
-                  >
-                    <SelectTrigger className="w-56 rounded-xl">
-                      <SelectValue placeholder="Select Institution" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {institutions.map((inst) => (
-                        <SelectItem key={inst._id} value={inst._id}>
-                          {inst.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {(isSuperAdmin && selectedInstitutionId) || adminInstitutionId ? (
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-slate-400" />
-                  <Select
-                    value={selectedStaffId}
-                    onValueChange={(v) => {
-                      setSelectedStaffId(v);
-                      setSelectedClassId("all");
-                    }}
-                    disabled={staffLoading}
-                  >
-                    <SelectTrigger className="w-56 rounded-xl">
-                      <SelectValue placeholder={staffLoading ? "Loading teachers..." : "Select Teacher"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {staffList.map((s) => (
-                        <SelectItem key={s._id} value={s._id}>
-                          {s.name} {s._id === staffId ? "(You)" : ""} — {s.type === "teacher" ? "Teacher" : "Admin"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
-            </>
+        <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-white rounded-2xl shadow-sm border">
+          {/* Super Admin: Institution filter */}
+          {isSuperAdmin && (
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-slate-400" />
+              <Select
+                value={selectedInstitutionId}
+                onValueChange={(v) => {
+                  setSelectedInstitutionId(v);
+                  setSelectedStaffId("__all__");
+                  setSelectedClassId("__all__");
+                }}
+              >
+                <SelectTrigger className="w-52 rounded-xl">
+                  <SelectValue placeholder="All Schools" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Schools</SelectItem>
+                  {institutions.map((inst) => (
+                    <SelectItem key={inst._id} value={inst._id}>
+                      {inst.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
 
-          <div className="flex items-center gap-2">
-            <GraduationCap className="h-4 w-4 text-slate-400" />
-            <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-              <SelectTrigger className="w-56 rounded-xl">
-                <SelectValue placeholder="All Classes" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Classes</SelectItem>
-                {classes.map((cls) => (
-                  <SelectItem key={cls._id} value={cls._id}>
-                    Grade {cls.grade} - Section {cls.section}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Admin/Super Admin: Staff filter */}
+          {isAdminRole && (
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-slate-400" />
+              <Select
+                value={selectedStaffId}
+                onValueChange={(v) => {
+                  setSelectedStaffId(v);
+                  setSelectedClassId("__all__");
+                }}
+                disabled={staffLoading || (isSuperAdmin && selectedInstitutionId === "__all__" && false)}
+              >
+                <SelectTrigger className="w-52 rounded-xl">
+                  <SelectValue placeholder={staffLoading ? "Loading..." : "All Teachers"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Teachers</SelectItem>
+                  {staffList.map((s) => (
+                    <SelectItem key={s._id} value={s._id}>
+                      {s.name} {s._id === staffId ? "(You)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Class filter */}
+          {availableClasses.length > 0 && (
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-4 w-4 text-slate-400" />
+              <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+                <SelectTrigger className="w-52 rounded-xl">
+                  <SelectValue placeholder="All Classes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Classes</SelectItem>
+                  {availableClasses.map((cls) => (
+                    <SelectItem key={cls._id} value={cls._id}>
+                      Grade {cls.grade} - Section {cls.section}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex-1" />
 
@@ -517,15 +539,15 @@ export default function TeachingDiaryPage() {
           </Button>
         </div>
 
-        {/* ── Today's teaching bar ── */}
-        {selectedClassId !== "all" && (
+        {/* ── Today's teaching bar (own diary only) ── */}
+        {isViewingOwnDiary && selectedClassId !== "__all__" && (
           <div className="mb-6 p-4 bg-white rounded-2xl border shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <CalendarDays className="h-5 w-5 text-indigo-500" />
                 <span className="text-sm font-semibold text-slate-700">
-                  {selectedClassId
-                    ? `Grade ${classes.find((c) => c._id === selectedClassId)?.grade || "?"} - Section ${classes.find((c) => c._id === selectedClassId)?.section || "?"}`
+                  {selectedClassId !== "__all__"
+                    ? `Grade ${availableClasses.find((c) => c._id === selectedClassId)?.grade || "?"} - Section ${availableClasses.find((c) => c._id === selectedClassId)?.section || "?"}`
                     : "Selected Class"}
                 </span>
               </div>
@@ -553,9 +575,7 @@ export default function TeachingDiaryPage() {
               )}
             </div>
 
-            {/* Today's sessions for this class */}
-            {todaySessions.filter((s) => getClassIdString(s.classId) === selectedClassId)
-              .length > 0 && (
+            {todaySessions.filter((s) => getClassIdString(s.classId) === selectedClassId).length > 0 && (
               <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
                 {todaySessions
                   .filter((s) => getClassIdString(s.classId) === selectedClassId)
@@ -592,8 +612,8 @@ export default function TeachingDiaryPage() {
           </div>
         )}
 
-        {/* ── Ongoing session indicator (global) ── */}
-        {ongoingSession && Date.now() - new Date(ongoingSession.updatedAt).getTime() < STALE_THRESHOLD_MINUTES * 60 * 1000 && selectedClassId === "all" && (
+        {/* ── Ongoing session indicator (own diary only) ── */}
+        {isViewingOwnDiary && ongoingSession && Date.now() - new Date(ongoingSession.updatedAt).getTime() < STALE_THRESHOLD_MINUTES * 60 * 1000 && selectedClassId === "__all__" && (
           <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl flex items-center gap-3">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -612,28 +632,18 @@ export default function TeachingDiaryPage() {
         )}
 
         {/* ── Diary entries ── */}
-        {isAdminRole && !effectiveStaffId ? (
-          <div className="text-center py-16">
-            <Users className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-400 mb-2">
-              Select a teacher to view their diary
-            </h3>
-            <p className="text-slate-400">
-              {isSuperAdmin && !selectedInstitutionId
-                ? "Select an institution first, then choose a teacher."
-                : "Choose a teacher from the dropdown above to view their teaching diary."}
-            </p>
-          </div>
-        ) : grouped.length === 0 ? (
+        {grouped.length === 0 ? (
           <div className="text-center py-16">
             <CalendarDays className="h-16 w-16 text-slate-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-slate-400 mb-2">
               No teaching sessions found
             </h3>
             <p className="text-slate-400">
-              {selectedClassId !== "all"
-                ? "Select a different class or start teaching to log sessions."
-                : "Start teaching to see your sessions here."}
+              {isAdminRole
+                ? "No sessions match your current filters. Try adjusting the filters above."
+                : selectedClassId !== "__all__"
+                  ? "Select a different class or start teaching to log sessions."
+                  : "Start teaching to see your sessions here."}
             </p>
           </div>
         ) : (
@@ -652,7 +662,7 @@ export default function TeachingDiaryPage() {
 
                 <div className="space-y-2">
                   {daySessions.map((session) => {
-                    const sameClass = selectedClassId !== "all";
+                    const sameClass = selectedClassId !== "__all__";
                     const isOngoing = session.status === "ongoing";
 
                     return (
@@ -664,7 +674,13 @@ export default function TeachingDiaryPage() {
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1.5">
+                            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              {/* Show teacher name when viewing all teachers */}
+                              {showStaffName && session.staff && (
+                                <span className="text-sm font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                  {session.staff.name}
+                                </span>
+                              )}
                               {!sameClass && (
                                 <span className="text-sm font-semibold text-slate-800">
                                   {getClassLabel(session.classId)}
@@ -704,7 +720,7 @@ export default function TeachingDiaryPage() {
                               )}
                             </div>
 
-                            {(session.topicsCovered && session.topicsCovered.length > 0) || (session.remarks) ? (
+                            {(session.topicsCovered && session.topicsCovered.length > 0) || session.remarks ? (
                               <div className="mt-2 space-y-1">
                                 {session.topicsCovered && session.topicsCovered.length > 0 && (
                                   <div className="flex flex-wrap items-center gap-1.5">

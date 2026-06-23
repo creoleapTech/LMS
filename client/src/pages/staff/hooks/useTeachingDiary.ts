@@ -14,6 +14,7 @@ export interface DiarySession {
   remarks?: string;
   topicsCovered?: string[];
   status: "ongoing" | "completed";
+  staff?: { name: string; email: string } | null;
   createdAt: string;
   updatedAt: string;
 }
