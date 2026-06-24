@@ -1,7 +1,7 @@
 // src/components/curriculum/GradeBookFormDialog.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -39,6 +39,8 @@ interface Props {
 export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBook, onSuccess }: Props) {
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string>("");
+  const [coverImageRemoved, setCoverImageRemoved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -75,6 +77,7 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
           setCoverImagePreview("");
         }
         setCoverImageFile(null);
+        setCoverImageRemoved(false);
       } else {
         reset({
           grade: 1,
@@ -94,6 +97,7 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
     if (file) {
       const compressed = await compressImage(file, { maxWidth: 600, maxHeight: 800, quality: 0.85 });
       setCoverImageFile(compressed);
+      setCoverImageRemoved(false);
       const reader = new FileReader();
       reader.onloadend = () => setCoverImagePreview(reader.result as string);
       reader.readAsDataURL(compressed);
@@ -103,6 +107,10 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
   const removeCoverImage = () => {
     setCoverImageFile(null);
     setCoverImagePreview("");
+    setCoverImageRemoved(true);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const onSubmit = async (data: FormData) => {
@@ -116,6 +124,8 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
 
       if (coverImageFile) {
         formData.append("coverImage", coverImageFile);
+      } else if (coverImageRemoved && gradeBook) {
+        formData.append("coverImage", "");
       }
 
       if (gradeBook) {
@@ -213,7 +223,7 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
                 <ImagePlus className="h-7 w-7 text-muted-foreground/50" />
                 <span className="text-sm text-muted-foreground">Click to upload a cover image</span>
                 <span className="text-xs text-muted-foreground/60">PNG, JPG up to 5MB · Recommended: 400×600px</span>
-                <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
               </label>
             )}
           </div>

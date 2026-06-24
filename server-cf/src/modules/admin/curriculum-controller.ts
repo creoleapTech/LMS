@@ -538,13 +538,20 @@ app.patch("/gradebook/:id", async (c) => {
   const isPublished = formData.get("isPublished");
   if (isPublished !== null) updateData.isPublished = parseBool(isPublished) ? 1 : 0;
 
-  const coverImageFile = formData.get("coverImage") as File | null;
-  if (coverImageFile) {
+  const coverImageInput = formData.get("coverImage");
+  if (coverImageInput && typeof coverImageInput !== "string") {
+    // New cover image uploaded; replace existing one
     if (existing.coverImage) {
       await deleteFile(c.env.BUCKET, existing.coverImage);
     }
-    const result = await saveFile(c.env.BUCKET, coverImageFile, "gradebook/covers");
+    const result = await saveFile(c.env.BUCKET, coverImageInput as unknown as File, "gradebook/covers");
     if (result.ok) updateData.coverImage = result.key;
+  } else if (coverImageInput === "") {
+    // Cover image explicitly removed
+    if (existing.coverImage) {
+      await deleteFile(c.env.BUCKET, existing.coverImage);
+    }
+    updateData.coverImage = null;
   }
 
   updateData.updatedAt = nowISO();
