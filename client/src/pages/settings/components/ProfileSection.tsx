@@ -105,10 +105,7 @@ export function ProfileSection() {
 
       const { data: res } = await _axios.patch<{ success: boolean; message: string; data: IUserProfile }>(
         "/admin/settings/profile",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
+        formData
       );
 
       return res;

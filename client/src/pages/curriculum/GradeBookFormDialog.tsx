@@ -120,19 +120,11 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
 
       if (gradeBook) {
         // Update existing grade book
-        await _axios.patch(`/admin/curriculum/gradebook/${gradeBook.id}`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        await _axios.patch(`/admin/curriculum/gradebook/${gradeBook.id}`, formData);
         toast.success("Grade book updated successfully!");
       } else {
         // Create new grade book
-        await _axios.post(`/admin/curriculum/${curriculumId}/grades`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        await _axios.post(`/admin/curriculum/${curriculumId}/grades`, formData);
         toast.success("Grade book created successfully!");
       }
       onSuccess();

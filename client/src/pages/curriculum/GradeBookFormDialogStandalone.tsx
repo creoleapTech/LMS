@@ -127,11 +127,7 @@ export function GradeBookFormDialogStandalone({ open, onOpenChange, onSuccess }:
                 formData.append("coverImage", coverImageFile);
             }
 
-            await _axios.post(`/admin/curriculum/${data.curriculumId}/grades`, formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
+            await _axios.post(`/admin/curriculum/${data.curriculumId}/grades`, formData);
 
             toast.success("Grade book created successfully!");
             onSuccess();

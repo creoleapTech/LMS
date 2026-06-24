@@ -184,18 +184,10 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
       }
 
       if (curriculum) {
-        await _axios.patch(`/admin/curriculum/${curriculum.id}`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        await _axios.patch(`/admin/curriculum/${curriculum.id}`, formData);
         toast.success("Curriculum updated successfully!");
       } else {
-        await _axios.post("/admin/curriculum", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        await _axios.post("/admin/curriculum", formData);
         toast.success("Curriculum created successfully!");
       }
       onSuccess();

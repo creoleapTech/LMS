@@ -168,9 +168,7 @@ export function StudentTable({ institutionId }: Props) {
       formData.append("file", bulkFile);
       formData.append("institutionId", institutionId);
 
-      const res = await _axios.post("/admin/students/bulk-upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await _axios.post("/admin/students/bulk-upload", formData);
 
       const responseData = res.data;
 

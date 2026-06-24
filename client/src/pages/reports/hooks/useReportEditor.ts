@@ -188,9 +188,7 @@ export function useReportEditor() {
   const uploadSignature = useCallback(async (file: File) => {
     const formData = new FormData();
     formData.append("signature", file);
-    const res = await _axios.post("/admin/timetable/signature", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await _axios.post("/admin/timetable/signature", formData);
     if (res.data?.success) {
       const key = res.data.data.signatureKey;
       setSignatureUrl(key ? `${Config.proxyUrl}${encodeURIComponent(key)}` : null);

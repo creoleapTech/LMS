@@ -139,14 +139,10 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
             if (thumbnailFile) formData.append("thumbnail", thumbnailFile);
 
             if (chapter) {
-                await _axios.patch(`/admin/curriculum/chapters/${String(chapter?.id ?? "")}`, formData, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                });
+                await _axios.patch(`/admin/curriculum/chapters/${String(chapter?.id ?? "")}`, formData);
                 toast.success("Chapter updated successfully!");
             } else {
-                await _axios.post(`/admin/curriculum/gradebook/${data.gradeBookId}/chapters`, formData, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                });
+                await _axios.post(`/admin/curriculum/gradebook/${data.gradeBookId}/chapters`, formData);
                 toast.success("Chapter created successfully!");
             }
 

@@ -171,9 +171,7 @@ function EditContentDialog({ item, onClose, onSaved }: EditContentDialogProps) {
         const fd = new FormData();
         fd.append("title", title.trim());
         fd.append("file", newFile);
-        await _axios.patch(`/admin/curriculum/content/${item.id}`, fd, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await _axios.patch(`/admin/curriculum/content/${item.id}`, fd);
       } else if (item.type === "quiz") {
         await _axios.patch(`/admin/curriculum/content/${item.id}`, {
           title: title.trim(),
