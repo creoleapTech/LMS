@@ -831,7 +831,7 @@ timetableController.patch("/:id", async (c) => {
           eq(timetableEntries.periodNumber, entry.periodNumber),
           eq(timetableEntries.isRecurring, 0),
           eq(timetableEntries.isDeleted, 0),
-          sql`${timetableEntries.specificDate} >= ${targetDateKey}`,
+          sql`${timetableEntries.specificDate} >= ${dateKeyToISOString(targetDateKey)}`,
           sql`${timetableEntries.specificDate} <= ${dateKeyEndISOString(targetDateKey)}`,
         ),
       )
@@ -977,7 +977,7 @@ timetableController.patch("/:id/complete", async (c) => {
           eq(timetableEntries.periodNumber, entryPeriodNumber),
           eq(timetableEntries.isRecurring, 0),
           eq(timetableEntries.isDeleted, 0),
-          sql`${timetableEntries.specificDate} >= ${targetDateKey}`,
+          sql`${timetableEntries.specificDate} >= ${dateKeyToISOString(targetDateKey)}`,
           sql`${timetableEntries.specificDate} <= ${dateKeyEndISOString(targetDateKey)}`,
         ),
       )
@@ -1619,18 +1619,10 @@ async function buildMonthlyReportData(
         .where(inArray(timetableTopicsCovered.timetableEntryId, allEntryIds))
     : [];
 
-  const topicsMap = new Map<string, string[]>();
   const chapterIdsSet = new Set<string>();
   const contentIdsSet = new Set<string>();
-  const topicChapterMap = new Map<string, { chapterId?: string; contentId?: string }>();
   for (const row of topicsRows) {
-    const existing = topicsMap.get(row.timetableEntryId) || [];
-    existing.push(row.topic);
-    topicsMap.set(row.timetableEntryId, existing);
-    if (row.chapterId) {
-      chapterIdsSet.add(row.chapterId);
-      topicChapterMap.set(row.id, { chapterId: row.chapterId, contentId: row.contentId });
-    }
+    if (row.chapterId) chapterIdsSet.add(row.chapterId);
     if (row.contentId) contentIdsSet.add(row.contentId);
   }
 
@@ -1699,10 +1691,25 @@ async function buildMonthlyReportData(
       return toDateKey(e.specificDate) === dateStr;
     });
 
-    const overriddenPeriods = new Set(oneOffForDate.map((e: any) => e.periodNumber));
+    // If duplicate one-off instances exist for the same period (legacy data),
+    // keep only the most recently completed one.
+    const oneOffByPeriod = new Map<number, any>();
+    for (const e of oneOffForDate) {
+      const pn = e.periodNumber ?? 0;
+      const existing = oneOffByPeriod.get(pn);
+      if (
+        !existing ||
+        (e.completedAt && existing.completedAt && new Date(e.completedAt) > new Date(existing.completedAt))
+      ) {
+        oneOffByPeriod.set(pn, e);
+      }
+    }
+    const dedupedOneOff = [...oneOffByPeriod.values()];
+
+    const overriddenPeriods = new Set(dedupedOneOff.map((e: any) => e.periodNumber));
     const merged = [
       ...recurringForDay.filter((e: any) => !overriddenPeriods.has(e.periodNumber)),
-      ...oneOffForDate,
+      ...dedupedOneOff,
     ].sort((a: any, b: any) => (a.periodNumber ?? 0) - (b.periodNumber ?? 0));
 
     for (const entry of merged) {
@@ -1717,10 +1724,9 @@ async function buildMonthlyReportData(
       if (bookTitle) subjectSet.add(bookTitle);
       if (entry.status === "completed") completedCount++;
 
-      const entryTopics = entry.__omitTopicsCovered ? [] : topicsMap.get(entry.id) || [];
-
       // Collect chapter and content names from structured entries for this entry
       const entryTopicRows = entry.__omitTopicsCovered ? [] : topicsRows.filter((r: any) => r.timetableEntryId === entry.id);
+      const entryTopics = entryTopicRows.map((r: any) => r.topic);
       const chapterLabels = new Set<string>();
       const subtopicLabels: string[] = [];
       for (const tr of entryTopicRows) {
@@ -1739,14 +1745,23 @@ async function buildMonthlyReportData(
         }
       }
 
-      const chapterName = chapterLabels.size > 0
+      const hasStructuredTopics = entryTopicRows.some((r: any) => r.chapterId || r.contentId);
+      const freeTextTopics = entryTopicRows
+        .filter((r: any) => !r.chapterId && !r.contentId)
+        .map((r: any) => r.topic);
+
+      // Chapter Name = chapter(s) selected by the teacher in work done
+      // For legacy/free-text-only entries, fall back to the grade-book (subject) title
+      const chapterName = hasStructuredTopics
         ? [...chapterLabels].join(", ")
         : bookTitle;
 
-      // topicName = chapter names (from workdone) + subtopics (from workdone)
-      const allTopicLabels = [...chapterLabels, ...subtopicLabels];
-      const topicName = allTopicLabels.length > 0
-        ? allTopicLabels.join(", ")
+      // Topic Name = subtopic(s) selected by the teacher under the chapters
+      // Fall back to free-text additional topics when no structured subtopics exist
+      const topicName = hasStructuredTopics
+        ? subtopicLabels.length > 0
+          ? subtopicLabels.join(", ")
+          : freeTextTopics.join(", ")
         : entryTopics.join(", ");
 
       rows.push({

@@ -209,15 +209,27 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period, sessio
   // Reset state when dialog opens
   useEffect(() => {
     if (open && entry) {
-      setSelectedChapterIds(new Set());
-      setSelectedContentIds(new Set());
-        setAdditionalClassIds(
-          entry.additionalClasses
-            ? entry.additionalClasses.map((c) => c._id)
-            : entry.additionalClassId
-              ? (() => { try { const p = JSON.parse(entry.additionalClassId!); return Array.isArray(p) ? p : [entry.additionalClassId!]; } catch { return [entry.additionalClassId!]; } })()
-              : []
-        );
+      // Restore structured chapter/subtopic selections from the entry
+      const restoredChapterIds = new Set<string>();
+      const restoredContentIds = new Set<string>();
+      if (entry.chapterTopics && entry.chapterTopics.length > 0) {
+        for (const group of entry.chapterTopics) {
+          if (group.chapterId) restoredChapterIds.add(group.chapterId);
+          for (const st of group.subtopics) {
+            if (st.contentId) restoredContentIds.add(st.contentId);
+          }
+        }
+      }
+      setSelectedChapterIds(restoredChapterIds);
+      setSelectedContentIds(restoredContentIds);
+
+      setAdditionalClassIds(
+        entry.additionalClasses
+          ? entry.additionalClasses.map((c) => c._id)
+          : entry.additionalClassId
+            ? (() => { try { const p = JSON.parse(entry.additionalClassId!); return Array.isArray(p) ? p : [entry.additionalClassId!]; } catch { return [entry.additionalClassId!]; } })()
+            : []
+      );
 
       if (matchedSession) {
         setTopicsInput(matchedSession.topicsCovered?.join(", ") || "");
