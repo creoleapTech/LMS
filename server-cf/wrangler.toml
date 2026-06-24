@@ -20,7 +20,7 @@ binding = "BUCKET"
 bucket_name = "lms-uploads"
 
 [observability.logs]
-enabled = false
+enabled = true
 invocation_logs = true
 
 [observability.traces]

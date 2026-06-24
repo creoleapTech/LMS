@@ -179,6 +179,82 @@ function serializeAdditionalClassIds(ids: string[] | undefined | null): string |
   return JSON.stringify(ids);
 }
 
+/**
+ * Freeze past dates for a recurring entry before modifying or deleting the template.
+ * Creates one-off copies for past dates (from createdAt to today) that don't already
+ * have an independent entry, so those dates retain the current state after the template changes.
+ */
+async function freezeRecurringPastDates(db: any, entry: any, beforeDateKey: string): Promise<void> {
+  const dayOfWeek = entry.dayOfWeek;
+  const workingDays = await getWorkingDays(db, entry.institutionId);
+  if (!workingDays.includes(dayOfWeek)) return;
+
+  // Collect all matching date keys from entry.createdAt to beforeDateKey (today)
+  const startDate = new Date(entry.createdAt);
+  const endDateParts = beforeDateKey.split("-").map(Number);
+  const endDate = new Date(endDateParts[0], endDateParts[1] - 1, endDateParts[2]);
+
+  const dateKeys: string[] = [];
+  const cursor = new Date(startDate);
+  // Advance to first matching dayOfWeek on or after startDate
+  while (cursor.getDay() !== dayOfWeek && cursor <= endDate) {
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  while (cursor <= endDate) {
+    dateKeys.push(toDateKey(cursor.toISOString()));
+    cursor.setDate(cursor.getDate() + 7);
+  }
+
+  if (dateKeys.length === 0) return;
+
+  // Fetch existing one-off entries for this staff + period
+  const existingOneOffs = await db
+    .select({ specificDate: timetableEntries.specificDate })
+    .from(timetableEntries)
+    .where(
+      and(
+        eq(timetableEntries.staffId, entry.staffId),
+        eq(timetableEntries.periodNumber, entry.periodNumber),
+        eq(timetableEntries.isRecurring, 0),
+        eq(timetableEntries.isDeleted, 0),
+      ),
+    );
+
+  const existingDateKeys = new Set(
+    existingOneOffs
+      .map((e: any) => (e.specificDate ? toDateKey(e.specificDate) : null))
+      .filter(Boolean),
+  );
+
+  const missingDateKeys = dateKeys.filter((dk) => !existingDateKeys.has(dk));
+  if (missingDateKeys.length === 0) return;
+
+  const now = nowISO();
+  const rows = missingDateKeys.map((dk) => ({
+    id: uuid(),
+    institutionId: entry.institutionId,
+    staffId: entry.staffId,
+    classId: entry.classId,
+    additionalClassId: entry.additionalClassId,
+    gradeBookId: entry.gradeBookId,
+    periodNumber: entry.periodNumber,
+    dayOfWeek: entry.dayOfWeek,
+    isRecurring: 0,
+    specificDate: dateKeyToISOString(dk),
+    notes: entry.notes,
+    status: entry.status === "completed" ? "completed" : "scheduled",
+    isDeleted: 0,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  // Batch insert in chunks of 50 to avoid exceeding parameters limit
+  const CHUNK = 50;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    await db.insert(timetableEntries).values(rows.slice(i, i + CHUNK));
+  }
+}
+
 /** Resolve additional class IDs from body (supports `additionalClassIds` array or legacy `additionalClassId`), falling back to a default. */
 function resolveAdditionalClassIds(body: any, fallback: any): string | null {
   if (body.additionalClassIds !== undefined) {
@@ -815,6 +891,12 @@ timetableController.patch("/:id", async (c) => {
   }
 
   // ── Non-recurring or no date: direct update ──
+  // For recurring entries, freeze past dates before updating the template
+  if (entry.isRecurring === 1) {
+    const todayKey = toDateKey(now);
+    await freezeRecurringPastDates(db, entry, todayKey);
+  }
+
   const updates: Record<string, any> = { updatedAt: now };
   if (body.classId) updates.classId = body.classId;
   if (body.additionalClassIds !== undefined || body.additionalClassId !== undefined) {
@@ -1213,7 +1295,41 @@ timetableController.delete("/:id", async (c) => {
     return c.json({ success: true, message: "Removed for this day only" });
   }
 
-  // No date provided — attempting to delete the recurring template
+  // ── scope=future: freeze past dates, then delete template ──
+  const scopeQuery = c.req.query("scope");
+  if (scopeQuery === "future") {
+    const todayKey = toDateKey(now);
+    await freezeRecurringPastDates(db, entry, todayKey);
+
+    // Soft-delete the recurring template
+    await db
+      .update(timetableEntries)
+      .set({ isDeleted: 1, updatedAt: now })
+      .where(eq(timetableEntries.id, id));
+
+    // Also soft-delete any future uncompleted one-off entries for this staff+period after today
+    const futureOneOffs = workdoneEntries.filter(
+      (e: any) =>
+        e.specificDate &&
+        toDateKey(e.specificDate) >= todayKey &&
+        e.status !== "completed",
+    );
+    if (futureOneOffs.length > 0) {
+      await db
+        .update(timetableEntries)
+        .set({ isDeleted: 1, updatedAt: now })
+        .where(
+          inArray(
+            timetableEntries.id,
+            futureOneOffs.map((e: any) => e.id),
+          ),
+        );
+    }
+
+    return c.json({ success: true, message: "Recurring schedule removed from today onwards" });
+  }
+
+  // No date/scope provided — attempting to delete the recurring template
   if (workdoneEntries.length > 0) {
     throw new BadRequestError(
       `Cannot delete this recurring schedule because ${workdoneEntries.length} workdone entry(ies) exist. Remove this period for a specific day instead.`,
@@ -1627,8 +1743,10 @@ async function buildMonthlyReportData(
         ? [...chapterLabels].join(", ")
         : bookTitle;
 
-      const topicName = subtopicLabels.length > 0
-        ? subtopicLabels.join(", ")
+      // topicName = chapter names (from workdone) + subtopics (from workdone)
+      const allTopicLabels = [...chapterLabels, ...subtopicLabels];
+      const topicName = allTopicLabels.length > 0
+        ? allTopicLabels.join(", ")
         : entryTopics.join(", ");
 
       rows.push({

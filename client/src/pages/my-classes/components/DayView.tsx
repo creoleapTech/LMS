@@ -35,6 +35,8 @@ import {
   Timer,
   GraduationCap,
   Trash2,
+  RefreshCw,
+  Calendar,
 } from "lucide-react";
 import { useAuthStore } from "@/store/userAuthStore";
 import { useNavigate } from "@tanstack/react-router";
@@ -190,18 +192,35 @@ export function DayView({
     entry?: ITimetableEntry;
   }>({ open: false });
 
+  const [deleteScope, setDeleteScope] = useState<"day" | "future" | null>(null);
+
   const { deleteEntry } = useTimetableMutations();
 
   const isRecurringEntry = !!deleteDialog.entry?.isRecurring;
 
   const handleDelete = () => {
     if (deleteDialog.entry) {
-      deleteEntry.mutate(
-        { id: deleteDialog.entry._id, date: isRecurringEntry ? dateStr : undefined },
-        {
-          onSuccess: () => setDeleteDialog({ open: false }),
-        },
-      );
+      if (isRecurringEntry && deleteScope === "future") {
+        deleteEntry.mutate(
+          { id: deleteDialog.entry._id, scope: "future" },
+          {
+            onSuccess: () => {
+              setDeleteDialog({ open: false });
+              setDeleteScope(null);
+            },
+          },
+        );
+      } else {
+        deleteEntry.mutate(
+          { id: deleteDialog.entry._id, date: isRecurringEntry ? dateStr : undefined },
+          {
+            onSuccess: () => {
+              setDeleteDialog({ open: false });
+              setDeleteScope(null);
+            },
+          },
+        );
+      }
     }
   };
 
@@ -453,33 +472,94 @@ export function DayView({
 
       <AlertDialog
         open={deleteDialog.open}
-        onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
+        onOpenChange={(open) => {
+          setDeleteDialog((prev) => ({ ...prev, open }));
+          if (!open) setDeleteScope(null);
+        }}
       >
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {isRecurringEntry ? "Remove for this day?" : "Delete schedule?"}
+              {isRecurringEntry
+                ? deleteScope
+                  ? deleteScope === "day"
+                    ? "Remove for this day?"
+                    : "Remove all future?"
+                  : "Delete recurring schedule?"
+                : "Delete schedule?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {isRecurringEntry
-                ? "This is a recurring class. Only this day's instance will be removed — the recurring schedule and any workdone on other days will remain intact."
+                ? deleteScope
+                  ? deleteScope === "day"
+                    ? "Only this day's instance will be removed — other days remain unchanged."
+                    : "This will remove the recurring schedule from today onwards. Past classes are preserved."
+                  : "This is a recurring class. Choose how to remove it:"
                 : "This will remove the scheduled class from your timetable. This action cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {/* Two-option selection for recurring entries when no scope selected */}
+          {isRecurringEntry && !deleteScope && (
+            <div className="space-y-2 px-1">
+              <button
+                type="button"
+                onClick={() => setDeleteScope("day")}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all text-left group cursor-pointer"
+              >
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-indigo-50 border border-indigo-200/60 flex items-center justify-center group-hover:shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] transition-all">
+                  <Calendar size={18} className="text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-800">Delete this day only</p>
+                  <p className="text-xs text-slate-500">
+                    Remove {DAY_NAMES[deleteDialog.entry?.dayOfWeek ?? 0]}&apos;s class. Other days remain unchanged.
+                  </p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteScope("future")}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-rose-300 hover:bg-rose-50/50 transition-all text-left group cursor-pointer"
+              >
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-rose-100 to-rose-50 border border-rose-200/60 flex items-center justify-center group-hover:shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] transition-all">
+                  <RefreshCw size={18} className="text-rose-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-800">Delete all future</p>
+                  <p className="text-xs text-slate-500">
+                    Remove this recurring schedule from today onwards. Past classes stay.
+                  </p>
+                </div>
+              </button>
+            </div>
+          )}
+
           <AlertDialogFooter>
             <AlertDialogCancel
-              onClick={() => setDeleteDialog({ open: false })}
+              onClick={() => {
+                setDeleteDialog({ open: false });
+                setDeleteScope(null);
+              }}
               className="rounded-xl"
             >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteEntry.isPending}
-              className="rounded-xl bg-rose-600 hover:bg-rose-700"
-            >
-              {deleteEntry.isPending ? "Removing..." : isRecurringEntry ? "Remove for today" : "Delete"}
-            </AlertDialogAction>
+            {(!isRecurringEntry || deleteScope) && (
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={deleteEntry.isPending}
+                className="rounded-xl bg-rose-600 hover:bg-rose-700"
+              >
+                {deleteEntry.isPending
+                  ? "Removing..."
+                  : isRecurringEntry && deleteScope === "future"
+                    ? "Remove all future"
+                    : isRecurringEntry
+                      ? "Remove for today"
+                      : "Delete"}
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -269,7 +269,7 @@ export function ScheduleEntryDialog({
                 }`}
               >
                 <RefreshCw size={13} />
-                All recurring days
+                All future days
               </button>
             </div>
           )}
