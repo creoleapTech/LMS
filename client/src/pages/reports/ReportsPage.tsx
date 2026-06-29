@@ -1633,9 +1633,11 @@ function SubmittedReportsView({
     }
   };
 
-  const handleView = (id: string) => {
+  const handleView = (docxKey: string) => {
     const apiBase = _axios.defaults.baseURL?.replace(/\/api$/, "") || window.location.origin;
-    window.open(`${apiBase}/api/admin/timetable/view-submitted-report?id=${id}`, "_blank");
+    const fileUrl = `${apiBase}/api/file/proxy?key=${encodeURIComponent(docxKey)}`;
+    const viewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+    window.open(viewerUrl, "_blank");
   };
 
   if (loading) {
@@ -1721,7 +1723,7 @@ function SubmittedReportsView({
                 <td className="px-4 py-3 text-center">
                   <div className="inline-flex items-center gap-1.5">
                     <button
-                      onClick={() => handleView(r.id)}
+                      onClick={() => handleView(r.docxKey)}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-semibold text-xs hover:bg-blue-100 transition-colors"
                     >
                       <Eye size={14} />
