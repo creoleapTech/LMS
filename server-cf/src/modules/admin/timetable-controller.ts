@@ -1114,15 +1114,20 @@ timetableController.patch("/:id/complete", async (c) => {
   let sessionId: string;
   if (existingSessions.length === 0) {
     sessionId = uuid();
+    // Use actual start/end times for the class session, not scheduled period times.
+    // body.startTime may be a future scheduled time; clamp to actual wall-clock.
+    const actualStartTime = new Date(startTime).getTime() > new Date(now).getTime() ? now : startTime;
+    const actualEndTime = now; // session ends when teacher marks it complete
+    const actualDuration = Math.round((new Date(actualEndTime).getTime() - new Date(actualStartTime).getTime()) / 60000);
     await db.insert(classSessions).values({
       id: sessionId,
       staffId: entryStaffId,
       institutionId: entry.institutionId,
       classId: entryClassId,
       courseId: entry.gradeBookId || null,
-      startTime,
-      endTime,
-      durationMinutes,
+      startTime: actualStartTime,
+      endTime: actualEndTime,
+      durationMinutes: actualDuration,
       remarks: body.notes || null,
       status: "completed",
       createdAt: now,
@@ -1130,12 +1135,14 @@ timetableController.patch("/:id/complete", async (c) => {
     });
   } else {
     sessionId = existingSessions[0].id;
+    // Clamp future scheduled start time to actual wall-clock
+    const actualStartTime = new Date(startTime).getTime() > new Date(now).getTime() ? now : startTime;
     await db
       .update(classSessions)
       .set({
-        startTime,
-        endTime,
-        durationMinutes,
+        startTime: actualStartTime,
+        endTime: now,
+        durationMinutes: Math.round((new Date(now).getTime() - new Date(actualStartTime).getTime()) / 60000),
         remarks: body.notes || null,
         status: "completed",
         updatedAt: now,
