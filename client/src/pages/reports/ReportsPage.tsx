@@ -1199,7 +1199,6 @@ function renderSignatureSection(dataUnitId?: string): React.ReactNode {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: tw(40) }}>
         <div style={{ width: "45%" }}>
           <div style={{ fontSize: hp(24), marginBottom: tw(40) }}>Principal's Signature</div>
-          <div style={{ borderTop: "1px solid #000000", height: "1px", width: "100%" }} />
         </div>
         <div style={{ width: "45%", textAlign: "left" }}>
           <div style={{ height: "100px", width: "180px" }} />
@@ -1220,7 +1219,6 @@ function renderSignatureSectionWithData(signatureUrl: string | null | undefined,
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: tw(40) }}>
         <div style={{ width: "45%" }}>
           <div style={{ fontSize: hp(24), marginBottom: tw(40) }}>Principal's Signature</div>
-          <div style={{ borderTop: "1px solid #000000", height: "1px", width: "100%" }} />
         </div>
         <div style={{ width: "45%", textAlign: "left" }}>
           {signatureUrl ? (
@@ -1846,24 +1844,24 @@ function SubmittedReportsView({
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-4 py-3 text-left font-bold text-slate-700">Teacher</th>
-                  {isSuperAdmin && <th className="px-4 py-3 text-left font-bold text-slate-700">School</th>}
-                  <th className="px-4 py-3 text-left font-bold text-slate-700">Month</th>
-                  <th className="px-4 py-3 text-left font-bold text-slate-700">Submitted On</th>
+                  <th className="px-4 py-3 text-center font-bold text-slate-700">Teacher</th>
+                  {isSuperAdmin && <th className="px-4 py-3 text-center font-bold text-slate-700">School</th>}
+                  <th className="px-4 py-3 text-center font-bold text-slate-700">Month</th>
+                  <th className="px-4 py-3 text-center font-bold text-slate-700">Submitted On</th>
                   <th className="px-4 py-3 text-center font-bold text-slate-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {reports.map((r, i) => (
                   <tr key={r.id || i} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3 font-medium">
+                    <td className="px-4 py-3 text-center font-medium">
                       {r.staffSalutation ? `${r.staffSalutation} ` : ""}{r.staffName || "Unknown"}
                     </td>
-                    {isSuperAdmin && <td className="px-4 py-3 text-slate-600">{r.institutionName || "—"}</td>}
-                    <td className="px-4 py-3">
+                    {isSuperAdmin && <td className="px-4 py-3 text-center text-slate-600">{r.institutionName || "—"}</td>}
+                    <td className="px-4 py-3 text-center">
                       {MONTH_NAMES[(r.month || 1) - 1]} {r.year}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-center text-slate-600">
                       {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -1993,21 +1991,21 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-4 py-3 text-left font-bold text-slate-700">Month</th>
-              <th className="px-4 py-3 text-left font-bold text-slate-700">Submitted On</th>
+              <th className="px-4 py-3 text-center font-bold text-slate-700">Month</th>
+              <th className="px-4 py-3 text-center font-bold text-slate-700">Submitted On</th>
               <th className="px-4 py-3 text-center font-bold text-slate-700">Actions</th>
             </tr>
           </thead>
           <tbody>
             {submissions.map((r, i) => (
               <tr key={r.id || i} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                <td className="px-4 py-3 font-medium">
+                <td className="px-4 py-3 text-center font-medium">
                   {MONTH_NAMES[(r.month || 1) - 1]} {r.year}
                 </td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="px-4 py-3 text-center text-slate-600">
                   {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 text-center">
                   <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={() => onView(r.id)}
