@@ -324,19 +324,21 @@ classSessionController.get("/my-history", async (c) => {
   const sessionIds = sessions.map((s) => s.id);
   const classIds = [...new Set(sessions.map((s) => s.classId).filter(Boolean))] as string[];
 
-  // Batch fetch class info
+  const CHUNK = 100;
+
+  // Batch fetch class info — chunk to avoid D1's 999-variable limit
   const classMap = new Map<string, any>();
-  if (classIds.length > 0) {
+  for (let i = 0; i < classIds.length; i += CHUNK) {
+    const chunk = classIds.slice(i, i + CHUNK);
     const rows = await db
       .select({ id: classes.id, grade: classes.grade, section: classes.section })
       .from(classes)
-      .where(inArray(classes.id, classIds));
+      .where(inArray(classes.id, chunk));
     for (const r of rows) classMap.set(r.id, r);
   }
 
   // Batch fetch topics — chunk to avoid D1's 999-variable limit
   const topicsMap = new Map<string, string[]>();
-  const CHUNK = 100;
   for (let i = 0; i < sessionIds.length; i += CHUNK) {
     const chunk = sessionIds.slice(i, i + CHUNK);
     const rows = await db
@@ -448,31 +450,34 @@ classSessionController.get("/diary", async (c) => {
 
   const sessionIds = sessions.map((s) => s.id);
 
-  // Batch fetch class info
+  const CHUNK = 100;
+
+  // Batch fetch class info — chunk to avoid D1's 999-variable limit
   const classMap = new Map<string, any>();
   const classIds = [...new Set(sessions.map((s) => s.classId).filter(Boolean))] as string[];
-  if (classIds.length > 0) {
+  for (let i = 0; i < classIds.length; i += CHUNK) {
+    const chunk = classIds.slice(i, i + CHUNK);
     const rows = await db
       .select({ id: classes.id, grade: classes.grade, section: classes.section })
       .from(classes)
-      .where(inArray(classes.id, classIds));
+      .where(inArray(classes.id, chunk));
     for (const r of rows) classMap.set(r.id, r);
   }
 
-  // Batch fetch staff info (for "all teachers" views)
+  // Batch fetch staff info (for "all teachers" views) — chunk to avoid D1's 999-variable limit
   const staffMap = new Map<string, any>();
   const staffIds = [...new Set(sessions.map((s) => s.staffId).filter(Boolean))] as string[];
-  if (staffIds.length > 0) {
+  for (let i = 0; i < staffIds.length; i += CHUNK) {
+    const chunk = staffIds.slice(i, i + CHUNK);
     const rows = await db
       .select({ id: staff.id, name: staff.name, email: staff.email })
       .from(staff)
-      .where(inArray(staff.id, staffIds));
+      .where(inArray(staff.id, chunk));
     for (const r of rows) staffMap.set(r.id, r);
   }
 
   // Batch fetch topics — chunk to avoid D1's 999-variable limit
   const topicsMap = new Map<string, string[]>();
-  const CHUNK = 100;
   for (let i = 0; i < sessionIds.length; i += CHUNK) {
     const chunk = sessionIds.slice(i, i + CHUNK);
     const rows = await db
