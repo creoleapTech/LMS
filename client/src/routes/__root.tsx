@@ -3,6 +3,7 @@ import { GlobalHeader } from '@/components/GlobalHeader';
 import { Outlet, createRootRouteWithContext, redirect, useLocation } from '@tanstack/react-router';
 import { Toaster } from 'sonner';
 import { useEffect, useRef, useState } from 'react';
+import { useAuthStore } from '@/store/userAuthStore';
 import type { QueryClient } from '@tanstack/react-query';
 
 function getStoredToken(): string | null {
@@ -48,8 +49,9 @@ function RootComponent() {
   const showSidebar = pathname !== '/';
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevPathRef = useRef<string>(pathname);
+  const hydrated = useAuthStore((s) => s.hydrated);
 
-  // Show loader only on login (/ → /dashboard) or logout (/dashboard → /)
+  // Show loader while Zustand rehydrates to prevent flash of login screen
   const [showLoader, setShowLoader] = useState(false);
 
   useEffect(() => {
@@ -76,7 +78,7 @@ function RootComponent() {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
   }, [pathname]);
 
-  if (showLoader) {
+  if (!hydrated || showLoader) {
     return <AppLoader />;
   }
 
