@@ -2583,4 +2583,49 @@ timetableController.get("/download-submitted-report", async (c) => {
   }
 });
 
+// ─── GET /view-submitted-report — redirect to Google Docs Viewer for in-browser viewing ──
+
+timetableController.get("/view-submitted-report", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const submissionId = c.req.query("id");
+    if (!submissionId) throw new BadRequestError("id is required");
+
+    const db = getDb(c.env.DB);
+    const [submission] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(eq(reportSubmissions.id, submissionId))
+      .limit(1);
+
+    if (!submission || submission.isDeleted) {
+      throw new BadRequestError("Submission not found");
+    }
+
+    // Permission check: admin can only view their institution's reports
+    if (user.role === "admin") {
+      const adminInstId = resolveInstitutionId(user);
+      if (submission.institutionId !== adminInstId) {
+        throw new ForbiddenError("Access denied");
+      }
+    }
+
+    if (!submission.docxKey) {
+      throw new BadRequestError("No DOCX file associated with this submission");
+    }
+
+    // Build the direct file URL using the API proxy
+    const apiBase = new URL(c.req.url).origin;
+    const fileUrl = `${apiBase}/api/file/proxy?key=${encodeURIComponent(submission.docxKey)}`;
+
+    // Redirect to Google Docs Viewer for in-browser rendering
+    const viewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+    return c.redirect(viewerUrl, 302);
+  } catch (err: any) {
+    if (err instanceof BadRequestError || err instanceof ForbiddenError) throw err;
+    console.error("View submitted report error:", err);
+    return c.json({ success: false, message: "Failed to view report" }, 500);
+  }
+});
+
 export { timetableController };

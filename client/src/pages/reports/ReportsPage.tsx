@@ -1633,6 +1633,11 @@ function SubmittedReportsView({
     }
   };
 
+  const handleView = (id: string) => {
+    const apiBase = _axios.defaults.baseURL?.replace(/\/api$/, "") || window.location.origin;
+    window.open(`${apiBase}/api/admin/timetable/view-submitted-report?id=${id}`, "_blank");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -1697,7 +1702,7 @@ function SubmittedReportsView({
               {isSuperAdmin && <th className="px-4 py-3 text-left font-bold text-slate-700">School</th>}
               <th className="px-4 py-3 text-left font-bold text-slate-700">Month</th>
               <th className="px-4 py-3 text-left font-bold text-slate-700">Submitted On</th>
-              <th className="px-4 py-3 text-center font-bold text-slate-700">Download</th>
+              <th className="px-4 py-3 text-center font-bold text-slate-700">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -1714,18 +1719,27 @@ function SubmittedReportsView({
                   {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <button
-                    onClick={() => handleDownload(r.id)}
-                    disabled={downloadingId === r.id}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                  >
-                    {downloadingId === r.id ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Download size={14} />
-                    )}
-                    DOCX
-                  </button>
+                  <div className="inline-flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleView(r.id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-semibold text-xs hover:bg-blue-100 transition-colors"
+                    >
+                      <Eye size={14} />
+                      View
+                    </button>
+                    <button
+                      onClick={() => handleDownload(r.id)}
+                      disabled={downloadingId === r.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                    >
+                      {downloadingId === r.id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Download size={14} />
+                      )}
+                      DOCX
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
