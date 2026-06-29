@@ -17,12 +17,71 @@ export function ContentProtectionWrapper({
   const containerRef = useRef<HTMLDivElement>(null);
   const [tabHidden, setTabHidden] = useState(false);
   const [devtoolsOpen, setDevtoolsOpen] = useState(false);
+  const fullscreenOverlayRef = useRef<HTMLDivElement | null>(null);
 
   // Build the tiled watermark image once per text value
   const watermarkBg = useMemo(() => {
     if (!watermarkText) return null;
     return buildWatermarkDataUrl(watermarkText);
   }, [watermarkText]);
+
+  // Sync the fullscreen watermark overlay with the native fullscreen element
+  useEffect(() => {
+    if (!enabled || !watermarkBg) return;
+
+    const addOverlay = (fsElement: Element) => {
+      // Remove any existing overlay first
+      removeOverlay();
+
+      const overlay = document.createElement("div");
+      overlay.setAttribute("aria-hidden", "true");
+      overlay.style.cssText = `
+        position: fixed; inset: 0; z-index: 2147483647;
+        pointer-events: none; user-select: none; -webkit-user-select: none;
+        background-image: url(${watermarkBg});
+        background-repeat: repeat;
+        background-size: 320px 160px;
+      `;
+      fsElement.appendChild(overlay);
+      fullscreenOverlayRef.current = overlay;
+    };
+
+    const removeOverlay = () => {
+      if (fullscreenOverlayRef.current) {
+        fullscreenOverlayRef.current.remove();
+        fullscreenOverlayRef.current = null;
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      const fsElement =
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement;
+
+      if (fsElement && containerRef.current?.contains(fsElement as Node)) {
+        // A child of our container went fullscreen — add overlay
+        // Use requestAnimationFrame to wait for the fullscreen render
+        requestAnimationFrame(() => addOverlay(fsElement));
+      } else {
+        removeOverlay()
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      removeOverlay();
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+    };
+  }, [enabled, watermarkBg]);
 
   // Block keyboard shortcuts for downloading, printing, devtools, view source
   useEffect(() => {
@@ -43,7 +102,7 @@ export function ContentProtectionWrapper({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [enabled]);
 
-  // Detect DevTools open/close via debugger timing and console size monitoring
+  // Detect DevTools open/close via window size monitoring
   useEffect(() => {
     if (!enabled) return;
     let interval: ReturnType<typeof setInterval>;
