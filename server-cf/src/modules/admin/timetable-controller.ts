@@ -114,7 +114,10 @@ function resolveInstitutionId(user: Record<string, any>): string {
 
 function toDateKey(value: string | Date): string {
   if (typeof value === "string") {
-    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    // Only treat bare YYYY-MM-DD strings as already-local dates.
+    // ISO datetime strings (e.g. "2026-06-21T18:30:00.000Z") must go through
+    // the Date conversion so the IST calendar date is computed correctly.
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (match) return `${match[1]}-${match[2]}-${match[3]}`;
   }
 
@@ -1680,16 +1683,18 @@ async function buildMonthlyReportData(
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month - 1, d);
     const dow = date.getDay();
-    if (!workingDays.includes(dow)) continue;
-
     const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    const recurringForDay = recurringEntries
-      .filter((e: any) => e.dayOfWeek === dow)
-      .map((e: any) => recurringEntryForDate(e, dateStr));
     const oneOffForDate = oneOffEntries.filter((e: any) => {
       if (!e.specificDate) return false;
       return toDateKey(e.specificDate) === dateStr;
     });
+
+    // Include non-working days only if they have actual one-off completed entries
+    if (!workingDays.includes(dow) && oneOffForDate.length === 0) continue;
+
+    const recurringForDay = recurringEntries
+      .filter((e: any) => e.dayOfWeek === dow)
+      .map((e: any) => recurringEntryForDate(e, dateStr));
 
     // If duplicate one-off instances exist for the same period (legacy data),
     // keep only the most recently completed one.
@@ -1750,10 +1755,18 @@ async function buildMonthlyReportData(
         .filter((r: any) => !r.chapterId && !r.contentId)
         .map((r: any) => r.topic);
 
+      // Fallback raw topic labels (used when chapter/content DB lookups fail)
+      const rawChapterTopics = entryTopicRows
+        .filter((r: any) => r.chapterId && !r.contentId)
+        .map((r: any) => r.topic);
+      const rawSubtopicTopics = entryTopicRows
+        .filter((r: any) => r.contentId)
+        .map((r: any) => r.topic);
+
       // Chapter Name = chapter(s) selected by the teacher in work done
       // For legacy/free-text-only entries, fall back to the grade-book (subject) title
       const chapterName = hasStructuredTopics
-        ? [...chapterLabels].join(", ")
+        ? [...chapterLabels].join(", ") || rawChapterTopics.join(", ")
         : bookTitle;
 
       // Topic Name = subtopic(s) selected by the teacher under the chapters
@@ -1761,7 +1774,7 @@ async function buildMonthlyReportData(
       const topicName = hasStructuredTopics
         ? subtopicLabels.length > 0
           ? subtopicLabels.join(", ")
-          : freeTextTopics.join(", ")
+          : rawSubtopicTopics.join(", ") || freeTextTopics.join(", ")
         : entryTopics.join(", ");
 
       rows.push({
@@ -1770,7 +1783,7 @@ async function buildMonthlyReportData(
         section,
         chapterName,
         topicName,
-        remarks: "",
+        remarks: entry.status === "completed" ? entry.notes || "" : "",
       });
     }
   }
