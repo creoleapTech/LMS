@@ -17,6 +17,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Config } from "@/lib/config";
+import {
   ChevronLeft,
   ChevronRight,
   Download,
@@ -37,6 +44,8 @@ import {
   CheckCircle2,
   Clock,
   Inbox,
+  Calendar,
+  X,
 } from "lucide-react";
 
 const MONTH_NAMES = [
@@ -242,6 +251,7 @@ export default function ReportsPage() {
             institutionId={effectiveInstitutionId || undefined}
             isSuperAdmin={isSuperAdmin}
             staffList={staffList}
+            institutions={institutions}
           />
         ) : (
           <MySubmissionsView
@@ -1584,22 +1594,45 @@ function SubmittedReportsView({
   institutionId,
   isSuperAdmin,
   staffList,
+  institutions,
 }: {
   institutionId?: string;
   isSuperAdmin: boolean;
   staffList: { _id: string; name: string; salutation?: string; type?: string }[];
+  institutions: { _id: string; name: string }[];
 }) {
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [filterStaffId, setFilterStaffId] = useState<string>("");
+  const [filterInstitutionId, setFilterInstitutionId] = useState<string>("");
+  const [filterMonth, setFilterMonth] = useState<string>("");
+  const [filterYear, setFilterYear] = useState<string>("");
+
+  // View state
+  const [viewingSubmission, setViewingSubmission] = useState<{
+    reportData: ReportParams;
+    signatureUrl: string | null;
+    staffName: string;
+    monthName: string;
+    year: number;
+  } | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
 
   useEffect(() => {
     setLoading(true);
-    let url = `/admin/timetable/submitted-reports${institutionId ? `?institutionId=${institutionId}` : ""}`;
-    if (filterStaffId && filterStaffId !== "all") {
-      url += institutionId ? `&staffId=${filterStaffId}` : `?staffId=${filterStaffId}`;
-    }
+    let url = `/admin/timetable/submitted-reports`;
+    const params: string[] = [];
+    const instId = isSuperAdmin ? (filterInstitutionId && filterInstitutionId !== "all" ? filterInstitutionId : "") : institutionId;
+    if (instId) params.push(`institutionId=${instId}`);
+    if (filterStaffId && filterStaffId !== "all") params.push(`staffId=${filterStaffId}`);
+    if (filterMonth && filterMonth !== "all") params.push(`month=${filterMonth}`);
+    if (filterYear && filterYear !== "all") params.push(`year=${filterYear}`);
+    if (params.length > 0) url += `?${params.join("&")}`;
+
     _axios.get(url)
       .then((res) => {
         if (res.data?.success) {
@@ -1610,7 +1643,7 @@ function SubmittedReportsView({
         setReports([]);
       })
       .finally(() => setLoading(false));
-  }, [institutionId, filterStaffId]);
+  }, [institutionId, filterInstitutionId, filterStaffId, filterMonth, filterYear, isSuperAdmin]);
 
   const handleDownload = async (id: string) => {
     setDownloadingId(id);
@@ -1633,12 +1666,47 @@ function SubmittedReportsView({
     }
   };
 
-  const handleView = (docxKey: string) => {
-    const apiBase = _axios.defaults.baseURL?.replace(/\/api$/, "") || window.location.origin;
-    const fileUrl = `${apiBase}/api/file/proxy?key=${encodeURIComponent(docxKey)}`;
-    const viewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
-    window.open(viewerUrl, "_blank");
+  const handleViewInApp = async (r: any) => {
+    setViewLoading(true);
+    try {
+      const [dataRes, sigRes] = await Promise.all([
+        _axios.get(`/admin/timetable/submission-data?id=${r.id}`),
+        r.staffId
+          ? _axios.get(`/admin/timetable/staff-signature?staffId=${r.staffId}`).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+
+      const reportData = dataRes.data?.data?.reportData as ReportParams | undefined;
+      if (!reportData) {
+        toast.error("No report data found");
+        return;
+      }
+
+      let signatureUrl: string | null = null;
+      const sigKey = sigRes?.data?.data?.signatureKey;
+      if (sigKey) {
+        signatureUrl = `${Config.proxyUrl}${encodeURIComponent(sigKey)}`;
+      }
+
+      setViewingSubmission({
+        reportData,
+        signatureUrl,
+        staffName: r.staffName || "Unknown",
+        monthName: MONTH_NAMES[(r.month || 1) - 1],
+        year: r.year,
+      });
+    } catch {
+      toast.error("Failed to load report data");
+    } finally {
+      setViewLoading(false);
+    }
   };
+
+  const hasActiveFilter =
+    (filterStaffId && filterStaffId !== "all") ||
+    (filterInstitutionId && filterInstitutionId !== "all") ||
+    (filterMonth && filterMonth !== "all") ||
+    (filterYear && filterYear !== "all");
 
   if (loading) {
     return (
@@ -1648,7 +1716,7 @@ function SubmittedReportsView({
     );
   }
 
-  if (reports.length === 0) {
+  if (reports.length === 0 && !hasActiveFilter) {
     return (
       <div className="neo-card rounded-2xl border border-slate-200/80 p-12 text-center">
         <Inbox className="h-12 w-12 text-slate-400 mx-auto mb-3" />
@@ -1659,96 +1727,199 @@ function SubmittedReportsView({
   }
 
   return (
-    <div className="neo-card rounded-2xl border border-slate-200/80 overflow-hidden">
-      <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-4">
-        <h2 className="text-lg font-extrabold text-white tracking-wide">Submitted Reports</h2>
-        <p className="text-sm text-white/80">
-          {isSuperAdmin ? "All schools" : "Your school"} — {reports.length} report{reports.length !== 1 ? "s" : ""}
-        </p>
-      </div>
-      {staffList.length > 0 && (
-        <div className="px-5 py-3 border-b border-slate-200 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-violet-100 rounded-lg text-violet-600">
-              <Users size={16} />
+    <>
+      <div className="neo-card rounded-2xl border border-slate-200/80 overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-4">
+          <h2 className="text-lg font-extrabold text-white tracking-wide">Submitted Reports</h2>
+          <p className="text-sm text-white/80">
+            {isSuperAdmin ? "All schools" : "Your school"} — {reports.length} report{reports.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+
+        {/* Filters */}
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/50 space-y-3">
+          {/* Row 1: School + Teacher + Clear */}
+          <div className="flex flex-wrap items-center gap-3">
+            {isSuperAdmin && (
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+                  <Building2 size={16} />
+                </div>
+                <Select value={filterInstitutionId} onValueChange={setFilterInstitutionId}>
+                  <SelectTrigger className="w-56 rounded-xl">
+                    <SelectValue placeholder="All Schools" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Schools</SelectItem>
+                    {institutions.map((inst) => (
+                      <SelectItem key={inst._id} value={inst._id}>
+                        {inst.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-violet-100 rounded-lg text-violet-600">
+                <Users size={16} />
+              </div>
+              <Select value={filterStaffId} onValueChange={setFilterStaffId}>
+                <SelectTrigger className="w-56 rounded-xl">
+                  <SelectValue placeholder="All Teachers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teachers</SelectItem>
+                  {staffList.map((s) => (
+                    <SelectItem key={s._id} value={s._id}>
+                      {s.salutation ? `${s.salutation} ` : ""}{s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={filterStaffId} onValueChange={setFilterStaffId}>
-              <SelectTrigger className="w-64 rounded-xl">
-                <SelectValue placeholder="All Teachers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Teachers</SelectItem>
-                {staffList.map((s) => (
-                  <SelectItem key={s._id} value={s._id}>
-                    {s.salutation ? `${s.salutation} ` : ""}{s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {filterStaffId && (
+
+            {hasActiveFilter && (
               <button
-                onClick={() => setFilterStaffId("")}
-                className="text-xs text-slate-500 hover:text-slate-700 underline"
+                onClick={() => {
+                  setFilterStaffId("");
+                  setFilterInstitutionId("");
+                  setFilterMonth("");
+                  setFilterYear("");
+                }}
+                className="text-xs text-slate-500 hover:text-slate-700 underline flex items-center gap-1"
               >
-                Clear filter
+                <X size={12} />
+                Clear all filters
               </button>
             )}
           </div>
+
+          {/* Row 2: Month + Year */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+                <Calendar size={16} />
+              </div>
+              <Select value={filterMonth} onValueChange={setFilterMonth}>
+                <SelectTrigger className="w-40 rounded-xl">
+                  <SelectValue placeholder="All Months" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months</SelectItem>
+                  {MONTH_NAMES.map((name, i) => (
+                    <SelectItem key={i + 1} value={String(i + 1)}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Select value={filterYear} onValueChange={setFilterYear}>
+                <SelectTrigger className="w-32 rounded-xl">
+                  <SelectValue placeholder="All Years" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {yearOptions.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
-      )}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-4 py-3 text-left font-bold text-slate-700">Teacher</th>
-              {isSuperAdmin && <th className="px-4 py-3 text-left font-bold text-slate-700">School</th>}
-              <th className="px-4 py-3 text-left font-bold text-slate-700">Month</th>
-              <th className="px-4 py-3 text-left font-bold text-slate-700">Submitted On</th>
-              <th className="px-4 py-3 text-center font-bold text-slate-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.map((r, i) => (
-              <tr key={r.id || i} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                <td className="px-4 py-3 font-medium">
-                  {r.staffSalutation ? `${r.staffSalutation} ` : ""}{r.staffName || "Unknown"}
-                </td>
-                {isSuperAdmin && <td className="px-4 py-3 text-slate-600">{r.institutionName || "—"}</td>}
-                <td className="px-4 py-3">
-                  {MONTH_NAMES[(r.month || 1) - 1]} {r.year}
-                </td>
-                <td className="px-4 py-3 text-slate-600">
-                  {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <div className="inline-flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleView(r.docxKey)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-semibold text-xs hover:bg-blue-100 transition-colors"
-                    >
-                      <Eye size={14} />
-                      View
-                    </button>
-                    <button
-                      onClick={() => handleDownload(r.id)}
-                      disabled={downloadingId === r.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                    >
-                      {downloadingId === r.id ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Download size={14} />
-                      )}
-                      DOCX
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+        {reports.length === 0 ? (
+          <div className="p-12 text-center">
+            <Inbox className="h-10 w-10 text-slate-300 mx-auto mb-2" />
+            <p className="text-slate-500 font-medium">No reports match your filters</p>
+            <p className="text-slate-400 text-xs mt-1">Try adjusting your filter criteria</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-4 py-3 text-left font-bold text-slate-700">Teacher</th>
+                  {isSuperAdmin && <th className="px-4 py-3 text-left font-bold text-slate-700">School</th>}
+                  <th className="px-4 py-3 text-left font-bold text-slate-700">Month</th>
+                  <th className="px-4 py-3 text-left font-bold text-slate-700">Submitted On</th>
+                  <th className="px-4 py-3 text-center font-bold text-slate-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reports.map((r, i) => (
+                  <tr key={r.id || i} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 font-medium">
+                      {r.staffSalutation ? `${r.staffSalutation} ` : ""}{r.staffName || "Unknown"}
+                    </td>
+                    {isSuperAdmin && <td className="px-4 py-3 text-slate-600">{r.institutionName || "—"}</td>}
+                    <td className="px-4 py-3">
+                      {MONTH_NAMES[(r.month || 1) - 1]} {r.year}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleViewInApp(r)}
+                          disabled={viewLoading}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-semibold text-xs hover:bg-blue-100 transition-colors disabled:opacity-50"
+                        >
+                          {viewLoading ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Eye size={14} />
+                          )}
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleDownload(r.id)}
+                          disabled={downloadingId === r.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                        >
+                          {downloadingId === r.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Download size={14} />
+                          )}
+                          DOCX
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-    </div>
+
+      {/* Report Preview Dialog */}
+      <Dialog open={!!viewingSubmission} onOpenChange={(open) => { if (!open) setViewingSubmission(null); }}>
+        <DialogContent className="sm:max-w-[90vw] max-h-[90vh] p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2 flex flex-row items-center justify-between">
+            <div>
+              <DialogTitle className="text-lg font-bold">
+                {viewingSubmission?.staffName} — {viewingSubmission?.monthName} {viewingSubmission?.year}
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-80px)] px-6 pb-6">
+            {viewingSubmission && (
+              <ReportPreview data={viewingSubmission.reportData} signatureUrl={viewingSubmission.signatureUrl} />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

@@ -2499,6 +2499,8 @@ timetableController.get("/submitted-reports", async (c) => {
     const db = getDb(c.env.DB);
     const queryInstitutionId = c.req.query("institutionId");
     const queryStaffId = c.req.query("staffId");
+    const queryMonth = c.req.query("month");
+    const queryYear = c.req.query("year");
 
     // Admin sees only their institution; super_admin can filter
     const effectiveInstitutionId =
@@ -2512,6 +2514,12 @@ timetableController.get("/submitted-reports", async (c) => {
     }
     if (queryStaffId) {
       conditions.push(eq(reportSubmissions.staffId, queryStaffId));
+    }
+    if (queryMonth) {
+      conditions.push(eq(reportSubmissions.month, Number(queryMonth)));
+    }
+    if (queryYear) {
+      conditions.push(eq(reportSubmissions.year, Number(queryYear)));
     }
 
     const submissions = await db
