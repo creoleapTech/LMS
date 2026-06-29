@@ -14,8 +14,8 @@ export function buildWatermarkDataUrl(text: string): string {
   ctx.translate(tileW / 2, tileH / 2);
   ctx.rotate(-Math.PI / 6); // -30°
 
-  ctx.font = "600 15px system-ui, sans-serif";
-  ctx.fillStyle = "rgba(0,0,0,0.07)";
+  ctx.font = "700 16px system-ui, sans-serif";
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 

@@ -62,6 +62,7 @@ import { YouTubePlayer } from "@/components/viewers/YouTubePlayer";
 import { PptViewer } from "@/components/viewers/PptViewer";
 import { LeapLabOpenButton } from "@/components/LeapLabOpenButton";
 import { ProjectDownloadCard } from "@/components/ProjectDownloadCard";
+import { ContentProtectionWrapper } from "@/components/protection/ContentProtectionWrapper";
 import { isLeapFile, isSb3File } from "@/lib/leaplab";
 import type { Question } from "@/components/quiz/types";
 import { QuizBuilder } from "@/components/quiz/QuizBuilder";
@@ -785,13 +786,18 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
             {/* Video */}
             {viewingContent.type === "video" && viewingContent.videoUrl && (
               <div className="space-y-4">
-                <video
-                  controls
-                  className="w-full max-w-4xl rounded-lg shadow-lg"
-                  src={fileUrl}
-                >
-                  Your browser does not support the video tag.
-                </video>
+                <ContentProtectionWrapper watermarkText="www.creoleap.com">
+                  <video
+                    controls
+                    controlsList="nodownload"
+                    disablePictureInPicture
+                    className="w-full max-w-4xl rounded-lg shadow-lg"
+                    src={fileUrl}
+                    onContextMenu={(e) => e.preventDefault()}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </ContentProtectionWrapper>
                 <p className="text-sm text-muted-foreground">
                   Video content - Use player controls to watch
                 </p>

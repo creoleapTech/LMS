@@ -48,12 +48,21 @@ fileController.get("/proxy", async (c) => {
     const filename = key.slice(key.lastIndexOf("/") + 1);
 
     const isImage = mimeType.startsWith("image/");
+    const isVideo = mimeType.startsWith("video/");
 
     const headers = new Headers();
     headers.set("Content-Type", mimeType);
-    headers.set("Content-Disposition", isImage ? "inline" : `attachment; filename="${filename}"`);
+    // Videos and images are inline (no download prompt); other files use attachment
+    headers.set("Content-Disposition", (isImage || isVideo) ? "inline" : `attachment; filename="${filename}"`);
     headers.set("X-Content-Type-Options", "nosniff");
     headers.set("Cache-Control", "private, max-age=3600");
+
+    // Anti-download headers for videos
+    if (isVideo) {
+      headers.set("X-Download-Options", "noopen");
+      headers.set("X-Frame-Options", "DENY");
+      headers.set("Content-Security-Policy", "default-src 'self'");
+    }
 
     return new Response(object.body, { headers });
   } catch (error: any) {
@@ -153,6 +162,7 @@ fileController.get("/local", async (c) => {
     }
 
     const mimeType = getMimeType(key);
+    const isVideo = mimeType.startsWith("video/");
 
     const headers = new Headers();
     headers.set("Content-Type", mimeType);
@@ -160,6 +170,13 @@ fileController.get("/local", async (c) => {
     headers.set("X-Content-Type-Options", "nosniff");
     // Allow caching but revalidate — cache-buster param handles freshness
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
+
+    // Anti-download headers for videos
+    if (isVideo) {
+      headers.set("X-Download-Options", "noopen");
+      headers.set("X-Frame-Options", "DENY");
+      headers.set("Content-Security-Policy", "default-src 'self'");
+    }
 
     return new Response(object.body, { headers });
   } catch (error: any) {
