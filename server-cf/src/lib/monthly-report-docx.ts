@@ -79,7 +79,7 @@ const COMPACT_CELL_MARGINS = {
   right: 80,
   marginUnitType: WidthType.DXA,
 };
-const PAGE_MARGINS = { top: 1440, bottom: 1440, left: 1440, right: 1440 };
+const PAGE_MARGINS = { top: 1440, bottom: 1440, left: 1440, right: 480 };
 const PORTRAIT_LOGO_OFFSET = 3750000;
 
 // Load assets as ArrayBuffer at module level
@@ -112,8 +112,8 @@ function infoRow(label: string, value: string): Paragraph {
   return new Paragraph({
     spacing: { before: 80, after: 80, line: 276 },
     children: [
-      new TextRun({ text: `${label}: `, bold: true, size: 32, font: "Times New Roman", color: "000000" }),
-      new TextRun({ text: value, size: 32, font: "Times New Roman", color: "000000" }),
+      new TextRun({ text: `${label}: `, bold: true, size: 24, font: "Times New Roman", color: "000000" }),
+      new TextRun({ text: value, size: 24, font: "Times New Roman", color: "000000" }),
     ],
   });
 }
@@ -122,8 +122,8 @@ function infoRowBoldValue(label: string, value: string): Paragraph {
   return new Paragraph({
     spacing: { before: 80, after: 80, line: 276 },
     children: [
-      new TextRun({ text: `${label}: `, bold: true, size: 32, font: "Times New Roman", color: "000000" }),
-      new TextRun({ text: value, bold: true, size: 32, font: "Times New Roman", color: "000000" }),
+      new TextRun({ text: `${label}: `, bold: true, size: 24, font: "Times New Roman", color: "000000" }),
+      new TextRun({ text: value, bold: true, size: 24, font: "Times New Roman", color: "000000" }),
     ],
   });
 }
@@ -161,7 +161,7 @@ function buildCoverPage(params: ReportParams): (Paragraph | Table)[] {
         new TextRun({
           text: "Monthly Lesson Completion Report",
           bold: true,
-          size: 56,
+          size: 24,
           font: "Times New Roman",
         }),
       ],
@@ -176,7 +176,7 @@ function buildCoverPage(params: ReportParams): (Paragraph | Table)[] {
         new TextRun({
           text: `${params.monthName} ${params.year}`,
           bold: true,
-          size: 142,
+          size: 24,
           font: "Times New Roman",
           color: TITLE_COLOR,
         }),
@@ -192,8 +192,8 @@ function buildCoverPage(params: ReportParams): (Paragraph | Table)[] {
     new Paragraph({
       spacing: { before: 80, after: 80 },
       children: [
-        new TextRun({ text: "Submitted by: ", bold: true, size: 32, font: "Times New Roman", color: "000000" }),
-        new TextRun({ text: params.staffNames[0] || "", size: 32, font: "Times New Roman", color: "000000" }),
+        new TextRun({ text: "Submitted by: ", bold: true, size: 24, font: "Times New Roman", color: "000000" }),
+        new TextRun({ text: params.staffNames[0] || "", size: 24, font: "Times New Roman", color: "000000" }),
       ],
     }),
   );
@@ -204,7 +204,7 @@ function buildCoverPage(params: ReportParams): (Paragraph | Table)[] {
         spacing: { after: 60 },
         indent: { left: 1800 },
         children: [
-          new TextRun({ text: params.staffNames[i], size: 32, font: "Times New Roman", color: "000000" }),
+          new TextRun({ text: params.staffNames[i], size: 24, font: "Times New Roman", color: "000000" }),
         ],
       }),
     );
@@ -219,7 +219,7 @@ function buildCoverPage(params: ReportParams): (Paragraph | Table)[] {
         new TextRun({
           text: "School Information",
           bold: true,
-          size: 40,
+          size: 24,
           font: "Times New Roman",
           color: "000000",
         }),
@@ -253,7 +253,7 @@ function buildStyledTable(
         new TextRun({
           text: title,
           bold: true,
-          size: 32,
+          size: 24,
           font: "Times New Roman",
           color: "000000",
         }),
@@ -262,9 +262,12 @@ function buildStyledTable(
   );
 
   const colCount = columns.length;
+  // Custom widths: Date & Class narrow, Chapter medium, Topic small, Remarks wide
+  const fixedWidths = [12, 8, 18, 12, 50];
   const widths = Array.from({ length: colCount }, (_, i) => {
     if (colCount <= 2) return { size: 0, type: WidthType.AUTO };
-    return { size: Math.floor(100 / colCount), type: WidthType.PERCENTAGE };
+    const pct = i < fixedWidths.length ? fixedWidths[i] : Math.floor(100 / colCount);
+    return { size: pct, type: WidthType.PERCENTAGE };
   });
 
   const headerCells = columns.map((col, i) =>
@@ -282,7 +285,7 @@ function buildStyledTable(
             new TextRun({
               text: col,
               bold: true,
-              size: 28,
+              size: 24,
               font: "Times New Roman",
               color: "FFFFFF",
             }),
@@ -310,7 +313,7 @@ function buildStyledTable(
             alignment: i < 2 ? AlignmentType.CENTER : AlignmentType.LEFT,
             spacing: { before: 0, after: 0 },
             children: [
-              new TextRun({ text: val || "", size: 28, font: "Times New Roman" }),
+              new TextRun({ text: val || "", size: 24, font: "Times New Roman" }),
             ],
           }),
         ],
@@ -337,7 +340,7 @@ function buildSessionTable(
 ): (Paragraph | Table)[] {
   const columns = columnNames?.length === 5
     ? columnNames
-    : ["Date", "Class/Section", "Chapter Name", "Topic Name", "Remarks"];
+    : ["Date", "Class", "Chapter", "Topic", "Remarks"];
 
   const dataRows = rows.map((row) => {
     const classSection = row.section ? `${row.className}–${row.section}` : row.className;
@@ -394,7 +397,7 @@ function buildSignatureSection(params: ReportParams): (Paragraph | Table)[] {
         new TextRun({
           text: `Submitted on: ${params.submittedOn || ""}`,
           bold: true,
-          size: 28,
+          size: 24,
           font: "Times New Roman",
           color: "000000",
         }),
@@ -504,16 +507,16 @@ function parseInlineBold(text: string, baseBold: boolean): TextRun[] {
   let match;
   while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      runs.push(new TextRun({ text: text.slice(lastIndex, match.index), bold: baseBold, size: 28, font: "Times New Roman" }));
+      runs.push(new TextRun({ text: text.slice(lastIndex, match.index), bold: baseBold, size: 24, font: "Times New Roman" }));
     }
-    runs.push(new TextRun({ text: match[1], bold: true, size: 28, font: "Times New Roman" }));
+    runs.push(new TextRun({ text: match[1], bold: true, size: 24, font: "Times New Roman" }));
     lastIndex = regex.lastIndex;
   }
   if (lastIndex < text.length) {
-    runs.push(new TextRun({ text: text.slice(lastIndex), bold: baseBold, size: 28, font: "Times New Roman" }));
+    runs.push(new TextRun({ text: text.slice(lastIndex), bold: baseBold, size: 24, font: "Times New Roman" }));
   }
   if (runs.length === 0) {
-    runs.push(new TextRun({ text, bold: baseBold, size: 28, font: "Times New Roman" }));
+    runs.push(new TextRun({ text, bold: baseBold, size: 24, font: "Times New Roman" }));
   }
   return runs;
 }
@@ -552,7 +555,7 @@ function parseHtmlInlineRuns(html: string): TextRun[] {
         bold: inBold,
         italics: inItalic,
         strike: inStrikethrough,
-        size: 28,
+        size: 24,
         font: "Times New Roman",
       }));
     }
@@ -561,7 +564,7 @@ function parseHtmlInlineRuns(html: string): TextRun[] {
   if (runs.length === 0) {
     // Strip any remaining tags and return plain text
     const plain = html.replace(/<[^>]+>/g, "").trim();
-    runs.push(new TextRun({ text: plain, size: 28, font: "Times New Roman" }));
+    runs.push(new TextRun({ text: plain, size: 24, font: "Times New Roman" }));
   }
   return runs;
 }
@@ -595,7 +598,7 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
                 new TextRun({
                   text: item.content.text,
                   bold: true,
-                  size: 32,
+                  size: 24,
                   font: "Times New Roman",
                   color: "000000",
                 }),

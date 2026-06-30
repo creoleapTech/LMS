@@ -1785,7 +1785,7 @@ async function buildMonthlyReportData(
         : entryTopics.join(", ");
 
       rows.push({
-        date: `${d} ${monthName} ${year}`,
+        date: `${String(d).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`,
         className: grade,
         section,
         chapterName,
@@ -1805,7 +1805,7 @@ async function buildMonthlyReportData(
     sessionsPlanned: rows.length,
     sessionsCompleted: completedCount,
     rows,
-    sessionColumns: ["Date", "Class/Section", "Chapter Name", "Topic Name", "Remarks"],
+    sessionColumns: ["Date", "Class", "Chapter", "Topic", "Remarks"],
     bodyItems: [],
     staffId,
   };
