@@ -451,9 +451,7 @@ function RenderElement({
     height: `${pct(position.height, slideHeight)}%`,
     transform: transforms.length > 0 ? transforms.join(" ") : undefined,
     transformOrigin: "center center",
-    // Text/shapes use visible so text that renders slightly taller than the
-    // declared PPTX height isn't cut off; tables and images clip to their box.
-    overflow: (element.type === "image" || element.type === "table") ? "hidden" : "visible",
+    overflow: "hidden",
     boxShadow: shouldShowShadow ? shadowToCss(element.shadow) : undefined,
   };
 
@@ -583,6 +581,10 @@ function RenderElement({
   let alignItems = "stretch";
   if (bodyProps.anchorCtr) alignItems = "center";
 
+  // Cap the visible text area to the slide boundary
+  const visibleTextWidth = Math.min(position.width, Math.max(0, slideWidth - position.x));
+  const visibleTextPct = `${pct(visibleTextWidth, slideWidth)}%`;
+
   const shapeStyle: React.CSSProperties = {
     ...baseStyle,
     ...fillCss,
@@ -596,21 +598,21 @@ function RenderElement({
     justifyContent,
     alignItems,
     boxSizing: "border-box",
-    wordWrap: "break-word",
-    overflowWrap: "break-word",
     overflow: "hidden",
     whiteSpace: bodyProps.wrap === "none" ? "nowrap" : undefined,
   };
 
   const markers = element.paragraphs ? buildParagraphMarkers(element.paragraphs) : [];
+  const numCol = bodyProps.numCol && bodyProps.numCol > 1 ? bodyProps.numCol : undefined;
 
   return (
     <div style={shapeStyle}>
       {element.paragraphs && (
         <div style={{
-          width: "100%",
-          columnCount: bodyProps.numCol && bodyProps.numCol > 1 ? bodyProps.numCol : undefined,
-          columnGap: bodyProps.numCol && bodyProps.numCol > 1 ? "1.5cqw" : undefined,
+          width: numCol ? visibleTextPct : "100%",
+          maxWidth: numCol ? undefined : visibleTextPct,
+          columnCount: numCol,
+          columnGap: numCol ? "1.5cqw" : undefined,
         }}>
           {element.paragraphs.map((para, i) => (
             <RenderParagraph 
