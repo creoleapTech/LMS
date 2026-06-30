@@ -607,7 +607,11 @@ function RenderElement({
   return (
     <div style={shapeStyle}>
       {element.paragraphs && (
-        <div style={{ width: "100%" }}>
+        <div style={{
+          width: "100%",
+          columnCount: bodyProps.numCol && bodyProps.numCol > 1 ? bodyProps.numCol : undefined,
+          columnGap: bodyProps.numCol && bodyProps.numCol > 1 ? "1.5cqw" : undefined,
+        }}>
           {element.paragraphs.map((para, i) => (
             <RenderParagraph 
               key={i} 

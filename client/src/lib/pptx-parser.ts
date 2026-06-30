@@ -42,6 +42,7 @@ export interface TextBodyProps {
   bIns?: number; // bottom inset
   wrap?: "square" | "none";
   autoFit?: "normal" | "shape" | "none";
+  numCol?: number; // number of text columns (default 1)
 }
 
 export interface SlideElement {
@@ -569,6 +570,7 @@ function parseBodyProps(txBody: Element): TextBodyProps {
     wrap: bodyPr.getAttribute("wrap") === "none" ? "none" : "square",
     autoFit: bodyPr.hasAttribute("noAutofit") ? "none" : 
              getFirstByLocal(bodyPr, "spAutoFit") ? "shape" : "normal",
+    numCol: Math.max(1, parseInt(bodyPr.getAttribute("numCol") || "1")),
   };
 }
 
