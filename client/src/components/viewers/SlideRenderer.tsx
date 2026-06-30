@@ -663,7 +663,7 @@ export const SlideRenderer = memo(function SlideRenderer({
           width: "100%",
           aspectRatio: `${aspectRatio}`,
           ...bgStyle,
-          overflow: "visible",
+          overflow: "hidden",
           borderRadius: "4px",
           fontFamily: "'Calibri', 'Segoe UI', Arial, sans-serif",
           lineHeight: 1.2,
