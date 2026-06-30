@@ -24,8 +24,13 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as CurriculumIndexRouteImport } from './routes/curriculum/index'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
 import { Route as LessonPlansIdRouteImport } from './routes/lesson-plans/$id'
+import { Route as InstructorDashboardRouteImport } from './routes/instructor/dashboard'
+import { Route as InstructorCoursesRouteImport } from './routes/instructor/courses'
 import { Route as InstitutionsIdRouteImport } from './routes/institutions/$id'
 import { Route as ExaminationsIdRouteImport } from './routes/examinations/$id'
+import { Route as CoursesIdRouteImport } from './routes/courses/$id'
+import { Route as InstructorBatchesIndexRouteImport } from './routes/instructor/batches/index'
+import { Route as InstructorBatchesBatchIdRouteImport } from './routes/instructor/batches/$batchId'
 
 const WorkDoneRoute = WorkDoneRouteImport.update({
   id: '/work-done',
@@ -102,6 +107,16 @@ const LessonPlansIdRoute = LessonPlansIdRouteImport.update({
   path: '/lesson-plans/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InstructorDashboardRoute = InstructorDashboardRouteImport.update({
+  id: '/instructor/dashboard',
+  path: '/instructor/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorCoursesRoute = InstructorCoursesRouteImport.update({
+  id: '/instructor/courses',
+  path: '/instructor/courses',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InstitutionsIdRoute = InstitutionsIdRouteImport.update({
   id: '/institutions/$id',
   path: '/institutions/$id',
@@ -112,13 +127,32 @@ const ExaminationsIdRoute = ExaminationsIdRouteImport.update({
   path: '/examinations/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoursesIdRoute = CoursesIdRouteImport.update({
+  id: '/courses/$id',
+  path: '/courses/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorBatchesIndexRoute = InstructorBatchesIndexRouteImport.update({
+  id: '/instructor/batches/',
+  path: '/instructor/batches/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorBatchesBatchIdRoute =
+  InstructorBatchesBatchIdRouteImport.update({
+    id: '/instructor/batches/$batchId',
+    path: '/instructor/batches/$batchId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/teaching-diary': typeof TeachingDiaryRoute
   '/work-done': typeof WorkDoneRoute
+  '/courses/$id': typeof CoursesIdRoute
   '/examinations/$id': typeof ExaminationsIdRoute
   '/institutions/$id': typeof InstitutionsIdRoute
+  '/instructor/courses': typeof InstructorCoursesRoute
+  '/instructor/dashboard': typeof InstructorDashboardRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
@@ -131,13 +165,18 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/students/': typeof StudentsIndexRoute
+  '/instructor/batches/$batchId': typeof InstructorBatchesBatchIdRoute
+  '/instructor/batches/': typeof InstructorBatchesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/teaching-diary': typeof TeachingDiaryRoute
   '/work-done': typeof WorkDoneRoute
+  '/courses/$id': typeof CoursesIdRoute
   '/examinations/$id': typeof ExaminationsIdRoute
   '/institutions/$id': typeof InstitutionsIdRoute
+  '/instructor/courses': typeof InstructorCoursesRoute
+  '/instructor/dashboard': typeof InstructorDashboardRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/courses': typeof CoursesIndexRoute
   '/curriculum': typeof CurriculumIndexRoute
@@ -150,14 +189,19 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/staff': typeof StaffIndexRoute
   '/students': typeof StudentsIndexRoute
+  '/instructor/batches/$batchId': typeof InstructorBatchesBatchIdRoute
+  '/instructor/batches': typeof InstructorBatchesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/teaching-diary': typeof TeachingDiaryRoute
   '/work-done': typeof WorkDoneRoute
+  '/courses/$id': typeof CoursesIdRoute
   '/examinations/$id': typeof ExaminationsIdRoute
   '/institutions/$id': typeof InstitutionsIdRoute
+  '/instructor/courses': typeof InstructorCoursesRoute
+  '/instructor/dashboard': typeof InstructorDashboardRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
@@ -170,6 +214,8 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/students/': typeof StudentsIndexRoute
+  '/instructor/batches/$batchId': typeof InstructorBatchesBatchIdRoute
+  '/instructor/batches/': typeof InstructorBatchesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -177,8 +223,11 @@ export interface FileRouteTypes {
     | '/'
     | '/teaching-diary'
     | '/work-done'
+    | '/courses/$id'
     | '/examinations/$id'
     | '/institutions/$id'
+    | '/instructor/courses'
+    | '/instructor/dashboard'
     | '/lesson-plans/$id'
     | '/courses/'
     | '/curriculum/'
@@ -191,13 +240,18 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/staff/'
     | '/students/'
+    | '/instructor/batches/$batchId'
+    | '/instructor/batches/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/teaching-diary'
     | '/work-done'
+    | '/courses/$id'
     | '/examinations/$id'
     | '/institutions/$id'
+    | '/instructor/courses'
+    | '/instructor/dashboard'
     | '/lesson-plans/$id'
     | '/courses'
     | '/curriculum'
@@ -210,13 +264,18 @@ export interface FileRouteTypes {
     | '/settings'
     | '/staff'
     | '/students'
+    | '/instructor/batches/$batchId'
+    | '/instructor/batches'
   id:
     | '__root__'
     | '/'
     | '/teaching-diary'
     | '/work-done'
+    | '/courses/$id'
     | '/examinations/$id'
     | '/institutions/$id'
+    | '/instructor/courses'
+    | '/instructor/dashboard'
     | '/lesson-plans/$id'
     | '/courses/'
     | '/curriculum/'
@@ -229,14 +288,19 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/staff/'
     | '/students/'
+    | '/instructor/batches/$batchId'
+    | '/instructor/batches/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TeachingDiaryRoute: typeof TeachingDiaryRoute
   WorkDoneRoute: typeof WorkDoneRoute
+  CoursesIdRoute: typeof CoursesIdRoute
   ExaminationsIdRoute: typeof ExaminationsIdRoute
   InstitutionsIdRoute: typeof InstitutionsIdRoute
+  InstructorCoursesRoute: typeof InstructorCoursesRoute
+  InstructorDashboardRoute: typeof InstructorDashboardRoute
   LessonPlansIdRoute: typeof LessonPlansIdRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
   CurriculumIndexRoute: typeof CurriculumIndexRoute
@@ -249,6 +313,8 @@ export interface RootRouteChildren {
   SettingsIndexRoute: typeof SettingsIndexRoute
   StaffIndexRoute: typeof StaffIndexRoute
   StudentsIndexRoute: typeof StudentsIndexRoute
+  InstructorBatchesBatchIdRoute: typeof InstructorBatchesBatchIdRoute
+  InstructorBatchesIndexRoute: typeof InstructorBatchesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -358,6 +424,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LessonPlansIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/instructor/dashboard': {
+      id: '/instructor/dashboard'
+      path: '/instructor/dashboard'
+      fullPath: '/instructor/dashboard'
+      preLoaderRoute: typeof InstructorDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/courses': {
+      id: '/instructor/courses'
+      path: '/instructor/courses'
+      fullPath: '/instructor/courses'
+      preLoaderRoute: typeof InstructorCoursesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/institutions/$id': {
       id: '/institutions/$id'
       path: '/institutions/$id'
@@ -372,6 +452,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExaminationsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/courses/$id': {
+      id: '/courses/$id'
+      path: '/courses/$id'
+      fullPath: '/courses/$id'
+      preLoaderRoute: typeof CoursesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/batches/': {
+      id: '/instructor/batches/'
+      path: '/instructor/batches'
+      fullPath: '/instructor/batches/'
+      preLoaderRoute: typeof InstructorBatchesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructor/batches/$batchId': {
+      id: '/instructor/batches/$batchId'
+      path: '/instructor/batches/$batchId'
+      fullPath: '/instructor/batches/$batchId'
+      preLoaderRoute: typeof InstructorBatchesBatchIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -379,8 +480,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TeachingDiaryRoute: TeachingDiaryRoute,
   WorkDoneRoute: WorkDoneRoute,
+  CoursesIdRoute: CoursesIdRoute,
   ExaminationsIdRoute: ExaminationsIdRoute,
   InstitutionsIdRoute: InstitutionsIdRoute,
+  InstructorCoursesRoute: InstructorCoursesRoute,
+  InstructorDashboardRoute: InstructorDashboardRoute,
   LessonPlansIdRoute: LessonPlansIdRoute,
   CoursesIndexRoute: CoursesIndexRoute,
   CurriculumIndexRoute: CurriculumIndexRoute,
@@ -393,6 +497,8 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsIndexRoute: SettingsIndexRoute,
   StaffIndexRoute: StaffIndexRoute,
   StudentsIndexRoute: StudentsIndexRoute,
+  InstructorBatchesBatchIdRoute: InstructorBatchesBatchIdRoute,
+  InstructorBatchesIndexRoute: InstructorBatchesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

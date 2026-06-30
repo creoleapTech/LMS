@@ -1,4 +1,3 @@
-// store/userAuthStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -7,11 +6,11 @@ interface User {
   email: string;
   name: string;
   salutation?: 'Mr' | 'Mrs' | 'Ms' | 'Dr';
-  mobileNumber: string;
-  role: 'admin' | 'super_admin' | 'staff' | 'teacher';
+  mobileNumber?: string;
+  role: 'admin' | 'super_admin' | 'staff' | 'teacher' | 'student' | 'instructor';
   institutionId?: string | { _id: string; name: string; logo?: string };
   profileImage?: string;
-  isActive: boolean;
+  isActive?: boolean;
   lastLogin: Date;
   token: string;
 }
@@ -24,7 +23,6 @@ interface AuthStore {
   isAuthenticated: () => boolean;
 }
 
-// Use persist middleware + auto-rehydrate from localStorage
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({

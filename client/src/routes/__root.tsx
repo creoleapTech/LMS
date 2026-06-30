@@ -9,8 +9,9 @@ import type { QueryClient } from '@tanstack/react-query';
 function getStoredToken(): string | null {
   try {
     const stored = localStorage.getItem('auth-storage');
-    if (!stored) return null;
-    return JSON.parse(stored)?.state?.user?.token ?? null;
+    const token = stored ? JSON.parse(stored)?.state?.user?.token : null;
+    if (token) return token;
+    return localStorage.getItem('token');
   } catch {
     return null;
   }

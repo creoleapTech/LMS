@@ -46,7 +46,7 @@ export async function decodeToken(
     // Suppress expected "wrong key" decryption failures to reduce log noise.
     // The admin middleware tries multiple keys; only the matching one should succeed.
     const errName = (error as any)?.name ?? "";
-    if (errName !== "JWEDecryptionFailed") {
+    if (errName !== "JWEDecryptionFailed" && errName !== "JWEInvalid") {
       console.error("Failed to decode token:", error);
     }
     return null;

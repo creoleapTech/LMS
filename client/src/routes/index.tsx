@@ -5,6 +5,7 @@ import { useMutation } from '@tanstack/react-query';
 import { _axios } from '@/lib/axios';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/userAuthStore';
+import { api } from '@/lib/api/service';
 
 interface LoginResponse {
   success: boolean;
@@ -13,11 +14,11 @@ interface LoginResponse {
     _id: string;
     email: string;
     name: string;
-    mobileNumber: string;
+    mobileNumber?: string;
     role: string;
     institutionId?: string;
     profileImage?: string;
-    isActive: boolean;
+    isActive?: boolean;
     lastLogin: Date;
     token: string;
   };
@@ -48,6 +49,10 @@ function LoginPage() {
 
   const loginMutation = useMutation<LoginResponse, any, LoginRequest>({
     mutationFn: async (credentials: LoginRequest) => {
+      const localResult = await api.login(credentials.email, credentials.password);
+      if (localResult.success && localResult.data) {
+        return { success: true, message: "Login successful", data: localResult.data as any };
+      }
       const response = await _axios.post<LoginResponse>('/admin/auth/login', credentials);
       return response.data;
     },
@@ -58,17 +63,18 @@ function LoginPage() {
         localStorage.setItem('user', JSON.stringify(data.data));
         setUser({
           ...data.data,
-          role: data.data.role as 'admin' | 'super_admin' | 'staff' | 'teacher',
+          role: data.data.role as any,
           lastLogin: new Date(data.data.lastLogin),
         });
-        navigate({ to: '/dashboard' });
+        const dest = data.data.role === 'instructor' ? '/instructor/dashboard' : '/dashboard';
+        navigate({ to: dest });
       } else {
         toast.error('Login failed. Please verify your credentials.');
       }
     },
     onError: (error: any) => {
       console.error('Login error:', error);
-      const errorMessage = error.message || 'Login failed. Please try again later.';
+      const errorMessage = typeof error === 'object' && error?.message ? error.message : 'Login failed. Please try again later.';
       toast.error(errorMessage);
     },
   });
@@ -253,13 +259,16 @@ export const Route = createFileRoute('/')({
   beforeLoad: () => {
     try {
       const stored = localStorage.getItem('auth-storage');
-      const token = stored ? JSON.parse(stored)?.state?.user?.token : null;
+      const state = stored ? JSON.parse(stored)?.state : null;
+      const token = state?.user?.token || localStorage.getItem('token');
+      const role = state?.user?.role;
       if (token) {
-        throw redirect({ to: '/dashboard' });
+        const dest = role === 'instructor' ? '/instructor/dashboard' : '/dashboard';
+        throw redirect({ to: dest });
       }
     } catch (e) {
-      if (e instanceof Error) return; // JSON parse error, continue to login
-      throw e; // re-throw redirect
+      if (e instanceof Error) return;
+      throw e;
     }
   },
   component: LoginPage,
