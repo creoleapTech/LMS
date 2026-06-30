@@ -69,7 +69,7 @@ export function useReportEditor() {
       const response = await _axios.get(url);
       const data = response.data?.data as ReportParams;
       if (!data) throw new Error("No report data returned");
-      if (!data.sessionColumns) data.sessionColumns = ["Date", "Class/Section", "Chapter Name", "Topic Name", "Remarks"];
+      if (!data.sessionColumns) data.sessionColumns = ["Date", "Class", "Chapter", "Topic", "Remarks"];
       if (!data.bodyItems) data.bodyItems = [];
       data.staffId = params.staffId || null;
       setReportData(data);

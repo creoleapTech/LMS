@@ -583,7 +583,7 @@ export default function ReportsPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-[#4FA3D1] text-white">
-                        {(reportData.sessionColumns || ["Date", "Class/Section", "Chapter Name", "Topic Name", "Remarks"]).map((col, ci) => (
+                        {(reportData.sessionColumns || ["Date", "Class", "Chapter", "Topic", "Remarks"]).map((col, ci) => (
                           <th key={ci} className="px-3 py-2.5">
                             <input
                               value={col}
@@ -607,6 +607,7 @@ export default function ReportsPage() {
                           <tr key={index} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                             <td className="px-3 py-1.5">
                               <Input
+                                type="date"
                                 value={row.date}
                                 onChange={(e) => updateRow(index, "date", e.target.value)}
                                 className="h-8 text-xs rounded-md text-center"
@@ -934,7 +935,7 @@ interface Unit {
 function buildUnits(data: ReportParams): Unit[] {
   const units: Unit[] = [];
   let tableCounter = 0;
-  const sessionCols = data.sessionColumns || ["Date", "Class/Section", "Chapter Name", "Topic Name", "Remarks"];
+  const sessionCols = data.sessionColumns || ["Date", "Class", "Chapter", "Topic", "Remarks"];
 
   units.push({
     id: "session-heading",
