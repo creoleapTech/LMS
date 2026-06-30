@@ -607,7 +607,6 @@ export default function ReportsPage() {
                           <tr key={index} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                             <td className="px-3 py-1.5">
                               <Input
-                                type="date"
                                 value={row.date}
                                 onChange={(e) => updateRow(index, "date", e.target.value)}
                                 className="h-8 text-xs rounded-md text-center"
