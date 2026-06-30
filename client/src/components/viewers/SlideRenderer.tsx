@@ -309,7 +309,7 @@ function RenderTable({
   const safeTotalGridWidth = totalGridWidth > 0 ? totalGridWidth : table.gridCols.length || 1;
   
   return (
-    <div style={{ ...baseStyle, overflow: "visible", minWidth: emuToCqw(totalGridWidth, slideWidth) }}>
+    <div style={{ ...baseStyle, overflow: "hidden", minWidth: emuToCqw(totalGridWidth, slideWidth) }}>
       <table 
         style={{
           width: "100%",
@@ -388,7 +388,7 @@ function RenderTableCell({
     ...borderStyle,
     padding: ptToCqw(2, slideWidth),
     verticalAlign: "top",
-    overflow: "visible",
+    overflow: "hidden",
     boxSizing: "border-box",
     whiteSpace: "normal",
     overflowWrap: "normal",
@@ -451,9 +451,9 @@ function RenderElement({
     height: `${pct(position.height, slideHeight)}%`,
     transform: transforms.length > 0 ? transforms.join(" ") : undefined,
     transformOrigin: "center center",
-    // Images clip to their box; text/shapes use visible so text that renders
-    // slightly taller than the declared PPTX height isn't cut off.
-    overflow: element.type === "image" ? "hidden" : "visible",
+    // Text/shapes use visible so text that renders slightly taller than the
+    // declared PPTX height isn't cut off; tables and images clip to their box.
+    overflow: (element.type === "image" || element.type === "table") ? "hidden" : "visible",
     boxShadow: shouldShowShadow ? shadowToCss(element.shadow) : undefined,
   };
 
@@ -598,10 +598,7 @@ function RenderElement({
     boxSizing: "border-box",
     wordWrap: "break-word",
     overflowWrap: "break-word",
-    // Text must be allowed to overflow its declared box — PowerPoint doesn't
-    // clip text boxes by default and web fonts render slightly taller than
-    // PPT's own metrics, causing the last line to be cut if we use hidden.
-    overflow: "visible",
+    overflow: "hidden",
     whiteSpace: bodyProps.wrap === "none" ? "nowrap" : undefined,
   };
 
