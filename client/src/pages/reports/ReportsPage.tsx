@@ -21,6 +21,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Config } from "@/lib/config";
 import {
@@ -75,6 +78,11 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
   const [viewMode, setViewMode] = useState<"edit" | "submitted">("edit");
   const [signatureLoadError, setSignatureLoadError] = useState(false);
   const signatureFileRef = useRef<HTMLInputElement>(null);
+
+  // Draft action states
+  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [isDeletingDraft, setIsDeletingDraft] = useState(false);
 
   const adminInstitutionId = isAdmin
     ? (typeof user?.institutionId === "object" ? user?.institutionId?._id : user?.institutionId) || ""
@@ -177,6 +185,19 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
     }
   }, [draftId, loadDraftData]);
 
+  // Sync currentMonth state when reportData changes (e.g. when loading a draft or submission)
+  useEffect(() => {
+    if (reportData) {
+      const monthIndex = MONTH_NAMES.indexOf(reportData.monthName) + 1;
+      if (monthIndex > 0 && (currentMonth.year !== reportData.year || currentMonth.month !== monthIndex)) {
+        setCurrentMonth({
+          year: reportData.year,
+          month: monthIndex,
+        });
+      }
+    }
+  }, [reportData]);
+
   const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -200,6 +221,35 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
       staffId: isAdminRole ? selectedStaffId : null,
       institutionId: isAdminRole ? effectiveInstitutionId : teacherInstitutionId || null,
     });
+  };
+
+  const handleGenerateClick = () => {
+    if (submissionStatus?.hasDraft) {
+      setShowOverwriteConfirm(true);
+    } else {
+      handleGenerate();
+    }
+  };
+
+  const handleDiscardDraft = async () => {
+    const draftId = submissionStatus?.draftId;
+    if (!draftId) return;
+    setIsDeletingDraft(true);
+    try {
+      await _axios.delete(`/admin/timetable/delete-report-draft?id=${draftId}`);
+      toast.success("Draft deleted successfully");
+      setShowDiscardConfirm(false);
+      clearReport();
+      checkSubmissionStatus({
+        year: currentMonth.year,
+        month: currentMonth.month,
+        staffId: isAdminRole ? selectedStaffId : null,
+      });
+    } catch {
+      toast.error("Failed to delete draft");
+    } finally {
+      setIsDeletingDraft(false);
+    }
   };
 
   const handleRegenerate = () => {
@@ -360,7 +410,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
         </div>
 
         <Button
-          onClick={handleGenerate}
+          onClick={handleGenerateClick}
           disabled={isGenerating || (isAdminRole && !selectedStaffId)}
           className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-300/30 disabled:opacity-60 disabled:cursor-not-allowed"
         >
@@ -746,17 +796,153 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
       {/* Empty State */}
       {!reportData && !isGenerating && !(isAdminRole && !selectedStaffId) && (
         <div className="neo-card rounded-2xl border border-slate-200/80 p-8 sm:p-10 text-center">
-          <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-            <FileText className="h-7 w-7" />
-          </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">Generate a Monthly Report</h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">
-            Select a month and click "Generate Report" to load the session table. You can edit the table, add more tables, headings, and paragraphs before downloading as a DOCX file.
-          </p>
+          {submissionStatus?.hasDraft ? (
+            <>
+              <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Clock className="h-7 w-7" />
+              </div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">Saved Draft Found</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto mb-6">
+                You have a saved draft for {MONTH_NAMES[currentMonth.month - 1]} {currentMonth.year}. You can load this draft to resume editing or generate a fresh report from scratch.
+              </p>
+              <div className="flex justify-center gap-3">
+                <Button
+                  onClick={() => submissionStatus.draftId && loadDraftData(submissionStatus.draftId)}
+                  className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg shadow-amber-300/30"
+                >
+                  <FileText size={16} className="mr-1.5" />
+                  Load Saved Draft
+                </Button>
+                <Button
+                  onClick={handleGenerateClick}
+                  variant="outline"
+                  className="rounded-xl font-bold border-slate-200 hover:bg-slate-50"
+                >
+                  Generate Fresh
+                </Button>
+                <Button
+                  onClick={() => setShowDiscardConfirm(true)}
+                  variant="outline"
+                  className="rounded-xl font-bold border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                >
+                  Discard Draft
+                </Button>
+              </div>
+            </>
+          ) : submissionStatus?.submitted ? (
+            <>
+              <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <CheckCircle2 className="h-7 w-7" />
+              </div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">Monthly Report Submitted</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto mb-6">
+                Your report for {MONTH_NAMES[currentMonth.month - 1]} {currentMonth.year} was submitted on{" "}
+                {submissionStatus.submittedAt
+                  ? new Date(submissionStatus.submittedAt).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })
+                  : "—"}
+                . You can load this submission to view or make edits.
+              </p>
+              <div className="flex justify-center gap-3">
+                <Button
+                  onClick={() => submissionStatus.submissionId && loadSubmissionData(submissionStatus.submissionId)}
+                  className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-300/30"
+                >
+                  <Eye size={16} className="mr-1.5" />
+                  View/Edit Submission
+                </Button>
+                <Button
+                  onClick={handleGenerateClick}
+                  variant="outline"
+                  className="rounded-xl font-bold border-slate-200 hover:bg-slate-50"
+                >
+                  Start Fresh
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <FileText className="h-7 w-7" />
+              </div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">Generate a Monthly Report</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Select a month and click "Generate Report" to load the session table. You can edit the table, add more tables, headings, and paragraphs before downloading as a DOCX file.
+              </p>
+            </>
+          )}
         </div>
       )}
     </>
       )}
+
+      {/* Overwrite Confirmation Dialog */}
+      <Dialog open={showOverwriteConfirm} onOpenChange={setShowOverwriteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Overwrite Saved Draft?</DialogTitle>
+            <DialogDescription>
+              We found a saved draft for {MONTH_NAMES[currentMonth.month - 1]} {currentMonth.year}. Generating a new report will discard any unsaved changes in that draft.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 justify-end">
+            <DialogClose asChild>
+              <Button variant="outline" size="sm">Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={() => {
+                setShowOverwriteConfirm(false);
+                handleGenerate();
+              }}
+              size="sm"
+              className="bg-red-600 text-white hover:bg-red-700 font-bold"
+            >
+              Generate Fresh
+            </Button>
+            <Button
+              onClick={() => {
+                setShowOverwriteConfirm(false);
+                if (submissionStatus?.draftId) {
+                  loadDraftData(submissionStatus.draftId);
+                }
+              }}
+              size="sm"
+              className="bg-indigo-600 text-white hover:bg-indigo-700 font-bold"
+            >
+              Load Draft
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Discard Draft Confirmation Dialog */}
+      <Dialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Discard Saved Draft?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to discard the draft for {MONTH_NAMES[currentMonth.month - 1]} {currentMonth.year}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 justify-end">
+            <DialogClose asChild>
+              <Button variant="outline" size="sm" disabled={isDeletingDraft}>Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={handleDiscardDraft}
+              disabled={isDeletingDraft}
+              size="sm"
+              className="bg-red-600 text-white hover:bg-red-700 font-bold"
+            >
+              {isDeletingDraft ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
+              Discard Draft
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

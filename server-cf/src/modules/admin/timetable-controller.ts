@@ -2328,6 +2328,7 @@ timetableController.post("/submit-report", async (c) => {
         .set({
           reportData: reportDataJson,
           docxKey,
+          status: "submitted",
           submittedAt: now,
           updatedAt: now,
         })
