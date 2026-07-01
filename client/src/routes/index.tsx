@@ -5,7 +5,6 @@ import { useMutation } from '@tanstack/react-query';
 import { _axios } from '@/lib/axios';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/userAuthStore';
-import { api } from '@/lib/api/service';
 
 interface LoginResponse {
   success: boolean;
@@ -17,6 +16,7 @@ interface LoginResponse {
     mobileNumber?: string;
     role: string;
     institutionId?: string;
+    classId?: string;
     profileImage?: string;
     isActive?: boolean;
     lastLogin: Date;
@@ -27,6 +27,17 @@ interface LoginResponse {
 interface LoginRequest {
   email: string;
   password: string;
+}
+
+function getRedirectPath(role: string): string {
+  switch (role) {
+    case 'instructor':
+      return '/instructor/dashboard';
+    case 'student':
+      return '/dashboard';
+    default:
+      return '/dashboard';
+  }
 }
 
 function LoginPage() {
@@ -49,10 +60,6 @@ function LoginPage() {
 
   const loginMutation = useMutation<LoginResponse, any, LoginRequest>({
     mutationFn: async (credentials: LoginRequest) => {
-      const localResult = await api.login(credentials.email, credentials.password);
-      if (localResult.success && localResult.data) {
-        return { success: true, message: "Login successful", data: localResult.data as any };
-      }
       const response = await _axios.post<LoginResponse>('/admin/auth/login', credentials);
       return response.data;
     },
@@ -66,7 +73,7 @@ function LoginPage() {
           role: data.data.role as any,
           lastLogin: new Date(data.data.lastLogin),
         });
-        const dest = data.data.role === 'instructor' ? '/instructor/dashboard' : '/dashboard';
+        const dest = getRedirectPath(data.data.role);
         navigate({ to: dest });
       } else {
         toast.error('Login failed. Please verify your credentials.');
@@ -263,7 +270,7 @@ export const Route = createFileRoute('/')({
       const token = state?.user?.token || localStorage.getItem('token');
       const role = state?.user?.role;
       if (token) {
-        const dest = role === 'instructor' ? '/instructor/dashboard' : '/dashboard';
+        const dest = getRedirectPath(role || '');
         throw redirect({ to: dest });
       }
     } catch (e) {

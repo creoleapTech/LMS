@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, GraduationCap, User, Hash, Mail } from "lucide-react";
+import { Loader2, GraduationCap, User, Hash, Mail, AtSign, Lock } from "lucide-react";
 import { useEffect } from "react";
 import type { IStudent, CreateStudentDTO } from "@/types/student";
 import type { IClass } from "@/types/class";
@@ -19,6 +19,8 @@ const formSchema = z.object({
   admissionNumber: z.string().optional(),
   rollNumber: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
+  username: z.string().min(3, "Username must be at least 3 characters").optional().or(z.literal("")),
+  password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
   gender: z.enum(["male", "female", "other"]).optional(),
 });
 
@@ -42,6 +44,8 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
       admissionNumber: "",
       rollNumber: "",
       email: "",
+      username: "",
+      password: "",
       gender: "male",
     },
   });
@@ -61,6 +65,8 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
           admissionNumber: student.admissionNumber || "",
           rollNumber: student.rollNumber || "",
           email: student.email || "",
+          username: student.username || "",
+          password: "",
           gender: (student.gender as any) || "male",
         });
       } else {
@@ -70,6 +76,8 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
           admissionNumber: "",
           rollNumber: "",
           email: "",
+          username: "",
+          password: "",
           gender: "male",
         });
       }
@@ -162,6 +170,30 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                   <Input id="email" type="email" placeholder="student@example.com" {...register("email")} className="pl-9" />
                 </div>
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* Login Credentials */}
+          <div className="space-y-4 pt-1">
+            <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Login Credentials <span className="font-normal normal-case text-muted-foreground">{student ? "(leave blank to keep current)" : "(optional — auto-generated if skipped)"}</span></p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="username" placeholder="e.g. student01" {...register("username")} className="pl-9" />
+                </div>
+                {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="password" type="password" placeholder={student ? "••••••••" : "Set a password"} {...register("password")} className="pl-9" />
+                </div>
+                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
             </div>
           </div>

@@ -24,6 +24,7 @@ const PAGE_TITLES: { path: string; title: string; subtitle?: string }[] = [
   { path: "/my-classes",  title: "Class Management",      subtitle: "Manage your class schedule and teaching activity" },
   { path: "/students",    title: "Student Management",    subtitle: "Manage classes, sections and students" },
   { path: "/reports",     title: "Reports",               subtitle: "Insights and analytics for your LMS" },
+  { path: "/my-drafts",   title: "My Drafts",             subtitle: "Your saved report drafts" },
   { path: "/settings",    title: "Settings",              subtitle: "Configure your institution and account" },
   { path: "/courses",     title: "Courses",               subtitle: "Manage courses and programs" },
   { path: "/examinations", title: "Assessments",           subtitle: "Create and manage student assessments" },

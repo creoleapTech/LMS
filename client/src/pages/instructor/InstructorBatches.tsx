@@ -1,34 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Layers, Users, CalendarCheck, UserCheck, ArrowLeft, BookOpen } from "lucide-react";
+import { Layers, CalendarCheck, UserCheck, ArrowLeft, BookOpen } from "lucide-react";
 import { useAuthStore } from "@/store/userAuthStore";
-import { api } from "@/lib/api/service";
-import type { Batch } from "@/lib/api/types";
+import { _axios } from "@/lib/axios";
+import { toast } from "sonner";
+
+type Batch = {
+  id: string;
+  name: string;
+  courseId: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  instructorName?: string;
+  courseName?: string;
+};
 
 export default function InstructorBatches() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [batches, setBatches] = useState<(Batch & { courseName?: string })[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      const inst = await api.getInstructor(user?._id || "");
-      const allBatches = await api.getBatches();
-      const allCourses = await api.getCourses();
-      const myBatches = allBatches
-        .filter(b => inst?.assignedBatchIds.includes(b.id))
-        .map(b => ({ ...b, courseName: allCourses.find(c => c.id === b.courseId)?.name }));
-      setBatches(myBatches);
+  const fetchData = useCallback(async () => {
+    if (!user?._id) return;
+    try {
+      setLoading(true);
+      const { data: batchRes } = await _axios.get("/admin/batches", { params: { instructorId: user._id } });
+      const myBatches: Batch[] = batchRes.data ?? [];
+
+      const courseIds = [...new Set(myBatches.map(b => b.courseId))];
+      const courseMap = new Map<string, string>();
+      await Promise.all(
+        courseIds.map(id =>
+          _axios.get(`/admin/courses/${id}`).then(r => {
+            if (r.data.data) courseMap.set(id, r.data.data.name);
+          })
+        )
+      );
+
+      setBatches(myBatches.map(b => ({ ...b, courseName: courseMap.get(b.courseId) })));
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to load batches");
+    } finally {
       setLoading(false);
     }
-    load();
   }, [user?._id]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   if (loading) return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
 
@@ -73,14 +97,10 @@ export default function InstructorBatches() {
                   <CalendarCheck className="h-3.5 w-3.5 shrink-0" />
                   <span>{batch.startDate} – {batch.endDate}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Users className="h-3.5 w-3.5 shrink-0" />
-                  <span>{batch.studentCount} student{batch.studentCount !== 1 ? "s" : ""}</span>
-                </div>
-                {batch.instructor && (
+                {batch.instructorName && (
                   <div className="flex items-center gap-2">
                     <UserCheck className="h-3.5 w-3.5 shrink-0" />
-                    <span>{batch.instructor}</span>
+                    <span>{batch.instructorName}</span>
                   </div>
                 )}
               </div>

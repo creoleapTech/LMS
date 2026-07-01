@@ -49,9 +49,10 @@ export function useReportEditor() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [reportData, setReportData] = useState<ReportParams | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
-  const [submissionStatus, setSubmissionStatus] = useState<{ submitted: boolean; submittedAt?: string; submissionId?: string } | null>(null);
+  const [submissionStatus, setSubmissionStatus] = useState<{ submitted: boolean; submittedAt?: string; submissionId?: string; hasDraft?: boolean; draftId?: string } | null>(null);
 
   const generateReport = useCallback(async (params: {
     year: number;
@@ -245,6 +246,24 @@ export function useReportEditor() {
     }
   }, []);
 
+  const saveDraft = useCallback(async (data: ReportParams) => {
+    setIsSavingDraft(true);
+    try {
+      const res = await _axios.post("/admin/timetable/save-report-draft", data);
+      if (res.data?.success) {
+        toast.success("Draft saved successfully");
+        setSubmissionStatus((prev) => ({ ...prev, submitted: false, hasDraft: true, draftId: res.data.data?.id }));
+      } else {
+        throw new Error("Save draft failed");
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to save draft";
+      toast.error(msg);
+    } finally {
+      setIsSavingDraft(false);
+    }
+  }, []);
+
   const checkSubmissionStatus = useCallback(async (params: {
     year: number;
     month: number;
@@ -256,9 +275,13 @@ export function useReportEditor() {
       if (res.data?.success) {
         const sub = res.data.data;
         if (sub) {
-          setSubmissionStatus({ submitted: true, submittedAt: sub.submittedAt, submissionId: sub.id });
+          if (sub.status === "draft") {
+            setSubmissionStatus({ submitted: false, hasDraft: true, draftId: sub.id });
+          } else {
+            setSubmissionStatus({ submitted: true, submittedAt: sub.submittedAt, submissionId: sub.id, hasDraft: false });
+          }
         } else {
-          setSubmissionStatus({ submitted: false });
+          setSubmissionStatus({ submitted: false, hasDraft: false });
         }
       }
     } catch {
@@ -281,10 +304,26 @@ export function useReportEditor() {
     }
   }, []);
 
+  const loadDraftData = useCallback(async (draftId: string) => {
+    try {
+      const res = await _axios.get(`/admin/timetable/submission-data?id=${draftId}`);
+      if (res.data?.success) {
+        const rd = res.data.data.reportData;
+        if (rd && typeof rd === "object") {
+          setReportData(rd as ReportParams);
+          setSubmissionStatus({ submitted: false, hasDraft: true, draftId });
+        }
+      }
+    } catch {
+      toast.error("Failed to load draft data");
+    }
+  }, []);
+
   return {
     isGenerating,
     isDownloading,
     isSubmitting,
+    isSavingDraft,
     reportData,
     signatureUrl,
     submissionStatus,
@@ -294,8 +333,10 @@ export function useReportEditor() {
     fetchSignature,
     fetchStaffSignature,
     submitReport,
+    saveDraft,
     checkSubmissionStatus,
     loadSubmissionData,
+    loadDraftData,
     updateField,
     updateRow,
     addRow,

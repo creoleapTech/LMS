@@ -16,6 +16,7 @@ import { Route as StudentsIndexRouteImport } from './routes/students/index'
 import { Route as StaffIndexRouteImport } from './routes/staff/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ReportsIndexRouteImport } from './routes/reports/index'
+import { Route as MyDraftsIndexRouteImport } from './routes/my-drafts/index'
 import { Route as MyClassesIndexRouteImport } from './routes/my-classes/index'
 import { Route as LessonPlansIndexRouteImport } from './routes/lesson-plans/index'
 import { Route as InstitutionsIndexRouteImport } from './routes/institutions/index'
@@ -23,6 +24,7 @@ import { Route as ExaminationsIndexRouteImport } from './routes/examinations/ind
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as CurriculumIndexRouteImport } from './routes/curriculum/index'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
+import { Route as StudentMyCoursesRouteImport } from './routes/student/my-courses'
 import { Route as LessonPlansIdRouteImport } from './routes/lesson-plans/$id'
 import { Route as InstructorDashboardRouteImport } from './routes/instructor/dashboard'
 import { Route as InstructorCoursesRouteImport } from './routes/instructor/courses'
@@ -67,6 +69,11 @@ const ReportsIndexRoute = ReportsIndexRouteImport.update({
   path: '/reports/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MyDraftsIndexRoute = MyDraftsIndexRouteImport.update({
+  id: '/my-drafts/',
+  path: '/my-drafts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MyClassesIndexRoute = MyClassesIndexRouteImport.update({
   id: '/my-classes/',
   path: '/my-classes/',
@@ -100,6 +107,11 @@ const CurriculumIndexRoute = CurriculumIndexRouteImport.update({
 const CoursesIndexRoute = CoursesIndexRouteImport.update({
   id: '/courses/',
   path: '/courses/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentMyCoursesRoute = StudentMyCoursesRouteImport.update({
+  id: '/student/my-courses',
+  path: '/student/my-courses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LessonPlansIdRoute = LessonPlansIdRouteImport.update({
@@ -154,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/instructor/courses': typeof InstructorCoursesRoute
   '/instructor/dashboard': typeof InstructorDashboardRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
+  '/student/my-courses': typeof StudentMyCoursesRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -161,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/institutions/': typeof InstitutionsIndexRoute
   '/lesson-plans/': typeof LessonPlansIndexRoute
   '/my-classes/': typeof MyClassesIndexRoute
+  '/my-drafts/': typeof MyDraftsIndexRoute
   '/reports/': typeof ReportsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/staff/': typeof StaffIndexRoute
@@ -178,6 +192,7 @@ export interface FileRoutesByTo {
   '/instructor/courses': typeof InstructorCoursesRoute
   '/instructor/dashboard': typeof InstructorDashboardRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
+  '/student/my-courses': typeof StudentMyCoursesRoute
   '/courses': typeof CoursesIndexRoute
   '/curriculum': typeof CurriculumIndexRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -185,6 +200,7 @@ export interface FileRoutesByTo {
   '/institutions': typeof InstitutionsIndexRoute
   '/lesson-plans': typeof LessonPlansIndexRoute
   '/my-classes': typeof MyClassesIndexRoute
+  '/my-drafts': typeof MyDraftsIndexRoute
   '/reports': typeof ReportsIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/staff': typeof StaffIndexRoute
@@ -203,6 +219,7 @@ export interface FileRoutesById {
   '/instructor/courses': typeof InstructorCoursesRoute
   '/instructor/dashboard': typeof InstructorDashboardRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
+  '/student/my-courses': typeof StudentMyCoursesRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -210,6 +227,7 @@ export interface FileRoutesById {
   '/institutions/': typeof InstitutionsIndexRoute
   '/lesson-plans/': typeof LessonPlansIndexRoute
   '/my-classes/': typeof MyClassesIndexRoute
+  '/my-drafts/': typeof MyDraftsIndexRoute
   '/reports/': typeof ReportsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/staff/': typeof StaffIndexRoute
@@ -229,6 +247,7 @@ export interface FileRouteTypes {
     | '/instructor/courses'
     | '/instructor/dashboard'
     | '/lesson-plans/$id'
+    | '/student/my-courses'
     | '/courses/'
     | '/curriculum/'
     | '/dashboard/'
@@ -236,6 +255,7 @@ export interface FileRouteTypes {
     | '/institutions/'
     | '/lesson-plans/'
     | '/my-classes/'
+    | '/my-drafts/'
     | '/reports/'
     | '/settings/'
     | '/staff/'
@@ -253,6 +273,7 @@ export interface FileRouteTypes {
     | '/instructor/courses'
     | '/instructor/dashboard'
     | '/lesson-plans/$id'
+    | '/student/my-courses'
     | '/courses'
     | '/curriculum'
     | '/dashboard'
@@ -260,6 +281,7 @@ export interface FileRouteTypes {
     | '/institutions'
     | '/lesson-plans'
     | '/my-classes'
+    | '/my-drafts'
     | '/reports'
     | '/settings'
     | '/staff'
@@ -277,6 +299,7 @@ export interface FileRouteTypes {
     | '/instructor/courses'
     | '/instructor/dashboard'
     | '/lesson-plans/$id'
+    | '/student/my-courses'
     | '/courses/'
     | '/curriculum/'
     | '/dashboard/'
@@ -284,6 +307,7 @@ export interface FileRouteTypes {
     | '/institutions/'
     | '/lesson-plans/'
     | '/my-classes/'
+    | '/my-drafts/'
     | '/reports/'
     | '/settings/'
     | '/staff/'
@@ -302,6 +326,7 @@ export interface RootRouteChildren {
   InstructorCoursesRoute: typeof InstructorCoursesRoute
   InstructorDashboardRoute: typeof InstructorDashboardRoute
   LessonPlansIdRoute: typeof LessonPlansIdRoute
+  StudentMyCoursesRoute: typeof StudentMyCoursesRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
   CurriculumIndexRoute: typeof CurriculumIndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
@@ -309,6 +334,7 @@ export interface RootRouteChildren {
   InstitutionsIndexRoute: typeof InstitutionsIndexRoute
   LessonPlansIndexRoute: typeof LessonPlansIndexRoute
   MyClassesIndexRoute: typeof MyClassesIndexRoute
+  MyDraftsIndexRoute: typeof MyDraftsIndexRoute
   ReportsIndexRoute: typeof ReportsIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   StaffIndexRoute: typeof StaffIndexRoute
@@ -368,6 +394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/my-drafts/': {
+      id: '/my-drafts/'
+      path: '/my-drafts'
+      fullPath: '/my-drafts/'
+      preLoaderRoute: typeof MyDraftsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/my-classes/': {
       id: '/my-classes/'
       path: '/my-classes'
@@ -415,6 +448,13 @@ declare module '@tanstack/react-router' {
       path: '/courses'
       fullPath: '/courses/'
       preLoaderRoute: typeof CoursesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/my-courses': {
+      id: '/student/my-courses'
+      path: '/student/my-courses'
+      fullPath: '/student/my-courses'
+      preLoaderRoute: typeof StudentMyCoursesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lesson-plans/$id': {
@@ -486,6 +526,7 @@ const rootRouteChildren: RootRouteChildren = {
   InstructorCoursesRoute: InstructorCoursesRoute,
   InstructorDashboardRoute: InstructorDashboardRoute,
   LessonPlansIdRoute: LessonPlansIdRoute,
+  StudentMyCoursesRoute: StudentMyCoursesRoute,
   CoursesIndexRoute: CoursesIndexRoute,
   CurriculumIndexRoute: CurriculumIndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,
@@ -493,6 +534,7 @@ const rootRouteChildren: RootRouteChildren = {
   InstitutionsIndexRoute: InstitutionsIndexRoute,
   LessonPlansIndexRoute: LessonPlansIndexRoute,
   MyClassesIndexRoute: MyClassesIndexRoute,
+  MyDraftsIndexRoute: MyDraftsIndexRoute,
   ReportsIndexRoute: ReportsIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   StaffIndexRoute: StaffIndexRoute,

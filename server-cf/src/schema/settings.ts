@@ -115,7 +115,7 @@ export const reportSubmissions = sqliteTable("report_submissions", {
   institutionId: text("institution_id").notNull().references(() => institutions.id),
   year: integer("year").notNull(),
   month: integer("month").notNull(),
-  status: text("status", { enum: ["submitted"] }).default("submitted"),
+  status: text("status", { enum: ["draft", "submitted"] }).default("submitted"),
   reportData: text("report_data"),
   docxKey: text("docx_key"),
   submittedAt: text("submitted_at"),

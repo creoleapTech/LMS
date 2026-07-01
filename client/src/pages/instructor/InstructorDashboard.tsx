@@ -1,14 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Users, ClipboardCheck, CalendarCheck, TrendingUp, ArrowRight, Layers } from "lucide-react";
 import { useAuthStore } from "@/store/userAuthStore";
-import { api } from "@/lib/api/service";
-import type { Course, Batch } from "@/lib/api/types";
+import { _axios } from "@/lib/axios";
+import { toast } from "sonner";
+
+type Course = {
+  id: string;
+  code: string;
+  name: string;
+  level: string;
+  status: string;
+  duration: string;
+  fees: number;
+};
+
+type Batch = {
+  id: string;
+  name: string;
+  courseId: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  studentCount?: number;
+  instructorName?: string;
+};
 
 export default function InstructorDashboard() {
   const navigate = useNavigate();
@@ -17,25 +38,33 @@ export default function InstructorDashboard() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      const inst = await api.getInstructor(user?._id || "");
-      const allCourses = await api.getCourses();
-      const myCourses = allCourses.filter(c => inst?.assignedCourseIds.includes(c.id));
-      setCourses(myCourses);
-      const allBatches = await api.getBatches();
-      const myBatches = allBatches.filter(b => inst?.assignedBatchIds.includes(b.id));
+  const fetchData = useCallback(async () => {
+    if (!user?._id) return;
+    try {
+      setLoading(true);
+      const { data: batchRes } = await _axios.get("/admin/batches", { params: { instructorId: user._id } });
+      const myBatches: Batch[] = batchRes.data ?? [];
       setBatches(myBatches);
+
+      const courseIds = [...new Set(myBatches.map(b => b.courseId))];
+      const coursePromises = courseIds.map(id => _axios.get(`/admin/courses/${id}`).then(r => r.data.data));
+      const myCourses = await Promise.all(coursePromises);
+      setCourses(myCourses.filter(Boolean));
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to load dashboard");
+    } finally {
       setLoading(false);
     }
-    load();
   }, [user?._id]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   if (loading) {
     return <div className="p-8 text-center text-muted-foreground">Loading dashboard...</div>;
   }
 
-  const totalStudents = batches.reduce((sum, b) => sum + b.studentCount, 0);
+  const totalStudents = batches.length; // placeholder — real count needs batch_students join
+  const activeBatches = batches.filter(b => b.status === "Active").length;
 
   return (
     <div className="py-8 px-5 sm:px-8 max-w-screen-2xl mx-auto space-y-6">
@@ -77,7 +106,7 @@ export default function InstructorDashboard() {
             <TrendingUp className="h-5.5 w-5.5" />
           </div>
           <div>
-            <p className="text-2xl font-bold leading-tight">{batches.filter(b => b.status === "Active").length}</p>
+            <p className="text-2xl font-bold leading-tight">{activeBatches}</p>
             <p className="text-xs text-muted-foreground">Active Batches</p>
           </div>
         </div>
@@ -123,7 +152,7 @@ export default function InstructorDashboard() {
                 <div key={batch.id} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div>
                     <p className="text-sm font-medium">{batch.name}</p>
-                    <p className="text-xs text-muted-foreground">{batch.studentCount} students &middot; {batch.startDate}</p>
+                    <p className="text-xs text-muted-foreground">{batch.startDate}</p>
                   </div>
                   <Badge variant={batch.status === "Active" ? "default" : batch.status === "Upcoming" ? "secondary" : "outline"} className="text-[10px]">{batch.status}</Badge>
                 </div>

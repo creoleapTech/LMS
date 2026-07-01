@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   createColumnHelper,
@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { _axios } from "@/lib/axios";
 import { CourseFormDialog } from "./CourseFormDialog";
 
 type Course = {
@@ -40,12 +41,6 @@ type Course = {
 };
 
 const columnHelper = createColumnHelper<Course>();
-
-const mockCourses: Course[] = [
-  { id: "1", code: "MATH101", name: "Mathematics Grade 10", description: "CBSE Math for Class 10", level: "Intermediate", duration: "1 Year", fees: 25000, status: "Active", startDate: "2025-04-01" },
-  { id: "2", code: "SCI202", name: "Physics Advanced", level: "Advanced", duration: "6 Months", fees: 35000, status: "Active", startDate: "2025-06-15" },
-  { id: "3", code: "ENG101", name: "English Foundation", level: "Beginner", duration: "3 Months", fees: 15000, status: "Inactive", startDate: "2025-01-10" },
-];
 
 interface Props {
   institutionName?: string;
@@ -65,7 +60,8 @@ const statusVariants: Record<string, "default" | "secondary" | "outline" | "dest
 
 export function CourseTable({ institutionName: _institutionName }: Props) {
   const navigate = useNavigate();
-  const [courses, setCourses] = useState(mockCourses);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [_loading, setLoading] = useState(true);
   const [openForm, setOpenForm] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -75,6 +71,20 @@ export function CourseTable({ institutionName: _institutionName }: Props) {
   const [levelFilter, setLevelFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  const fetchCourses = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data } = await _axios.get("/admin/courses");
+      setCourses(data.data ?? []);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to load courses");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchCourses(); }, [fetchCourses]);
 
   const filteredData = useMemo(() => {
     let filtered = courses;
@@ -160,16 +170,22 @@ export function CourseTable({ institutionName: _institutionName }: Props) {
     onSortingChange: setSorting,
   });
 
-  const handleSave = useCallback((data: any) => {
-    if (editingCourse) {
-      setCourses(prev => prev.map(c => c.id === editingCourse.id ? { ...c, ...data } : c));
-      toast.success("Course updated successfully");
-    } else {
-      setCourses(prev => [...prev, { id: String(Date.now()), ...data }]);
-      toast.success("Course created successfully");
+  const handleSave = useCallback(async (data: any) => {
+    try {
+      if (editingCourse) {
+        const { data: res } = await _axios.put(`/admin/courses/${editingCourse.id}`, data);
+        setCourses(prev => prev.map(c => c.id === editingCourse.id ? { ...c, ...res.data } : c));
+        toast.success("Course updated successfully");
+      } else {
+        const { data: res } = await _axios.post("/admin/courses", data);
+        setCourses(prev => [...prev, res.data]);
+        toast.success("Course created successfully");
+      }
+      setOpenForm(false);
+      setEditingCourse(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to save course");
     }
-    setOpenForm(false);
-    setEditingCourse(null);
   }, [editingCourse]);
 
   const StatCard = ({ label, value, icon: Icon, color }: { label: string; value: number; icon: any; color: string }) => (
@@ -415,10 +431,15 @@ export function CourseTable({ institutionName: _institutionName }: Props) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              setCourses(prev => prev.filter(c => c.id !== deletingId));
-              setDeletingId(null);
-              toast.success("Course deleted");
+            <AlertDialogAction onClick={async () => {
+              try {
+                await _axios.delete(`/admin/courses/${deletingId}`);
+                setCourses(prev => prev.filter(c => c.id !== deletingId));
+                setDeletingId(null);
+                toast.success("Course deleted");
+              } catch (err: any) {
+                toast.error(err?.message ?? "Failed to delete course");
+              }
             }} className="bg-destructive text-destructive-foreground">
               Delete
             </AlertDialogAction>

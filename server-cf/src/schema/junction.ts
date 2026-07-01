@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
-import { admins, institutions, staff, classes, students } from "./admin";
+import { admins, institutions, staff, classes, students, batches } from "./admin";
 import { curricula, gradeBooks, chapterContents } from "./books";
 import { classSessions, teachingProgress } from "./staff";
 import { studentProgress } from "./students";
@@ -256,4 +256,16 @@ export const studentQuizScores = sqliteTable("student_quiz_scores", {
 }, (table) => [
   index("student_quiz_scores_progress_id_idx").on(table.progressId),
   index("student_quiz_scores_quiz_id_idx").on(table.quizId),
+]);
+
+// ─── batch_students ────────────────────────────────
+export const batchStudents = sqliteTable("batch_students", {
+  id: text("id").primaryKey(),
+  batchId: text("batch_id").notNull().references(() => batches.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  enrolledAt: text("enrolled_at"),
+  isActive: integer("is_active").default(1),
+}, (table) => [
+  index("batch_students_batch_id_idx").on(table.batchId),
+  index("batch_students_student_id_idx").on(table.studentId),
 ]);

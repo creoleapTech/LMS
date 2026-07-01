@@ -2361,6 +2361,155 @@ timetableController.post("/submit-report", async (c) => {
   }
 });
 
+// ═══ Report Draft endpoints ═══════════════════════
+
+// ─── POST /save-report-draft — save or update a draft ──
+
+timetableController.post("/save-report-draft", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const staffId = user.id;
+    const institutionId = resolveInstitutionId(user);
+    const body = await c.req.json<ReportParams>();
+    const db = getDb(c.env.DB);
+
+    const year = body.year;
+    const monthNum = MONTH_NAMES.indexOf(body.monthName) + 1;
+    if (!year || !monthNum) {
+      throw new BadRequestError("year and monthName are required");
+    }
+
+    const now = nowISO();
+    const reportDataJson = JSON.stringify(body);
+
+    // Check if a record already exists for this staff+year+month
+    const [existing] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(
+        and(
+          eq(reportSubmissions.staffId, staffId),
+          eq(reportSubmissions.year, year),
+          eq(reportSubmissions.month, monthNum),
+          eq(reportSubmissions.isDeleted, 0),
+        ),
+      )
+      .limit(1);
+
+    if (existing) {
+      // Update existing record (whether draft or submitted — saving draft overwrites)
+      const [updated] = await db
+        .update(reportSubmissions)
+        .set({
+          reportData: reportDataJson,
+          status: "draft",
+          updatedAt: now,
+        })
+        .where(eq(reportSubmissions.id, existing.id))
+        .returning();
+      return c.json({ success: true, data: updated });
+    } else {
+      const id = uuid();
+      const [created] = await db
+        .insert(reportSubmissions)
+        .values({
+          id,
+          staffId,
+          institutionId,
+          year,
+          month: monthNum,
+          status: "draft",
+          reportData: reportDataJson,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      return c.json({ success: true, data: created });
+    }
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("Save draft error:", err);
+    return c.json({ success: false, message: "Failed to save draft" }, 500);
+  }
+});
+
+// ─── GET /my-report-drafts — teacher lists their own drafts ──
+
+timetableController.get("/my-report-drafts", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    if (user.role !== "teacher" && user.role !== "admin" && user.role !== "super_admin") {
+      throw new BadRequestError("Access denied");
+    }
+
+    const db = getDb(c.env.DB);
+    const staffId = user.role === "teacher" ? user.id : c.req.query("staffId");
+    if (!staffId) throw new BadRequestError("staffId is required");
+
+    const drafts = await db
+      .select({
+        id: reportSubmissions.id,
+        year: reportSubmissions.year,
+        month: reportSubmissions.month,
+        status: reportSubmissions.status,
+        updatedAt: reportSubmissions.updatedAt,
+      })
+      .from(reportSubmissions)
+      .where(and(
+        eq(reportSubmissions.staffId, staffId),
+        eq(reportSubmissions.status, "draft"),
+        eq(reportSubmissions.isDeleted, 0),
+      ))
+      .orderBy(desc(reportSubmissions.updatedAt));
+
+    return c.json({ success: true, data: drafts });
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("List drafts error:", err);
+    return c.json({ success: false, message: "Failed to list drafts" }, 500);
+  }
+});
+
+// ─── DELETE /delete-report-draft — delete a draft ──
+
+timetableController.delete("/delete-report-draft", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const draftId = c.req.query("id");
+    if (!draftId) throw new BadRequestError("id is required");
+
+    const db = getDb(c.env.DB);
+    const now = nowISO();
+
+    const [draft] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(eq(reportSubmissions.id, draftId))
+      .limit(1);
+
+    if (!draft || draft.isDeleted) {
+      throw new BadRequestError("Draft not found");
+    }
+
+    // Permission check
+    if (user.role === "teacher" && draft.staffId !== user.id) {
+      throw new ForbiddenError("Access denied");
+    }
+
+    // Soft delete
+    await db
+      .update(reportSubmissions)
+      .set({ isDeleted: 1, updatedAt: now })
+      .where(eq(reportSubmissions.id, draftId));
+
+    return c.json({ success: true, message: "Draft deleted" });
+  } catch (err: any) {
+    if (err instanceof BadRequestError || err instanceof ForbiddenError) throw err;
+    console.error("Delete draft error:", err);
+    return c.json({ success: false, message: "Failed to delete draft" }, 500);
+  }
+});
+
 // ─── GET /report-submission — check submission status ──
 
 timetableController.get("/report-submission", async (c) => {

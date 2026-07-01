@@ -4,6 +4,7 @@ export interface IStudent {
   rollNumber?: string;
   admissionNumber?: string;
   email?: string;
+  username?: string;
   mobileNumber?: string;
   parentName?: string;
   parentMobile?: string;
@@ -26,6 +27,8 @@ export interface CreateStudentDTO {
   rollNumber?: string;
   admissionNumber?: string;
   email?: string;
+  username?: string;
+  password?: string;
   mobileNumber?: string;
   parentName?: string;
   parentMobile?: string;

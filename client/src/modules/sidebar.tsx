@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
-import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, Book, BookOpenText, Users, LogOut, GraduationCap, ClipboardList, NotebookPen, CheckCircle2 } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, Book, BookOpenText, Users, LogOut, GraduationCap, ClipboardList, NotebookPen, CheckCircle2, FileEdit } from 'lucide-react';
 import { useAuthStore } from '@/store/userAuthStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 
@@ -13,7 +13,8 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
+  { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher', 'student'] },
+  { name: 'Dashboard', path: '/instructor/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['instructor'] },
   { name: 'Curriculum', path: '/curriculum', icon: <BookOpenText className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Courses', path: '/courses', icon: <Book className="w-5 h-5" />, roles: ['super_admin'] },
   { name: 'Institutions', path: '/institutions', icon: <Building className="w-5 h-5" />, roles: ['super_admin'] },
@@ -23,9 +24,11 @@ const navItems: NavItem[] = [
   { name: 'Assessments', path: '/examinations', icon: <ClipboardList className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher', 'student'] },
   { name: 'Students', path: '/students', icon: <GraduationCap className="w-5 h-5" />, roles: ['admin', 'super_admin'] },
   { name: 'Reports', path: '/reports', icon: <BarChart className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
+  { name: 'My Drafts', path: '/my-drafts', icon: <FileEdit className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'My Courses', path: '/instructor/courses', icon: <Book className="w-5 h-5" />, roles: ['instructor'] },
   { name: 'My Batches', path: '/instructor/batches', icon: <Users className="w-5 h-5" />, roles: ['instructor'] },
+  { name: 'My Courses', path: '/student/my-courses', icon: <Book className="w-5 h-5" />, roles: ['student'] },
 ];
 
 const Sidebar: React.FC = () => {

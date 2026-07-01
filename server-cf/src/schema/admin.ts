@@ -53,7 +53,7 @@ export const staff = sqliteTable("staff", {
   email: text("email").notNull().unique(),
   mobileNumber: text("mobile_number"),
   password: text("password").notNull(),
-  type: text("type", { enum: ["teacher", "admin"] }),
+  type: text("type", { enum: ["teacher", "admin", "instructor"] }),
   joiningDate: text("joining_date"),
   profileImage: text("profile_image"),
   signatureKey: text("signature_key"),
@@ -110,6 +110,8 @@ export const students = sqliteTable("students", {
   rollNumber: text("roll_number"),
   admissionNumber: text("admission_number"),
   email: text("email"),
+  username: text("username").unique(),
+  password: text("password"),
   mobileNumber: text("mobile_number"),
   parentName: text("parent_name"),
   parentMobile: text("parent_mobile"),
@@ -131,4 +133,48 @@ export const students = sqliteTable("students", {
   index("students_is_deleted_idx").on(table.isDeleted),
   index("students_is_active_idx").on(table.isActive),
   index("students_name_idx").on(table.name),
+]);
+
+// ─── courses ──────────────────────────────────────
+export const courses = sqliteTable("courses", {
+  id: text("id").primaryKey(),
+  code: text("code").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  thumbnail: text("thumbnail"),
+  level: text("level", { enum: ["Beginner", "Intermediate", "Advanced"] }),
+  duration: text("duration"),
+  fees: integer("fees").default(0),
+  status: text("status", { enum: ["Active", "Inactive", "Archived"] }).default("Active"),
+  startDate: text("start_date"),
+  institutionId: text("institution_id").references(() => institutions.id),
+  isActive: integer("is_active").default(1),
+  isDeleted: integer("is_deleted").default(0),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
+}, (table) => [
+  index("courses_institution_id_idx").on(table.institutionId),
+  index("courses_is_deleted_idx").on(table.isDeleted),
+  index("courses_is_active_idx").on(table.isActive),
+  index("courses_code_idx").on(table.code),
+]);
+
+// ─── batches ──────────────────────────────────────
+export const batches = sqliteTable("batches", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  courseId: text("course_id").notNull().references(() => courses.id),
+  instructorId: text("instructor_id").references(() => staff.id),
+  startDate: text("start_date"),
+  endDate: text("end_date"),
+  status: text("status", { enum: ["Active", "Upcoming", "Completed"] }).default("Upcoming"),
+  isActive: integer("is_active").default(1),
+  isDeleted: integer("is_deleted").default(0),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
+}, (table) => [
+  index("batches_course_id_idx").on(table.courseId),
+  index("batches_instructor_id_idx").on(table.instructorId),
+  index("batches_is_deleted_idx").on(table.isDeleted),
+  index("batches_is_active_idx").on(table.isActive),
 ]);

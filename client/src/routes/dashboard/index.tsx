@@ -28,13 +28,38 @@ function Dashboard() {
 
   const role = user?.role;
   const isAdmin = role === 'admin';
+  const isStudent = role === 'student';
 
-  const { data: response, isLoading, isError, error } = useDashboardStats(isAdmin ? filters : undefined);
+  const { data: response, isLoading, isError, error } = useDashboardStats(!isStudent && isAdmin ? filters : undefined);
 
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-400">
         Please log in to view the dashboard.
+      </div>
+    );
+  }
+
+  if (isStudent) {
+    return (
+      <div className="min-h-screen">
+        <main className="p-6 md:p-8 max-w-screen-2xl mx-auto space-y-6">
+          <DashboardHeader />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="neo-card bg-gradient-to-br from-indigo-50 to-indigo-100/50 p-6">
+              <h3 className="font-semibold text-indigo-700">Welcome, {user.name}!</h3>
+              <p className="text-sm text-indigo-600/70 mt-1">You are logged in as a student.</p>
+            </div>
+            <div className="neo-card bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-6">
+              <h3 className="font-semibold text-emerald-700">My Assessments</h3>
+              <p className="text-sm text-emerald-600/70 mt-1">View your grades and feedback.</p>
+            </div>
+            <div className="neo-card bg-gradient-to-br from-amber-50 to-amber-100/50 p-6">
+              <h3 className="font-semibold text-amber-700">My Courses</h3>
+              <p className="text-sm text-amber-600/70 mt-1">Access your course content.</p>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }

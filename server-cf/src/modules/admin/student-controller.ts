@@ -18,6 +18,7 @@ import {
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { saveFile, deleteFile } from "../../lib/file";
+import { hashPassword } from "../../lib/password";
 import * as XLSX from "xlsx";
 
 const studentController = new Hono<{
@@ -51,6 +52,8 @@ studentController.post("/", async (c) => {
       rollNumber: formData.get("rollNumber") as string | null,
       admissionNumber: formData.get("admissionNumber") as string | null,
       email: formData.get("email") as string | null,
+      username: formData.get("username") as string | null,
+      password: formData.get("password") as string | null,
       mobileNumber: formData.get("mobileNumber") as string | null,
       parentName: formData.get("parentName") as string | null,
       parentMobile: formData.get("parentMobile") as string | null,
@@ -100,6 +103,20 @@ studentController.post("/", async (c) => {
   const studentId = uuid();
   const now = nowISO();
 
+  // Handle password: use provided or generate random
+  let plainPassword: string | null = null;
+  let hashedPw: string | null = null;
+  if (body.password) {
+    plainPassword = body.password;
+    hashedPw = await hashPassword(plainPassword);
+  } else if (body.username) {
+    // If username provided but no password, generate one
+    plainPassword =
+      Math.random().toString(36).slice(-8) +
+      Math.random().toString(36).slice(-2);
+    hashedPw = await hashPassword(plainPassword);
+  }
+
   const [created] = await db
     .insert(students)
     .values({
@@ -108,6 +125,8 @@ studentController.post("/", async (c) => {
       rollNumber: body.rollNumber,
       admissionNumber: body.admissionNumber,
       email: body.email?.toLowerCase(),
+      username: body.username?.toLowerCase() || null,
+      password: hashedPw,
       mobileNumber: body.mobileNumber,
       parentName: body.parentName,
       parentMobile: body.parentMobile,
@@ -133,7 +152,13 @@ studentController.post("/", async (c) => {
     studentId,
   });
 
-  return c.json({ success: true, data: created }, 201);
+  return c.json({
+    success: true,
+    data: {
+      ...created,
+      ...(plainPassword ? { password: plainPassword } : {}),
+    },
+  }, 201);
 });
 
 // ─── BULK UPLOAD Students from Excel ───────────────
@@ -247,6 +272,7 @@ studentController.post("/bulk-upload", async (c) => {
           rollNumber: row.rollNumber?.trim(),
           admissionNumber: row.admissionNumber?.trim(),
           email: row.email?.trim().toLowerCase(),
+          username: row.username?.trim().toLowerCase(),
           mobileNumber: row.mobileNumber?.trim(),
           parentName: row.parentName.trim(),
           parentMobile: row.parentMobile.trim(),
@@ -367,6 +393,7 @@ studentController.post("/bulk-upload", async (c) => {
         rollNumber: studentData.rollNumber,
         admissionNumber: studentData.admissionNumber,
         email: studentData.email,
+        username: studentData.username || null,
         mobileNumber: studentData.mobileNumber,
         parentName: studentData.parentName,
         parentMobile: studentData.parentMobile,
@@ -563,6 +590,7 @@ studentController.get("/", async (c) => {
       admissionNumber: students.admissionNumber,
       rollNumber: students.rollNumber,
       email: students.email,
+      username: students.username,
       gender: students.gender,
       institutionId: students.institutionId,
       isActive: students.isActive,
@@ -707,8 +735,8 @@ studentController.patch("/:id", async (c) => {
     const formData = await c.req.formData();
     body = {};
     const fields = [
-      "name", "rollNumber", "admissionNumber", "email", "mobileNumber",
-      "parentName", "parentMobile", "parentEmail", "dateOfBirth",
+      "name", "rollNumber", "admissionNumber", "email", "username", "password",
+      "mobileNumber", "parentName", "parentMobile", "parentEmail", "dateOfBirth",
       "gender", "address", "classId", "isActive",
     ];
     for (const f of fields) {
@@ -751,6 +779,7 @@ studentController.patch("/:id", async (c) => {
     "rollNumber",
     "admissionNumber",
     "email",
+    "username",
     "mobileNumber",
     "parentName",
     "parentMobile",
@@ -767,6 +796,11 @@ studentController.patch("/:id", async (c) => {
     if (body[field] !== undefined) {
       updateData[field] = body[field];
     }
+  }
+
+  // Handle password update
+  if (body.password) {
+    updateData.password = await hashPassword(body.password);
   }
 
   // Handle profile image file upload

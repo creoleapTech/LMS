@@ -55,7 +55,7 @@ const MONTH_NAMES = [
 
 const today = new Date();
 
-export default function ReportsPage() {
+export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
   const user = useAuthStore((s) => s.user);
   const role = user?.role;
   const isSuperAdmin = role === "super_admin";
@@ -116,6 +116,7 @@ export default function ReportsPage() {
     isGenerating,
     isDownloading,
     isSubmitting,
+    isSavingDraft,
     reportData,
     signatureUrl,
     submissionStatus,
@@ -124,8 +125,10 @@ export default function ReportsPage() {
     uploadSignature,
     fetchSignature,
     submitReport,
+    saveDraft,
     checkSubmissionStatus,
     loadSubmissionData,
+    loadDraftData,
     updateRow,
     addRow,
     removeRow,
@@ -166,6 +169,14 @@ export default function ReportsPage() {
     });
   }, [currentMonth.year, currentMonth.month, selectedStaffId, isAdminRole, checkSubmissionStatus]);
 
+  // Load draft if draftId is provided in search params
+  useEffect(() => {
+    if (draftId) {
+      loadDraftData(draftId);
+      setViewMode("edit");
+    }
+  }, [draftId, loadDraftData]);
+
   const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -176,6 +187,10 @@ export default function ReportsPage() {
 
   const handleSubmitReport = () => {
     if (reportData) submitReport(reportData);
+  };
+
+  const handleSaveDraft = () => {
+    if (reportData) saveDraft(reportData);
   };
 
   const handleGenerate = () => {
@@ -467,6 +482,11 @@ export default function ReportsPage() {
                   <CheckCircle2 size={14} />
                   Submitted{submissionStatus.submittedAt ? ` on ${new Date(submissionStatus.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}` : ""}
                 </span>
+              ) : submissionStatus?.hasDraft ? (
+                <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg shrink-0">
+                  <Clock size={14} />
+                  Draft Saved
+                </span>
               ) : submissionStatus && !submissionStatus.submitted ? (
                 <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg shrink-0">
                   <Clock size={14} />
@@ -491,6 +511,22 @@ export default function ReportsPage() {
                     <Send size={14} />
                   )}
                   {isSubmitting ? "Submitting..." : "Submit Report"}
+                </Button>
+              )}
+              {/* Save Draft button (teachers only) */}
+              {!isAdminRole && reportData && (
+                <Button
+                  onClick={handleSaveDraft}
+                  disabled={isSavingDraft}
+                  size="sm"
+                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-md disabled:opacity-60"
+                >
+                  {isSavingDraft ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <FileText size={14} />
+                  )}
+                  {isSavingDraft ? "Saving..." : "Save Draft"}
                 </Button>
               )}
               {!isAdminRole && !signatureUrl && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import {
   CircleCheck, CircleEllipsis, X, BarChart3, UserCheck, BookText
 } from "lucide-react";
 import { toast } from "sonner";
+import { _axios } from "@/lib/axios";
 import { CourseContentManager } from "./CourseContentManager";
 
 interface Props {
@@ -27,17 +28,29 @@ interface Props {
 type Batch = {
   id: string;
   name: string;
+  courseId: string;
   startDate: string;
   endDate: string;
   studentCount: number;
   status: "Active" | "Upcoming" | "Completed";
+  instructorId?: string;
+  instructorName?: string;
   instructor?: string;
+};
+
+type Instructor = {
+  id: string;
+  name: string;
+  email: string;
+  type: string;
 };
 
 type Student = {
   id: string;
   name: string;
   email: string;
+  username: string;
+  password: string;
   batchId: string;
   enrolledDate: string;
   status: "Active" | "Inactive";
@@ -70,29 +83,17 @@ type Attendance = {
   percentage: number;
 };
 
-const allCourses = new Map<string, { code: string; name: string; description?: string; thumbnail?: string; level: string; duration: string; fees: number; status: string; startDate: string }>([
-  ["1", { code: "MATH101", name: "Mathematics Grade 10", description: "CBSE Math for Class 10 covering algebra, geometry, and trigonometry", level: "Intermediate", duration: "1 Year", fees: 25000, status: "Active", startDate: "2025-04-01" }],
-  ["2", { code: "SCI202", name: "Physics Advanced", description: "Advanced physics concepts including mechanics, thermodynamics, and electromagnetism", level: "Advanced", duration: "6 Months", fees: 35000, status: "Active", startDate: "2025-06-15" }],
-  ["3", { code: "ENG101", name: "English Foundation", description: "Foundational English language skills", level: "Beginner", duration: "3 Months", fees: 15000, status: "Inactive", startDate: "2025-01-10" }],
-]);
-
-const mockBatches: Batch[] = [
-  { id: "b1", name: "Batch A - Morning", startDate: "2025-04-01", endDate: "2026-03-31", studentCount: 24, status: "Active", instructor: "Rajesh Kumar" },
-  { id: "b2", name: "Batch B - Afternoon", startDate: "2025-04-01", endDate: "2026-03-31", studentCount: 18, status: "Active", instructor: "Priya Singh" },
-  { id: "b3", name: "Batch C - Weekend", startDate: "2025-06-01", endDate: "2026-05-31", studentCount: 12, status: "Upcoming" },
-];
-
 const mockStudents: Student[] = [
-  { id: "s1", name: "Aarav Sharma", email: "aarav@example.com", batchId: "b1", enrolledDate: "2025-04-01", status: "Active" },
-  { id: "s2", name: "Ananya Patel", email: "ananya@example.com", batchId: "b1", enrolledDate: "2025-04-01", status: "Active" },
-  { id: "s3", name: "Rohan Verma", email: "rohan@example.com", batchId: "b1", enrolledDate: "2025-04-01", status: "Active" },
-  { id: "s4", name: "Priya Gupta", email: "priya@example.com", batchId: "b1", enrolledDate: "2025-04-05", status: "Active" },
-  { id: "s5", name: "Arjun Nair", email: "arjun@example.com", batchId: "b1", enrolledDate: "2025-04-01", status: "Active" },
-  { id: "s6", name: "Diya Reddy", email: "diya@example.com", batchId: "b1", enrolledDate: "2025-04-10", status: "Active" },
-  { id: "s7", name: "Karan Joshi", email: "karan@example.com", batchId: "b2", enrolledDate: "2025-04-01", status: "Active" },
-  { id: "s8", name: "Neha Kapoor", email: "neha@example.com", batchId: "b2", enrolledDate: "2025-04-02", status: "Active" },
-  { id: "s9", name: "Vikram Singh", email: "vikram@example.com", batchId: "b2", enrolledDate: "2025-04-01", status: "Active" },
-  { id: "s10", name: "Isha Mehta", email: "isha@example.com", batchId: "b2", enrolledDate: "2025-04-03", status: "Inactive" },
+  { id: "s1", name: "Aarav Sharma", email: "aarav@example.com", username: "aarav", password: "", batchId: "b1", enrolledDate: "2025-04-01", status: "Active" },
+  { id: "s2", name: "Ananya Patel", email: "ananya@example.com", username: "ananya", password: "", batchId: "b1", enrolledDate: "2025-04-01", status: "Active" },
+  { id: "s3", name: "Rohan Verma", email: "rohan@example.com", username: "rohan", password: "", batchId: "b1", enrolledDate: "2025-04-01", status: "Active" },
+  { id: "s4", name: "Priya Gupta", email: "priya@example.com", username: "priya", password: "", batchId: "b1", enrolledDate: "2025-04-05", status: "Active" },
+  { id: "s5", name: "Arjun Nair", email: "arjun@example.com", username: "arjun", password: "", batchId: "b1", enrolledDate: "2025-04-01", status: "Active" },
+  { id: "s6", name: "Diya Reddy", email: "diya@example.com", username: "diya", password: "", batchId: "b1", enrolledDate: "2025-04-10", status: "Active" },
+  { id: "s7", name: "Karan Joshi", email: "karan@example.com", username: "karan", password: "", batchId: "b2", enrolledDate: "2025-04-01", status: "Active" },
+  { id: "s8", name: "Neha Kapoor", email: "neha@example.com", username: "neha", password: "", batchId: "b2", enrolledDate: "2025-04-02", status: "Active" },
+  { id: "s9", name: "Vikram Singh", email: "vikram@example.com", username: "vikram", password: "", batchId: "b2", enrolledDate: "2025-04-01", status: "Active" },
+  { id: "s10", name: "Isha Mehta", email: "isha@example.com", username: "isha", password: "", batchId: "b2", enrolledDate: "2025-04-03", status: "Inactive" },
 ];
 
 const mockProgress: Progress[] = [
@@ -175,16 +176,17 @@ const levelColors: Record<string, string> = {
 
 export function CourseManagementPage({ courseId }: Props) {
   const navigate = useNavigate();
-  const course = allCourses.get(courseId);
-
-  const [batches, setBatches] = useState(mockBatches);
+  const [course, setCourse] = useState<any>(null);
+  const [courseLoading, setCourseLoading] = useState(true);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [students, setStudents] = useState(mockStudents);
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
   const [batchName, setBatchName] = useState("");
   const [batchStart, setBatchStart] = useState("");
   const [batchEnd, setBatchEnd] = useState("");
-  const [batchInstructor, setBatchInstructor] = useState("");
+  const [batchInstructorId, setBatchInstructorId] = useState("");
   const [deletingBatchId, setDeletingBatchId] = useState<string | null>(null);
   const [detailBatchId, setDetailBatchId] = useState<string | null>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
@@ -192,15 +194,58 @@ export function CourseManagementPage({ courseId }: Props) {
   const [addStudentDialog, setAddStudentDialog] = useState(false);
   const [studentName, setStudentName] = useState("");
   const [studentEmail, setStudentEmail] = useState("");
+  const [studentUsername, setStudentUsername] = useState("");
+  const [studentPassword, setStudentPassword] = useState("");
   const [studentBatch, setStudentBatch] = useState("");
   const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null);
+
+  const fetchCourse = useCallback(async () => {
+    try {
+      setCourseLoading(true);
+      const { data } = await _axios.get(`/admin/courses/${courseId}`);
+      setCourse(data.data);
+    } catch {
+      setCourse(null);
+    } finally {
+      setCourseLoading(false);
+    }
+  }, [courseId]);
+
+  const fetchBatches = useCallback(async () => {
+    try {
+      const { data } = await _axios.get(`/admin/batches`, { params: { courseId } });
+      setBatches(data.data ?? []);
+    } catch {
+      setBatches([]);
+    }
+  }, [courseId]);
+
+  const fetchInstructors = useCallback(async () => {
+    try {
+      const { data } = await _axios.get(`/admin/batches/meta/instructors`);
+      setInstructors(data.data ?? []);
+    } catch {
+      setInstructors([]);
+    }
+  }, []);
+
+  useEffect(() => { fetchCourse(); fetchBatches(); fetchInstructors(); }, [fetchCourse, fetchBatches, fetchInstructors]);
 
   const filteredStudents = useMemo(() => {
     let list = students;
     if (selectedBatchId !== "all") list = list.filter(s => s.batchId === selectedBatchId);
-    if (studentSearch) list = list.filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()) || s.email.toLowerCase().includes(studentSearch.toLowerCase()));
+    if (studentSearch) list = list.filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()) || s.email.toLowerCase().includes(studentSearch.toLowerCase()) || s.username.toLowerCase().includes(studentSearch.toLowerCase()));
     return list;
   }, [students, selectedBatchId, studentSearch]);
+
+  if (courseLoading) {
+    return (
+      <div className="p-8 text-center">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent mx-auto" />
+        <p className="text-muted-foreground mt-2">Loading course...</p>
+      </div>
+    );
+  }
 
   if (!course) {
     return (
@@ -341,7 +386,7 @@ export function CourseManagementPage({ courseId }: Props) {
         <TabsContent value="batches" className="space-y-4 mt-0">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">{batches.length} batch{batches.length !== 1 ? "es" : ""}</p>
-            <Button size="sm" onClick={() => { setEditingBatch(null); setBatchName(""); setBatchStart(""); setBatchEnd(""); setBatchInstructor(""); setBatchDialogOpen(true); }} className="rounded-xl">
+            <Button size="sm" onClick={() => { setEditingBatch(null); setBatchName(""); setBatchStart(""); setBatchEnd(""); setBatchInstructorId(""); setBatchDialogOpen(true); }} className="rounded-xl">
               <Plus className="mr-1.5 h-4 w-4" /> Create Batch
             </Button>
           </div>
@@ -373,7 +418,7 @@ export function CourseManagementPage({ courseId }: Props) {
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {batch.startDate} – {batch.endDate}
-                        {batch.instructor && <> &middot; Instructor: {batch.instructor}</>}
+                        {(batch.instructorName || batch.instructor) && <> &middot; Instructor: {batch.instructorName || batch.instructor}</>}
                         <> &middot; {batchStudentIds.length} student{batchStudentIds.length !== 1 ? "s" : ""}</>
                       </p>
                     </div>
@@ -393,6 +438,7 @@ export function CourseManagementPage({ courseId }: Props) {
                           <TableHeader>
                             <TableRow>
                               <TableHead>Name</TableHead>
+                              <TableHead>Username</TableHead>
                               <TableHead>Email</TableHead>
                               <TableHead>Enrolled</TableHead>
                               <TableHead>Status</TableHead>
@@ -400,10 +446,11 @@ export function CourseManagementPage({ courseId }: Props) {
                           </TableHeader>
                           <TableBody>
                             {students.filter(s => s.batchId === batch.id).length === 0 ? (
-                              <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">No students in this batch</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No students in this batch</TableCell></TableRow>
                             ) : students.filter(s => s.batchId === batch.id).map(s => (
                               <TableRow key={s.id}>
                                 <TableCell className="font-medium">{s.name}</TableCell>
+                                <TableCell className="text-muted-foreground font-mono text-sm">{s.username}</TableCell>
                                 <TableCell className="text-muted-foreground">{s.email}</TableCell>
                                 <TableCell className="text-muted-foreground">{s.enrolledDate}</TableCell>
                                 <TableCell><Badge variant={s.status === "Active" ? "default" : "secondary"} className="text-[10px]">{s.status}</Badge></TableCell>
@@ -544,7 +591,7 @@ export function CourseManagementPage({ courseId }: Props) {
                       <Badge variant={batch.status === "Active" ? "default" : batch.status === "Upcoming" ? "secondary" : "outline"} className="mt-1 text-[10px]">{batch.status}</Badge>
                     </div>
                     <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => { setEditingBatch(batch); setBatchName(batch.name); setBatchStart(batch.startDate); setBatchEnd(batch.endDate); setBatchInstructor(batch.instructor || ""); setBatchDialogOpen(true); }} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted transition-colors">
+                      <button onClick={() => { setEditingBatch(batch); setBatchName(batch.name); setBatchStart(batch.startDate); setBatchEnd(batch.endDate); setBatchInstructorId(batch.instructorId || ""); setBatchDialogOpen(true); }} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted transition-colors">
                         <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                       </button>
                       <button onClick={() => setDeletingBatchId(batch.id)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted transition-colors">
@@ -561,10 +608,10 @@ export function CourseManagementPage({ courseId }: Props) {
                         <Users className="h-3.5 w-3.5 shrink-0" />
                         <span>{batch.studentCount} student{batch.studentCount !== 1 ? "s" : ""}</span>
                       </div>
-                      {batch.instructor && (
+                      {(batch.instructorName || batch.instructor) && (
                         <div className="flex items-center gap-2">
                           <UserCheck className="h-3.5 w-3.5 shrink-0" />
-                          <span>{batch.instructor}</span>
+                          <span>{batch.instructorName || batch.instructor}</span>
                         </div>
                       )}
                     </div>
@@ -589,7 +636,7 @@ export function CourseManagementPage({ courseId }: Props) {
                 </SelectContent>
               </Select>
             </div>
-            <Button size="sm" onClick={() => { setAddStudentDialog(true); setStudentName(""); setStudentEmail(""); setStudentBatch(""); }} className="rounded-xl">
+            <Button size="sm" onClick={() => { setAddStudentDialog(true); setStudentName(""); setStudentEmail(""); setStudentUsername(""); setStudentPassword(""); setStudentBatch(""); }} className="rounded-xl">
               <Plus className="mr-1.5 h-4 w-4" /> Add Student
             </Button>
           </div>
@@ -600,6 +647,7 @@ export function CourseManagementPage({ courseId }: Props) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
+                    <TableHead>Username</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Batch</TableHead>
                     <TableHead>Enrolled</TableHead>
@@ -610,7 +658,7 @@ export function CourseManagementPage({ courseId }: Props) {
                 <TableBody>
                   {filteredStudents.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                         {studentSearch || selectedBatchId !== "all" ? "No students match your search" : "No students enrolled yet"}
                       </TableCell>
                     </TableRow>
@@ -619,6 +667,7 @@ export function CourseManagementPage({ courseId }: Props) {
                     return (
                       <TableRow key={s.id}>
                         <TableCell className="font-medium">{s.name}</TableCell>
+                        <TableCell className="text-muted-foreground font-mono text-sm">{s.username}</TableCell>
                         <TableCell className="text-muted-foreground">{s.email}</TableCell>
                         <TableCell>{batch?.name || "—"}</TableCell>
                         <TableCell className="text-muted-foreground">{s.enrolledDate}</TableCell>
@@ -795,7 +844,14 @@ export function CourseManagementPage({ courseId }: Props) {
             </div>
             <div className="space-y-1.5">
               <Label>Instructor</Label>
-              <Input value={batchInstructor} onChange={e => setBatchInstructor(e.target.value)} placeholder="e.g. Rajesh Kumar" />
+              <Select value={batchInstructorId} onValueChange={setBatchInstructorId}>
+                <SelectTrigger><SelectValue placeholder="Select an instructor" /></SelectTrigger>
+                <SelectContent>
+                  {instructors.map(inst => (
+                    <SelectItem key={inst.id} value={inst.id}>{inst.name} ({inst.type})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -810,17 +866,34 @@ export function CourseManagementPage({ courseId }: Props) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBatchDialogOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={() => {
+            <Button onClick={async () => {
               if (!batchName.trim()) { toast.error("Batch name is required"); return; }
-              if (editingBatch) {
-                setBatches(prev => prev.map(b => b.id === editingBatch.id ? { ...b, name: batchName, startDate: batchStart, endDate: batchEnd, instructor: batchInstructor || undefined } : b));
-                toast.success("Batch updated");
-              } else {
-                const newBatch: Batch = { id: `b${Date.now()}`, name: batchName, startDate: batchStart || new Date().toISOString().split("T")[0], endDate: batchEnd || "", studentCount: 0, status: "Upcoming", instructor: batchInstructor || undefined };
-                setBatches(prev => [...prev, newBatch]);
-                toast.success("Batch created");
+              try {
+                const payload: any = {
+                  name: batchName,
+                  courseId,
+                  startDate: batchStart || undefined,
+                  endDate: batchEnd || undefined,
+                  instructorId: batchInstructorId || undefined,
+                };
+                if (editingBatch) {
+                  const { data: res } = await _axios.put(`/admin/batches/${editingBatch.id}`, payload);
+                  setBatches(prev => prev.map(b => b.id === editingBatch.id ? { ...b, ...res.data } : b));
+                  toast.success("Batch updated");
+                } else {
+                  const { data: res } = await _axios.post("/admin/batches", payload);
+                  setBatches(prev => [...prev, { ...res.data, studentCount: 0 }]);
+                  toast.success("Batch created");
+                }
+                setBatchDialogOpen(false);
+                setEditingBatch(null);
+                setBatchName("");
+                setBatchStart("");
+                setBatchEnd("");
+                setBatchInstructorId("");
+              } catch (err: any) {
+                toast.error(err?.message ?? "Failed to save batch");
               }
-              setBatchDialogOpen(false);
             }} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white">
               {editingBatch ? "Update" : "Create"}
             </Button>
@@ -843,6 +916,16 @@ export function CourseManagementPage({ courseId }: Props) {
               <Label>Email</Label>
               <Input type="email" value={studentEmail} onChange={e => setStudentEmail(e.target.value)} placeholder="email@example.com" />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Username <span className="text-destructive">*</span></Label>
+                <Input value={studentUsername} onChange={e => setStudentUsername(e.target.value)} placeholder="e.g. student01" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Password <span className="text-destructive">*</span></Label>
+                <Input type="password" value={studentPassword} onChange={e => setStudentPassword(e.target.value)} placeholder="Set a password" />
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label>Batch <span className="text-destructive">*</span></Label>
               <Select value={studentBatch} onValueChange={setStudentBatch}>
@@ -856,8 +939,8 @@ export function CourseManagementPage({ courseId }: Props) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddStudentDialog(false)} className="rounded-xl">Cancel</Button>
             <Button onClick={() => {
-              if (!studentName.trim() || !studentBatch) { toast.error("Name and batch are required"); return; }
-              const newStudent: Student = { id: `s${Date.now()}`, name: studentName, email: studentEmail || `${studentName.toLowerCase().replace(/\s+/g, ".")}@example.com`, batchId: studentBatch, enrolledDate: new Date().toISOString().split("T")[0], status: "Active" };
+              if (!studentName.trim() || !studentBatch || !studentUsername.trim() || !studentPassword.trim()) { toast.error("Name, batch, username, and password are required"); return; }
+              const newStudent: Student = { id: `s${Date.now()}`, name: studentName, email: studentEmail || `${studentName.toLowerCase().replace(/\s+/g, ".")}@example.com`, username: studentUsername, password: studentPassword, batchId: studentBatch, enrolledDate: new Date().toISOString().split("T")[0], status: "Active" };
               setStudents(prev => [...prev, newStudent]);
               setBatches(prev => prev.map(b => b.id === studentBatch ? { ...b, studentCount: b.studentCount + 1 } : b));
               setAddStudentDialog(false);
@@ -877,10 +960,15 @@ export function CourseManagementPage({ courseId }: Props) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              setBatches(prev => prev.filter(b => b.id !== deletingBatchId));
-              setDeletingBatchId(null);
-              toast.success("Batch deleted");
+            <AlertDialogAction onClick={async () => {
+              try {
+                await _axios.delete(`/admin/batches/${deletingBatchId}`);
+                setBatches(prev => prev.filter(b => b.id !== deletingBatchId));
+                setDeletingBatchId(null);
+                toast.success("Batch deleted");
+              } catch (err: any) {
+                toast.error(err?.message ?? "Failed to delete batch");
+              }
             }} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

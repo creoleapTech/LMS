@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
-import { admins, staff } from "../../schema/admin";
+import { admins, staff, students } from "../../schema/admin";
 import { institutions } from "../../schema/admin";
 import { hashPassword, verifyPassword } from "../../lib/password";
 import { encodeToken, decodeToken } from "../../lib/auth";
@@ -102,7 +102,7 @@ app.post("/register", zValidator("json", registerSchema), async (c) => {
 
 // ─── POST /login ───────────────────────────────────────
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1),
   password: z.string(),
 });
 
@@ -112,6 +112,7 @@ app.post("/login", zValidator("json", loginSchema), async (c) => {
 
   let user: any = null;
   let isStaff = false;
+  let isStudent = false;
 
   // 1. Try finding Admin first
   const adminRows = await db
@@ -131,6 +132,28 @@ app.post("/login", zValidator("json", loginSchema), async (c) => {
     if (staffRows.length > 0) {
       user = staffRows[0];
       isStaff = true;
+    } else {
+      // 3. If not staff, try Student (by email or username)
+      const studentRows = await db
+        .select()
+        .from(students)
+        .where(
+          and(
+            eq(students.isDeleted, 0),
+            eq(students.isActive, 1),
+          ),
+        );
+
+      const match = studentRows.find(
+        (s) =>
+          (s.email && s.email.toLowerCase() === email.toLowerCase()) ||
+          (s.username && s.username.toLowerCase() === email.toLowerCase()),
+      );
+
+      if (match) {
+        user = match;
+        isStudent = true;
+      }
     }
   }
 
@@ -157,7 +180,12 @@ app.post("/login", zValidator("json", loginSchema), async (c) => {
 
   // Update last login
   const now = nowISO();
-  if (!isStaff) {
+  if (isStudent) {
+    await db
+      .update(students)
+      .set({ updatedAt: now })
+      .where(eq(students.id, user.id));
+  } else if (!isStaff) {
     const lastIp =
       c.req.header("x-forwarded-for") ||
       c.req.header("x-real-ip") ||
@@ -176,7 +204,7 @@ app.post("/login", zValidator("json", loginSchema), async (c) => {
   }
 
   // Prepare token payload
-  const roleForToken: AdminRoles = isStaff ? user.type : user.role;
+  const roleForToken: AdminRoles = isStudent ? "student" : isStaff ? user.type : user.role;
   const tokenPayload: Record<string, string> = {
     id: user.id,
     email: user.email,
@@ -209,6 +237,8 @@ app.post("/login", zValidator("json", loginSchema), async (c) => {
     roleForToken,
     "isStaff:",
     isStaff,
+    "isStudent:",
+    isStudent,
     "user.type:",
     user.type,
   );
@@ -225,6 +255,7 @@ app.post("/login", zValidator("json", loginSchema), async (c) => {
         mobileNumber: user.mobileNumber,
         role: roleForToken,
         institutionId: institutionData,
+        classId: isStudent ? user.classId : undefined,
         profileImage: user.profileImage,
         isActive: user.isActive === 1,
         lastLogin: now,

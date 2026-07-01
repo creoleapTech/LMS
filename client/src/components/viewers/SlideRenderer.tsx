@@ -309,7 +309,7 @@ function RenderTable({
   const safeTotalGridWidth = totalGridWidth > 0 ? totalGridWidth : table.gridCols.length || 1;
   
   return (
-    <div style={{ ...baseStyle, overflow: "hidden", minWidth: emuToCqw(totalGridWidth, slideWidth) }}>
+    <div style={{ ...baseStyle, overflow: "visible", minWidth: emuToCqw(totalGridWidth, slideWidth) }}>
       <table 
         style={{
           width: "100%",
@@ -388,7 +388,7 @@ function RenderTableCell({
     ...borderStyle,
     padding: ptToCqw(2, slideWidth),
     verticalAlign: "top",
-    overflow: "hidden",
+    overflow: "visible",
     boxSizing: "border-box",
     whiteSpace: "normal",
     overflowWrap: "normal",
@@ -451,7 +451,9 @@ function RenderElement({
     height: `${pct(position.height, slideHeight)}%`,
     transform: transforms.length > 0 ? transforms.join(" ") : undefined,
     transformOrigin: "center center",
-    overflow: "hidden",
+    // Images clip to their box; text/shapes use visible so text that renders
+    // slightly taller than the declared PPTX height isn't cut off.
+    overflow: element.type === "image" ? "hidden" : "visible",
     boxShadow: shouldShowShadow ? shadowToCss(element.shadow) : undefined,
   };
 
@@ -581,10 +583,6 @@ function RenderElement({
   let alignItems = "stretch";
   if (bodyProps.anchorCtr) alignItems = "center";
 
-  // Cap the visible text area to the slide boundary
-  const visibleTextWidth = Math.min(position.width, Math.max(0, slideWidth - position.x));
-  const visibleTextPct = `${pct(visibleTextWidth, slideWidth)}%`;
-
   const shapeStyle: React.CSSProperties = {
     ...baseStyle,
     ...fillCss,
@@ -598,22 +596,21 @@ function RenderElement({
     justifyContent,
     alignItems,
     boxSizing: "border-box",
-    overflow: "hidden",
+    wordWrap: "break-word",
+    overflowWrap: "break-word",
+    // Text must be allowed to overflow its declared box — PowerPoint doesn't
+    // clip text boxes by default and web fonts render slightly taller than
+    // PPT's own metrics, causing the last line to be cut if we use hidden.
+    overflow: "visible",
     whiteSpace: bodyProps.wrap === "none" ? "nowrap" : undefined,
   };
 
   const markers = element.paragraphs ? buildParagraphMarkers(element.paragraphs) : [];
-  const numCol = bodyProps.numCol && bodyProps.numCol > 1 ? bodyProps.numCol : undefined;
 
   return (
     <div style={shapeStyle}>
       {element.paragraphs && (
-        <div style={{
-          width: numCol ? visibleTextPct : "100%",
-          maxWidth: numCol ? undefined : visibleTextPct,
-          columnCount: numCol,
-          columnGap: numCol ? "1.5cqw" : undefined,
-        }}>
+        <div style={{ width: "100%" }}>
           {element.paragraphs.map((para, i) => (
             <RenderParagraph 
               key={i} 
@@ -666,7 +663,7 @@ export const SlideRenderer = memo(function SlideRenderer({
           width: "100%",
           aspectRatio: `${aspectRatio}`,
           ...bgStyle,
-          overflow: "hidden",
+    overflow: "visible",
           borderRadius: "4px",
           fontFamily: "'Calibri', 'Segoe UI', Arial, sans-serif",
           lineHeight: 1.2,

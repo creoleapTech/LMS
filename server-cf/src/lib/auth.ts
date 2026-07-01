@@ -1,7 +1,7 @@
 import * as jose from "jose";
 import type { Bindings } from "../env";
 
-export type AdminRoles = "super_admin" | "admin" | "teacher";
+export type AdminRoles = "super_admin" | "admin" | "teacher" | "instructor" | "student";
 
 function getKey(env: Bindings, role: AdminRoles): Uint8Array {
   const secret =
