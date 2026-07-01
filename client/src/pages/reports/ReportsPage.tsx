@@ -1153,7 +1153,8 @@ const PAGE_W = 8.5 * 96; // 816px
 const PAGE_H = 11 * 96; // 1056px
 const MARGIN = 96; // 1 inch = 96px
 const LEFT_MARGIN = 115; // stripe width + 10px safety margin
-const CONTENT_W = PAGE_W - LEFT_MARGIN - MARGIN; // 605px
+const RIGHT_MARGIN = 32; // right margin of 480 twips = 32px
+const CONTENT_W = PAGE_W - LEFT_MARGIN - RIGHT_MARGIN; // 669px
 const CONTENT_H = PAGE_H - 2 * MARGIN; // 864px
 const PAGE_GAP = 32; // px between preview pages
 const PAGE_SHADOW = "0 4px 6px -1px rgba(0,0,0,0.1), 0 10px 15px -3px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)";
@@ -1189,7 +1190,7 @@ function buildUnits(data: ReportParams): Unit[] {
     id: "session-heading",
     type: "heading",
     text: "Session Summary",
-    style: { fontWeight: "bold", fontSize: hp(32), color: "#000000", marginTop: tw(240), marginBottom: tw(300) },
+    style: { fontWeight: "bold", fontSize: hp(24), color: "#000000", marginTop: tw(240), marginBottom: tw(300) },
   });
 
   tableCounter++;
@@ -1216,7 +1217,7 @@ function buildUnits(data: ReportParams): Unit[] {
         id: `body-table-title-${bi}`,
         type: "table-title",
         text: item.table.title,
-        style: { fontWeight: "bold", fontSize: hp(32), color: "#000000", marginBottom: tw(300) },
+        style: { fontWeight: "bold", fontSize: hp(24), color: "#000000", marginBottom: tw(300) },
         forceNewPage,
         keepTogether: item.keepOnSamePage,
       });
@@ -1234,7 +1235,7 @@ function buildUnits(data: ReportParams): Unit[] {
           id: `body-heading-${bi}`,
           type: "heading",
           text: item.content.text,
-          style: { fontWeight: "bold", fontSize: hp(32), color: "#000000", marginTop: tw(300), marginBottom: tw(120) },
+          style: { fontWeight: "bold", fontSize: hp(24), color: "#000000", marginTop: tw(300), marginBottom: tw(120) },
           forceNewPage,
           keepTogether: item.keepOnSamePage || nextWantsSamePage,
         });
@@ -1245,7 +1246,7 @@ function buildUnits(data: ReportParams): Unit[] {
           text: item.content.text,
           format: item.content.format,
           bold: item.content.bold,
-          style: { fontSize: hp(28), marginTop: tw(80), marginBottom: tw(80), lineHeight: LINE_276 },
+          style: { fontSize: hp(24), marginTop: tw(80), marginBottom: tw(80), lineHeight: LINE_276 },
           forceNewPage,
           keepTogether: item.keepOnSamePage,
         });
@@ -1392,20 +1393,25 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
   const rowUnits = units.filter(u => u.type === "table-row");
   const columns = headerUnit?.columns || [];
   const colCount = columns.length;
+  // Match column widths of the generated DOCX: Date (12%), Class (8%), Chapter (18%), Topic (12%), Remarks (50%)
+  const fixedWidths = colCount === 5 ? [12, 8, 18, 12, 50] : [];
 
   return (
     <table key={key} style={{ width: "100%", borderCollapse: "collapse", border: BORDER_CSS, tableLayout: "fixed" }}>
       <colgroup>
         {colCount <= 2
           ? columns.map((_, i) => <col key={i} />)
-          : columns.map((_, i) => <col key={i} style={{ width: `${Math.floor(100 / colCount)}%` }} />)
+          : columns.map((_, i) => {
+              const widthPct = i < fixedWidths.length ? fixedWidths[i] : Math.floor(100 / colCount);
+              return <col key={i} style={{ width: `${widthPct}%` }} />;
+            })
         }
       </colgroup>
       <thead>
         <tr data-unit-id={headerUnit?.id} style={{ backgroundColor: "#4FA3D1" }}>
           {columns.map((col, ci) => (
             <th key={ci} style={{
-              color: "#FFFFFF", fontWeight: "bold", fontSize: hp(28),
+              color: "#FFFFFF", fontWeight: "bold", fontSize: hp(24),
               textAlign: "center", padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "middle", lineHeight: 1,
             }}>{col}</th>
           ))}
@@ -1415,7 +1421,7 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
         {rowUnits.length === 0 ? (
           <tr>
             <td colSpan={colCount} style={{
-              fontSize: hp(28), textAlign: "center", color: "#999",
+              fontSize: hp(24), textAlign: "center", color: "#999",
               padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "middle", lineHeight: 1,
             }}>No rows</td>
           </tr>
@@ -1424,7 +1430,7 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
             <tr key={ri} data-unit-id={unit.id}>
               {unit.cells?.map((val, ci) => (
                 <td key={ci} style={{
-                  fontSize: hp(28),
+                  fontSize: hp(24),
                   textAlign: ci < 2 ? "center" : "left",
                   padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "middle", lineHeight: 1,
                 }}>{val || ""}</td>
@@ -1442,15 +1448,15 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
 function renderSignatureSection(dataUnitId?: string): React.ReactNode {
   return (
     <div data-unit-id={dataUnitId} style={{ marginTop: tw(100) }}>
-      <div style={{ fontWeight: "bold", fontSize: hp(28) }}>
+      <div style={{ fontWeight: "bold", fontSize: hp(24) }}>
         Submitted on: {new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: tw(40) }}>
         <div style={{ width: "45%" }}>
           <div style={{ fontSize: hp(24), marginBottom: tw(40) }}>Principal's Signature</div>
         </div>
-        <div style={{ width: "45%", textAlign: "left" }}>
-          <div style={{ height: "100px", width: "180px" }} />
+        <div style={{ width: "45%", textAlign: "right" }}>
+          <div style={{ height: "100px", width: "180px", marginLeft: "auto" }} />
           <div style={{ fontSize: hp(24) }}>Trainer's Signature</div>
           <div style={{ borderTop: "1px solid #000000", height: "1px", width: "100%", marginTop: "4px" }} />
         </div>
@@ -1462,18 +1468,18 @@ function renderSignatureSection(dataUnitId?: string): React.ReactNode {
 function renderSignatureSectionWithData(signatureUrl: string | null | undefined, dataUnitId?: string): React.ReactNode {
   return (
     <div data-unit-id={dataUnitId} style={{ marginTop: tw(100) }}>
-      <div style={{ fontWeight: "bold", fontSize: hp(28) }}>
+      <div style={{ fontWeight: "bold", fontSize: hp(24) }}>
         Submitted on: {new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: tw(40) }}>
         <div style={{ width: "45%" }}>
           <div style={{ fontSize: hp(24), marginBottom: tw(40) }}>Principal's Signature</div>
         </div>
-        <div style={{ width: "45%", textAlign: "left" }}>
+        <div style={{ width: "45%", textAlign: "right" }}>
           {signatureUrl ? (
-            <img src={signatureUrl} alt="Signature" style={{ height: "100px", width: "180px", objectFit: "contain" }} />
+            <img src={signatureUrl} alt="Signature" style={{ height: "100px", width: "180px", objectFit: "contain", marginLeft: "auto" }} />
           ) : (
-            <div style={{ height: "100px", width: "180px" }} />
+            <div style={{ height: "100px", width: "180px", marginLeft: "auto" }} />
           )}
           <div style={{ fontSize: hp(24) }}>Trainer's Signature</div>
           {!signatureUrl && <div style={{ borderTop: "1px solid #000000", height: "1px", width: "100%", marginTop: "4px" }} />}
@@ -1633,7 +1639,9 @@ function renderPageContent(units: Unit[], signatureUrl?: string | null): React.R
 function CoverPage({ data }: { data: ReportParams }) {
   return (
     <div style={{
-      width: `${PAGE_W}px`, height: `${PAGE_H}px`, padding: `${MARGIN}px`, paddingLeft: `${LEFT_MARGIN}px`,
+      width: `${PAGE_W}px`, height: `${PAGE_H}px`,
+      paddingTop: `${MARGIN}px`, paddingBottom: `${MARGIN}px`,
+      paddingLeft: `${LEFT_MARGIN}px`, paddingRight: `${RIGHT_MARGIN}px`,
       boxSizing: "border-box", fontFamily: "'Times New Roman', serif", color: "#000000", overflow: "hidden",
     }}>
       {Array.from({ length: 4 }).map((_, i) => (
@@ -1808,7 +1816,9 @@ function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUr
                 <PageHeader assets={assets} />
                 <div style={{
                   position: "relative", zIndex: 1,
-                  width: `${PAGE_W}px`, height: `${PAGE_H}px`, padding: `${MARGIN}px`, paddingLeft: `${LEFT_MARGIN}px`,
+                  width: `${PAGE_W}px`, height: `${PAGE_H}px`,
+                  paddingTop: `${MARGIN}px`, paddingBottom: `${MARGIN}px`,
+                  paddingLeft: `${LEFT_MARGIN}px`, paddingRight: `${RIGHT_MARGIN}px`,
                   boxSizing: "border-box", fontFamily: "'Times New Roman', serif", color: "#000000", overflow: "hidden",
                 }}>
                   {renderPageContent(pageUnits, signatureUrl)}
