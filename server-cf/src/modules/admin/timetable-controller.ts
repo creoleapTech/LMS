@@ -2593,6 +2593,7 @@ timetableController.get("/my-submissions", async (c) => {
       .from(reportSubmissions)
       .where(and(
         eq(reportSubmissions.staffId, staffId),
+        eq(reportSubmissions.status, "submitted"),
         eq(reportSubmissions.isDeleted, 0),
       ))
       .orderBy(desc(reportSubmissions.submittedAt));
@@ -2669,7 +2670,10 @@ timetableController.get("/submitted-reports", async (c) => {
         ? resolveInstitutionId(user)
         : queryInstitutionId || undefined;
 
-    const conditions = [eq(reportSubmissions.isDeleted, 0)];
+    const conditions = [
+      eq(reportSubmissions.status, "submitted"),
+      eq(reportSubmissions.isDeleted, 0),
+    ];
     if (effectiveInstitutionId) {
       conditions.push(eq(reportSubmissions.institutionId, effectiveInstitutionId));
     }
