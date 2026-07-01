@@ -3,7 +3,7 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
 import { nowISO } from "../../lib/utils";
-import { eq, and, sql, inArray, desc } from "drizzle-orm";
+import { eq, and, or, sql, inArray, desc } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import { institutions, staff, classes } from "../../schema/admin";
 import { gradeBooks, chapters, chapterContents } from "../../schema/books";
@@ -1611,7 +1611,13 @@ async function buildMonthlyReportData(
         and(
           eq(timetableEntries.staffId, staffId),
           eq(timetableEntries.isRecurring, 0),
-          eq(timetableEntries.isDeleted, 0),
+          or(
+            eq(timetableEntries.isDeleted, 0),
+            and(
+              eq(timetableEntries.isDeleted, 1),
+              eq(timetableEntries.status, "cancelled"),
+            ),
+          ),
           sql`${timetableEntries.specificDate} >= ${dateKeyToISOString(`${year}-${String(month).padStart(2, "0")}-01`)}`,
           sql`${timetableEntries.specificDate} <= ${dateKeyEndISOString(`${year}-${String(month).padStart(2, "0")}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`)}`,
         ),
@@ -1696,17 +1702,23 @@ async function buildMonthlyReportData(
       return toDateKey(e.specificDate) === dateStr;
     });
 
-    // Include non-working days only if they have actual one-off completed entries
-    if (!workingDays.includes(dow) && oneOffForDate.length === 0) continue;
+    const activeOneOff = oneOffForDate.filter((e: any) => e.isDeleted === 0);
+    const cancelledOneOff = oneOffForDate.filter((e: any) => e.isDeleted === 1 && e.status === "cancelled");
+
+    // Include non-working days only if they have actual active one-off entries
+    if (!workingDays.includes(dow) && activeOneOff.length === 0) continue;
 
     const recurringForDay = recurringEntries
       .filter((e: any) => e.dayOfWeek === dow)
       .map((e: any) => recurringEntryForDate(e, dateStr));
 
-    // If duplicate one-off instances exist for the same period (legacy data),
+    const cancelledPeriods = new Set(cancelledOneOff.map((e: any) => e.periodNumber));
+    const overriddenPeriods = new Set(activeOneOff.map((e: any) => e.periodNumber));
+
+    // If duplicate active one-off instances exist for the same period (legacy data),
     // keep only the most recently completed one.
     const oneOffByPeriod = new Map<number, any>();
-    for (const e of oneOffForDate) {
+    for (const e of activeOneOff) {
       const pn = e.periodNumber ?? 0;
       const existing = oneOffByPeriod.get(pn);
       if (
@@ -1718,9 +1730,8 @@ async function buildMonthlyReportData(
     }
     const dedupedOneOff = [...oneOffByPeriod.values()];
 
-    const overriddenPeriods = new Set(dedupedOneOff.map((e: any) => e.periodNumber));
     const merged = [
-      ...recurringForDay.filter((e: any) => !overriddenPeriods.has(e.periodNumber)),
+      ...recurringForDay.filter((e: any) => !overriddenPeriods.has(e.periodNumber) && !cancelledPeriods.has(e.periodNumber)),
       ...dedupedOneOff,
     ].sort((a: any, b: any) => (a.periodNumber ?? 0) - (b.periodNumber ?? 0));
 

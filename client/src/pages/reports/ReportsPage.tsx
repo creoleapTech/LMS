@@ -145,6 +145,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
     updateBodyItem,
     removeBodyItem,
     clearReport,
+    updateField,
   } = useReportEditor();
 
   const handlePrevMonth = () => {
@@ -647,6 +648,32 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
             <ReportPreview data={reportData} signatureUrl={signatureUrl} />
           ) : (
             <>
+              {/* Report Metadata Card */}
+              <div className="neo-card rounded-2xl border border-slate-200/80 p-5 bg-slate-50/50 space-y-4 mb-6">
+                <h2 className="text-lg font-bold text-slate-700 tracking-wide">Report Session Statistics</h2>
+                <p className="text-sm text-muted-foreground">Adjust the planned and completed sessions count for this monthly report.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-500">No. of Sessions/Periods Planned</label>
+                    <Input
+                      type="number"
+                      value={reportData.sessionsPlanned ?? ""}
+                      onChange={(e) => updateField("sessionsPlanned", Number(e.target.value))}
+                      className="rounded-lg bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-500">No. of Sessions/Periods Completed</label>
+                    <Input
+                      type="number"
+                      value={reportData.sessionsCompleted ?? ""}
+                      onChange={(e) => updateField("sessionsCompleted", Number(e.target.value))}
+                      className="rounded-lg bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Session Summary Table */}
               <div className="neo-card rounded-2xl border-2 border-indigo-200 overflow-hidden">
                 <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-4 flex items-center justify-between">
