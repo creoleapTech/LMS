@@ -161,7 +161,7 @@ function buildCoverPage(params: ReportParams): (Paragraph | Table)[] {
         new TextRun({
           text: "Monthly Lesson Completion Report",
           bold: true,
-          size: 24,
+          size: 56,
           font: "Times New Roman",
         }),
       ],
@@ -176,7 +176,7 @@ function buildCoverPage(params: ReportParams): (Paragraph | Table)[] {
         new TextRun({
           text: `${params.monthName} ${params.year}`,
           bold: true,
-          size: 24,
+          size: 142,
           font: "Times New Roman",
           color: TITLE_COLOR,
         }),
