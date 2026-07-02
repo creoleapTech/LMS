@@ -138,7 +138,7 @@ export function StudentCredentialsSection() {
         id: s.id,
         name: s.name ?? "Unknown",
         rollNumber: s.rollNumber ?? s.username ?? "",
-        plainPassword: "",
+        plainPassword: s.plainPassword ?? "",
       }));
       downloadCredentialsAsCsv(institutionName, csvCreds);
       toast.success(`Downloaded credentials for ${creds.length} student(s)`);
