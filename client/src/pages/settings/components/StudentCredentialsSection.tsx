@@ -110,14 +110,14 @@ export function StudentCredentialsSection() {
       const { data: res } = await _axios.post(
         `/admin/institutions/${contextInstitutionId}/generate-student-credentials`
       );
-      return res.data;
+      return res;
     },
     onSuccess: (data) => {
       setGeneratedCredentials(data.data);
       toast.success(data.message || "Credentials generated!");
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || err?.message || "Failed to generate credentials");
+      toast.error(err?.message || "Failed to generate credentials");
     },
   });
 
@@ -126,10 +126,10 @@ export function StudentCredentialsSection() {
       const { data: res } = await _axios.get(
         `/admin/institutions/${contextInstitutionId}/student-credentials`
       );
-      return res.data;
+      return res;
     },
     onSuccess: (data) => {
-      const { institutionName, students: creds } = data.data;
+      const { institutionName = "", students: creds } = data.data ?? {};
       if (!creds || creds.length === 0) {
         toast.error("No students with credentials found");
         return;
@@ -144,7 +144,7 @@ export function StudentCredentialsSection() {
       toast.success(`Downloaded credentials for ${creds.length} student(s)`);
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || err?.message || "Failed to download credentials");
+      toast.error(err?.message || "Failed to download credentials");
     },
   });
 
