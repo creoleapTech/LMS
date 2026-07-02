@@ -11,6 +11,7 @@ import { nowISO } from "../../lib/utils";
 import { userAuth } from "../../middleware/user-auth";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { UnauthorizedError } from "../../lib/errors/unauthorized";
+import { ForbiddenError } from "../../lib/errors/forbidden";
 
 const app = new Hono<{
   Bindings: Bindings;
@@ -202,6 +203,10 @@ app.post("/", zValidator("form", createSchema), async (c) => {
     throw new UnauthorizedError("Invalid authentication token");
   }
 
+  if (user.role === "trainer") {
+    throw new ForbiddenError("Trainers are not allowed to save projects to the cloud");
+  }
+
   const body = c.req.valid("form");
   const formData = await c.req.formData();
   const projectFile = getFormFile(formData, "file");
@@ -297,6 +302,10 @@ app.get("/", async (c) => {
     throw new UnauthorizedError("Invalid authentication token");
   }
 
+  if (user.role === "trainer") {
+    return c.json({ success: true, data: [] }, 200);
+  }
+
   const conditions = [
     eq(leaplabProjects.credentialId, credentialId),
     eq(leaplabProjects.isDeleted, 0),
@@ -331,6 +340,10 @@ app.get("/:id", async (c) => {
   const user = getUser(c);
   const credentialId = String(user.userId);
   const id = c.req.param("id");
+
+  if (user.role === "trainer") {
+    throw new ForbiddenError("Trainers are not allowed to access cloud projects");
+  }
 
   const [row] = await getDb(c.env.DB)
     .select()
@@ -373,6 +386,10 @@ app.patch("/:id", zValidator("form", updateSchema), async (c) => {
   const user = getUser(c);
   const credentialId = String(user.userId);
   const id = c.req.param("id");
+
+  if (user.role === "trainer") {
+    throw new ForbiddenError("Trainers are not allowed to save projects to the cloud");
+  }
 
   const [existing] = await getDb(c.env.DB)
     .select()
@@ -450,6 +467,10 @@ app.delete("/:id", async (c) => {
   const credentialId = String(user.userId);
   const id = c.req.param("id");
 
+  if (user.role === "trainer") {
+    throw new ForbiddenError("Trainers are not allowed to delete cloud projects");
+  }
+
   const [existing] = await getDb(c.env.DB)
     .select()
     .from(leaplabProjects)
@@ -491,6 +512,10 @@ app.post("/:id/share", zValidator("json", shareSchema), async (c) => {
   const credentialId = String(user.userId);
   const id = c.req.param("id");
   const { permission } = c.req.valid("json");
+
+  if (user.role === "trainer") {
+    throw new ForbiddenError("Trainers are not allowed to share projects");
+  }
 
   const db = getDb(c.env.DB);
 
@@ -542,6 +567,10 @@ app.delete("/:id/share", async (c) => {
   const user = getUser(c);
   const credentialId = String(user.userId);
   const id = c.req.param("id");
+
+  if (user.role === "trainer") {
+    throw new ForbiddenError("Trainers are not allowed to manage shares");
+  }
 
   const db = getDb(c.env.DB);
 
