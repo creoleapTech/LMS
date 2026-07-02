@@ -40,9 +40,17 @@ function downloadCredentialsAsCsv(
   institutionName: string,
   credentials: GeneratedCredential[],
 ) {
-  const header = "Name,Roll Number,Password\n";
+  const hasPasswords = credentials.some((c) => c.plainPassword);
+  const header = hasPasswords
+    ? "Name,Roll Number,Password\n"
+    : "Name,Roll Number,Username\n";
   const rows = credentials
-    .map((c) => `"${c.name}","${c.rollNumber}","${c.plainPassword}"`)
+    .map((c) => {
+      if (hasPasswords) {
+        return `"${c.name}","${c.rollNumber}","${c.plainPassword}"`;
+      }
+      return `"${c.name}","${c.rollNumber}","${c.rollNumber}"`;
+    })
     .join("\n");
   const blob = new Blob([header + rows], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
@@ -113,6 +121,33 @@ export function StudentCredentialsSection() {
     },
   });
 
+  const downloadAllMutation = useMutation({
+    mutationFn: async () => {
+      const { data: res } = await _axios.get(
+        `/admin/institutions/${contextInstitutionId}/student-credentials`
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      const { institutionName, students: creds } = data.data;
+      if (!creds || creds.length === 0) {
+        toast.error("No students with credentials found");
+        return;
+      }
+      const csvCreds = creds.map((s: any) => ({
+        id: s.id,
+        name: s.name ?? "Unknown",
+        rollNumber: s.rollNumber ?? s.username ?? "",
+        plainPassword: "",
+      }));
+      downloadCredentialsAsCsv(institutionName, csvCreds);
+      toast.success(`Downloaded credentials for ${creds.length} student(s)`);
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to download credentials");
+    },
+  });
+
   if (isLoading) {
     return (
       <Card>
@@ -171,6 +206,22 @@ export function StudentCredentialsSection() {
                 <Save size={14} />
               )}
               Save Setting
+            </Button>
+            <Button
+              onClick={() => {
+                if (!contextInstitutionId) return;
+                downloadAllMutation.mutate();
+              }}
+              disabled={!contextInstitutionId || downloadAllMutation.isPending}
+              variant="outline"
+              className="rounded-xl gap-1.5"
+            >
+              {downloadAllMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download size={14} />
+              )}
+              Download Credentials
             </Button>
             <Button
               onClick={() => {

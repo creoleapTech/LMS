@@ -169,4 +169,61 @@ app.post("/:id/generate-student-credentials", async (c) => {
   );
 });
 
+// GET /:id/student-credentials — list all students with credentials for CSV export
+app.get("/:id/student-credentials", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+
+  if (user.role !== "admin" && user.role !== "super_admin") {
+    throw new ForbiddenError("Only admin can view student credentials");
+  }
+
+  const institutionId = c.req.param("id");
+  const db = getDb(c.env.DB);
+
+  const [institution] = await db
+    .select({ id: institutions.id, name: institutions.name })
+    .from(institutions)
+    .where(and(eq(institutions.id, institutionId), eq(institutions.isDeleted, 0)));
+
+  if (!institution) {
+    throw new BadRequestError("Institution not found");
+  }
+
+  if (user.role !== "super_admin") {
+    const userInstId =
+      typeof user.institutionId === "object"
+        ? (user.institutionId as any)._id?.toString()
+        : user.institutionId?.toString();
+    if (userInstId !== institutionId) {
+      throw new ForbiddenError("Access denied to this institution");
+    }
+  }
+
+  const studentsWithCredentials = await db
+    .select({
+      id: students.id,
+      name: students.name,
+      username: students.username,
+      rollNumber: students.rollNumber,
+    })
+    .from(students)
+    .where(
+      and(
+        eq(students.institutionId, institutionId),
+        eq(students.isDeleted, 0),
+        eq(students.isActive, 1),
+        sql`${students.username} IS NOT NULL`,
+      ),
+    )
+    .orderBy(students.name);
+
+  return c.json({
+    success: true,
+    data: {
+      institutionName: institution.name,
+      students: studentsWithCredentials,
+    },
+  });
+});
+
 export { app as studentCredentialController };
