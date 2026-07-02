@@ -4,7 +4,7 @@ import { z } from "zod";
 import { eq, and } from "drizzle-orm";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
-import { institutions } from "../../schema/admin";
+import { institutions, staff } from "../../schema/admin";
 import { leaplabCredentials } from "../../schema/leaplab";
 import { verifyPassword } from "../../lib/password";
 import { encodeToken } from "../../lib/auth";
@@ -26,6 +26,7 @@ app.post("/verify", zValidator("json", verifySchema), async (c) => {
 
   const db = getDb(c.env.DB);
 
+  // 1. Try LeapLab credentials first
   const rows = await db
     .select({
       credential: {
@@ -49,21 +50,84 @@ app.post("/verify", zValidator("json", verifySchema), async (c) => {
 
   const row = rows[0];
 
-  if (!row) {
+  if (row) {
+    const isValid = await verifyPassword(password, row.credential.password);
+
+    if (!isValid) {
+      throw new UnauthorizedError("Invalid username or password");
+    }
+
+    const token = await encodeToken(
+      {
+        userId: String(row.credential.id),
+        username: row.credential.username,
+        institutionId: String(row.credential.institutionId),
+      },
+      "teacher",
+      c.env,
+    );
+
+    if (!token) {
+      throw new Error("Failed to generate authentication token");
+    }
+
+    c.header("Authorization", `Bearer ${token}`);
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          id: row.credential.id,
+          username: row.credential.username,
+          institutionId: row.credential.institutionId,
+          institutionName: row.institutionName,
+          token,
+        },
+      },
+      200,
+    );
+  }
+
+  // 2. If not found in LeapLab credentials, try staff (trainers)
+  const staffRows = await db
+    .select({
+      staff: {
+        id: staff.id,
+        email: staff.email,
+        name: staff.name,
+        password: staff.password,
+        institutionId: staff.institutionId,
+      },
+      institutionName: institutions.name,
+    })
+    .from(staff)
+    .innerJoin(institutions, eq(staff.institutionId, institutions.id))
+    .where(
+      and(
+        eq(staff.email, username.trim().toLowerCase()),
+        eq(staff.isDeleted, 0),
+        eq(staff.isActive, 1),
+      ),
+    )
+    .limit(1);
+
+  const staffRow = staffRows[0];
+
+  if (!staffRow) {
     throw new UnauthorizedError("Invalid username or password");
   }
 
-  const isValid = await verifyPassword(password, row.credential.password);
+  const isStaffPasswordValid = await verifyPassword(password, staffRow.staff.password);
 
-  if (!isValid) {
+  if (!isStaffPasswordValid) {
     throw new UnauthorizedError("Invalid username or password");
   }
 
   const token = await encodeToken(
     {
-      userId: String(row.credential.id),
-      username: row.credential.username,
-      institutionId: String(row.credential.institutionId),
+      userId: String(staffRow.staff.id),
+      username: staffRow.staff.email,
+      institutionId: String(staffRow.staff.institutionId),
     },
     "teacher",
     c.env,
@@ -79,10 +143,10 @@ app.post("/verify", zValidator("json", verifySchema), async (c) => {
     {
       success: true,
       data: {
-        id: row.credential.id,
-        username: row.credential.username,
-        institutionId: row.credential.institutionId,
-        institutionName: row.institutionName,
+        id: staffRow.staff.id,
+        username: staffRow.staff.email,
+        institutionId: staffRow.staff.institutionId,
+        institutionName: staffRow.institutionName,
         token,
       },
     },
