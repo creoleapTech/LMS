@@ -48,6 +48,26 @@ function pickWord(index: number): string {
   return PASSWORD_WORDS[index % PASSWORD_WORDS.length];
 }
 
+function reconstructPassword(rollNumber: string, prefix: string): string {
+  if (!rollNumber) return "";
+  
+  let digits = "";
+  if (rollNumber.startsWith(prefix)) {
+    digits = rollNumber.slice(prefix.length);
+  } else {
+    const match = rollNumber.match(/\d+$/);
+    if (match) {
+      digits = match[0];
+    }
+  }
+
+  if (digits.length <= 2) return "";
+  const seqStr = digits.slice(2);
+  const seq = parseInt(seqStr, 10);
+  if (isNaN(seq)) return "";
+  return `${pickWord(seq - 1)}@${padSequence(seq)}`;
+}
+
 // POST /:id/generate-student-credentials
 app.post("/:id/generate-student-credentials", async (c) => {
   const user = c.get("user") as Record<string, any>;
@@ -137,8 +157,10 @@ app.post("/:id/generate-student-credentials", async (c) => {
 
   for (let i = 0; i < studentsWithoutCredentials.length; i++) {
     const student = studentsWithoutCredentials[i];
-    const rollNumber = `${prefix}${yearSuffix}${padSequence(sequence + i)}`;
-    const plainPassword = `${pickWord(i)}@${padSequence(sequence + i)}`;
+    const seqNum = sequence + i;
+    const seqStr = padSequence(seqNum);
+    const rollNumber = `${prefix}${yearSuffix}${seqStr}`;
+    const plainPassword = `${pickWord(seqNum - 1)}@${seqStr}`;
     const hashedPassword = await hashPassword(plainPassword);
 
     await db
@@ -199,6 +221,8 @@ app.get("/:id/student-credentials", async (c) => {
     }
   }
 
+  const prefix = institutionInitials(institution.name);
+
   const studentsWithCredentials = await db
     .select({
       id: students.id,
@@ -217,11 +241,19 @@ app.get("/:id/student-credentials", async (c) => {
     )
     .orderBy(students.name);
 
+  const studentsWithPasswords = studentsWithCredentials.map((s) => {
+    const rollNumber = s.rollNumber || s.username || "";
+    return {
+      ...s,
+      plainPassword: reconstructPassword(rollNumber, prefix),
+    };
+  });
+
   return c.json({
     success: true,
     data: {
       institutionName: institution.name,
-      students: studentsWithCredentials,
+      students: studentsWithPasswords,
     },
   });
 });
