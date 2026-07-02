@@ -147,7 +147,8 @@ app.post("/login", zValidator("json", loginSchema), async (c) => {
       const match = studentRows.find(
         (s) =>
           (s.email && s.email.toLowerCase() === email.toLowerCase()) ||
-          (s.username && s.username.toLowerCase() === email.toLowerCase()),
+          (s.username && s.username.toLowerCase() === email.toLowerCase()) ||
+          (s.rollNumber && s.rollNumber.toLowerCase() === email.toLowerCase()),
       );
 
       if (match) {

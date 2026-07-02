@@ -357,6 +357,7 @@ app.put("/institution", async (c) => {
     currency?: string;
     enableStudentPortal?: boolean;
     enableParentPortal?: boolean;
+    generateStudentCredentials?: boolean;
     gradingScale?: {
       grade: string;
       label: string;
@@ -400,6 +401,8 @@ app.put("/institution", async (c) => {
     settingsData.enableStudentPortal = body.enableStudentPortal ? 1 : 0;
   if (body.enableParentPortal !== undefined)
     settingsData.enableParentPortal = body.enableParentPortal ? 1 : 0;
+  if (body.generateStudentCredentials !== undefined)
+    settingsData.generateStudentCredentials = body.generateStudentCredentials ? 1 : 0;
   if (body.passingMarks !== undefined) settingsData.passingMarks = body.passingMarks;
   if (body.sessionTimeout !== undefined) settingsData.sessionTimeout = body.sessionTimeout;
 

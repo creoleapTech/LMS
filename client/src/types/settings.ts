@@ -24,6 +24,7 @@ export interface IInstitutionSettings {
   currency: string;
   enableStudentPortal: boolean;
   enableParentPortal: boolean;
+  generateStudentCredentials: boolean;
   gradingScale: IGradeScaleEntry[];
   passingMarks: number;
   notificationPreferences: IInstitutionNotificationPrefs;

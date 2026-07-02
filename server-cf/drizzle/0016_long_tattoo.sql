@@ -1,0 +1,1 @@
+ALTER TABLE `institution_settings` ADD `generate_student_credentials` integer DEFAULT 0;

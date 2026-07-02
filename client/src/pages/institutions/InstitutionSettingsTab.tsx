@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Globe, Calendar, GraduationCap, Bell, Shield } from "lucide-react";
+import { Building2, Globe, Calendar, GraduationCap, Bell, Shield, KeyRound } from "lucide-react";
 import { SettingsInstitutionProvider } from "../settings/context/SettingsInstitutionContext";
 import { InstitutionProfileSection } from "../settings/components/InstitutionProfileSection";
 import { GeneralSettingsSection } from "../settings/components/GeneralSettingsSection";
@@ -7,6 +7,7 @@ import { AcademicSection } from "../settings/components/AcademicSection";
 import { GradingSection } from "../settings/components/GradingSection";
 import { NotificationSection } from "../settings/components/NotificationSection";
 import { SecuritySection } from "../settings/components/SecuritySection";
+import { StudentCredentialsSection } from "../settings/components/StudentCredentialsSection";
 
 interface Props {
   institutionId: string;
@@ -17,6 +18,7 @@ const SUB_TABS = [
   { id: "general", label: "General", icon: Globe },
   { id: "academic", label: "Academic", icon: Calendar },
   { id: "grading", label: "Grading", icon: GraduationCap },
+  { id: "credentials", label: "Credentials", icon: KeyRound },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "security", label: "Security", icon: Shield },
 ];
@@ -45,6 +47,9 @@ export function InstitutionSettingsTab({ institutionId }: Props) {
         </TabsContent>
         <TabsContent value="grading">
           <GradingSection />
+        </TabsContent>
+        <TabsContent value="credentials">
+          <StudentCredentialsSection />
         </TabsContent>
         <TabsContent value="notifications">
           <NotificationSection />

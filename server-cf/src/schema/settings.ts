@@ -66,6 +66,7 @@ export const institutionSettings = sqliteTable("institution_settings", {
   currency: text("currency").default("INR"),
   enableStudentPortal: integer("enable_student_portal").default(0),
   enableParentPortal: integer("enable_parent_portal").default(0),
+  generateStudentCredentials: integer("generate_student_credentials").default(0),
   passingMarks: integer("passing_marks"),
   notifyEmail: integer("notify_email").default(1),
   notifySms: integer("notify_sms").default(0),
