@@ -12,7 +12,7 @@ import {
   institutionQuizAttempts,
   institutionQuizAttemptAnswers,
 } from "../../schema/quiz";
-import { institutions } from "../../schema/admin";
+import { institutions, students } from "../../schema/admin";
 import { saveFile } from "../../lib/file";
 import { nowISO } from "../../lib/utils";
 import { BadRequestError } from "../../lib/errors/bad-request";
