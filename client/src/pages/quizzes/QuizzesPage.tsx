@@ -12,7 +12,8 @@ import {
   Download,
   Upload,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,6 +88,7 @@ export default function QuizzesPage() {
   });
 
   const deleteQuiz = useDeleteQuiz();
+  const qc = useQueryClient();
 
   const quizzes = data?.data ?? [];
   const meta = data?.meta ?? { total: 0, page: 1, limit: 20 };
@@ -102,7 +104,9 @@ export default function QuizzesPage() {
       a.download = res.data.filename || `${quiz.title}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {}
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to export questions");
+    }
   };
 
   const handleImportCSV = async (quiz: Quiz, file: File) => {
@@ -112,8 +116,13 @@ export default function QuizzesPage() {
       await _axios.post(`/admin/quizzes/${quiz.id}/import-csv`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      qc.invalidateQueries({ queryKey: ["quizzes"] });
+      qc.invalidateQueries({ queryKey: ["quiz", quiz.id] });
+      toast.success("Questions imported successfully");
       setImportTarget(null);
-    } catch {}
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to import questions");
+    }
   };
 
   return (

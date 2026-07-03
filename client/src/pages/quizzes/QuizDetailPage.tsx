@@ -14,6 +14,7 @@ import {
   Trophy,
   BarChart3,
   Pencil,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,6 +33,7 @@ import {
 import { _axios } from "@/lib/axios";
 import { useQuiz } from "./hooks/useQuiz";
 import { useUpdateQuiz } from "./hooks/useUpdateQuiz";
+import { useDeleteQuestion } from "./hooks/useDeleteQuestion";
 import { useQuizMarks } from "./hooks/useQuizMarks";
 import { AddQuestionDialog } from "./components/AddQuestionDialog";
 import { QuizFormDialog } from "./components/QuizFormDialog";
@@ -43,6 +45,7 @@ export default function QuizDetailPage() {
   const { id } = useParams({ from: "/quizzes/$id" });
   const { data: quiz, isLoading } = useQuiz(id);
   const updateQuiz = useUpdateQuiz();
+  const deleteQuestionMutation = useDeleteQuestion(id);
   const { data: marksData } = useQuizMarks(id);
 
   const [tab, setTab] = useState<Tab>("questions");
@@ -50,11 +53,10 @@ export default function QuizDetailPage() {
   const [deleteQuestion, setDeleteQuestion] = useState<QuizQuestion | null>(null);
   const [editOpen, setEditOpen] = useState(false);
 
-  const handleDeleteQuestion = async (questionId: string) => {
-    try {
-      await _axios.delete(`/admin/quizzes/${id}/questions/${questionId}`);
-      setDeleteQuestion(null);
-    } catch {}
+  const handleDeleteQuestion = (questionId: string) => {
+    deleteQuestionMutation.mutate(questionId, {
+      onSuccess: () => setDeleteQuestion(null),
+    });
   };
 
   const handleTogglePublish = async () => {
@@ -407,19 +409,34 @@ export default function QuizDetailPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Question</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this question? This cannot be undone.
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>Are you sure you want to delete this question? This cannot be undone.</p>
+                {quiz.isPublished === 1 && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>
+                      This quiz is <strong>published</strong>. Deleting this question will immediately affect students who haven't completed the quiz.
+                    </span>
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground"
+              disabled={deleteQuestionMutation.isPending}
               onClick={() => {
                 if (deleteQuestion) handleDeleteQuestion(deleteQuestion.id);
               }}
             >
-              Delete
+              {deleteQuestionMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Delete"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
