@@ -88,13 +88,6 @@ export const createQuestionSchema = z.object({
   correctAnswer: z.string().min(1, "Select the correct answer"),
   explanation: z.string().optional(),
   points: z.number().int().min(0).max(100).default(1),
-  options: z
-    .array(
-      z.object({
-        text: z.string().min(1, "Option text is required"),
-      }),
-    )
-    .min(2, "At least 2 options required"),
 });
 
 export type CreateQuestionValues = z.infer<typeof createQuestionSchema>;

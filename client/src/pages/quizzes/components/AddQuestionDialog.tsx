@@ -59,7 +59,6 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
       correctAnswer: "",
       explanation: "",
       points: 1,
-      options: [{ text: "" }, { text: "" }],
     },
   });
 
@@ -73,7 +72,6 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
         correctAnswer: "",
         explanation: "",
         points: 1,
-        options: [{ text: "" }, { text: "" }],
       });
       setOptions([{ text: "" }, { text: "" }]);
       setQuestionImage(null);
@@ -97,10 +95,21 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
   };
 
   const onSubmit = async (data: CreateQuestionValues) => {
-    console.log("[AddQuestion] onSubmit triggered", { data, options, quizId, questionImage, optionImages });
+    const filteredOptions = options.filter((o) => o.text.trim());
+    console.log("[AddQuestion] onSubmit triggered", { data, options, filteredOptions, quizId, questionImage, optionImages });
+
+    if (filteredOptions.length < 2) {
+      toast.error("At least 2 options are required");
+      return;
+    }
+
+    if (!data.correctAnswer) {
+      toast.error("Select the correct answer");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const filteredOptions = options.filter((o) => o.text.trim());
       console.log("[AddQuestion] filteredOptions", filteredOptions);
 
       const formData = new FormData();
@@ -143,9 +152,8 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
     if (answerType === "true_false") {
       setOptions([{ text: "True" }, { text: "False" }]);
       setOptionImages([null, null]);
-      setValue("options", [{ text: "True" }, { text: "False" }]);
     }
-  }, [answerType, setValue]);
+  }, [answerType]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -287,10 +295,6 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
                   )}
                 </div>
               ))}
-
-              {errors.options && (
-                <p className="text-sm text-destructive">{errors.options.message}</p>
-              )}
             </div>
           )}
 
