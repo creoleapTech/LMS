@@ -343,7 +343,16 @@ app.post("/quizzes/attempts/:attemptId/submit", async (c) => {
   const { attemptId } = c.req.param();
 
   const body = await c.req.json();
-  const answers: { questionId: string; selectedAnswer: string }[] = body.answers || [];
+  const rawAnswers: { questionId: string; selectedAnswer: string }[] = body.answers || [];
+
+  // Deduplicate by questionId — keep last answer per question to prevent double-point exploit
+  const answersMap = new Map<string, { questionId: string; selectedAnswer: string }>();
+  for (const a of rawAnswers) {
+    if (a.questionId && typeof a.selectedAnswer === "string") {
+      answersMap.set(a.questionId, a);
+    }
+  }
+  const answers = Array.from(answersMap.values());
 
   // Get attempt
   const [attempt] = await db

@@ -71,12 +71,13 @@ export interface QuizAttempt {
 export const createQuizSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   description: z.string().max(2000).optional(),
+  institutionId: z.string().optional(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
-  timeLimitMinutes: z.number().int().min(1).max(1440).optional().nullable(),
+  timeLimitMinutes: z.number().int().min(0, "Cannot be negative").max(1440).optional().nullable(),
   retakeAllowed: z.boolean().optional(),
-  maxRetakes: z.number().int().min(0).max(100).optional(),
-  passingPoints: z.number().int().min(0).optional(),
+  maxRetakes: z.number().int().min(0, "Cannot be negative").max(100).optional(),
+  passingPoints: z.number().int().min(0, "Cannot be negative").optional(),
   isPublished: z.boolean().optional(),
 });
 

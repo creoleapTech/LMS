@@ -5,7 +5,6 @@ import {
   Plus,
   Trash2,
   GripVertical,
-  Save,
   Loader2,
   Image,
   Eye,
@@ -14,11 +13,11 @@ import {
   Calendar,
   Trophy,
   BarChart3,
+  Pencil,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +34,7 @@ import { useQuiz } from "./hooks/useQuiz";
 import { useUpdateQuiz } from "./hooks/useUpdateQuiz";
 import { useQuizMarks } from "./hooks/useQuizMarks";
 import { AddQuestionDialog } from "./components/AddQuestionDialog";
+import { QuizFormDialog } from "./components/QuizFormDialog";
 import type { QuizQuestion } from "./types";
 
 type Tab = "questions" | "marks";
@@ -46,41 +46,28 @@ export default function QuizDetailPage() {
   const { data: marksData } = useQuizMarks(id);
 
   const [tab, setTab] = useState<Tab>("questions");
-  const [editMode, setEditMode] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [addQuestionOpen, setAddQuestionOpen] = useState(false);
   const [deleteQuestion, setDeleteQuestion] = useState<QuizQuestion | null>(null);
-  const [publishState, setPublishState] = useState(false);
-
-  const startEdit = () => {
-    if (quiz) {
-      setTitle(quiz.title);
-      setDescription(quiz.description || "");
-      setPublishState(quiz.isPublished === 1);
-    }
-    setEditMode(true);
-  };
-
-  const saveEdits = () => {
-    updateQuiz.mutate(
-      {
-        id,
-        data: {
-          title,
-          description: description || null,
-          isPublished: publishState,
-        },
-      },
-      { onSuccess: () => setEditMode(false) },
-    );
-  };
+  const [editOpen, setEditOpen] = useState(false);
 
   const handleDeleteQuestion = async (questionId: string) => {
     try {
       await _axios.delete(`/admin/quizzes/${id}/questions/${questionId}`);
       setDeleteQuestion(null);
     } catch {}
+  };
+
+  const handleTogglePublish = async () => {
+    if (!quiz) return;
+    const newPublished = quiz.isPublished !== 1;
+    if (newPublished && (!quiz.questions || quiz.questions.length === 0)) {
+      toast.error("Cannot publish a quiz without questions. Add at least one question first.");
+      return;
+    }
+    updateQuiz.mutate({
+      id,
+      data: { isPublished: newPublished },
+    });
   };
 
   const formatTime = (seconds: number | null) => {
@@ -115,73 +102,36 @@ export default function QuizDetailPage() {
       <div className="border rounded-xl p-6 bg-white space-y-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            {editMode ? (
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="text-xl font-bold"
-              />
-            ) : (
-              <h1 className="text-2xl font-bold">{quiz.title}</h1>
-            )}
-            {editMode ? (
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="mt-2"
-                rows={2}
-                placeholder="Description..."
-              />
-            ) : (
-              quiz.description && (
-                <p className="text-muted-foreground mt-1">{quiz.description}</p>
-              )
+            <h1 className="text-2xl font-bold">{quiz.title}</h1>
+            {quiz.description && (
+              <p className="text-muted-foreground mt-1">{quiz.description}</p>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {editMode ? (
-              <>
-                <Button variant="outline" size="sm" onClick={() => setEditMode(false)}>
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={saveEdits} disabled={updateQuiz.isPending}>
-                  {updateQuiz.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-1" />
-                  )}
-                  Save
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" size="sm" onClick={startEdit}>
-                  Edit Details
-                </Button>
-                <Button
-                  variant={quiz.isPublished ? "outline" : "default"}
-                  size="sm"
-                  onClick={() =>
-                    updateQuiz.mutate({
-                      id,
-                      data: { isPublished: quiz.isPublished === 1 ? false : true },
-                    })
-                  }
-                >
-                  {quiz.isPublished ? (
-                    <>
-                      <EyeOff className="h-4 w-4 mr-1" />
-                      Unpublish
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="h-4 w-4 mr-1" />
-                      Publish
-                    </>
-                  )}
-                </Button>
-              </>
-            )}
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            <Button
+              variant={quiz.isPublished ? "outline" : "default"}
+              size="sm"
+              onClick={handleTogglePublish}
+              disabled={updateQuiz.isPending}
+            >
+              {updateQuiz.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : quiz.isPublished ? (
+                <>
+                  <EyeOff className="h-4 w-4 mr-1" />
+                  Unpublish
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4 mr-1" />
+                  Publish
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
@@ -205,6 +155,9 @@ export default function QuizDetailPage() {
             <span className="text-blue-600">
               Retake allowed{quiz.maxRetakes ? ` (${quiz.maxRetakes}x)` : " (unlimited)"}
             </span>
+          )}
+          {quiz.passingPoints > 0 && (
+            <span>Passing: {quiz.passingPoints} pts</span>
           )}
         </div>
       </div>
@@ -442,6 +395,9 @@ export default function QuizDetailPage() {
           )}
         </div>
       )}
+
+      {/* Edit Quiz Dialog */}
+      <QuizFormDialog open={editOpen} onOpenChange={setEditOpen} quiz={quiz} />
 
       {/* Add Question Dialog */}
       <AddQuestionDialog open={addQuestionOpen} onOpenChange={setAddQuestionOpen} quizId={id} />

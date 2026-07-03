@@ -57,6 +57,7 @@ async function recalcQuizPoints(db: ReturnType<typeof getDb>, quizId: string) {
 const createQuizSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   description: z.string().max(2000).optional(),
+  institutionId: z.string().optional(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
   timeLimitMinutes: z.number().int().min(1).max(1440).optional().nullable(),
@@ -151,7 +152,7 @@ app.post("/", zValidator("json", createQuizSchema), async (c) => {
   const instId =
     typeof user.institutionId === "object"
       ? (user.institutionId as any)?._id?.toString()
-      : user.institutionId?.toString();
+      : user.institutionId?.toString() || body.institutionId;
 
   if (!instId) throw new BadRequestError("No institution associated with your account");
 
@@ -167,7 +168,7 @@ app.post("/", zValidator("json", createQuizSchema), async (c) => {
       institutionId: instId,
       title: body.title.trim(),
       description: body.description?.trim() || null,
-      createdBy: user.id as string,
+      createdBy: (user.id || user.userId) as string,
       startDate: body.startDate || null,
       endDate: body.endDate || null,
       timeLimitMinutes: body.timeLimitMinutes || null,
@@ -245,6 +246,40 @@ app.patch("/:id", async (c) => {
 
   if (!existing) throw new BadRequestError("Quiz not found");
   assertInstitutionAccess(user, existing.institutionId);
+
+  // Validate no negative values
+  if (body.passingPoints !== undefined && body.passingPoints < 0) {
+    throw new BadRequestError("Passing points cannot be negative");
+  }
+  if (body.maxRetakes !== undefined && body.maxRetakes < 0) {
+    throw new BadRequestError("Max retakes cannot be negative");
+  }
+  if (body.timeLimitMinutes !== undefined && body.timeLimitMinutes !== null && body.timeLimitMinutes < 0) {
+    throw new BadRequestError("Time limit cannot be negative");
+  }
+
+  // If publishing, require at least one question
+  if (body.isPublished === true || body.isPublished === 1) {
+    const [qCount] = await db
+      .select({ count: count() })
+      .from(institutionQuizQuestions)
+      .where(and(eq(institutionQuizQuestions.quizId, id), eq(institutionQuizQuestions.isDeleted, 0)));
+    if ((qCount?.count ?? 0) === 0) {
+      throw new BadRequestError("Cannot publish a quiz without questions. Add at least one question first.");
+    }
+
+    // Validate passing points does not exceed total points from questions
+    const passingPts = body.passingPoints ?? existing.passingPoints ?? 0;
+    if (passingPts > 0) {
+      const [totalRow] = await db
+        .select({ total: sql<number>`coalesce(sum(${institutionQuizQuestions.points}), 0)` })
+        .from(institutionQuizQuestions)
+        .where(and(eq(institutionQuizQuestions.quizId, id), eq(institutionQuizQuestions.isDeleted, 0)));
+      if (passingPts > (totalRow?.total ?? 0)) {
+        throw new BadRequestError("Passing points cannot exceed total question points");
+      }
+    }
+  }
 
   const updateData: Record<string, any> = { updatedAt: nowISO() };
   if (body.title !== undefined) updateData.title = body.title.trim();

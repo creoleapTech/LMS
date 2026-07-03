@@ -295,7 +295,11 @@ export default function QuizzesPage() {
       )}
 
       {/* Create Dialog */}
-      <QuizFormDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <QuizFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        institutionId={isSuperAdmin && selectedInstitutionId !== "all" ? selectedInstitutionId : undefined}
+      />
 
       {/* Delete Dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>

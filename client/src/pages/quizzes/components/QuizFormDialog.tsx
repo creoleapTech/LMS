@@ -18,15 +18,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
 import { useCreateQuiz } from "../hooks/useCreateQuiz";
-import { createQuizSchema, type CreateQuizValues } from "../types";
+import { useUpdateQuiz } from "../hooks/useUpdateQuiz";
+import { createQuizSchema, type CreateQuizValues, type Quiz } from "../types";
 
 interface QuizFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  institutionId?: string;
+  quiz?: Quiz;
 }
 
-export function QuizFormDialog({ open, onOpenChange }: QuizFormDialogProps) {
+function toLocalDatetime(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export function QuizFormDialog({ open, onOpenChange, institutionId, quiz }: QuizFormDialogProps) {
+  const isEdit = !!quiz;
   const createQuiz = useCreateQuiz();
+  const updateQuiz = useUpdateQuiz();
+  const isPending = isEdit ? updateQuiz.isPending : createQuiz.isPending;
 
   const {
     register,
@@ -49,26 +62,46 @@ export function QuizFormDialog({ open, onOpenChange }: QuizFormDialogProps) {
 
   useEffect(() => {
     if (open) {
-      reset({
-        title: "",
-        description: "",
-        startDate: null,
-        endDate: null,
-        timeLimitMinutes: null,
-        retakeAllowed: false,
-        maxRetakes: 0,
-        passingPoints: 0,
-        isPublished: false,
-      });
+      if (isEdit && quiz) {
+        reset({
+          title: quiz.title,
+          description: quiz.description || "",
+          startDate: toLocalDatetime(quiz.startDate) || null,
+          endDate: toLocalDatetime(quiz.endDate) || null,
+          timeLimitMinutes: quiz.timeLimitMinutes ?? null,
+          retakeAllowed: quiz.retakeAllowed === 1,
+          maxRetakes: quiz.maxRetakes ?? 0,
+          passingPoints: quiz.passingPoints ?? 0,
+          isPublished: quiz.isPublished === 1,
+        });
+      } else {
+        reset({
+          title: "",
+          description: "",
+          startDate: null,
+          endDate: null,
+          timeLimitMinutes: null,
+          retakeAllowed: false,
+          maxRetakes: 0,
+          passingPoints: 0,
+          isPublished: false,
+        });
+      }
     }
-  }, [open, reset]);
+  }, [open, isEdit, quiz, reset]);
 
   const onSubmit = (data: CreateQuizValues) => {
-    createQuiz.mutate(data, {
-      onSuccess: () => {
-        onOpenChange(false);
-      },
-    });
+    if (isEdit && quiz) {
+      updateQuiz.mutate(
+        { id: quiz.id, data },
+        { onSuccess: () => onOpenChange(false) },
+      );
+    } else {
+      const payload = institutionId ? { ...data, institutionId } : data;
+      createQuiz.mutate(payload, {
+        onSuccess: () => onOpenChange(false),
+      });
+    }
   };
 
   const retakeAllowed = watch("retakeAllowed");
@@ -77,9 +110,11 @@ export function QuizFormDialog({ open, onOpenChange }: QuizFormDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Quiz</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Quiz" : "Create Quiz"}</DialogTitle>
           <DialogDescription>
-            Set up a new quiz. You can add questions after creating it.
+            {isEdit
+              ? "Update quiz settings. You can manage questions in the Questions tab."
+              : "Set up a new quiz. You can add questions after creating it."}
           </DialogDescription>
         </DialogHeader>
 
@@ -108,9 +143,13 @@ export function QuizFormDialog({ open, onOpenChange }: QuizFormDialogProps) {
             <Input
               id="timeLimitMinutes"
               type="number"
+              min={0}
               placeholder="Leave empty for no time limit"
               {...register("timeLimitMinutes", { valueAsNumber: true })}
             />
+            {errors.timeLimitMinutes && (
+              <p className="text-sm text-destructive">{errors.timeLimitMinutes.message}</p>
+            )}
           </div>
 
           {/* Date Range */}
@@ -131,9 +170,13 @@ export function QuizFormDialog({ open, onOpenChange }: QuizFormDialogProps) {
             <Input
               id="passingPoints"
               type="number"
+              min={0}
               placeholder="0 = no passing score"
               {...register("passingPoints", { valueAsNumber: true })}
             />
+            {errors.passingPoints && (
+              <p className="text-sm text-destructive">{errors.passingPoints.message}</p>
+            )}
           </div>
 
           {/* Retake */}
@@ -154,16 +197,22 @@ export function QuizFormDialog({ open, onOpenChange }: QuizFormDialogProps) {
               <Input
                 id="maxRetakes"
                 type="number"
+                min={0}
                 {...register("maxRetakes", { valueAsNumber: true })}
               />
+              {errors.maxRetakes && (
+                <p className="text-sm text-destructive">{errors.maxRetakes.message}</p>
+              )}
             </div>
           )}
 
           {/* Publish */}
           <div className="flex items-center justify-between border-t pt-4">
             <div className="space-y-0.5">
-              <Label>Publish Immediately</Label>
-              <p className="text-xs text-muted-foreground">Students can see this quiz</p>
+              <Label>{isEdit ? "Published" : "Publish Immediately"}</Label>
+              <p className="text-xs text-muted-foreground">
+                {isEdit ? "Students can see this quiz" : "Students can see this quiz after creation"}
+              </p>
             </div>
             <Switch
               checked={watch("isPublished")}
@@ -175,12 +224,14 @@ export function QuizFormDialog({ open, onOpenChange }: QuizFormDialogProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createQuiz.isPending}>
-              {createQuiz.isPending ? (
+            <Button type="submit" disabled={isPending}>
+              {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
+                  {isEdit ? "Saving..." : "Creating..."}
                 </>
+              ) : isEdit ? (
+                "Save Changes"
               ) : (
                 "Create Quiz"
               )}
