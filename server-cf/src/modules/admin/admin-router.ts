@@ -27,6 +27,7 @@ import { lessonPlanController } from "./lesson-plan-controller";
 import { examinationController } from "./examination-controller";
 import { courseController } from "./course-controller";
 import { batchController } from "./batch-controller";
+import { quizController } from "./quiz-controller";
 
 // ─── Import staff-module controllers (mounted under admin) ─
 import { classSessionController } from "../staff/class-session-controller";
@@ -81,5 +82,8 @@ adminBaseRouter.route("/examinations", examinationController);
 // Courses & batches
 adminBaseRouter.route("/courses", courseController);
 adminBaseRouter.route("/batches", batchController);
+
+// Quizzes
+adminBaseRouter.route("/quizzes", quizController);
 
 export { adminBaseRouter };
