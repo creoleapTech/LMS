@@ -97,15 +97,19 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
   };
 
   const onSubmit = async (data: CreateQuestionValues) => {
+    console.log("[AddQuestion] onSubmit triggered", { data, options, quizId, questionImage, optionImages });
     setSubmitting(true);
     try {
+      const filteredOptions = options.filter((o) => o.text.trim());
+      console.log("[AddQuestion] filteredOptions", filteredOptions);
+
       const formData = new FormData();
       formData.append("questionText", data.questionText);
       formData.append("answerType", data.answerType);
       formData.append("correctAnswer", data.correctAnswer);
       if (data.explanation) formData.append("explanation", data.explanation);
       formData.append("points", String(data.points));
-      formData.append("options", JSON.stringify(options.filter((o) => o.text.trim())));
+      formData.append("options", JSON.stringify(filteredOptions));
 
       if (questionImage) {
         formData.append("questionMedia", questionImage);
@@ -117,15 +121,17 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
         }
       }
 
-      await _axios.post(`/admin/quizzes/${quizId}/questions`, formData, {
+      console.log("[AddQuestion] POSTing to", `/admin/quizzes/${quizId}/questions`);
+      const res = await _axios.post(`/admin/quizzes/${quizId}/questions`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      console.log("[AddQuestion] Success", res.data);
 
       queryClient.invalidateQueries({ queryKey: ["quiz", quizId] });
       toast.success("Question added successfully");
       onOpenChange(false);
     } catch (err: any) {
-      console.error(err);
+      console.error("[AddQuestion] Error", err?.response?.data || err);
       toast.error("Failed to add question");
     } finally {
       setSubmitting(false);
