@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   Dialog,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/select";
 
 import { _axios } from "@/lib/axios";
+import { useQueryClient } from "@tanstack/react-query";
 import { createQuestionSchema, type CreateQuestionValues } from "../types";
 
 interface AddQuestionDialogProps {
@@ -33,6 +35,7 @@ interface AddQuestionDialogProps {
 }
 
 export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDialogProps) {
+  const queryClient = useQueryClient();
   const [options, setOptions] = useState<{ text: string }[]>([
     { text: "" },
     { text: "" },
@@ -118,9 +121,12 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
         headers: { "Content-Type": "multipart/form-data" },
       });
 
+      queryClient.invalidateQueries({ queryKey: ["quiz", quizId] });
+      toast.success("Question added successfully");
       onOpenChange(false);
     } catch (err: any) {
       console.error(err);
+      toast.error("Failed to add question");
     } finally {
       setSubmitting(false);
     }
