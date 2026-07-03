@@ -11,10 +11,19 @@ import {
   EyeOff,
   Download,
   Upload,
+  Users,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,22 +47,38 @@ export default function QuizzesPage() {
   const user = useAuthStore((s) => s.user);
 
   const isSuperAdmin = user?.role === "super_admin";
-  const isAdmin = user?.role === "admin";
 
-  const [selectedInstitutionId, setSelectedInstitutionId] = useState("");
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Quiz | null>(null);
   const [importTarget, setImportTarget] = useState<Quiz | null>(null);
 
-  const adminInstitutionId = isAdmin
-    ? typeof user?.institutionId === "object"
-      ? (user?.institutionId as { _id: string })?._id
-      : user?.institutionId ?? ""
-    : "";
+  // Fetch institutions list for superadmin dropdown
+  const { data: institutions = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["institutions-list"],
+    queryFn: async () => {
+      const res = await _axios.get("/admin/institutions");
+      return res.data?.data ?? [];
+    },
+    enabled: isSuperAdmin,
+  });
 
-  const effectiveInstitutionId = isSuperAdmin ? selectedInstitutionId : adminInstitutionId;
+  // Get user's own institution ID (works for admin, teacher, staff)
+  const getMyInstitutionId = (): string => {
+    if (!user) return "";
+    const instId = (user as any).institutionId;
+    if (!instId) return "";
+    if (typeof instId === "object") return instId?._id?.toString() || instId?.id?.toString() || "";
+    return instId?.toString() || "";
+  };
+
+  const effectiveInstitutionId = isSuperAdmin
+    ? selectedInstitutionId === "all"
+      ? ""
+      : selectedInstitutionId
+    : getMyInstitutionId();
 
   const { data, isLoading } = useQuizzes({
     page,
@@ -99,7 +124,9 @@ export default function QuizzesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Quizzes</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Create and manage quizzes for your institution
+            {isSuperAdmin
+              ? "View and manage quizzes across all institutions"
+              : "Create and manage quizzes for your institution"}
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="gap-2">
@@ -111,15 +138,25 @@ export default function QuizzesPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         {isSuperAdmin && (
-          <Input
-            placeholder="Filter by institution ID..."
+          <Select
             value={selectedInstitutionId}
-            onChange={(e) => {
-              setSelectedInstitutionId(e.target.value);
+            onValueChange={(val) => {
+              setSelectedInstitutionId(val);
               setPage(1);
             }}
-            className="max-w-xs"
-          />
+          >
+            <SelectTrigger className="w-[280px]">
+              <SelectValue placeholder="All Institutions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Institutions</SelectItem>
+              {institutions.map((inst) => (
+                <SelectItem key={inst.id} value={inst.id}>
+                  {inst.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

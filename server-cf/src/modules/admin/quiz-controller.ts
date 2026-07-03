@@ -792,6 +792,95 @@ app.post("/:id/import-csv", async (c) => {
   );
 });
 
+// ─── STUDENT MARKS ────────────────────────────────────────────
+
+// GET /:id/marks — list all student attempts for this quiz
+app.get("/:id/marks", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  const db = getDb(c.env.DB);
+  const { id: quizId } = c.req.param();
+
+  const [quiz] = await db
+    .select()
+    .from(institutionQuizzes)
+    .where(and(eq(institutionQuizzes.id, quizId), eq(institutionQuizzes.isDeleted, 0)))
+    .limit(1);
+
+  if (!quiz) throw new BadRequestError("Quiz not found");
+  assertInstitutionAccess(user, quiz.institutionId);
+
+  // Get all attempts for this quiz
+  const attempts = await db
+    .select({
+      id: institutionQuizAttempts.id,
+      studentId: institutionQuizAttempts.studentId,
+      score: institutionQuizAttempts.score,
+      maxScore: institutionQuizAttempts.maxScore,
+      startedAt: institutionQuizAttempts.startedAt,
+      completedAt: institutionQuizAttempts.completedAt,
+      timeTakenSeconds: institutionQuizAttempts.timeTakenSeconds,
+      attemptNumber: institutionQuizAttempts.attemptNumber,
+    })
+    .from(institutionQuizAttempts)
+    .where(
+      and(
+        eq(institutionQuizAttempts.quizId, quizId),
+        eq(institutionQuizAttempts.isDeleted, 0),
+      ),
+    )
+    .orderBy(desc(institutionQuizAttempts.createdAt));
+
+  // Try to resolve student names from students table
+  const studentIds = [...new Set(attempts.map((a) => a.studentId))];
+  let studentMap: Record<string, { name: string; username: string; rollNumber: string }> = {};
+
+  if (studentIds.length > 0) {
+    const studentRows = await db
+      .select({
+        id: students.id,
+        name: students.name,
+        username: students.username,
+        rollNumber: students.rollNumber,
+      })
+      .from(students)
+      .where(sql`${students.id} IN ${studentIds}`);
+
+    for (const s of studentRows) {
+      studentMap[s.id] = {
+        name: s.name || "Unknown",
+        username: s.username || "",
+        rollNumber: s.rollNumber || "",
+      };
+    }
+  }
+
+  // Enrich attempts with student info
+  const enriched = attempts.map((a) => ({
+    ...a,
+    studentName: studentMap[a.studentId]?.name || a.studentId,
+    studentUsername: studentMap[a.studentId]?.username || "",
+    studentRollNumber: studentMap[a.studentId]?.rollNumber || "",
+    percentage: a.maxScore > 0 ? Math.round(((a.score ?? 0) / a.maxScore) * 100) : 0,
+  }));
+
+  return c.json(
+    {
+      success: true,
+      data: {
+        quiz: {
+          id: quiz.id,
+          title: quiz.title,
+          totalPoints: quiz.totalPoints,
+          passingPoints: quiz.passingPoints,
+        },
+        attempts: enriched,
+        totalAttempts: enriched.length,
+      },
+    },
+    200,
+  );
+});
+
 // ─── IMAGE UPLOAD (standalone) ─────────────────────────────────
 
 // POST /upload-image — upload image for question/option
