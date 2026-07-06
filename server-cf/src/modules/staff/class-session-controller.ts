@@ -28,6 +28,12 @@ const classSessionController = new Hono<{
 // Apply auth to all routes
 classSessionController.use("*", adminAuth);
 
+// ─── GET /server-time — return server ISO time for drift correction ──
+
+classSessionController.get("/server-time", async (c) => {
+  return c.json({ success: true, serverTime: nowISO() });
+});
+
 async function logSessionEvent(
   db: any,
   sessionId: string,

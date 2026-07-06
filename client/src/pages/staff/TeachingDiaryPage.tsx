@@ -40,10 +40,112 @@ import {
   Building2,
   Users,
   CheckCircle2,
+  WifiOff,
 } from "lucide-react";
 
 const HEARTBEAT_INTERVAL = 30000;
 const STALE_THRESHOLD_MINUTES = 5;
+const SESSION_DRAFT_KEY = "teaching-diary-session-draft";
+const SESSION_BACKUP_KEY = "teaching-diary-session-backup";
+const HEARTBEAT_RETRY_MAX = 3;
+const HEARTBEAT_RETRY_DELAY = 5000;
+
+// ─── Offline detection hook ─────────────────────────
+function useOnlineStatus() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+  return isOnline;
+}
+
+// ─── Server time drift correction ───────────────────
+let serverTimeOffsetMs = 0;
+
+async function syncServerTime(baseURL: string, token: string | null) {
+  try {
+    const clientSent = Date.now();
+    const res = await fetch(`${baseURL}/admin/class-session/server-time`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (res.ok) {
+      const { serverTime } = await res.json();
+      const clientReceived = Date.now();
+      const roundTrip = clientReceived - clientSent;
+      serverTimeOffsetMs = new Date(serverTime).getTime() - clientSent - roundTrip / 2;
+    }
+  } catch {}
+}
+
+function correctedNow(): Date {
+  return new Date(Date.now() + serverTimeOffsetMs);
+}
+
+// ─── Session backup helpers ─────────────────────────
+function saveSessionBackup(session: DiarySession | null) {
+  if (session && (session.status === "ongoing" || session.status === "paused")) {
+    try {
+      localStorage.setItem(SESSION_BACKUP_KEY, JSON.stringify(session));
+    } catch {}
+  }
+}
+
+function loadSessionBackup(): DiarySession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_BACKUP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && (parsed.status === "ongoing" || parsed.status === "paused")) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function clearSessionBackup() {
+  try {
+    localStorage.removeItem(SESSION_BACKUP_KEY);
+  } catch {}
+}
+
+// ─── Draft persistence helpers ──────────────────────
+interface SessionDraft {
+  sessionId: string;
+  topicsCovered: string[];
+  remarks: string;
+  savedAt: string;
+}
+
+function saveDraft(draft: SessionDraft) {
+  try {
+    localStorage.setItem(SESSION_DRAFT_KEY, JSON.stringify(draft));
+  } catch {}
+}
+
+function loadDraft(sessionId: string): SessionDraft | null {
+  try {
+    const raw = localStorage.getItem(SESSION_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SessionDraft;
+    if (parsed.sessionId === sessionId) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(SESSION_DRAFT_KEY);
+  } catch {}
+}
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -111,10 +213,31 @@ function EditSessionDialog({
 
   useEffect(() => {
     if (open) {
-      setTopicsInput((session.topicsCovered || []).join(", "));
-      setRemarks(session.remarks || "");
+      // Restore draft if available, otherwise use session data
+      const draft = loadDraft(session.id);
+      if (draft) {
+        setTopicsInput(draft.topicsCovered.join(", "));
+        setRemarks(draft.remarks || "");
+      } else {
+        setTopicsInput((session.topicsCovered || []).join(", "));
+        setRemarks(session.remarks || "");
+      }
     }
   }, [open, session]);
+
+  // Auto-save draft on change
+  useEffect(() => {
+    if (!open || !session.id) return;
+    const timer = setTimeout(() => {
+      saveDraft({
+        sessionId: session.id,
+        topicsCovered: topicsInput.split(",").map((t) => t.trim()).filter(Boolean),
+        remarks,
+        savedAt: new Date().toISOString(),
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [topicsInput, remarks, open, session.id]);
 
   const handleSave = async () => {
     const topics = topicsInput.split(",").map((t) => t.trim()).filter(Boolean);
@@ -123,6 +246,7 @@ function EditSessionDialog({
         topicsCovered: topics,
         remarks: remarks || undefined,
       });
+      clearDraft();
       onSaved();
       onOpenChange(false);
     } catch {
@@ -311,6 +435,36 @@ export default function TeachingDiaryPage() {
 
   const stoppedRef = useRef(false);
   const [elapsed, setElapsed] = useState("00:00");
+  const isOnline = useOnlineStatus();
+  const [heartbeatFailCount, setHeartbeatFailCount] = useState(0);
+
+  // Sync server time on mount and periodically
+  useEffect(() => {
+    const baseUrl = _axios.defaults.baseURL?.replace(/\/api$/, "") || "";
+    const token = getAuthToken();
+    syncServerTime(baseUrl, token);
+    const interval = setInterval(() => syncServerTime(baseUrl, token), 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Restore session from localStorage backup on mount
+  useEffect(() => {
+    if (!ongoingSession) {
+      const backup = loadSessionBackup();
+      if (backup && backup.status === "ongoing") {
+        refetch();
+      }
+    }
+  }, []);
+
+  // Backup ongoing session to localStorage for recovery
+  useEffect(() => {
+    if (ongoingSession && (ongoingSession.status === "ongoing" || ongoingSession.status === "paused")) {
+      saveSessionBackup(ongoingSession);
+    } else {
+      clearSessionBackup();
+    }
+  }, [ongoingSession]);
 
   // Auto-close stale sessions silently on mount
   useEffect(() => {
@@ -321,36 +475,56 @@ export default function TeachingDiaryPage() {
       _axios.patch(`/admin/class-session/${ongoingSession.id}/end`, {
         remarks: "[auto-closed: abandoned]",
         topicsCovered: [],
-      }).then(() => refetch()).catch(() => {});
+      }).then(() => {
+        clearSessionBackup();
+        refetch();
+      }).catch(() => {});
     }
   }, []);
 
-  // Heartbeat timer (only when ongoing, not paused)
+  // Heartbeat timer with retry logic (only when ongoing, not paused)
   useEffect(() => {
     if (!ongoingSession || ongoingSession.status === "paused") return;
     const age = Date.now() - new Date(ongoingSession.updatedAt).getTime();
     if (age > STALE_THRESHOLD_MINUTES * 60 * 1000) return;
     stoppedRef.current = false;
+    setHeartbeatFailCount(0);
 
-    const beat = async () => {
+    const beat = async (retryCount = 0) => {
       if (stoppedRef.current) return;
       try {
         await _axios.post(`/admin/class-session/heartbeat/${ongoingSession.id}`);
-      } catch {}
+        setHeartbeatFailCount(0);
+      } catch {
+        if (retryCount < HEARTBEAT_RETRY_MAX) {
+          setTimeout(() => beat(retryCount + 1), HEARTBEAT_RETRY_DELAY);
+        } else {
+          setHeartbeatFailCount((c) => c + 1);
+        }
+      }
     };
 
     beat();
-    const interval = setInterval(beat, HEARTBEAT_INTERVAL);
+    const interval = setInterval(() => beat(), HEARTBEAT_INTERVAL);
     return () => clearInterval(interval);
   }, [ongoingSession]);
 
-  // Elapsed timer
+  // Elapsed timer using corrected server time
   useEffect(() => {
     if (!ongoingSession) {
       setElapsed("00:00");
       return;
     }
-    const tick = () => setElapsed(getElapsed(ongoingSession.startTime, ongoingSession.totalPausedMs || 0, ongoingSession.pausedAt));
+    const tick = () => {
+      const start = new Date(ongoingSession.startTime).getTime();
+      const now = correctedNow().getTime();
+      const pausedMs = (ongoingSession.totalPausedMs || 0) +
+        (ongoingSession.pausedAt ? now - new Date(ongoingSession.pausedAt).getTime() : 0);
+      const diff = Math.max(0, now - start - pausedMs);
+      const m = Math.floor(diff / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setElapsed(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+    };
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
@@ -369,7 +543,7 @@ export default function TeachingDiaryPage() {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
         keepalive: true,
-      }).catch(() => {});
+      }).then(() => clearSessionBackup()).catch(() => {});
     };
     window.addEventListener("beforeunload", handleUnload);
     window.addEventListener("pagehide", handleUnload);
@@ -396,7 +570,10 @@ export default function TeachingDiaryPage() {
           _axios.patch(`/admin/class-session/${ongoingSession.id}/end`, {
             remarks: "[auto-closed: page hidden]",
             topicsCovered: [],
-          }).then(() => refetch()).catch(() => {});
+          }).then(() => {
+            clearSessionBackup();
+            refetch();
+          }).catch(() => {});
         }
       }
     };
@@ -435,6 +612,7 @@ export default function TeachingDiaryPage() {
         remarks: "",
         topicsCovered: ongoingSession.topicsCovered || [],
       });
+      clearSessionBackup();
       refetch();
     } catch {}
   };
@@ -595,6 +773,24 @@ export default function TeachingDiaryPage() {
             Refresh
           </Button>
         </div>
+
+        {/* ── Offline banner ── */}
+        {!isOnline && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl flex items-center gap-3">
+            <WifiOff className="h-5 w-5 text-amber-600 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800">You are offline</p>
+              <p className="text-xs text-amber-600">
+                Session timer continues locally. Heartbeats will resume when connection is restored.
+              </p>
+            </div>
+            {heartbeatFailCount > 0 && (
+              <span className="text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 px-2 py-1 rounded-full">
+                Reconnecting...
+              </span>
+            )}
+          </div>
+        )}
 
         {/* ── Today's teaching bar (own diary only) ── */}
         {isViewingOwnDiary && selectedClassId !== "__all__" && (
