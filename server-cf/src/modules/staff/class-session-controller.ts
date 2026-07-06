@@ -6,7 +6,7 @@ import { nowISO } from "../../lib/utils";
 import { eq, and, desc, inArray, sql, lt } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import { staff, classes } from "../../schema/admin";
-import { classSessions } from "../../schema/staff";
+import { classSessions, classSessionLogs } from "../../schema/staff";
 import { classSessionTopics } from "../../schema/junction";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
@@ -27,6 +27,39 @@ const classSessionController = new Hono<{
 
 // Apply auth to all routes
 classSessionController.use("*", adminAuth);
+
+async function logSessionEvent(
+  db: any,
+  sessionId: string,
+  staffId: string,
+  action: string,
+  statusFrom: string | null,
+  statusTo: string | null,
+  c: any,
+  extra: { durationMinutes?: number; remarks?: string; topicsCovered?: string[] } = {}
+) {
+  const ipAddress = c ? (c.req.header("CF-Connecting-IP") || c.req.header("x-forwarded-for") || null) : null;
+  const userAgent = c ? (c.req.header("user-agent") || null) : null;
+
+  try {
+    await db.insert(classSessionLogs).values({
+      id: uuid(),
+      sessionId,
+      staffId,
+      action,
+      statusFrom,
+      statusTo,
+      timestamp: nowISO(),
+      durationMinutes: extra.durationMinutes ?? null,
+      remarks: extra.remarks ?? null,
+      topicsCovered: extra.topicsCovered ? JSON.stringify(extra.topicsCovered) : null,
+      ipAddress,
+      userAgent,
+    });
+  } catch (err) {
+    console.error("[logSessionEvent] Failed to insert audit log:", err);
+  }
+}
 
 async function autoCloseStaleSessions(db: any, staffId?: string) {
   const cutoff = new Date(Date.now() - STALE_SESSION_MINUTES * 60 * 1000).toISOString();
@@ -58,6 +91,17 @@ async function autoCloseStaleSessions(db: any, staffId?: string) {
         updatedAt: nowISO(),
       })
       .where(eq(classSessions.id, s.id));
+
+    await logSessionEvent(
+      db,
+      s.id,
+      s.staffId!,
+      "auto_close",
+      "ongoing",
+      "in_progress",
+      null,
+      { durationMinutes, remarks: s.remarks || "[auto-closed: stale]" }
+    );
   }
 
   return stale.length;
@@ -121,7 +165,44 @@ classSessionController.post("/start", async (c) => {
     .limit(1);
 
   if (existing) {
-    return c.json({ success: true, data: existing }, 200);
+    await logSessionEvent(db, existing.id, staffId, "reconnect", existing.status, existing.status, c);
+    return c.json({ success: true, data: existing, serverTime: nowISO() }, 200);
+  }
+
+  // Reactivate a recently auto-closed / quietly-ended session in the last 15 minutes
+  const recentCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const [recentClosed] = await db
+    .select()
+    .from(classSessions)
+    .where(and(
+      eq(classSessions.staffId, staffId),
+      eq(classSessions.classId, classId),
+      eq(classSessions.status, "in_progress"),
+      sql`${classSessions.updatedAt} >= ${recentCutoff}`
+    ))
+    .limit(1);
+
+  if (recentClosed) {
+    const now = nowISO();
+    await db
+      .update(classSessions)
+      .set({
+        status: "ongoing",
+        endTime: null,
+        durationMinutes: null,
+        updatedAt: now,
+      })
+      .where(eq(classSessions.id, recentClosed.id));
+
+    await logSessionEvent(db, recentClosed.id, staffId, "reactivate", "in_progress", "ongoing", c);
+
+    const [reactivated] = await db
+      .select()
+      .from(classSessions)
+      .where(eq(classSessions.id, recentClosed.id))
+      .limit(1);
+
+    return c.json({ success: true, data: reactivated, serverTime: now }, 200);
   }
 
   const id = uuid();
@@ -139,13 +220,15 @@ classSessionController.post("/start", async (c) => {
     updatedAt: now,
   });
 
+  await logSessionEvent(db, id, staffId, "start", null, "ongoing", c);
+
   const [session] = await db
     .select()
     .from(classSessions)
     .where(eq(classSessions.id, id))
     .limit(1);
 
-  return c.json({ success: true, data: session }, 201);
+  return c.json({ success: true, data: session, serverTime: now }, 201);
 });
 
 // ─── PATCH /:id/end — end session with remarks + topics ─
@@ -178,6 +261,7 @@ classSessionController.patch("/:id/end", async (c) => {
         ...session,
         topicsCovered: topics.map((t: any) => t.topic),
       },
+      serverTime: nowISO(),
     });
   }
 
@@ -210,6 +294,12 @@ classSessionController.patch("/:id/end", async (c) => {
     }
   }
 
+  await logSessionEvent(db, id, session.staffId!, "complete", session.status, "completed", c, {
+    durationMinutes,
+    remarks: body.remarks,
+    topicsCovered: body.topicsCovered,
+  });
+
   // Fetch updated session
   const [updated] = await db
     .select()
@@ -229,6 +319,7 @@ classSessionController.patch("/:id/end", async (c) => {
       ...updated,
       topicsCovered: topics.map((t: any) => t.topic),
     },
+    serverTime: now,
   });
 });
 
@@ -273,6 +364,13 @@ classSessionController.patch("/:id", async (c) => {
     }
   }
 
+  const now = nowISO();
+  await logSessionEvent(db, id, session.staffId!, "edit", session.status, body.status || session.status, c, {
+    durationMinutes: body.durationMinutes,
+    remarks: body.remarks,
+    topicsCovered: body.topicsCovered,
+  });
+
   const [updated] = await db
     .select()
     .from(classSessions)
@@ -290,6 +388,7 @@ classSessionController.patch("/:id", async (c) => {
       ...updated,
       topicsCovered: topics.map((t: any) => t.topic),
     },
+    serverTime: now,
   });
 });
 
@@ -504,7 +603,7 @@ classSessionController.get("/diary", async (c) => {
     topicsCovered: topicsMap.get(session.id) || [],
   }));
 
-  return c.json({ success: true, data: enriched });
+  return c.json({ success: true, data: enriched, serverTime: nowISO() });
 });
 
 // ─── GET /:id/end-quietly — end session via sendBeacon (no body) ─
@@ -520,12 +619,12 @@ classSessionController.get("/:id/end-quietly", async (c) => {
     .limit(1);
 
   if (!session) {
-    return c.json({ success: false }, 404);
+    return c.json({ success: false, serverTime: nowISO() }, 404);
   }
 
   // Already completed or in_progress — no-op
   if (session.status === "completed" || session.status === "in_progress") {
-    return c.json({ success: true });
+    return c.json({ success: true, serverTime: nowISO() });
   }
 
   const endTime = new Date();
@@ -546,7 +645,12 @@ classSessionController.get("/:id/end-quietly", async (c) => {
     })
     .where(eq(classSessions.id, id));
 
-  return c.json({ success: true });
+  await logSessionEvent(db, id, session.staffId!, "tab_close", session.status, "in_progress", c, {
+    durationMinutes,
+    remarks: session.remarks || "[auto-closed: tab closed]",
+  });
+
+  return c.json({ success: true, serverTime: now });
 });
 
 // ─── POST /heartbeat/:id — keep session alive ────
@@ -562,20 +666,43 @@ classSessionController.post("/heartbeat/:id", async (c) => {
     .limit(1);
 
   if (!session) {
-    return c.json({ success: false, message: "Session not found" }, 404);
+    return c.json({ success: false, message: "Session not found", serverTime: nowISO() }, 404);
   }
 
   // No-op if session is already completed or paused — don't error
   if (session.status === "completed" || session.status === "paused") {
-    return c.json({ success: true });
+    return c.json({ success: true, serverTime: nowISO() });
   }
 
-  await db
-    .update(classSessions)
-    .set({ updatedAt: nowISO() })
-    .where(eq(classSessions.id, id));
+  const now = nowISO();
+  let statusFrom = session.status;
+  let statusTo = session.status;
+  let reactivated = false;
 
-  return c.json({ success: true });
+  if (session.status === "in_progress") {
+    await db
+      .update(classSessions)
+      .set({
+        status: "ongoing",
+        endTime: null,
+        durationMinutes: null,
+        updatedAt: now,
+      })
+      .where(eq(classSessions.id, id));
+    statusTo = "ongoing";
+    reactivated = true;
+  } else {
+    await db
+      .update(classSessions)
+      .set({ updatedAt: now })
+      .where(eq(classSessions.id, id));
+  }
+
+  if (reactivated) {
+    await logSessionEvent(db, id, session.staffId!, "reactivate", statusFrom, statusTo, c);
+  }
+
+  return c.json({ success: true, serverTime: now });
 });
 
 // ─── POST /:id/topics — add topics to a session ──
@@ -635,11 +762,12 @@ classSessionController.post("/:id/pause", async (c) => {
     throw new BadRequestError("Session not found");
   }
 
-  if (session.status !== "ongoing") {
-    throw new BadRequestError("Can only pause an ongoing session");
+  if (session.status !== "ongoing" && session.status !== "in_progress") {
+    throw new BadRequestError("Can only pause an ongoing or in-progress session");
   }
 
   const now = nowISO();
+  const statusFrom = session.status;
   await db
     .update(classSessions)
     .set({
@@ -649,7 +777,9 @@ classSessionController.post("/:id/pause", async (c) => {
     })
     .where(eq(classSessions.id, id));
 
-  return c.json({ success: true });
+  await logSessionEvent(db, id, session.staffId!, "pause", statusFrom, "paused", c);
+
+  return c.json({ success: true, serverTime: now });
 });
 
 // ─── POST /:id/resume — resume a paused session ──────
@@ -668,13 +798,14 @@ classSessionController.post("/:id/resume", async (c) => {
     throw new BadRequestError("Session not found");
   }
 
-  if (session.status !== "paused") {
-    throw new BadRequestError("Can only resume a paused session");
+  if (session.status !== "paused" && session.status !== "in_progress") {
+    throw new BadRequestError("Can only resume a paused or in-progress session");
   }
 
   const now = nowISO();
+  const statusFrom = session.status;
   const pausedAt = session.pausedAt ? new Date(session.pausedAt).getTime() : Date.now();
-  const pauseDuration = Date.now() - pausedAt;
+  const pauseDuration = session.status === "in_progress" ? 0 : Date.now() - pausedAt;
   const currentTotalPaused = session.totalPausedMs || 0;
 
   await db
@@ -687,7 +818,9 @@ classSessionController.post("/:id/resume", async (c) => {
     })
     .where(eq(classSessions.id, id));
 
-  return c.json({ success: true });
+  await logSessionEvent(db, id, session.staffId!, "resume", statusFrom, "ongoing", c);
+
+  return c.json({ success: true, serverTime: now });
 });
 
 // ─── PATCH /:id/complete — explicitly mark session as completed ──
@@ -720,14 +853,16 @@ classSessionController.patch("/:id/complete", async (c) => {
         ...session,
         topicsCovered: topics.map((t: any) => t.topic),
       },
+      serverTime: nowISO(),
     });
   }
 
   const now = nowISO();
   let endTime: Date;
   let durationMinutes: number;
+  const statusFrom = session.status;
 
-  if (session.status === "ongoing" || session.status === "paused") {
+  if (session.status === "ongoing" || session.status === "paused" || session.status === "in_progress") {
     endTime = new Date();
     const startTime = new Date(session.startTime!);
     const pausedMs = session.totalPausedMs || 0;
@@ -735,7 +870,7 @@ classSessionController.patch("/:id/complete", async (c) => {
     const currentPauseMs = session.pausedAt ? Date.now() - new Date(session.pausedAt).getTime() : 0;
     durationMinutes = Math.round((endTime.getTime() - startTime.getTime() - pausedMs - currentPauseMs) / 60000);
   } else {
-    // in_progress — already has endTime
+    // Already ended somehow
     endTime = session.endTime ? new Date(session.endTime) : new Date();
     durationMinutes = session.durationMinutes || 0;
   }
@@ -764,6 +899,12 @@ classSessionController.patch("/:id/complete", async (c) => {
     }
   }
 
+  await logSessionEvent(db, id, session.staffId!, "complete", statusFrom, "completed", c, {
+    durationMinutes,
+    remarks: body.remarks || session.remarks,
+    topicsCovered: body.topicsCovered,
+  });
+
   const [updated] = await db
     .select()
     .from(classSessions)
@@ -781,6 +922,7 @@ classSessionController.patch("/:id/complete", async (c) => {
       ...updated,
       topicsCovered: topics.map((t: any) => t.topic),
     },
+    serverTime: now,
   });
 });
 

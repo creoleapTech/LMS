@@ -47,3 +47,23 @@ export const teachingProgress = sqliteTable("teaching_progress", {
   index("teaching_progress_class_id_idx").on(table.classId),
   index("teaching_progress_grade_book_id_idx").on(table.gradeBookId),
 ]);
+
+// ─── class_session_logs ──────────────────────────────
+export const classSessionLogs = sqliteTable("class_session_logs", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id").notNull(),
+  staffId: text("staff_id").references(() => staff.id),
+  action: text("action").notNull(),
+  statusFrom: text("status_from"),
+  statusTo: text("status_to"),
+  timestamp: text("timestamp").notNull(),
+  durationMinutes: integer("duration_minutes"),
+  remarks: text("remarks"),
+  topicsCovered: text("topics_covered"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+}, (table) => [
+  index("class_session_logs_session_id_idx").on(table.sessionId),
+  index("class_session_logs_staff_id_idx").on(table.staffId),
+]);
+

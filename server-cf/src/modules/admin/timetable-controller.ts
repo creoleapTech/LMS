@@ -1743,7 +1743,7 @@ async function buildMonthlyReportData(
       const section = classObj?.section || "";
       const bookTitle = bookObj?.bookTitle || "";
 
-      if (grade) classSet.add(`${grade}${section ? "," + section : ""}`);
+      if (grade) classSet.add(`${grade}${section ? section : ""}`);
       if (bookTitle) subjectSet.add(bookTitle);
       if (entry.status === "completed") completedCount++;
 
