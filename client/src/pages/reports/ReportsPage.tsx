@@ -727,13 +727,13 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                             </td>
                             <td className="px-3 py-1.5">
                               <Input
-                                value={row.section ? `${row.className}–${row.section}` : row.className}
+                                value={row.section ? `${row.className}${row.section}` : row.className}
                                 onChange={(e) => {
                                   const val = e.target.value;
-                                  const dashIdx = val.indexOf("–");
-                                  if (dashIdx >= 0) {
-                                    updateRow(index, "className", val.substring(0, dashIdx).trim());
-                                    updateRow(index, "section", val.substring(dashIdx + 1).trim());
+                                  const match = val.match(/^(\d+)\s*([a-zA-Z]*)$/);
+                                  if (match) {
+                                    updateRow(index, "className", match[1]);
+                                    updateRow(index, "section", match[2]);
                                   } else {
                                     updateRow(index, "className", val);
                                     updateRow(index, "section", "");
@@ -1198,7 +1198,7 @@ function buildUnits(data: ReportParams): Unit[] {
 
   for (let i = 0; i < data.rows.length; i++) {
     const row = data.rows[i];
-    const classSection = row.section ? `${row.className}–${row.section}` : row.className;
+    const classSection = row.section ? `${row.className}${row.section}` : row.className;
     units.push({
       id: `session-row-${i}`,
       type: "table-row",

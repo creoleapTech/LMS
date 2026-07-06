@@ -343,7 +343,7 @@ function buildSessionTable(
     : ["Date", "Class", "Chapter", "Topic", "Remarks"];
 
   const dataRows = rows.map((row) => {
-    const classSection = row.section ? `${row.className}–${row.section}` : row.className;
+    const classSection = row.section ? `${row.className}${row.section}` : row.className;
     return [row.date, classSection, row.chapterName, row.topicName, row.remarks];
   });
 

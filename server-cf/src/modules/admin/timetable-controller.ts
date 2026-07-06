@@ -44,6 +44,31 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+function normalizeReportData(data: any): any {
+  if (!data) return data;
+  if (typeof data.classesLabel === "string") {
+    data.classesLabel = data.classesLabel
+      .replace(/(\d+),\s*([a-zA-Z])/g, "$1$2")
+      .replace(/(\d+),([a-zA-Z])/g, "$1$2");
+  }
+  if (Array.isArray(data.rows)) {
+    for (const row of data.rows) {
+      if (typeof row.className === "string") {
+        row.className = row.className
+          .replace(/(\d+),\s*([a-zA-Z])/g, "$1$2")
+          .replace(/(\d+),([a-zA-Z])/g, "$1$2");
+      }
+      if (typeof row.section === "string") {
+        row.section = row.section
+          .replace(/(\d+),\s*([a-zA-Z])/g, "$1$2")
+          .replace(/(\d+),([a-zA-Z])/g, "$1$2");
+      }
+    }
+  }
+  return data;
+}
+
+
 async function assetToBase64(asset: string | ArrayBuffer): Promise<string | null> {
   try {
     let buffer: ArrayBuffer;
@@ -1806,7 +1831,7 @@ async function buildMonthlyReportData(
     }
   }
 
-  return {
+  return normalizeReportData({
     monthName,
     year,
     staffNames: [trainerName],
@@ -1819,7 +1844,7 @@ async function buildMonthlyReportData(
     sessionColumns: ["Date", "Class", "Chapter", "Topic", "Remarks"],
     bodyItems: [],
     staffId,
-  };
+  });
 }
 
 async function buildMonthlyReport(
@@ -1957,7 +1982,8 @@ timetableController.get("/staff-monthly-report-data", async (c) => {
 timetableController.post("/generate-report-docx", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
-    const body = await c.req.json<ReportParams>();
+    let body = await c.req.json<ReportParams>();
+    body = normalizeReportData(body);
     const db = getDb(c.env.DB);
     const targetStaffId = body.staffId || (user.role === "admin" || user.role === "super_admin" ? null : user.id);
 
@@ -2281,7 +2307,8 @@ timetableController.post("/submit-report", async (c) => {
     const user = c.get("user") as Record<string, any>;
     const staffId = user.id;
     const institutionId = resolveInstitutionId(user);
-    const body = await c.req.json<ReportParams>();
+    let body = await c.req.json<ReportParams>();
+    body = normalizeReportData(body);
     const db = getDb(c.env.DB);
 
     const year = body.year;
@@ -2382,7 +2409,8 @@ timetableController.post("/save-report-draft", async (c) => {
     const user = c.get("user") as Record<string, any>;
     const staffId = user.id;
     const institutionId = resolveInstitutionId(user);
-    const body = await c.req.json<ReportParams>();
+    let body = await c.req.json<ReportParams>();
+    body = normalizeReportData(body);
     const db = getDb(c.env.DB);
 
     const year = body.year;
@@ -2640,6 +2668,7 @@ timetableController.get("/submission-data", async (c) => {
     if (typeof reportData === "string") {
       try { reportData = JSON.parse(reportData); } catch { /* keep as string */ }
     }
+    reportData = normalizeReportData(reportData);
 
     return c.json({ success: true, data: { reportData, submittedAt: submission.submittedAt, year: submission.year, month: submission.month } });
   } catch (err: any) {
