@@ -65,6 +65,29 @@ export function useTeachingProgress(classId: string, gradeBookId: string) {
     },
   });
 
+  const markInProgressMutation = useMutation({
+    mutationFn: async (contentId: string) => {
+      const res = await _axios.put(
+        `/admin/teaching-progress/${classId}/${gradeBookId}/content/${contentId}`,
+        { isCompleted: false }
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const inProgressContentIds = useMemo(() => {
+    const set = new Set<string>();
+    if (progressQuery.data?.contentProgress) {
+      for (const p of progressQuery.data.contentProgress) {
+        if (!p.isCompleted) set.add(p.contentId);
+      }
+    }
+    return set;
+  }, [progressQuery.data]);
+
   const completedContentIds = useMemo(() => {
     const set = new Set<string>();
     if (progressQuery.data?.contentProgress) {
@@ -89,7 +112,9 @@ export function useTeachingProgress(classId: string, gradeBookId: string) {
     progressQuery,
     updateMutation,
     completeMutation,
+    markInProgressMutation,
     completedContentIds,
+    inProgressContentIds,
     progressByContentId,
     lastAccessedContentId: progressQuery.data?.lastAccessedContentId || null,
     overallPercentage: progressQuery.data?.overallPercentage || 0,

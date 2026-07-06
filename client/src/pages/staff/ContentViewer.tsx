@@ -29,6 +29,7 @@ import {
   ArrowLeft,
   Maximize,
   File,
+  Clock,
 } from "lucide-react";
 
 type ContentType = "video" | "youtube" | "ppt" | "pdf" | "activity" | "quiz" | "text" | "file";
@@ -55,6 +56,7 @@ interface ContentViewerProps {
   isCompleted: boolean;
   contentProgress?: ContentProgressEntry;
   onMarkComplete: (contentId: string) => Promise<void>;
+  onMarkInProgress?: (contentId: string) => Promise<void>;
   onProgressUpdate: (
     contentId: string,
     data: { videoTimestamp?: number; pdfPage?: number }
@@ -98,6 +100,7 @@ export function ContentViewer({
   isCompleted,
   contentProgress,
   onMarkComplete,
+  onMarkInProgress,
   isCompletingLoading,
   isChapterComplete,
   hasNextChapter,
@@ -204,6 +207,20 @@ export function ContentViewer({
               >
                 <Maximize className="h-4 w-4" />
                 <span className="hidden sm:inline">Fullscreen</span>
+              </Button>
+            )}
+
+            {/* Mark as In Progress Button */}
+            {!isViewMode && !isCompleted && onMarkInProgress && (
+              <Button
+                onClick={() => onMarkInProgress(content._id)}
+                disabled={isCompletingLoading}
+                variant="ghost"
+                size="sm"
+                className="gap-2 bg-white/15 text-white/80 hover:bg-white/25 border border-white/20"
+              >
+                <Clock className="h-4 w-4" />
+                In Progress
               </Button>
             )}
 

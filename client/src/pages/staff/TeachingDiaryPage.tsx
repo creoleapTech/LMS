@@ -33,11 +33,13 @@ import {
   Loader2,
   AlertCircle,
   Play,
+  Pause,
   Tag,
   RefreshCw,
   Pencil,
   Building2,
   Users,
+  CheckCircle2,
 } from "lucide-react";
 
 const HEARTBEAT_INTERVAL = 30000;
@@ -81,8 +83,11 @@ function getClassIdString(classId: DiarySession["classId"]): string {
   return classId || "";
 }
 
-function getElapsed(startTime: string): string {
-  const diff = Date.now() - new Date(startTime).getTime();
+function getElapsed(startTime: string, totalPausedMs: number = 0, pausedAt?: string | null): string {
+  const start = new Date(startTime).getTime();
+  const now = Date.now();
+  const pausedMs = totalPausedMs + (pausedAt ? now - new Date(pausedAt).getTime() : 0);
+  const diff = Math.max(0, now - start - pausedMs);
   const m = Math.floor(diff / 60000);
   const s = Math.floor((diff % 60000) / 1000);
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
@@ -300,7 +305,7 @@ export default function TeachingDiaryPage() {
   );
 
   const ongoingSession = useMemo(
-    () => sessions.find((s) => s.status === "ongoing"),
+    () => sessions.find((s) => s.status === "ongoing" || s.status === "paused"),
     [sessions],
   );
 
@@ -320,9 +325,9 @@ export default function TeachingDiaryPage() {
     }
   }, []);
 
-  // Heartbeat timer
+  // Heartbeat timer (only when ongoing, not paused)
   useEffect(() => {
-    if (!ongoingSession) return;
+    if (!ongoingSession || ongoingSession.status === "paused") return;
     const age = Date.now() - new Date(ongoingSession.updatedAt).getTime();
     if (age > STALE_THRESHOLD_MINUTES * 60 * 1000) return;
     stoppedRef.current = false;
@@ -345,7 +350,7 @@ export default function TeachingDiaryPage() {
       setElapsed("00:00");
       return;
     }
-    const tick = () => setElapsed(getElapsed(ongoingSession.startTime));
+    const tick = () => setElapsed(getElapsed(ongoingSession.startTime, ongoingSession.totalPausedMs || 0, ongoingSession.pausedAt));
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
@@ -374,10 +379,62 @@ export default function TeachingDiaryPage() {
     };
   }, [ongoingSession]);
 
+  // Auto-close session when page becomes hidden for extended period
+  useEffect(() => {
+    if (!ongoingSession) return;
+    let hiddenAt: number | null = null;
+    const HIDDEN_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        hiddenAt = Date.now();
+      } else if (hiddenAt) {
+        const hiddenDuration = Date.now() - hiddenAt;
+        hiddenAt = null;
+        if (hiddenDuration > HIDDEN_THRESHOLD_MS) {
+          stoppedRef.current = true;
+          _axios.patch(`/admin/class-session/${ongoingSession.id}/end`, {
+            remarks: "[auto-closed: page hidden]",
+            topicsCovered: [],
+          }).then(() => refetch()).catch(() => {});
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [ongoingSession]);
+
   // ── Actions ──
   const handleStartTeaching = async (classId: string) => {
     try {
       await _axios.post("/admin/class-session/start", { classId });
+      refetch();
+    } catch {}
+  };
+
+  const handlePauseSession = async () => {
+    if (!ongoingSession) return;
+    try {
+      await _axios.post(`/admin/class-session/${ongoingSession.id}/pause`);
+      refetch();
+    } catch {}
+  };
+
+  const handleResumeSession = async () => {
+    if (!ongoingSession) return;
+    try {
+      await _axios.post(`/admin/class-session/${ongoingSession.id}/resume`);
+      refetch();
+    } catch {}
+  };
+
+  const handleCompleteSession = async () => {
+    if (!ongoingSession) return;
+    try {
+      await _axios.patch(`/admin/class-session/${ongoingSession.id}/complete`, {
+        remarks: "",
+        topicsCovered: ongoingSession.topicsCovered || [],
+      });
       refetch();
     } catch {}
   };
@@ -559,8 +616,40 @@ export default function TeachingDiaryPage() {
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
                   </span>
                   <span className="text-sm font-medium text-red-700 tabular-nums">
-                    Teaching · {elapsed}
+                    {ongoingSession.status === "paused" ? `Paused · ${elapsed}` : `Teaching · ${elapsed}`}
                   </span>
+                  <div className="flex items-center gap-1 ml-2">
+                    {ongoingSession.status === "ongoing" ? (
+                      <Button
+                        onClick={handlePauseSession}
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                        title="Pause timer"
+                      >
+                        <Pause className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : ongoingSession.status === "paused" ? (
+                      <Button
+                        onClick={handleResumeSession}
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        title="Resume timer"
+                      >
+                        <Play className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
+                    <Button
+                      onClick={handleCompleteSession}
+                      size="sm"
+                      className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white gap-1"
+                      title="Mark as complete"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span className="text-xs">Done</span>
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <Button
@@ -621,9 +710,40 @@ export default function TeachingDiaryPage() {
             </span>
             <div className="flex-1">
               <p className="text-sm font-medium text-green-800">
-                Teaching {getClassLabel(ongoingSession.classId)}
+                {ongoingSession.status === "paused" ? "Paused" : "Teaching"} {getClassLabel(ongoingSession.classId)}
               </p>
               <p className="text-xs text-green-600 tabular-nums">{elapsed} elapsed</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {ongoingSession.status === "ongoing" ? (
+                <Button
+                  onClick={handlePauseSession}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 rounded-xl border-amber-300 text-amber-700 hover:bg-amber-50"
+                >
+                  <Pause className="h-3.5 w-3.5" />
+                  Pause
+                </Button>
+              ) : ongoingSession.status === "paused" ? (
+                <Button
+                  onClick={handleResumeSession}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 rounded-xl border-green-300 text-green-700 hover:bg-green-50"
+                >
+                  <Play className="h-3.5 w-3.5" />
+                  Resume
+                </Button>
+              ) : null}
+              <Button
+                onClick={handleCompleteSession}
+                size="sm"
+                className="gap-1.5 rounded-xl bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Mark Complete
+              </Button>
             </div>
             <span className="text-xs text-green-700 font-medium">
               Auto-closes when you leave this page
@@ -664,12 +784,17 @@ export default function TeachingDiaryPage() {
                   {daySessions.map((session) => {
                     const sameClass = selectedClassId !== "__all__";
                     const isOngoing = session.status === "ongoing";
+                    const isPaused = session.status === "paused";
+                    const isInProgress = session.status === "in_progress";
+                    const isActive = isOngoing || isPaused;
 
                     return (
                       <div
                         key={session.id}
                         className={`bg-white rounded-2xl border p-4 transition-shadow hover:shadow-md ${
-                          isOngoing ? "border-green-300 ring-1 ring-green-200" : "border-slate-200"
+                          isActive ? "border-green-300 ring-1 ring-green-200"
+                            : isInProgress ? "border-amber-300 ring-1 ring-amber-200"
+                            : "border-slate-200"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -690,11 +815,15 @@ export default function TeachingDiaryPage() {
                                 variant="secondary"
                                 className={
                                   isOngoing
-                                    ? "bg-amber-100 text-amber-700 border-amber-200"
-                                    : "bg-green-100 text-green-700 border-green-200"
+                                    ? "bg-green-100 text-green-700 border-green-200"
+                                    : isPaused
+                                      ? "bg-amber-100 text-amber-700 border-amber-200"
+                                      : isInProgress
+                                        ? "bg-orange-100 text-orange-700 border-orange-200"
+                                        : "bg-green-100 text-green-700 border-green-200"
                                 }
                               >
-                                {isOngoing ? "Ongoing" : "Completed"}
+                                {isOngoing ? "Ongoing" : isPaused ? "Paused" : isInProgress ? "In Progress" : "Completed"}
                               </Badge>
                             </div>
 
@@ -713,9 +842,14 @@ export default function TeachingDiaryPage() {
                                     {session.durationMinutes} min
                                   </span>
                                 )}
-                              {isOngoing && (
+                              {(isOngoing || isPaused) && (
                                 <span className="text-xs text-amber-600 font-medium tabular-nums">
-                                  {getElapsed(session.startTime)} elapsed
+                                  {getElapsed(session.startTime, session.totalPausedMs || 0, session.pausedAt)} elapsed
+                                </span>
+                              )}
+                              {isInProgress && (
+                                <span className="text-xs text-orange-600 font-medium">
+                                  Incomplete
                                 </span>
                               )}
                             </div>

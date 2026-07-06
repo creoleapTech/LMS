@@ -69,18 +69,16 @@ export function CourseraLayout({
     progressByContentId,
     lastAccessedContentId,
     completeMutation,
+    markInProgressMutation,
     updateMutation,
   } = useTeachingProgress(classId, gradeBookId);
 
-  // Auto session tracking — start on mount in teach mode, end on unmount
+  // Auto session tracking — start on mount in teach mode, end on tab close only
   const sessionIdRef = useRef<string | null>(null);
-  const endedRef = useRef(false);
   const heartbeatRef = useRef<any>(null);
 
   useEffect(() => {
     if (mode !== "teach") return;
-
-    endedRef.current = false;
 
     const startSession = async () => {
       try {
@@ -96,30 +94,12 @@ export function CourseraLayout({
       } catch {}
     };
 
-    const endSession = async () => {
-      const id = sessionIdRef.current;
-      if (!id || endedRef.current) return;
-      endedRef.current = true;
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-        heartbeatRef.current = null;
-      }
-      try {
-        await _axios.patch(`/admin/class-session/${id}/end`, {
-          remarks: "",
-          topicsCovered: [],
-        });
-      } catch {}
-    };
-
-    // Browser close / refresh / back button — use fetch with keepalive so we can
-    // send the Authorization header. navigator.sendBeacon cannot set headers, so
-    // the previous beacon was rejected by admin-auth as 401 Unauthorized.
+    // Only end session on tab/browser close — set to "in_progress" (not "completed")
+    // On React unmount (navigation), we leave the session alive so the teacher can resume
     const baseUrl = _axios.defaults.baseURL?.replace(/\/api$/, "") || "";
     const handleUnload = () => {
       const id = sessionIdRef.current;
-      if (!id || endedRef.current) return;
-      endedRef.current = true;
+      if (!id) return;
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
@@ -140,7 +120,11 @@ export function CourseraLayout({
     return () => {
       window.removeEventListener("beforeunload", handleUnload);
       window.removeEventListener("pagehide", handleUnload);
-      endSession();
+      // Stop heartbeat on React unmount but DON'T end the session
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
     };
   }, [classId, mode]);
 
@@ -213,6 +197,11 @@ export function CourseraLayout({
         });
       } catch {}
     }
+  };
+
+  const handleMarkInProgress = async (contentId: string) => {
+    if (isViewMode) return;
+    await markInProgressMutation.mutateAsync(contentId);
   };
 
   const handleProgressUpdate = (
@@ -330,6 +319,7 @@ export function CourseraLayout({
               isCompleted={completedContentIds.has(activeContent._id)}
               contentProgress={progressByContentId.get(activeContent._id)}
               onMarkComplete={handleMarkComplete}
+              onMarkInProgress={handleMarkInProgress}
               onProgressUpdate={handleProgressUpdate}
               isCompletingLoading={completeMutation.isPending}
               isChapterComplete={isChapterComplete}

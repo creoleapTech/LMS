@@ -97,7 +97,9 @@ export interface IClassSession {
   durationMinutes?: number;
   remarks?: string;
   topicsCovered?: string[];
-  status: "ongoing" | "completed";
+  status: "ongoing" | "paused" | "in_progress" | "completed";
+  pausedAt?: string;
+  totalPausedMs?: number;
   createdAt: string;
   updatedAt: string;
 }

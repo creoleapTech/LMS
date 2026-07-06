@@ -13,7 +13,9 @@ export interface DiarySession {
   durationMinutes?: number;
   remarks?: string;
   topicsCovered?: string[];
-  status: "ongoing" | "completed";
+  status: "ongoing" | "paused" | "in_progress" | "completed";
+  pausedAt?: string;
+  totalPausedMs?: number;
   staff?: { name: string; email: string } | null;
   createdAt: string;
   updatedAt: string;

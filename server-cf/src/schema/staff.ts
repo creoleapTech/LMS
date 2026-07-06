@@ -12,7 +12,9 @@ export const classSessions = sqliteTable("class_sessions", {
   endTime: text("end_time"),
   durationMinutes: integer("duration_minutes"),
   remarks: text("remarks"),
-  status: text("status", { enum: ["ongoing", "completed"] }).default("ongoing"),
+  status: text("status", { enum: ["ongoing", "paused", "in_progress", "completed"] }).default("ongoing"),
+  pausedAt: text("paused_at"),
+  totalPausedMs: integer("total_paused_ms").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
 }, (table) => [

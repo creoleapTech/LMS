@@ -9,6 +9,7 @@ import { staff, classes } from "../../schema/admin";
 import { classSessions } from "../../schema/staff";
 import { classSessionTopics } from "../../schema/junction";
 import { BadRequestError } from "../../lib/errors/bad-request";
+import { ForbiddenError } from "../../lib/errors/forbidden";
 
 export const STALE_SESSION_MINUTES = 5;
 
@@ -45,14 +46,15 @@ async function autoCloseStaleSessions(db: any, staffId?: string) {
   for (const s of stale) {
     const startTime = new Date(s.startTime!);
     const endTime = new Date();
-    const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+    const pausedMs = s.totalPausedMs || 0;
+    const durationMinutes = Math.round((endTime.getTime() - startTime.getTime() - pausedMs) / 60000);
     await db
       .update(classSessions)
       .set({
         endTime: endTime.toISOString(),
         durationMinutes,
         remarks: s.remarks || "[auto-closed: stale]",
-        status: "completed",
+        status: "in_progress",
         updatedAt: nowISO(),
       })
       .where(eq(classSessions.id, s.id));
@@ -107,14 +109,14 @@ classSessionController.post("/start", async (c) => {
   // Auto-close any stale ongoing sessions for this staff
   await autoCloseStaleSessions(db, staffId);
 
-  // If there's already an ongoing session for this staff+class, return it
+  // If there's already an ongoing/paused session for this staff+class, return it
   const [existing] = await db
     .select()
     .from(classSessions)
     .where(and(
       eq(classSessions.staffId, staffId),
       eq(classSessions.classId, classId),
-      eq(classSessions.status, "ongoing"),
+      sql`${classSessions.status} IN ('ongoing', 'paused')`,
     ))
     .limit(1);
 
@@ -181,7 +183,8 @@ classSessionController.patch("/:id/end", async (c) => {
 
   const endTime = new Date();
   const startTime = new Date(session.startTime!);
-  const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+  const pausedMs = session.totalPausedMs || 0;
+  const durationMinutes = Math.round((endTime.getTime() - startTime.getTime() - pausedMs) / 60000);
   const now = nowISO();
 
   await db
@@ -191,6 +194,7 @@ classSessionController.patch("/:id/end", async (c) => {
       durationMinutes,
       remarks: body.remarks,
       status: "completed",
+      pausedAt: null,
       updatedAt: now,
     })
     .where(eq(classSessions.id, id));
@@ -251,6 +255,8 @@ classSessionController.patch("/:id", async (c) => {
   if (body.durationMinutes !== undefined) updates.durationMinutes = body.durationMinutes;
   if (body.remarks !== undefined) updates.remarks = body.remarks;
   if (body.status) updates.status = body.status;
+  if (body.pausedAt !== undefined) updates.pausedAt = body.pausedAt;
+  if (body.totalPausedMs !== undefined) updates.totalPausedMs = body.totalPausedMs;
 
   await db.update(classSessions).set(updates).where(eq(classSessions.id, id));
 
@@ -517,14 +523,15 @@ classSessionController.get("/:id/end-quietly", async (c) => {
     return c.json({ success: false }, 404);
   }
 
-  // Already completed — no-op
-  if (session.status === "completed") {
+  // Already completed or in_progress — no-op
+  if (session.status === "completed" || session.status === "in_progress") {
     return c.json({ success: true });
   }
 
   const endTime = new Date();
   const startTime = new Date(session.startTime!);
-  const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+  const pausedMs = session.totalPausedMs || 0;
+  const durationMinutes = Math.round((endTime.getTime() - startTime.getTime() - pausedMs) / 60000);
   const now = nowISO();
 
   await db
@@ -532,8 +539,9 @@ classSessionController.get("/:id/end-quietly", async (c) => {
     .set({
       endTime: endTime.toISOString(),
       durationMinutes,
-      status: "completed",
+      status: "in_progress",
       remarks: session.remarks || "[auto-closed: tab closed]",
+      pausedAt: null,
       updatedAt: now,
     })
     .where(eq(classSessions.id, id));
@@ -557,8 +565,8 @@ classSessionController.post("/heartbeat/:id", async (c) => {
     return c.json({ success: false, message: "Session not found" }, 404);
   }
 
-  // No-op if session is already completed — don't error
-  if (session.status === "completed") {
+  // No-op if session is already completed or paused — don't error
+  if (session.status === "completed" || session.status === "paused") {
     return c.json({ success: true });
   }
 
@@ -608,6 +616,171 @@ classSessionController.post("/:id/topics", async (c) => {
   return c.json({
     success: true,
     data: { topicsAdded: topics.length, topicsCovered: allTopics.map((t: any) => t.topic) },
+  });
+});
+
+// ─── POST /:id/pause — pause an ongoing session ──────
+
+classSessionController.post("/:id/pause", async (c) => {
+  const { id } = c.req.param();
+  const db = getDb(c.env.DB);
+
+  const [session] = await db
+    .select()
+    .from(classSessions)
+    .where(eq(classSessions.id, id))
+    .limit(1);
+
+  if (!session) {
+    throw new BadRequestError("Session not found");
+  }
+
+  if (session.status !== "ongoing") {
+    throw new BadRequestError("Can only pause an ongoing session");
+  }
+
+  const now = nowISO();
+  await db
+    .update(classSessions)
+    .set({
+      status: "paused",
+      pausedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(classSessions.id, id));
+
+  return c.json({ success: true });
+});
+
+// ─── POST /:id/resume — resume a paused session ──────
+
+classSessionController.post("/:id/resume", async (c) => {
+  const { id } = c.req.param();
+  const db = getDb(c.env.DB);
+
+  const [session] = await db
+    .select()
+    .from(classSessions)
+    .where(eq(classSessions.id, id))
+    .limit(1);
+
+  if (!session) {
+    throw new BadRequestError("Session not found");
+  }
+
+  if (session.status !== "paused") {
+    throw new BadRequestError("Can only resume a paused session");
+  }
+
+  const now = nowISO();
+  const pausedAt = session.pausedAt ? new Date(session.pausedAt).getTime() : Date.now();
+  const pauseDuration = Date.now() - pausedAt;
+  const currentTotalPaused = session.totalPausedMs || 0;
+
+  await db
+    .update(classSessions)
+    .set({
+      status: "ongoing",
+      pausedAt: null,
+      totalPausedMs: currentTotalPaused + pauseDuration,
+      updatedAt: now,
+    })
+    .where(eq(classSessions.id, id));
+
+  return c.json({ success: true });
+});
+
+// ─── PATCH /:id/complete — explicitly mark session as completed ──
+
+classSessionController.patch("/:id/complete", async (c) => {
+  const { id } = c.req.param();
+  const body = await c.req.json();
+  const db = getDb(c.env.DB);
+
+  const [session] = await db
+    .select()
+    .from(classSessions)
+    .where(eq(classSessions.id, id))
+    .limit(1);
+
+  if (!session) {
+    throw new BadRequestError("Session not found");
+  }
+
+  if (session.status === "completed") {
+    // Idempotent: return existing completed session
+    const topics = await db
+      .select({ topic: classSessionTopics.topic })
+      .from(classSessionTopics)
+      .where(eq(classSessionTopics.sessionId, id));
+
+    return c.json({
+      success: true,
+      data: {
+        ...session,
+        topicsCovered: topics.map((t: any) => t.topic),
+      },
+    });
+  }
+
+  const now = nowISO();
+  let endTime: Date;
+  let durationMinutes: number;
+
+  if (session.status === "ongoing" || session.status === "paused") {
+    endTime = new Date();
+    const startTime = new Date(session.startTime!);
+    const pausedMs = session.totalPausedMs || 0;
+    // If currently paused, add the current pause duration
+    const currentPauseMs = session.pausedAt ? Date.now() - new Date(session.pausedAt).getTime() : 0;
+    durationMinutes = Math.round((endTime.getTime() - startTime.getTime() - pausedMs - currentPauseMs) / 60000);
+  } else {
+    // in_progress — already has endTime
+    endTime = session.endTime ? new Date(session.endTime) : new Date();
+    durationMinutes = session.durationMinutes || 0;
+  }
+
+  await db
+    .update(classSessions)
+    .set({
+      endTime: endTime.toISOString(),
+      durationMinutes,
+      remarks: body.remarks || session.remarks,
+      status: "completed",
+      pausedAt: null,
+      updatedAt: now,
+    })
+    .where(eq(classSessions.id, id));
+
+  // Update topics if provided
+  if (body.topicsCovered && Array.isArray(body.topicsCovered)) {
+    await db.delete(classSessionTopics).where(eq(classSessionTopics.sessionId, id));
+    for (const topic of body.topicsCovered) {
+      await db.insert(classSessionTopics).values({
+        id: uuid(),
+        sessionId: id,
+        topic,
+      });
+    }
+  }
+
+  const [updated] = await db
+    .select()
+    .from(classSessions)
+    .where(eq(classSessions.id, id))
+    .limit(1);
+
+  const topics = await db
+    .select({ topic: classSessionTopics.topic })
+    .from(classSessionTopics)
+    .where(eq(classSessionTopics.sessionId, id));
+
+  return c.json({
+    success: true,
+    data: {
+      ...updated,
+      topicsCovered: topics.map((t: any) => t.topic),
+    },
   });
 });
 
