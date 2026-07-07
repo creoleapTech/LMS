@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/userAuthStore";
+import { convertDocxToPdf } from "@/lib/docx-to-pdf";
 import { useStaffList } from "@/pages/my-classes/hooks/useStaffList";
 import { useReportEditor, type BodyItem, type ReportTable, type ReportParams } from "./hooks/useReportEditor";
 import { Input } from "@/components/ui/input";
@@ -1908,15 +1909,26 @@ function SubmittedReportsView({
       const res = await _axios.get(`/admin/timetable/download-submitted-report?id=${id}`, {
         responseType: "blob",
       });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const docxBlob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      const reportItem = reports.find((x) => x.id === id);
+      const monthName = reportItem ? MONTH_NAMES[(reportItem.month || 1) - 1] : "Report";
+      const year = reportItem?.year || "";
+
+      // Convert to PDF and download
+      const pdfBlob = await convertDocxToPdf(docxBlob, `Monthly_Report_${monthName}_${year}.pdf`);
+      const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "Monthly_Report.docx";
+      a.download = `Monthly_Report_${monthName}_${year}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-    } catch {
+      toast.success("Report downloaded as PDF");
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to download report");
     } finally {
       setDownloadingId(null);
@@ -2147,7 +2159,7 @@ function SubmittedReportsView({
                           ) : (
                             <Download size={14} />
                           )}
-                          DOCX
+                          PDF
                         </button>
                       </div>
                     </td>
@@ -2183,6 +2195,10 @@ function SubmittedReportsView({
 // ─── My Submissions View (teacher) ───
 
 function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
+  const user = useAuthStore((s) => s.user);
+  const role = user?.role;
+  const isAdminRole = role === "super_admin" || role === "admin";
+
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -2207,15 +2223,38 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
       const res = await _axios.get(`/admin/timetable/download-submitted-report?id=${id}`, {
         responseType: "blob",
       });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "Monthly_Report.docx";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-    } catch {
+      const docxBlob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      const submissionItem = submissions.find((x) => x.id === id);
+      const monthName = submissionItem ? MONTH_NAMES[(submissionItem.month || 1) - 1] : "Report";
+      const year = submissionItem?.year || "";
+
+      if (isAdminRole) {
+        // Convert to PDF and download
+        const pdfBlob = await convertDocxToPdf(docxBlob, `Monthly_Report_${monthName}_${year}.pdf`);
+        const url = window.URL.createObjectURL(pdfBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Monthly_Report_${monthName}_${year}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        toast.success("Report downloaded as PDF");
+      } else {
+        // Download as DOCX
+        const url = window.URL.createObjectURL(docxBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Monthly_Report_${monthName}_${year}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      }
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to download report");
     } finally {
       setDownloadingId(null);
@@ -2283,7 +2322,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
                       ) : (
                         <Download size={14} />
                       )}
-                      DOCX
+                      {isAdminRole ? "PDF" : "DOCX"}
                     </button>
                   </div>
                 </td>
