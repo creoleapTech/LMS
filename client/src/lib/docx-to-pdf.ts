@@ -16,10 +16,30 @@ function getRenderScale(): number {
 
 function getElementSize(element: HTMLElement) {
   const rect = element.getBoundingClientRect();
+  const width = Math.ceil(rect.width || element.scrollWidth);
+  const contentHeight = Math.ceil(Math.max(rect.height, element.scrollHeight, element.offsetHeight));
+
+  // Extract the target page height from CSS min-height to enable proper pagination slicing
+  const computedStyle = window.getComputedStyle(element);
+  const minHeightVal = parseFloat(computedStyle.minHeight);
+
+  let pageHeight = minHeightVal;
+  if (!pageHeight || isNaN(pageHeight) || pageHeight <= 0) {
+    const heightVal = parseFloat(computedStyle.height);
+    if (heightVal && !isNaN(heightVal) && heightVal > 0) {
+      pageHeight = heightVal;
+    } else {
+      // Fallback to standard A4 aspect ratio (1.4142) if no CSS heights are specified
+      pageHeight = Math.ceil(width * 1.4142);
+    }
+  } else {
+    pageHeight = Math.ceil(pageHeight);
+  }
+
   return {
-    width: Math.ceil(rect.width || element.scrollWidth),
-    pageHeight: Math.ceil(rect.height || element.offsetHeight),
-    contentHeight: Math.ceil(Math.max(rect.height, element.scrollHeight, element.offsetHeight)),
+    width,
+    pageHeight,
+    contentHeight,
   };
 }
 
