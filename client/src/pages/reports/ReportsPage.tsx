@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/userAuthStore";
-import domtoimage from "dom-to-image-more";
-import { jsPDF } from "jspdf";
+
 import { useStaffList } from "@/pages/my-classes/hooks/useStaffList";
 import { useReportEditor, type BodyItem, type ReportTable, type ReportParams } from "./hooks/useReportEditor";
 import { Input } from "@/components/ui/input";
@@ -1171,47 +1170,38 @@ async function captureReportPreviewPdf(monthName: string, year: number) {
     return;
   }
 
-  const externalLinks: { link: HTMLLinkElement; parent: Node }[] = [];
-  for (const link of Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'))) {
-    if (link.href && !link.href.startsWith(window.location.origin)) {
-      externalLinks.push({ link, parent: link.parentNode! });
-      link.parentNode!.removeChild(link);
-    }
-  }
-
-  let pdf: jsPDF | null = null;
-  const wPt = 8.5 * 72;
-  const hPt = 11 * 72;
-
+  let pagesHtml = "";
   for (const el of pageElements) {
-    try {
-      const dataUrl = await domtoimage.toPng(el, {
-        bgcolor: "#ffffff",
-        scale: 2,
-        width: el.scrollWidth,
-        height: el.scrollHeight,
-      });
-
-      if (!pdf) {
-        pdf = new jsPDF({ unit: "pt", format: [wPt, hPt], orientation: "portrait", compress: true });
-      } else {
-        pdf.addPage([wPt, hPt], "portrait");
-      }
-
-      pdf.addImage(dataUrl, "PNG", 0, 0, wPt, hPt, undefined, "FAST");
-    } catch (err) {
-      console.error("Failed to capture page:", err);
-      toast.error("Failed to capture report page");
-      break;
-    }
+    pagesHtml += el.outerHTML;
   }
 
-  externalLinks.forEach(({ link, parent }) => { parent.appendChild(link); });
-
-  if (pdf) {
-    pdf.save(`Monthly_Report_${monthName}_${year}.pdf`);
-    toast.success("Report downloaded as PDF");
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    toast.error("Please allow popups to download PDF");
+    return;
   }
+
+  printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<title>Monthly Report - ${monthName} ${year}</title>
+<style>
+@page { size: letter; margin: 0; }
+body { margin: 0; padding: 0; font-family: 'Times New Roman', serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+[data-report-page] { width: 8.5in; height: 11in; position: relative; overflow: hidden; background: white; page-break-after: always; }
+[data-report-page]:last-child { page-break-after: auto; }
+</style>
+</head>
+<body>${pagesHtml}</body>
+</html>`);
+  printWindow.document.close();
+
+  setTimeout(() => {
+    printWindow.print();
+    setTimeout(() => printWindow.close(), 500);
+  }, 600);
+
+  toast.info("Select 'Save as PDF' in the print dialog");
 }
 
 // ─── Pagination types ───
