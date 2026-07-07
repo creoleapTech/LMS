@@ -26,6 +26,8 @@ import {
   type ReportRow,
   type ReportParams,
 } from "../../lib/monthly-report-docx";
+import { convertToPdf } from "docx-to-pdf-wasm";
+import wasmModule from "docx-to-pdf-wasm/wasm";
 import blueStripeAsset from "../../assets/monthly-report-design.jpeg";
 import logoAsset from "../../assets/creoleap-logo-final.png";
 
@@ -2025,6 +2027,40 @@ timetableController.post("/generate-report-docx", async (c) => {
   } catch (err) {
     console.error("Generate report docx error:", err);
     return c.json({ success: false, message: "Failed to generate docx" }, 500);
+  }
+});
+
+// ─── POST /generate-report-pdf — generate PDF from edited report data ──
+
+timetableController.post("/generate-report-pdf", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    let body = await c.req.json<ReportParams>();
+    body = normalizeReportData(body);
+    const db = getDb(c.env.DB);
+    const targetStaffId = body.staffId || (user.role === "admin" || user.role === "super_admin" ? null : user.id);
+
+    const { signatureData, signatureImageType } = await loadStaffSignature(db, c.env.BUCKET, targetStaffId);
+    const docxBuffer = await generateMonthlyReportDocx({
+      ...body,
+      signatureData,
+      signatureImageType,
+      submittedOn: body.submittedOn || formatSubmittedOn(),
+    });
+
+    const pdfBuffer = await convertToPdf(wasmModule, docxBuffer);
+    const monthName = body.monthName || "Report";
+    const year = body.year || "";
+
+    return new Response(pdfBuffer, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="Monthly_Report_${monthName}_${year}.pdf"`,
+      },
+    });
+  } catch (err) {
+    console.error("Generate report pdf error:", err);
+    return c.json({ success: false, message: "Failed to generate pdf" }, 500);
   }
 });
 

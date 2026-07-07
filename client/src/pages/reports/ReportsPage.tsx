@@ -27,7 +27,6 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Config } from "@/lib/config";
-import { generateReportPdf } from "@/lib/report-pdf";
 import {
   ChevronLeft,
   ChevronRight,
@@ -1164,18 +1163,6 @@ const PAGE_SHADOW = "0 4px 6px -1px rgba(0,0,0,0.1), 0 10px 15px -3px rgba(0,0,0
 const CELL_PADDING = `${tw(40)} ${tw(80)}`;
 const BORDER_CSS = "1px solid #999999";
 
-async function captureReportPreviewPdf(
-  reportData: ReportParams,
-  signatureUrl?: string | null,
-) {
-  try {
-    await generateReportPdf(reportData, signatureUrl);
-    toast.success("PDF downloaded");
-  } catch {
-    toast.error("Failed to generate PDF");
-  }
-}
-
 // ─── Pagination types ───
 
 interface Unit {
@@ -1984,7 +1971,25 @@ function SubmittedReportsView({
 
   const downloadPreviewPdf = useCallback(async () => {
     if (!viewingSubmission) return;
-    await captureReportPreviewPdf(viewingSubmission.reportData, viewingSubmission.signatureUrl);
+    try {
+      const res = await _axios.post(
+        "/admin/timetable/generate-report-pdf",
+        viewingSubmission.reportData,
+        { responseType: "blob" },
+      );
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Monthly_Report_${viewingSubmission.monthName}_${viewingSubmission.year}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      toast.success("PDF downloaded");
+    } catch {
+      toast.error("Failed to generate PDF");
+    }
   }, [viewingSubmission]);
 
   const hasActiveFilter =
@@ -2323,7 +2328,25 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
 
   const downloadPreviewPdf = useCallback(async () => {
     if (!viewingSubmission) return;
-    await captureReportPreviewPdf(viewingSubmission.reportData, viewingSubmission.signatureUrl);
+    try {
+      const res = await _axios.post(
+        "/admin/timetable/generate-report-pdf",
+        viewingSubmission.reportData,
+        { responseType: "blob" },
+      );
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Monthly_Report_${viewingSubmission.monthName}_${viewingSubmission.year}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      toast.success("PDF downloaded");
+    } catch {
+      toast.error("Failed to generate PDF");
+    }
   }, [viewingSubmission]);
 
   if (loading) {

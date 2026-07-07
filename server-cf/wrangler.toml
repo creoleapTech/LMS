@@ -8,6 +8,11 @@ type = "Data"
 globs = ["**/*.png", "**/*.jpeg"]
 fallthrough = true
 
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = true
+
 [[d1_databases]]
 binding = "DB"
 database_name = "lms"
