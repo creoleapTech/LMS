@@ -19,6 +19,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
+      'html2canvas': 'html2canvas-pro',
     },
     // Force a single React instance — prevents duplicate React from FFmpeg or other packages
     dedupe: ['react', 'react-dom'],
