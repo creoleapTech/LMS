@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/userAuthStore";
-import { convertDocxToPdf } from "@/lib/docx-to-pdf";
+import html2canvas from "html2canvas-pro";
+import { jsPDF } from "jspdf";
 import { useStaffList } from "@/pages/my-classes/hooks/useStaffList";
 import { useReportEditor, type BodyItem, type ReportTable, type ReportParams } from "./hooks/useReportEditor";
 import { Input } from "@/components/ui/input";
@@ -1798,7 +1799,7 @@ function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUr
   return (
     <div ref={containerRef} className="w-full flex flex-col items-center">
       {/* Cover Page — scaled */}
-      <div style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px`, overflow: "hidden" }}>
+      <div data-report-page="cover" style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px`, overflow: "hidden" }}>
         <div style={{ width: `${PAGE_W}px`, transformOrigin: "top left", transform: `scale(${scale})` }}>
           <div style={{ position: "relative", width: `${PAGE_W}px`, height: `${PAGE_H}px`, background: "white", boxShadow: PAGE_SHADOW, overflow: "hidden" }}>
             <PageHeader assets={assets} />
@@ -1811,7 +1812,7 @@ function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUr
       {pages ? (
         pages.map((pageUnits, i) => {
           return (
-          <div key={i} style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px`, overflow: "hidden" }}>
+          <div key={i} data-report-page="content" style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px`, overflow: "hidden" }}>
             <div style={{ width: `${PAGE_W}px`, transformOrigin: "top left", transform: `scale(${scale})` }}>
               <div style={{ position: "relative", width: `${PAGE_W}px`, height: `${PAGE_H}px`, background: "white", boxShadow: PAGE_SHADOW, overflow: "hidden" }}>
                 <PageHeader assets={assets} />
@@ -1903,7 +1904,7 @@ function SubmittedReportsView({
       .finally(() => setLoading(false));
   }, [institutionId, filterInstitutionId, filterStaffId, filterMonth, filterYear, isSuperAdmin]);
 
-  const handleDownload = async (id: string, format: "pdf" | "docx") => {
+  const handleDownloadDocx = async (id: string) => {
     setDownloadingId(id);
     try {
       const res = await _axios.get(`/admin/timetable/download-submitted-report?id=${id}`, {
@@ -1916,30 +1917,15 @@ function SubmittedReportsView({
       const monthName = reportItem ? MONTH_NAMES[(reportItem.month || 1) - 1] : "Report";
       const year = reportItem?.year || "";
 
-      if (format === "pdf") {
-        // Convert to PDF and download
-        const pdfBlob = await convertDocxToPdf(docxBlob, `Monthly_Report_${monthName}_${year}.pdf`);
-        const url = window.URL.createObjectURL(pdfBlob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `Monthly_Report_${monthName}_${year}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-        toast.success("Report downloaded as PDF");
-      } else {
-        // Download as DOCX
-        const url = window.URL.createObjectURL(docxBlob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `Monthly_Report_${monthName}_${year}.docx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-        toast.success("Report downloaded as DOCX");
-      }
+      const url = window.URL.createObjectURL(docxBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Monthly_Report_${monthName}_${year}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      toast.success("Report downloaded as DOCX");
     } catch (err) {
       console.error(err);
       toast.error("Failed to download report");
@@ -1983,6 +1969,44 @@ function SubmittedReportsView({
       setViewLoading(false);
     }
   };
+
+  const downloadPreviewPdf = useCallback(async () => {
+    if (!viewingSubmission) return;
+    const { monthName, year } = viewingSubmission;
+    const pageElements = document.querySelectorAll<HTMLElement>('[data-report-page]');
+    if (!pageElements.length) {
+      toast.error("Preview not rendered yet");
+      return;
+    }
+
+    let pdf: jsPDF | null = null;
+
+    for (const el of pageElements) {
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false,
+      });
+
+      const wPt = 8.5 * 72;
+      const hPt = 11 * 72;
+      const orientation = "portrait";
+
+      if (!pdf) {
+        pdf = new jsPDF({ unit: "pt", format: [wPt, hPt], orientation, compress: true });
+      } else {
+        pdf.addPage([wPt, hPt], orientation);
+      }
+
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, wPt, hPt, undefined, "FAST");
+    }
+
+    if (pdf) {
+      pdf.save(`Monthly_Report_${monthName}_${year}.pdf`);
+      toast.success("Report downloaded as PDF");
+    }
+  }, [viewingSubmission]);
 
   const hasActiveFilter =
     (filterStaffId && filterStaffId !== "all") ||
@@ -2163,11 +2187,11 @@ function SubmittedReportsView({
                           View
                         </button>
                         <button
-                          onClick={() => handleDownload(r.id, "pdf")}
-                          disabled={downloadingId === r.id}
+                          onClick={() => handleViewInApp(r)}
+                          disabled={viewLoading}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 font-semibold text-xs hover:bg-red-100 transition-colors disabled:opacity-50"
                         >
-                          {downloadingId === r.id ? (
+                          {viewLoading ? (
                             <Loader2 size={14} className="animate-spin" />
                           ) : (
                             <Download size={14} />
@@ -2175,7 +2199,7 @@ function SubmittedReportsView({
                           PDF
                         </button>
                         <button
-                          onClick={() => handleDownload(r.id, "docx")}
+                          onClick={() => handleDownloadDocx(r.id)}
                           disabled={downloadingId === r.id}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
                         >
@@ -2205,6 +2229,10 @@ function SubmittedReportsView({
                 {viewingSubmission?.staffName} — {viewingSubmission?.monthName} {viewingSubmission?.year}
               </DialogTitle>
             </div>
+            <Button onClick={downloadPreviewPdf} size="sm" className="bg-red-600 hover:bg-red-700 text-white gap-1.5">
+              <Download size={14} />
+              Download PDF
+            </Button>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-80px)] px-6 pb-6">
             {viewingSubmission && (
@@ -2224,6 +2252,16 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
+  // View state
+  const [viewingSubmission, setViewingSubmission] = useState<{
+    reportData: ReportParams;
+    signatureUrl: string | null;
+    staffName: string;
+    monthName: string;
+    year: number;
+  } | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+
   useEffect(() => {
     setLoading(true);
     _axios.get("/admin/timetable/my-submissions")
@@ -2238,7 +2276,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleDownload = async (id: string, format: "pdf" | "docx") => {
+  const handleDownloadDocx = async (id: string) => {
     setDownloadingId(id);
     try {
       const res = await _axios.get(`/admin/timetable/download-submitted-report?id=${id}`, {
@@ -2251,30 +2289,15 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
       const monthName = submissionItem ? MONTH_NAMES[(submissionItem.month || 1) - 1] : "Report";
       const year = submissionItem?.year || "";
 
-      if (format === "pdf") {
-        // Convert to PDF and download
-        const pdfBlob = await convertDocxToPdf(docxBlob, `Monthly_Report_${monthName}_${year}.pdf`);
-        const url = window.URL.createObjectURL(pdfBlob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `Monthly_Report_${monthName}_${year}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-        toast.success("Report downloaded as PDF");
-      } else {
-        // Download as DOCX
-        const url = window.URL.createObjectURL(docxBlob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `Monthly_Report_${monthName}_${year}.docx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-        toast.success("Report downloaded as DOCX");
-      }
+      const url = window.URL.createObjectURL(docxBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Monthly_Report_${monthName}_${year}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      toast.success("Report downloaded as DOCX");
     } catch (err) {
       console.error(err);
       toast.error("Failed to download report");
@@ -2282,6 +2305,80 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
       setDownloadingId(null);
     }
   };
+
+  const handleViewInApp = async (r: any) => {
+    setViewLoading(true);
+    try {
+      const [dataRes, sigRes] = await Promise.all([
+        _axios.get(`/admin/timetable/submission-data?id=${r.id}`),
+        r.staffId
+          ? _axios.get(`/admin/timetable/staff-signature?staffId=${r.staffId}`).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+
+      const reportData = dataRes.data?.data?.reportData as ReportParams | undefined;
+      if (!reportData) {
+        toast.error("No report data found");
+        return;
+      }
+
+      let signatureUrl: string | null = null;
+      const sigKey = sigRes?.data?.data?.signatureKey;
+      if (sigKey) {
+        signatureUrl = `${Config.proxyUrl}${encodeURIComponent(sigKey)}`;
+      }
+
+      setViewingSubmission({
+        reportData,
+        signatureUrl,
+        staffName: r.staffName || "Unknown",
+        monthName: MONTH_NAMES[(r.month || 1) - 1],
+        year: r.year,
+      });
+    } catch {
+      toast.error("Failed to load report data");
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
+  const downloadPreviewPdf = useCallback(async () => {
+    if (!viewingSubmission) return;
+    const { monthName, year } = viewingSubmission;
+    const pageElements = document.querySelectorAll<HTMLElement>('[data-report-page]');
+    if (!pageElements.length) {
+      toast.error("Preview not rendered yet");
+      return;
+    }
+
+    let pdf: jsPDF | null = null;
+
+    for (const el of pageElements) {
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false,
+      });
+
+      const wPt = 8.5 * 72;
+      const hPt = 11 * 72;
+      const orientation = "portrait";
+
+      if (!pdf) {
+        pdf = new jsPDF({ unit: "pt", format: [wPt, hPt], orientation, compress: true });
+      } else {
+        pdf.addPage([wPt, hPt], orientation);
+      }
+
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, wPt, hPt, undefined, "FAST");
+    }
+
+    if (pdf) {
+      pdf.save(`Monthly_Report_${monthName}_${year}.pdf`);
+      toast.success("Report downloaded as PDF");
+    }
+  }, [viewingSubmission]);
 
   if (loading) {
     return (
@@ -2302,69 +2399,93 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
   }
 
   return (
-    <div className="neo-card rounded-2xl border border-slate-200/80 overflow-hidden">
-      <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-4">
-        <h2 className="text-lg font-extrabold text-white tracking-wide">My Submissions</h2>
-        <p className="text-sm text-white/80">{submissions.length} report{submissions.length !== 1 ? "s" : ""} submitted</p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-4 py-3 text-center font-bold text-slate-700">Month</th>
-              <th className="px-4 py-3 text-center font-bold text-slate-700">Submitted On</th>
-              <th className="px-4 py-3 text-center font-bold text-slate-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {submissions.map((r, i) => (
-              <tr key={r.id || i} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                <td className="px-4 py-3 text-center font-medium">
-                  {MONTH_NAMES[(r.month || 1) - 1]} {r.year}
-                </td>
-                <td className="px-4 py-3 text-center text-slate-600">
-                  {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      onClick={() => onView(r.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 font-semibold text-xs hover:bg-indigo-100 transition-colors"
-                    >
-                      <Eye size={14} />
-                      View / Edit
-                    </button>
-                    <button
-                      onClick={() => handleDownload(r.id, "pdf")}
-                      disabled={downloadingId === r.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 font-semibold text-xs hover:bg-red-100 transition-colors disabled:opacity-50"
-                    >
-                      {downloadingId === r.id ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Download size={14} />
-                      )}
-                      PDF
-                    </button>
-                    <button
-                      onClick={() => handleDownload(r.id, "docx")}
-                      disabled={downloadingId === r.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                    >
-                      {downloadingId === r.id ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Download size={14} />
-                      )}
-                      DOCX
-                    </button>
-                  </div>
-                </td>
+    <>
+      <div className="neo-card rounded-2xl border border-slate-200/80 overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-4">
+          <h2 className="text-lg font-extrabold text-white tracking-wide">My Submissions</h2>
+          <p className="text-sm text-white/80">{submissions.length} report{submissions.length !== 1 ? "s" : ""} submitted</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-4 py-3 text-center font-bold text-slate-700">Month</th>
+                <th className="px-4 py-3 text-center font-bold text-slate-700">Submitted On</th>
+                <th className="px-4 py-3 text-center font-bold text-slate-700">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {submissions.map((r, i) => (
+                <tr key={r.id || i} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3 text-center font-medium">
+                    {MONTH_NAMES[(r.month || 1) - 1]} {r.year}
+                  </td>
+                  <td className="px-4 py-3 text-center text-slate-600">
+                    {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => onView(r.id)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 font-semibold text-xs hover:bg-indigo-100 transition-colors"
+                      >
+                        <Eye size={14} />
+                        View / Edit
+                      </button>
+                      <button
+                        onClick={() => handleViewInApp(r)}
+                        disabled={viewLoading}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 font-semibold text-xs hover:bg-red-100 transition-colors disabled:opacity-50"
+                      >
+                        {viewLoading ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Download size={14} />
+                        )}
+                        PDF
+                      </button>
+                      <button
+                        onClick={() => handleDownloadDocx(r.id)}
+                        disabled={downloadingId === r.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                      >
+                        {downloadingId === r.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Download size={14} />
+                        )}
+                        DOCX
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      {/* Report Preview Dialog */}
+      <Dialog open={!!viewingSubmission} onOpenChange={(open) => { if (!open) setViewingSubmission(null); }}>
+        <DialogContent className="sm:max-w-[90vw] max-h-[90vh] p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2 flex flex-row items-center justify-between">
+            <div>
+              <DialogTitle className="text-lg font-bold">
+                {viewingSubmission?.staffName} — {viewingSubmission?.monthName} {viewingSubmission?.year}
+              </DialogTitle>
+            </div>
+            <Button onClick={downloadPreviewPdf} size="sm" className="bg-red-600 hover:bg-red-700 text-white gap-1.5">
+              <Download size={14} />
+              Download PDF
+            </Button>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-80px)] px-6 pb-6">
+            {viewingSubmission && (
+              <ReportPreview data={viewingSubmission.reportData} signatureUrl={viewingSubmission.signatureUrl} />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
