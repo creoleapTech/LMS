@@ -27,7 +27,8 @@ import {
   type ReportParams,
 } from "../../lib/monthly-report-docx";
 import { convertToPdf } from "docx-to-pdf-wasm";
-import wasmModule from "docx-to-pdf-wasm/wasm";
+import wasmModule from "../../lib/docx-to-pdf.wasm";
+import { PDFDocument } from "pdf-lib";
 import blueStripeAsset from "../../assets/monthly-report-design.jpeg";
 import logoAsset from "../../assets/creoleap-logo-final.png";
 
@@ -2030,15 +2031,57 @@ timetableController.post("/generate-report-docx", async (c) => {
   }
 });
 
+function detectImageFormat(bytes: Uint8Array): "png" | "jpg" | null {
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return "png";
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) return "jpg";
+  return null;
+}
+
+async function embedSignatureImage(pdfDoc: PDFDocument, sigBytes: Uint8Array): Promise<any> {
+  const fmt = detectImageFormat(sigBytes);
+  console.log("PDF sig format:", fmt, "bytes:", sigBytes.byteLength);
+
+  if (fmt === "png") {
+    const img = await pdfDoc.embedPng(sigBytes).catch(() => null);
+    if (img) return img;
+  }
+  if (fmt === "jpg") {
+    const img = await pdfDoc.embedJpg(sigBytes).catch(() => null);
+    if (img) return img;
+  }
+
+  // Unknown format: try both
+  const asPng = await pdfDoc.embedPng(sigBytes).catch(() => null);
+  if (asPng) return asPng;
+  const asJpg = await pdfDoc.embedJpg(sigBytes).catch(() => null);
+  if (asJpg) return asJpg;
+
+  console.log("PDF sig: all embed attempts failed");
+  return null;
+}
+
+async function resolveAssetBytes(asset: string | ArrayBuffer): Promise<Uint8Array | null> {
+  try {
+    if (asset instanceof ArrayBuffer) return new Uint8Array(asset);
+    if (typeof asset === "string") {
+      const res = await fetch(asset);
+      if (!res.ok) return null;
+      return new Uint8Array(await res.arrayBuffer());
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 // ─── POST /generate-report-pdf — generate PDF from edited report data ──
 
 timetableController.post("/generate-report-pdf", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
+    const queryStaffId = c.req.query("staffId");
     let body = await c.req.json<ReportParams>();
     body = normalizeReportData(body);
     const db = getDb(c.env.DB);
-    const targetStaffId = body.staffId || (user.role === "admin" || user.role === "super_admin" ? null : user.id);
+    const targetStaffId = queryStaffId || body.staffId || (user.role === "admin" || user.role === "super_admin" ? null : user.id);
 
     const { signatureData, signatureImageType } = await loadStaffSignature(db, c.env.BUCKET, targetStaffId);
     const docxBuffer = await generateMonthlyReportDocx({
@@ -2048,11 +2091,89 @@ timetableController.post("/generate-report-pdf", async (c) => {
       submittedOn: body.submittedOn || formatSubmittedOn(),
     });
 
-    const pdfBuffer = await convertToPdf(wasmModule, docxBuffer);
+    let pdfBytes = await convertToPdf(wasmModule, docxBuffer);
+
+    // Post-process: overlay images that the WASM converter may have dropped
+    try {
+      const pdfDoc = await PDFDocument.load(pdfBytes);
+      const pages = pdfDoc.getPages();
+
+      // Load assets
+      const [stripeBytes, logoBytes, sigBytes] = await Promise.all([
+        resolveAssetBytes(blueStripeAsset),
+        resolveAssetBytes(logoAsset),
+        signatureData ? Promise.resolve(new Uint8Array(signatureData)) : Promise.resolve(null),
+      ]);
+
+      // Embed images
+      const stripeImg = stripeBytes ? await pdfDoc.embedJpg(stripeBytes).catch(() => null) ?? await pdfDoc.embedPng(stripeBytes).catch(() => null) : null;
+      const logoImg = logoBytes ? await pdfDoc.embedPng(logoBytes).catch(() => null) ?? await pdfDoc.embedJpg(logoBytes).catch(() => null) : null;
+
+      // Signature — detect actual format from bytes
+      let sigImg = null;
+      if (sigBytes) {
+        sigImg = await embedSignatureImage(pdfDoc, sigBytes);
+      } else {
+        console.log("PDF sig: no signatureData provided");
+      }
+
+      for (const page of pages) {
+        const { width, height } = page.getSize();
+
+        // Blue stripe — left edge, full page height (matches DOCX 105px stripe)
+        if (stripeImg) {
+          const stripeW = 20;
+          const aspect = stripeImg.height / stripeImg.width;
+          const stripeH = height; // full page height
+          const drawW = stripeH / aspect;
+          page.drawImage(stripeImg, {
+            x: 0,
+            y: 0,
+            width: drawW,
+            height: stripeH,
+          });
+        }
+
+        // Logo — top right
+        if (logoImg) {
+          const logoW = 120;
+          const aspect = logoImg.height / logoImg.width;
+          const logoH = logoW * aspect;
+          page.drawImage(logoImg, {
+            x: width - logoW - 24,
+            y: height - logoH - 8,
+            width: logoW,
+            height: logoH,
+          });
+        }
+      }
+
+      // Signature — on last page, right side between the labels
+      if (sigImg && pages.length > 0) {
+        const lastPage = pages[pages.length - 1];
+        const { width, height } = lastPage.getSize();
+        const sigW = 180;
+        const aspect = sigImg.height / sigImg.width;
+        const sigH = sigW * aspect;
+        // "Trainer's Signature" label is near bottom-right (~100pt from bottom)
+        // Place signature image just above the label
+        lastPage.drawImage(sigImg, {
+          x: width / 2 + 20,
+          y: 130,
+          width: sigW,
+          height: sigH,
+        });
+      }
+
+      pdfBytes = await pdfDoc.save();
+    } catch (postErr) {
+      console.error("PDF post-processing failed (returning unmodified):", postErr);
+    }
+
     const monthName = body.monthName || "Report";
     const year = body.year || "";
 
-    return new Response(pdfBuffer, {
+    return new Response(pdfBytes, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="Monthly_Report_${monthName}_${year}.pdf"`,

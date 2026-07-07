@@ -1872,6 +1872,7 @@ function SubmittedReportsView({
     reportData: ReportParams;
     signatureUrl: string | null;
     staffName: string;
+    staffId: string | null;
     monthName: string;
     year: number;
   } | null>(null);
@@ -1959,6 +1960,7 @@ function SubmittedReportsView({
         reportData,
         signatureUrl,
         staffName: r.staffName || "Unknown",
+        staffId: r.staffId || null,
         monthName: MONTH_NAMES[(r.month || 1) - 1],
         year: r.year,
       });
@@ -1972,8 +1974,9 @@ function SubmittedReportsView({
   const downloadPreviewPdf = useCallback(async () => {
     if (!viewingSubmission) return;
     try {
+      const staffParam = viewingSubmission.staffId ? `?staffId=${viewingSubmission.staffId}` : "";
       const res = await _axios.post(
-        "/admin/timetable/generate-report-pdf",
+        `/admin/timetable/generate-report-pdf${staffParam}`,
         viewingSubmission.reportData,
         { responseType: "blob" },
       );
@@ -2241,6 +2244,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
     reportData: ReportParams;
     signatureUrl: string | null;
     staffName: string;
+    staffId: string | null;
     monthName: string;
     year: number;
   } | null>(null);
@@ -2316,6 +2320,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
         reportData,
         signatureUrl,
         staffName: r.staffName || "Unknown",
+        staffId: r.staffId || null,
         monthName: MONTH_NAMES[(r.month || 1) - 1],
         year: r.year,
       });
@@ -2329,8 +2334,9 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
   const downloadPreviewPdf = useCallback(async () => {
     if (!viewingSubmission) return;
     try {
+      const staffParam = viewingSubmission.staffId ? `?staffId=${viewingSubmission.staffId}` : "";
       const res = await _axios.post(
-        "/admin/timetable/generate-report-pdf",
+        `/admin/timetable/generate-report-pdf${staffParam}`,
         viewingSubmission.reportData,
         { responseType: "blob" },
       );
