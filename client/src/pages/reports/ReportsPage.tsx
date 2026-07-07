@@ -1164,6 +1164,56 @@ const PAGE_SHADOW = "0 4px 6px -1px rgba(0,0,0,0.1), 0 10px 15px -3px rgba(0,0,0
 const CELL_PADDING = `${tw(40)} ${tw(80)}`;
 const BORDER_CSS = "1px solid #999999";
 
+async function captureReportPreviewPdf(monthName: string, year: number) {
+  const pageElements = document.querySelectorAll<HTMLElement>('[data-report-page]');
+  if (!pageElements.length) {
+    toast.error("Preview not rendered yet");
+    return;
+  }
+
+  const externalSheets: CSSStyleSheet[] = [];
+  for (const s of Array.from(document.styleSheets)) {
+    try { s.cssRules; } catch {
+      externalSheets.push(s);
+      s.disabled = true;
+    }
+  }
+
+  let pdf: jsPDF | null = null;
+  const wPt = 8.5 * 72;
+  const hPt = 11 * 72;
+
+  for (const el of pageElements) {
+    try {
+      const dataUrl = await domtoimage.toPng(el, {
+        bgcolor: "#ffffff",
+        scale: 2,
+        width: el.scrollWidth,
+        height: el.scrollHeight,
+      });
+
+      if (!pdf) {
+        pdf = new jsPDF({ unit: "pt", format: [wPt, hPt], orientation: "portrait", compress: true });
+      } else {
+        pdf.addPage([wPt, hPt], "portrait");
+      }
+
+      pdf.addImage(dataUrl, "PNG", 0, 0, wPt, hPt, undefined, "FAST");
+    } catch (err) {
+      console.error("Failed to capture page:", err);
+      toast.error("Failed to capture report page");
+      break;
+    }
+  }
+
+  externalSheets.forEach(s => { s.disabled = false; });
+
+  if (pdf) {
+    pdf.save(`Monthly_Report_${monthName}_${year}.pdf`);
+    toast.success("Report downloaded as PDF");
+  }
+}
+
 // ─── Pagination types ───
 
 interface Unit {
@@ -1972,40 +2022,7 @@ function SubmittedReportsView({
 
   const downloadPreviewPdf = useCallback(async () => {
     if (!viewingSubmission) return;
-    const { monthName, year } = viewingSubmission;
-    const pageElements = document.querySelectorAll<HTMLElement>('[data-report-page]');
-    if (!pageElements.length) {
-      toast.error("Preview not rendered yet");
-      return;
-    }
-
-    let pdf: jsPDF | null = null;
-
-    for (const el of pageElements) {
-      const dataUrl = await domtoimage.toPng(el, {
-        bgcolor: "#ffffff",
-        scale: 2,
-        width: el.scrollWidth,
-        height: el.scrollHeight,
-      });
-
-      const wPt = 8.5 * 72;
-      const hPt = 11 * 72;
-      const orientation = "portrait";
-
-      if (!pdf) {
-        pdf = new jsPDF({ unit: "pt", format: [wPt, hPt], orientation, compress: true });
-      } else {
-        pdf.addPage([wPt, hPt], orientation);
-      }
-
-      pdf.addImage(dataUrl, "PNG", 0, 0, wPt, hPt, undefined, "FAST");
-    }
-
-    if (pdf) {
-      pdf.save(`Monthly_Report_${monthName}_${year}.pdf`);
-      toast.success("Report downloaded as PDF");
-    }
+    await captureReportPreviewPdf(viewingSubmission.monthName, viewingSubmission.year);
   }, [viewingSubmission]);
 
   const hasActiveFilter =
@@ -2344,40 +2361,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
 
   const downloadPreviewPdf = useCallback(async () => {
     if (!viewingSubmission) return;
-    const { monthName, year } = viewingSubmission;
-    const pageElements = document.querySelectorAll<HTMLElement>('[data-report-page]');
-    if (!pageElements.length) {
-      toast.error("Preview not rendered yet");
-      return;
-    }
-
-    let pdf: jsPDF | null = null;
-
-    for (const el of pageElements) {
-      const dataUrl = await domtoimage.toPng(el, {
-        bgcolor: "#ffffff",
-        scale: 2,
-        width: el.scrollWidth,
-        height: el.scrollHeight,
-      });
-
-      const wPt = 8.5 * 72;
-      const hPt = 11 * 72;
-      const orientation = "portrait";
-
-      if (!pdf) {
-        pdf = new jsPDF({ unit: "pt", format: [wPt, hPt], orientation, compress: true });
-      } else {
-        pdf.addPage([wPt, hPt], orientation);
-      }
-
-      pdf.addImage(dataUrl, "PNG", 0, 0, wPt, hPt, undefined, "FAST");
-    }
-
-    if (pdf) {
-      pdf.save(`Monthly_Report_${monthName}_${year}.pdf`);
-      toast.success("Report downloaded as PDF");
-    }
+    await captureReportPreviewPdf(viewingSubmission.monthName, viewingSubmission.year);
   }, [viewingSubmission]);
 
   if (loading) {
