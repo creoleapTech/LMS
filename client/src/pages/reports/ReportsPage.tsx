@@ -1171,11 +1171,11 @@ async function captureReportPreviewPdf(monthName: string, year: number) {
     return;
   }
 
-  const externalSheets: CSSStyleSheet[] = [];
-  for (const s of Array.from(document.styleSheets)) {
-    try { s.cssRules; } catch {
-      externalSheets.push(s);
-      s.disabled = true;
+  const externalLinks: { link: HTMLLinkElement; parent: Node }[] = [];
+  for (const link of Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'))) {
+    if (link.href && !link.href.startsWith(window.location.origin)) {
+      externalLinks.push({ link, parent: link.parentNode! });
+      link.parentNode!.removeChild(link);
     }
   }
 
@@ -1206,7 +1206,7 @@ async function captureReportPreviewPdf(monthName: string, year: number) {
     }
   }
 
-  externalSheets.forEach(s => { s.disabled = false; });
+  externalLinks.forEach(({ link, parent }) => { parent.appendChild(link); });
 
   if (pdf) {
     pdf.save(`Monthly_Report_${monthName}_${year}.pdf`);
