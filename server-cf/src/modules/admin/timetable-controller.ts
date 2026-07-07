@@ -46,6 +46,7 @@ const MONTH_NAMES = [
 
 function normalizeReportData(data: any): any {
   if (!data) return data;
+  data.isNormalized = true;
   if (typeof data.classesLabel === "string") {
     data.classesLabel = data.classesLabel
       .replace(/(\d+),\s*([a-zA-Z])/g, "$1$2")
@@ -2770,13 +2771,49 @@ timetableController.get("/download-submitted-report", async (c) => {
       }
     }
 
-    if (!submission.docxKey) {
-      throw new BadRequestError("No DOCX file associated with this submission");
+    let reportData = submission.reportData;
+    if (typeof reportData === "string") {
+      try { reportData = JSON.parse(reportData); } catch { /* keep as string */ }
     }
 
-    const file = await getFile(c.env.BUCKET, submission.docxKey);
-    if (!file) {
-      throw new BadRequestError("File not found in storage");
+    const needsRegeneration = reportData && typeof reportData === "object" && !reportData.isNormalized;
+    let docxBuffer: Uint8Array;
+
+    const { signatureData, signatureImageType } = await loadStaffSignature(db, c.env.BUCKET, submission.staffId);
+
+    if (needsRegeneration && reportData && signatureData) {
+      reportData = normalizeReportData(reportData);
+      docxBuffer = await generateMonthlyReportDocx({
+        ...reportData,
+        signatureData,
+        signatureImageType,
+        submittedOn: submission.submittedAt || reportData.submittedOn || formatSubmittedOn(),
+      });
+
+      // Lazy-update the database record
+      try {
+        await db
+          .update(reportSubmissions)
+          .set({ reportData: JSON.stringify(reportData) })
+          .where(eq(reportSubmissions.id, submission.id));
+      } catch (dbErr) {
+        console.error("Failed to update normalized JSON in DB:", dbErr);
+      }
+
+      // Lazy-update R2 with the clean version
+      if (c.env.BUCKET && submission.docxKey) {
+        try {
+          await c.env.BUCKET.put(submission.docxKey, docxBuffer);
+        } catch (e) {
+          console.error("Failed to update corrected report in R2:", e);
+        }
+      }
+    } else {
+      const file = await getFile(c.env.BUCKET, submission.docxKey);
+      if (!file) {
+        throw new BadRequestError("File not found in storage");
+      }
+      docxBuffer = new Uint8Array(await file.arrayBuffer());
     }
 
     const monthName = MONTH_NAMES[submission.month - 1] || "Report";
@@ -2784,7 +2821,7 @@ timetableController.get("/download-submitted-report", async (c) => {
     headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
     headers.set("Content-Disposition", `attachment; filename="Monthly_Report_${monthName}_${submission.year}.docx"`);
 
-    return new Response(file.body, { headers });
+    return new Response(docxBuffer, { headers });
   } catch (err: any) {
     if (err instanceof BadRequestError || err instanceof ForbiddenError) throw err;
     console.error("Download submitted report error:", err);
