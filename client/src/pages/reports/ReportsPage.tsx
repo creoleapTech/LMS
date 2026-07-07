@@ -1903,7 +1903,7 @@ function SubmittedReportsView({
       .finally(() => setLoading(false));
   }, [institutionId, filterInstitutionId, filterStaffId, filterMonth, filterYear, isSuperAdmin]);
 
-  const handleDownload = async (id: string) => {
+  const handleDownload = async (id: string, format: "pdf" | "docx") => {
     setDownloadingId(id);
     try {
       const res = await _axios.get(`/admin/timetable/download-submitted-report?id=${id}`, {
@@ -1916,17 +1916,30 @@ function SubmittedReportsView({
       const monthName = reportItem ? MONTH_NAMES[(reportItem.month || 1) - 1] : "Report";
       const year = reportItem?.year || "";
 
-      // Convert to PDF and download
-      const pdfBlob = await convertDocxToPdf(docxBlob, `Monthly_Report_${monthName}_${year}.pdf`);
-      const url = window.URL.createObjectURL(pdfBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Monthly_Report_${monthName}_${year}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-      toast.success("Report downloaded as PDF");
+      if (format === "pdf") {
+        // Convert to PDF and download
+        const pdfBlob = await convertDocxToPdf(docxBlob, `Monthly_Report_${monthName}_${year}.pdf`);
+        const url = window.URL.createObjectURL(pdfBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Monthly_Report_${monthName}_${year}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        toast.success("Report downloaded as PDF");
+      } else {
+        // Download as DOCX
+        const url = window.URL.createObjectURL(docxBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Monthly_Report_${monthName}_${year}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        toast.success("Report downloaded as DOCX");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to download report");
@@ -2150,7 +2163,19 @@ function SubmittedReportsView({
                           View
                         </button>
                         <button
-                          onClick={() => handleDownload(r.id)}
+                          onClick={() => handleDownload(r.id, "pdf")}
+                          disabled={downloadingId === r.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 font-semibold text-xs hover:bg-red-100 transition-colors disabled:opacity-50"
+                        >
+                          {downloadingId === r.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Download size={14} />
+                          )}
+                          PDF
+                        </button>
+                        <button
+                          onClick={() => handleDownload(r.id, "docx")}
                           disabled={downloadingId === r.id}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
                         >
@@ -2159,7 +2184,7 @@ function SubmittedReportsView({
                           ) : (
                             <Download size={14} />
                           )}
-                          PDF
+                          DOCX
                         </button>
                       </div>
                     </td>
@@ -2217,7 +2242,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleDownload = async (id: string) => {
+  const handleDownload = async (id: string, format: "pdf" | "docx") => {
     setDownloadingId(id);
     try {
       const res = await _axios.get(`/admin/timetable/download-submitted-report?id=${id}`, {
@@ -2230,7 +2255,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
       const monthName = submissionItem ? MONTH_NAMES[(submissionItem.month || 1) - 1] : "Report";
       const year = submissionItem?.year || "";
 
-      if (isAdminRole) {
+      if (format === "pdf") {
         // Convert to PDF and download
         const pdfBlob = await convertDocxToPdf(docxBlob, `Monthly_Report_${monthName}_${year}.pdf`);
         const url = window.URL.createObjectURL(pdfBlob);
@@ -2252,6 +2277,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
         a.click();
         document.body.removeChild(a);
         setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        toast.success("Report downloaded as DOCX");
       }
     } catch (err) {
       console.error(err);
@@ -2312,18 +2338,47 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
                       <Eye size={14} />
                       View / Edit
                     </button>
-                    <button
-                      onClick={() => handleDownload(r.id)}
-                      disabled={downloadingId === r.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                    >
-                      {downloadingId === r.id ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Download size={14} />
-                      )}
-                      {isAdminRole ? "PDF" : "DOCX"}
-                    </button>
+                    {isAdminRole ? (
+                      <>
+                        <button
+                          onClick={() => handleDownload(r.id, "pdf")}
+                          disabled={downloadingId === r.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 font-semibold text-xs hover:bg-red-100 transition-colors disabled:opacity-50"
+                        >
+                          {downloadingId === r.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Download size={14} />
+                          )}
+                          PDF
+                        </button>
+                        <button
+                          onClick={() => handleDownload(r.id, "docx")}
+                          disabled={downloadingId === r.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                        >
+                          {downloadingId === r.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Download size={14} />
+                          )}
+                          DOCX
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => handleDownload(r.id, "docx")}
+                        disabled={downloadingId === r.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                      >
+                        {downloadingId === r.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Download size={14} />
+                        )}
+                        DOCX
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

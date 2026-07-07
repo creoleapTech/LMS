@@ -13,14 +13,16 @@ export async function convertDocxToPdf(docxBlob: Blob, filename: string): Promis
 
   const container = document.createElement("div");
 
-  // Position off-screen so the user doesn't see the rendering steps
-  container.style.position = "fixed";
-  container.style.left = "-9999px";
-  container.style.top = "-9999px";
+  // Position inside document bounds but behind everything
+  container.style.position = "absolute";
+  container.style.left = "0px";
+  container.style.top = "0px";
   container.style.width = "820px"; // Approximate A4 width in pixels
   container.style.background = "#ffffff";
   container.style.padding = "40px"; // Default page margin
   container.style.boxSizing = "border-box";
+  container.style.zIndex = "-9999";
+  container.style.pointerEvents = "none";
   container.className = "docx-pdf-conversion-container";
 
   // Inject a stylesheet to ensure tables and layout behave correctly when printed
