@@ -27,6 +27,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Config } from "@/lib/config";
+import { generateReportPdf } from "@/lib/report-pdf";
 import {
   ChevronLeft,
   ChevronRight,
@@ -1163,45 +1164,16 @@ const PAGE_SHADOW = "0 4px 6px -1px rgba(0,0,0,0.1), 0 10px 15px -3px rgba(0,0,0
 const CELL_PADDING = `${tw(40)} ${tw(80)}`;
 const BORDER_CSS = "1px solid #999999";
 
-async function captureReportPreviewPdf(monthName: string, year: number) {
-  const pageElements = document.querySelectorAll<HTMLElement>('[data-report-page]');
-  if (!pageElements.length) {
-    toast.error("Preview not rendered yet");
-    return;
+async function captureReportPreviewPdf(
+  reportData: ReportParams,
+  signatureUrl?: string | null,
+) {
+  try {
+    await generateReportPdf(reportData, signatureUrl);
+    toast.success("PDF downloaded");
+  } catch {
+    toast.error("Failed to generate PDF");
   }
-
-  let pagesHtml = "";
-  for (const el of pageElements) {
-    pagesHtml += el.outerHTML;
-  }
-
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) {
-    toast.error("Please allow popups to download PDF");
-    return;
-  }
-
-  printWindow.document.write(`<!DOCTYPE html>
-<html>
-<head>
-<title>Monthly Report - ${monthName} ${year}</title>
-<style>
-@page { size: letter; margin: 0; }
-body { margin: 0; padding: 0; font-family: 'Times New Roman', serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-[data-report-page] { width: 8.5in; height: 11in; position: relative; overflow: hidden; background: white; page-break-after: always; }
-[data-report-page]:last-child { page-break-after: auto; }
-</style>
-</head>
-<body>${pagesHtml}</body>
-</html>`);
-  printWindow.document.close();
-
-  setTimeout(() => {
-    printWindow.print();
-    setTimeout(() => printWindow.close(), 500);
-  }, 600);
-
-  toast.info("Select 'Save as PDF' in the print dialog");
 }
 
 // ─── Pagination types ───
@@ -2012,7 +1984,7 @@ function SubmittedReportsView({
 
   const downloadPreviewPdf = useCallback(async () => {
     if (!viewingSubmission) return;
-    await captureReportPreviewPdf(viewingSubmission.monthName, viewingSubmission.year);
+    await captureReportPreviewPdf(viewingSubmission.reportData, viewingSubmission.signatureUrl);
   }, [viewingSubmission]);
 
   const hasActiveFilter =
@@ -2351,7 +2323,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
 
   const downloadPreviewPdf = useCallback(async () => {
     if (!viewingSubmission) return;
-    await captureReportPreviewPdf(viewingSubmission.monthName, viewingSubmission.year);
+    await captureReportPreviewPdf(viewingSubmission.reportData, viewingSubmission.signatureUrl);
   }, [viewingSubmission]);
 
   if (loading) {
