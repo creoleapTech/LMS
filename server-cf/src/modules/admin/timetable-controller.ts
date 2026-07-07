@@ -1686,9 +1686,21 @@ async function buildMonthlyReportData(
     for (const ct of ctRows) contentMap.set(ct.id, { title: ct.title || "", chapterId: ct.chapterId, order: ct.order });
   }
 
-  // Batch fetch class and gradeBook info
-  const classIds = [...new Set([...recurringEntries, ...oneOffEntries].map((e: any) => e.classId).filter(Boolean))];
-  const gbIds = [...new Set([...recurringEntries, ...oneOffEntries].map((e: any) => e.gradeBookId).filter(Boolean))];
+  const allTimetableEntries = [...recurringEntries, ...oneOffEntries];
+  const getEntryClassIds = (entry: any): string[] => [
+    entry.classId,
+    ...parseAdditionalClassIds(entry.additionalClassId),
+  ].filter(Boolean);
+  const formatClassLabel = (classRow: any): string => {
+    if (!classRow) return "";
+    const grade = String(classRow.grade || "").trim();
+    const section = String(classRow.section || "").trim();
+    return `${grade}${section}`;
+  };
+
+  // Batch fetch class and gradeBook info, including combined/additional classes.
+  const classIds = [...new Set(allTimetableEntries.flatMap((e: any) => getEntryClassIds(e)))];
+  const gbIds = [...new Set(allTimetableEntries.map((e: any) => e.gradeBookId).filter(Boolean))];
 
   const classMap = new Map<string, any>();
   if (classIds.length > 0) {
@@ -1762,14 +1774,19 @@ async function buildMonthlyReportData(
     ].sort((a: any, b: any) => (a.periodNumber ?? 0) - (b.periodNumber ?? 0));
 
     for (const entry of merged) {
-      const classObj = classMap.get(entry.classId);
       const bookObj = gbMap.get(entry.gradeBookId);
 
-      const grade = classObj?.grade || "";
-      const section = classObj?.section || "";
+      const classLabels = [
+        ...new Set(
+          getEntryClassIds(entry)
+            .map((classId) => formatClassLabel(classMap.get(classId)))
+            .filter(Boolean),
+        ),
+      ];
+      const classLabel = classLabels.join(", ");
       const bookTitle = bookObj?.bookTitle || "";
 
-      if (grade) classSet.add(`${grade}${section ? section : ""}`);
+      for (const label of classLabels) classSet.add(label);
       if (bookTitle) subjectSet.add(bookTitle);
       if (entry.status === "completed") completedCount++;
 
@@ -1823,8 +1840,8 @@ async function buildMonthlyReportData(
 
       rows.push({
         date: `${String(d).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`,
-        className: grade,
-        section,
+        className: classLabel,
+        section: "",
         chapterName,
         topicName,
         remarks: entry.status === "completed" ? entry.notes || "" : "",
