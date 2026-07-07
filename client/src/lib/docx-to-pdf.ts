@@ -65,6 +65,14 @@ export async function convertDocxToPdf(docxBlob: Blob, filename: string): Promis
         useCORS: true,
         logging: false,
         letterRendering: true,
+        onclone: (clonedDoc: Document) => {
+          const el = clonedDoc.querySelector(".docx-pdf-conversion-container") as HTMLElement;
+          if (el) {
+            el.style.position = "static";
+            el.style.left = "0px";
+            el.style.top = "0px";
+          }
+        }
       },
       jsPDF: {
         unit: "mm",
