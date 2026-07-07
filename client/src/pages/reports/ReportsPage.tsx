@@ -2220,10 +2220,6 @@ function SubmittedReportsView({
 // ─── My Submissions View (teacher) ───
 
 function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
-  const user = useAuthStore((s) => s.user);
-  const role = user?.role;
-  const isAdminRole = role === "super_admin" || role === "admin";
-
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -2338,47 +2334,30 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
                       <Eye size={14} />
                       View / Edit
                     </button>
-                    {isAdminRole ? (
-                      <>
-                        <button
-                          onClick={() => handleDownload(r.id, "pdf")}
-                          disabled={downloadingId === r.id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 font-semibold text-xs hover:bg-red-100 transition-colors disabled:opacity-50"
-                        >
-                          {downloadingId === r.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Download size={14} />
-                          )}
-                          PDF
-                        </button>
-                        <button
-                          onClick={() => handleDownload(r.id, "docx")}
-                          disabled={downloadingId === r.id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                        >
-                          {downloadingId === r.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Download size={14} />
-                          )}
-                          DOCX
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => handleDownload(r.id, "docx")}
-                        disabled={downloadingId === r.id}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                      >
-                        {downloadingId === r.id ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <Download size={14} />
-                        )}
-                        DOCX
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleDownload(r.id, "pdf")}
+                      disabled={downloadingId === r.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 font-semibold text-xs hover:bg-red-100 transition-colors disabled:opacity-50"
+                    >
+                      {downloadingId === r.id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Download size={14} />
+                      )}
+                      PDF
+                    </button>
+                    <button
+                      onClick={() => handleDownload(r.id, "docx")}
+                      disabled={downloadingId === r.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                    >
+                      {downloadingId === r.id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Download size={14} />
+                      )}
+                      DOCX
+                    </button>
                   </div>
                 </td>
               </tr>

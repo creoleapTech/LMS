@@ -57,6 +57,7 @@
     "highlight.js": "^11.11.1",
     "html2canvas-pro": "^2.2.2",
     "html2pdf.js": "^0.14.0",
+    "jspdf": "^4.2.1",
     "jszip": "^3.10.1",
     "lottie-web": "^5.13.0",
     "lucide-react": "^0.544.0",
