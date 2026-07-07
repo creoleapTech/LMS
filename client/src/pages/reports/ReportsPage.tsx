@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/userAuthStore";
-import html2canvas from "html2canvas-pro";
+import domtoimage from "dom-to-image-more";
 import { jsPDF } from "jspdf";
 import { useStaffList } from "@/pages/my-classes/hooks/useStaffList";
 import { useReportEditor, type BodyItem, type ReportTable, type ReportParams } from "./hooks/useReportEditor";
@@ -1799,9 +1799,9 @@ function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUr
   return (
     <div ref={containerRef} className="w-full flex flex-col items-center">
       {/* Cover Page — scaled */}
-      <div data-report-page="cover" style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px`, overflow: "hidden" }}>
+      <div style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px`, overflow: "hidden" }}>
         <div style={{ width: `${PAGE_W}px`, transformOrigin: "top left", transform: `scale(${scale})` }}>
-          <div style={{ position: "relative", width: `${PAGE_W}px`, height: `${PAGE_H}px`, background: "white", boxShadow: PAGE_SHADOW, overflow: "hidden" }}>
+          <div data-report-page="cover" style={{ position: "relative", width: `${PAGE_W}px`, height: `${PAGE_H}px`, background: "white", boxShadow: PAGE_SHADOW, overflow: "hidden" }}>
             <PageHeader assets={assets} />
             <CoverPage data={data} />
           </div>
@@ -1812,9 +1812,9 @@ function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUr
       {pages ? (
         pages.map((pageUnits, i) => {
           return (
-          <div key={i} data-report-page="content" style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px`, overflow: "hidden" }}>
+          <div key={i} style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px`, overflow: "hidden" }}>
             <div style={{ width: `${PAGE_W}px`, transformOrigin: "top left", transform: `scale(${scale})` }}>
-              <div style={{ position: "relative", width: `${PAGE_W}px`, height: `${PAGE_H}px`, background: "white", boxShadow: PAGE_SHADOW, overflow: "hidden" }}>
+              <div data-report-page="content" style={{ position: "relative", width: `${PAGE_W}px`, height: `${PAGE_H}px`, background: "white", boxShadow: PAGE_SHADOW, overflow: "hidden" }}>
                 <PageHeader assets={assets} />
                 <div style={{
                   position: "relative", zIndex: 1,
@@ -1982,11 +1982,11 @@ function SubmittedReportsView({
     let pdf: jsPDF | null = null;
 
     for (const el of pageElements) {
-      const canvas = await html2canvas(el, {
+      const dataUrl = await domtoimage.toPng(el, {
+        bgcolor: "#ffffff",
         scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        logging: false,
+        width: el.scrollWidth,
+        height: el.scrollHeight,
       });
 
       const wPt = 8.5 * 72;
@@ -1999,7 +1999,7 @@ function SubmittedReportsView({
         pdf.addPage([wPt, hPt], orientation);
       }
 
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, wPt, hPt, undefined, "FAST");
+      pdf.addImage(dataUrl, "PNG", 0, 0, wPt, hPt, undefined, "FAST");
     }
 
     if (pdf) {
@@ -2354,11 +2354,11 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
     let pdf: jsPDF | null = null;
 
     for (const el of pageElements) {
-      const canvas = await html2canvas(el, {
+      const dataUrl = await domtoimage.toPng(el, {
+        bgcolor: "#ffffff",
         scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        logging: false,
+        width: el.scrollWidth,
+        height: el.scrollHeight,
       });
 
       const wPt = 8.5 * 72;
@@ -2371,7 +2371,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
         pdf.addPage([wPt, hPt], orientation);
       }
 
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, wPt, hPt, undefined, "FAST");
+      pdf.addImage(dataUrl, "PNG", 0, 0, wPt, hPt, undefined, "FAST");
     }
 
     if (pdf) {
