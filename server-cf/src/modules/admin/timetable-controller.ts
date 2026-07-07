@@ -2098,24 +2098,15 @@ timetableController.post("/generate-report-pdf", async (c) => {
       const pdfDoc = await PDFDocument.load(pdfBytes);
       const pages = pdfDoc.getPages();
 
-      // Load assets
-      const [stripeBytes, logoBytes, sigBytes] = await Promise.all([
+      // Load assets — only stripe and logo (signature is already in DOCX)
+      const [stripeBytes, logoBytes] = await Promise.all([
         resolveAssetBytes(blueStripeAsset),
         resolveAssetBytes(logoAsset),
-        signatureData ? Promise.resolve(new Uint8Array(signatureData)) : Promise.resolve(null),
       ]);
 
       // Embed images
       const stripeImg = stripeBytes ? await pdfDoc.embedJpg(stripeBytes).catch(() => null) ?? await pdfDoc.embedPng(stripeBytes).catch(() => null) : null;
       const logoImg = logoBytes ? await pdfDoc.embedPng(logoBytes).catch(() => null) ?? await pdfDoc.embedJpg(logoBytes).catch(() => null) : null;
-
-      // Signature — detect actual format from bytes
-      let sigImg = null;
-      if (sigBytes) {
-        sigImg = await embedSignatureImage(pdfDoc, sigBytes);
-      } else {
-        console.log("PDF sig: no signatureData provided");
-      }
 
       for (const page of pages) {
         const { width, height } = page.getSize();
@@ -2146,23 +2137,6 @@ timetableController.post("/generate-report-pdf", async (c) => {
             height: logoH,
           });
         }
-      }
-
-      // Signature — on last page, right side between the labels
-      if (sigImg && pages.length > 0) {
-        const lastPage = pages[pages.length - 1];
-        const { width, height } = lastPage.getSize();
-        const sigW = 180;
-        const aspect = sigImg.height / sigImg.width;
-        const sigH = sigW * aspect;
-        // "Trainer's Signature" label is near bottom-right (~100pt from bottom)
-        // Place signature image just above the label
-        lastPage.drawImage(sigImg, {
-          x: width / 2 + 20,
-          y: 130,
-          width: sigW,
-          height: sigH,
-        });
       }
 
       pdfBytes = await pdfDoc.save();
