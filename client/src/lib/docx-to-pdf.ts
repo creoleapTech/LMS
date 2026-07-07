@@ -8,6 +8,9 @@ import html2pdf from "html2pdf.js";
  * then converts it to PDF using html2pdf.js.
  */
 export async function convertDocxToPdf(docxBlob: Blob, filename: string): Promise<Blob> {
+  console.log("[docx-to-pdf] Starting conversion for:", filename);
+  console.log("[docx-to-pdf] Blob size (bytes):", docxBlob.size, "type:", docxBlob.type);
+
   const container = document.createElement("div");
 
   // Position off-screen so the user doesn't see the rendering steps
@@ -41,19 +44,28 @@ export async function convertDocxToPdf(docxBlob: Blob, filename: string): Promis
   `;
   container.appendChild(style);
   document.body.appendChild(container);
+  console.log("[docx-to-pdf] Temporary container appended to body.");
 
   try {
+    console.log("[docx-to-pdf] Calling renderAsync with docx-preview...");
     // Render DOCX into the container
     await renderAsync(docxBlob, container, undefined, {
       className: "docx-preview-element",
       inWrapper: false,
       ignoreWidth: false,
       ignoreHeight: false,
-      debug: false,
+      debug: true,
     });
+    console.log("[docx-to-pdf] renderAsync completed.");
+
+    // Log the structure of the container
+    console.log("[docx-to-pdf] Container child nodes count:", container.childNodes.length);
+    console.log("[docx-to-pdf] Container innerHTML snippet (first 1000 chars):", container.innerHTML.substring(0, 1000));
+    console.log("[docx-to-pdf] Container clientHeight:", container.clientHeight, "clientWidth:", container.clientWidth);
 
     // Wait briefly for images and styling to resolve
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    console.log("[docx-to-pdf] Waiting 1000ms for resources...");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // Configure PDF conversion options
     const options: any = {
@@ -63,14 +75,20 @@ export async function convertDocxToPdf(docxBlob: Blob, filename: string): Promis
       html2canvas: {
         scale: 2, // high quality
         useCORS: true,
-        logging: false,
+        logging: true, // Enable HTML2Canvas debug logging
         letterRendering: true,
         onclone: (clonedDoc: Document) => {
+          console.log("[docx-to-pdf] html2canvas onclone callback triggered.");
           const el = clonedDoc.querySelector(".docx-pdf-conversion-container") as HTMLElement;
           if (el) {
+            console.log("[docx-to-pdf] Cloned element found in clonedDoc. Resetting styles.");
+            console.log("[docx-to-pdf] Cloned element clientHeight before:", el.clientHeight, "clientWidth:", el.clientWidth);
             el.style.position = "static";
             el.style.left = "0px";
             el.style.top = "0px";
+            console.log("[docx-to-pdf] Cloned element styles reset to static at 0,0.");
+          } else {
+            console.warn("[docx-to-pdf] Cloned element NOT found in clonedDoc!");
           }
         }
       },
@@ -84,6 +102,7 @@ export async function convertDocxToPdf(docxBlob: Blob, filename: string): Promis
       },
     };
 
+    console.log("[docx-to-pdf] Starting html2pdf compilation...");
     // Generate and return the PDF Blob
     const pdfBlob = await html2pdf()
       .set(options)
@@ -91,12 +110,14 @@ export async function convertDocxToPdf(docxBlob: Blob, filename: string): Promis
       .toPdf()
       .outputPdf("blob");
 
+    console.log("[docx-to-pdf] html2pdf completed successfully. PDF Blob size:", pdfBlob.size);
     return pdfBlob;
   } catch (error) {
-    console.error("DOCX to PDF conversion error:", error);
+    console.error("[docx-to-pdf] Error during conversion process:", error);
     throw error;
   } finally {
     // Always clean up the temporary DOM element
+    console.log("[docx-to-pdf] Cleaning up temporary container.");
     document.body.removeChild(container);
   }
 }
