@@ -641,7 +641,7 @@ function ScheduledRow({
       </TableCell>
 
       {/* Class / Subject */}
-      <TableCell>
+      <TableCell className="max-w-[220px] sm:max-w-[320px] md:max-w-[400px] break-words">
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-bold text-slate-800">
