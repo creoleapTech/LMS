@@ -181,6 +181,16 @@ export function useReportEditor() {
     });
   }, []);
 
+  const moveBodyItem = useCallback((fromIndex: number, toIndex: number) => {
+    setReportData((prev) => {
+      if (!prev || !prev.bodyItems) return prev;
+      const items = [...prev.bodyItems];
+      const [moved] = items.splice(fromIndex, 1);
+      items.splice(toIndex, 0, moved);
+      return { ...prev, bodyItems: items };
+    });
+  }, []);
+
   const clearReport = useCallback(() => {
     setReportData(null);
     setSubmissionStatus(null);
@@ -345,6 +355,7 @@ export function useReportEditor() {
     addBodyItem,
     updateBodyItem,
     removeBodyItem,
+    moveBodyItem,
     clearReport,
   };
 }

@@ -28,6 +28,21 @@ import {
 } from "@/components/ui/dialog";
 import { Config } from "@/lib/config";
 import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+import {
   ChevronLeft,
   ChevronRight,
   Download,
@@ -55,6 +70,7 @@ import {
   MessageSquare,
   Upload,
   Shield,
+  GripVertical,
 } from "lucide-react";
 
 const MONTH_NAMES = [
@@ -151,6 +167,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
     addBodyItem,
     updateBodyItem,
     removeBodyItem,
+    moveBodyItem,
     clearReport,
     updateField,
   } = useReportEditor();
@@ -323,6 +340,18 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
       toast.error("Failed to download principal signed report");
     }
   };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = Number(active.id);
+    const newIndex = Number(over.id);
+    moveBodyItem(oldIndex, newIndex);
+  }, [moveBodyItem]);
 
   const handleAddTable = () => {
     const cols = newTableCols.split(",").map((c) => c.trim()).filter(Boolean);
@@ -951,15 +980,20 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
               </div>
 
               {/* Body Items (additional tables, headings, paragraphs) */}
-              {(reportData.bodyItems || []).map((item, index) => (
-                <BodyItemEditor
-                  key={index}
-                  item={item}
-                  onUpdate={(newItem) => updateBodyItem(index, newItem)}
-                  onRemove={() => removeBodyItem(index)}
-                  readOnly={isApproved}
-                />
-              ))}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={(reportData.bodyItems || []).map((_, i) => String(i))} strategy={verticalListSortingStrategy}>
+                  {(reportData.bodyItems || []).map((item, index) => (
+                    <SortableBodyItemEditor
+                      key={index}
+                      id={String(index)}
+                      item={item}
+                      onUpdate={(newItem) => updateBodyItem(index, newItem)}
+                      onRemove={() => removeBodyItem(index)}
+                      readOnly={isApproved}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             </>
           )}
 
@@ -1148,6 +1182,18 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
   );
 }
 
+// ─── Sortable Body Item Editor (drag & drop wrapper) ───
+
+function SortableBodyItemEditor({ id, item, onUpdate, onRemove, readOnly }: { id: string; item: BodyItem; onUpdate: (item: BodyItem) => void; onRemove: () => void; readOnly?: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, position: "relative" as const, zIndex: isDragging ? 10 : undefined };
+  return (
+    <div ref={setNodeRef} style={style} className="group/body-item">
+      <BodyItemEditor item={item} onUpdate={onUpdate} onRemove={onRemove} readOnly={readOnly} dragHandleProps={{ ...attributes, ...listeners }} />
+    </div>
+  );
+}
+
 // ─── Body Item Editor (additional tables, headings, paragraphs) ───
 
 function BodyItemEditor({
@@ -1155,11 +1201,13 @@ function BodyItemEditor({
   onUpdate,
   onRemove,
   readOnly,
+  dragHandleProps,
 }: {
   item: BodyItem;
   onUpdate: (item: BodyItem) => void;
   onRemove: () => void;
   readOnly?: boolean;
+  dragHandleProps?: any;
 }) {
   if (item.kind === "table" && item.table) {
     const table = item.table;
@@ -1184,7 +1232,12 @@ function BodyItemEditor({
 
     return (
       <div className="neo-card rounded-2xl border-2 border-indigo-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-4 pl-2 flex items-center justify-between">
+          {!readOnly && dragHandleProps && (
+            <button {...dragHandleProps} className="p-1 mr-1 rounded cursor-grab active:cursor-grabbing text-white/70 hover:text-white hover:bg-white/20 transition-colors" title="Drag to reorder">
+              <GripVertical size={16} />
+            </button>
+          )}
           <input
             value={table.title}
             onChange={(e) => updateTitle(e.target.value)}
@@ -1273,9 +1326,16 @@ function BodyItemEditor({
     return (
       <div className="flex items-start gap-2 group">
         <div className="flex flex-col items-start gap-1.5 pt-2 shrink-0 w-28">
-          <span className={`text-xs font-bold uppercase ${content.type === "heading" ? "text-indigo-600" : "text-slate-500"}`}>
-            {content.type}
-          </span>
+          <div className="flex items-center gap-1">
+            {!readOnly && dragHandleProps && (
+              <button {...dragHandleProps} className="p-0.5 rounded cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Drag to reorder">
+                <GripVertical size={14} />
+              </button>
+            )}
+            <span className={`text-xs font-bold uppercase ${content.type === "heading" ? "text-indigo-600" : "text-slate-500"}`}>
+              {content.type}
+            </span>
+          </div>
         </div>
         <div className="flex-1 flex flex-col gap-1.5">
           {content.type === "heading" ? (
