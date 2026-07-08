@@ -2915,6 +2915,8 @@ timetableController.get("/my-submissions", async (c) => {
         docxKey: reportSubmissions.docxKey,
         adminApproval: reportSubmissions.adminApproval,
         adminComment: reportSubmissions.adminComment,
+        principalSignedKey: reportSubmissions.principalSignedKey,
+        principalSignedAt: reportSubmissions.principalSignedAt,
       })
       .from(reportSubmissions)
       .where(and(
@@ -2968,7 +2970,7 @@ timetableController.get("/submission-data", async (c) => {
     }
     reportData = normalizeReportData(reportData);
 
-    return c.json({ success: true, data: { reportData, submittedAt: submission.submittedAt, year: submission.year, month: submission.month, adminApproval: submission.adminApproval, adminComment: submission.adminComment } });
+    return c.json({ success: true, data: { reportData, submittedAt: submission.submittedAt, year: submission.year, month: submission.month, adminApproval: submission.adminApproval, adminComment: submission.adminComment, principalSignedKey: submission.principalSignedKey, principalSignedAt: submission.principalSignedAt } });
   } catch (err: any) {
     if (err instanceof BadRequestError || err instanceof ForbiddenError) throw err;
     console.error("Get submission data error:", err);
@@ -3026,6 +3028,8 @@ timetableController.get("/submitted-reports", async (c) => {
         docxKey: reportSubmissions.docxKey,
         adminApproval: reportSubmissions.adminApproval,
         adminComment: reportSubmissions.adminComment,
+        principalSignedKey: reportSubmissions.principalSignedKey,
+        principalSignedAt: reportSubmissions.principalSignedAt,
         staffName: staff.name,
         staffSalutation: staff.salutation,
         institutionName: institutions.name,
@@ -3178,6 +3182,125 @@ timetableController.get("/view-submitted-report", async (c) => {
     if (err instanceof BadRequestError || err instanceof ForbiddenError) throw err;
     console.error("View submitted report error:", err);
     return c.json({ success: false, message: "Failed to view report" }, 500);
+  }
+});
+
+// ─── POST /upload-principal-signed-report — upload principal signed PDF ──
+
+timetableController.post("/upload-principal-signed-report", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const body: any = await c.req.parseBody();
+    const submissionId = body.submissionId?.toString?.() || c.req.query("submissionId");
+
+    if (!submissionId) throw new BadRequestError("submissionId is required");
+
+    const db = getDb(c.env.DB);
+    const [submission] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(and(eq(reportSubmissions.id, submissionId), eq(reportSubmissions.isDeleted, 0)))
+      .limit(1);
+
+    if (!submission) throw new BadRequestError("Submission not found");
+
+    // Only the owner trainer can upload
+    if (submission.staffId !== user.id) throw new ForbiddenError("Access denied");
+
+    // Must be verified first
+    if (submission.adminApproval !== "verified") {
+      throw new BadRequestError("Principal signed report can only be uploaded after admin verification");
+    }
+
+    // Must be within 10 days of initial submission
+    const submittedAt = submission.submittedAt;
+    if (!submittedAt) throw new BadRequestError("Submission date not found");
+    const submittedDate = new Date(submittedAt);
+    const now = new Date();
+    const daysSince = (now.getTime() - submittedDate.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSince > 10) {
+      throw new BadRequestError("10-day edit window for principal signed report has expired");
+    }
+
+    // Get the uploaded file
+    const file = body.file;
+    if (!file || !(file instanceof File)) throw new BadRequestError("PDF file is required");
+
+    if (file.type !== "application/pdf") throw new BadRequestError("Only PDF files are accepted");
+
+    // Delete old principal signed file from R2 if exists
+    if (submission.principalSignedKey) {
+      await deleteFile(c.env.BUCKET, submission.principalSignedKey);
+    }
+
+    // Save to R2
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    const key = `principal-signed/${submission.staffId}/${submission.year}-${submission.month}-${timestamp}-${randomStr}.pdf`;
+    await c.env.BUCKET.put(key, file);
+
+    const nowStr = new Date().toISOString();
+    const [updated] = await db
+      .update(reportSubmissions)
+      .set({ principalSignedKey: key, principalSignedAt: nowStr, updatedAt: nowStr })
+      .where(eq(reportSubmissions.id, submissionId))
+      .returning();
+
+    return c.json({ success: true, data: { principalSignedKey: key, principalSignedAt: nowStr } });
+  } catch (err: any) {
+    if (err instanceof BadRequestError || err instanceof ForbiddenError) throw err;
+    console.error("Upload principal signed report error:", err);
+    return c.json({ success: false, message: "Failed to upload principal signed report" }, 500);
+  }
+});
+
+// ─── GET /download-principal-signed-report — download principal signed PDF ──
+
+timetableController.get("/download-principal-signed-report", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const submissionId = c.req.query("id");
+    if (!submissionId) throw new BadRequestError("id is required");
+
+    const db = getDb(c.env.DB);
+    const [submission] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(and(eq(reportSubmissions.id, submissionId), eq(reportSubmissions.isDeleted, 0)))
+      .limit(1);
+
+    if (!submission) throw new BadRequestError("Submission not found");
+
+    // Only the owner trainer or admin of same institution can download
+    if (user.role === "staff" && submission.staffId !== user.id) {
+      throw new ForbiddenError("Access denied");
+    }
+    if (user.role === "admin") {
+      const adminInstId = resolveInstitutionId(user);
+      if (submission.institutionId !== adminInstId) {
+        throw new ForbiddenError("Access denied");
+      }
+    }
+
+    if (!submission.principalSignedKey) {
+      throw new BadRequestError("No principal signed report uploaded yet");
+    }
+
+    const file = await getFile(c.env.BUCKET, submission.principalSignedKey);
+    if (!file) {
+      throw new BadRequestError("File not found in storage");
+    }
+
+    const buffer = await file.arrayBuffer();
+    const headers = new Headers();
+    headers.set("Content-Type", "application/pdf");
+    headers.set("Content-Disposition", `attachment; filename="Principal_Signed_Report_${MONTH_NAMES[submission.month - 1] || "Report"}_${submission.year}.pdf"`);
+
+    return new Response(buffer, { headers });
+  } catch (err: any) {
+    if (err instanceof BadRequestError || err instanceof ForbiddenError) throw err;
+    console.error("Download principal signed report error:", err);
+    return c.json({ success: false, message: "Failed to download principal signed report" }, 500);
   }
 });
 

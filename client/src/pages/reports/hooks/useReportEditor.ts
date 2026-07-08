@@ -52,7 +52,7 @@ export function useReportEditor() {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [reportData, setReportData] = useState<ReportParams | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
-  const [submissionStatus, setSubmissionStatus] = useState<{ submitted: boolean; submittedAt?: string; submissionId?: string; hasDraft?: boolean; draftId?: string; adminApproval?: string; adminComment?: string } | null>(null);
+  const [submissionStatus, setSubmissionStatus] = useState<{ submitted: boolean; submittedAt?: string; submissionId?: string; hasDraft?: boolean; draftId?: string; adminApproval?: string; adminComment?: string; principalSignedKey?: string; principalSignedAt?: string } | null>(null);
 
   const generateReport = useCallback(async (params: {
     year: number;
@@ -278,7 +278,7 @@ export function useReportEditor() {
           if (sub.status === "draft") {
             setSubmissionStatus({ submitted: false, hasDraft: true, draftId: sub.id });
           } else {
-            setSubmissionStatus({ submitted: true, submittedAt: sub.submittedAt, submissionId: sub.id, hasDraft: false, adminApproval: sub.adminApproval, adminComment: sub.adminComment });
+            setSubmissionStatus({ submitted: true, submittedAt: sub.submittedAt, submissionId: sub.id, hasDraft: false, adminApproval: sub.adminApproval, adminComment: sub.adminComment, principalSignedKey: sub.principalSignedKey, principalSignedAt: sub.principalSignedAt });
           }
         } else {
           setSubmissionStatus({ submitted: false, hasDraft: false });
@@ -296,7 +296,7 @@ export function useReportEditor() {
         const rd = res.data.data.reportData;
         if (rd && typeof rd === "object") {
           setReportData(rd as ReportParams);
-          setSubmissionStatus({ submitted: true, submittedAt: res.data.data.submittedAt, submissionId, adminApproval: res.data.data.adminApproval, adminComment: res.data.data.adminComment });
+          setSubmissionStatus({ submitted: true, submittedAt: res.data.data.submittedAt, submissionId, adminApproval: res.data.data.adminApproval, adminComment: res.data.data.adminComment, principalSignedKey: res.data.data.principalSignedKey, principalSignedAt: res.data.data.principalSignedAt });
         }
       }
     } catch {

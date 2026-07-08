@@ -53,6 +53,8 @@ import {
   ShieldCheck,
   ShieldX,
   MessageSquare,
+  Upload,
+  Shield,
 } from "lucide-react";
 
 const MONTH_NAMES = [
@@ -82,6 +84,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
   const [viewMode, setViewMode] = useState<"edit" | "submitted">("edit");
   const [signatureLoadError, setSignatureLoadError] = useState(false);
   const signatureFileRef = useRef<HTMLInputElement>(null);
+  const principalPdfRef = useRef<HTMLInputElement>(null);
 
   // Draft action states
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
@@ -211,6 +214,40 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
     setSignatureLoadError(false);
     await uploadSignature(file);
     if (signatureFileRef.current) signatureFileRef.current.value = "";
+  };
+
+  const handlePrincipalPdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Only PDF files are accepted");
+      return;
+    }
+    const submissionId = submissionStatus?.submissionId;
+    if (!submissionId) {
+      toast.error("No active submission found");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("submissionId", submissionId);
+    try {
+      const res = await _axios.post("/admin/timetable/upload-principal-signed-report", formData);
+      if (res.data?.success) {
+        toast.success("Principal signed report uploaded");
+        checkSubmissionStatus({
+          year: currentMonth.year,
+          month: currentMonth.month,
+          staffId: isAdminRole ? selectedStaffId : null,
+        });
+      } else {
+        toast.error(res.data?.message || "Upload failed");
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to upload";
+      toast.error(msg);
+    }
+    if (principalPdfRef.current) principalPdfRef.current.value = "";
   };
 
   const handleSubmitReport = () => {
@@ -612,6 +649,82 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                   Signature required to submit
                 </span>
               )}
+              {/* Principal Signed Report (trainers only, after verification) */}
+              {!isAdminRole && isApproved && (() => {
+                const submittedAt = submissionStatus?.submittedAt;
+                const daysSince = submittedAt ? (Date.now() - new Date(submittedAt).getTime()) / (1000 * 60 * 60 * 24) : Infinity;
+                const canEdit = daysSince <= 10;
+                const hasPrincipalSigned = !!submissionStatus?.principalSignedKey;
+                return (
+                  <>
+                    <div className="h-5 w-px bg-slate-300 shrink-0" />
+                    <input
+                      ref={principalPdfRef}
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handlePrincipalPdfUpload}
+                      className="hidden"
+                    />
+                    {canEdit ? (
+                      <>
+                        {hasPrincipalSigned ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-1.5 rounded-lg font-semibold border-emerald-300 text-emerald-700"
+                              onClick={() => window.open(`/admin/timetable/download-principal-signed-report?id=${submissionStatus?.submissionId}`, "_blank")}
+                            >
+                              <Download size={14} />
+                              Signed PDF
+                            </Button>
+                            <Button
+                              onClick={() => principalPdfRef.current?.click()}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-1.5 rounded-lg font-semibold"
+                            >
+                              <Upload size={14} />
+                              Replace
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            onClick={() => principalPdfRef.current?.click()}
+                            size="sm"
+                            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold hover:from-violet-700 hover:to-purple-700 transition-all shadow-md"
+                          >
+                            <Upload size={14} />
+                            Upload Principal Signed PDF
+                          </Button>
+                        )}
+                        <span className="text-[10px] text-slate-500">
+                          {Math.ceil(10 - daysSince)} days left
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        {hasPrincipalSigned ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1.5 rounded-lg font-semibold border-emerald-300 text-emerald-700"
+                            onClick={() => window.open(`/admin/timetable/download-principal-signed-report?id=${submissionStatus?.submissionId}`, "_blank")}
+                          >
+                            <Download size={14} />
+                            Signed PDF
+                          </Button>
+                        ) : (
+                          <span className="flex items-center gap-1 text-xs font-semibold text-slate-400">
+                            <Shield size={14} />
+                            Principal sign window expired
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </>
+                );
+              })()}
               <div className="flex-1" />
               <Button
                 onClick={handleDownload}
@@ -2434,6 +2547,78 @@ function SubmittedReportsView({
 
 // ─── My Submissions View (teacher) ───
 
+function PrincipalSignedUpload({ r, onRefresh }: { r: any; onRefresh: () => void }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const submittedAt = r.submittedAt;
+  const daysSince = submittedAt ? (Date.now() - new Date(submittedAt).getTime()) / (1000 * 60 * 60 * 24) : Infinity;
+  const canEdit = daysSince <= 10;
+  const hasSigned = !!r.principalSignedKey;
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") { toast.error("Only PDF files are accepted"); return; }
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("submissionId", r.id);
+    setUploading(true);
+    try {
+      const res = await _axios.post("/admin/timetable/upload-principal-signed-report", formData);
+      if (res.data?.success) { toast.success("Principal signed report uploaded"); onRefresh(); }
+      else toast.error(res.data?.message || "Upload failed");
+    } catch (err: any) { toast.error(err?.response?.data?.message || "Failed to upload"); }
+    finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
+  };
+
+  return (
+    <>
+      <input ref={fileRef} type="file" accept="application/pdf" onChange={handleUpload} className="hidden" />
+      {canEdit ? (
+        hasSigned ? (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => window.open(`/admin/timetable/download-principal-signed-report?id=${r.id}`, "_blank")}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors"
+            >
+              <Download size={12} />
+              Signed
+            </button>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors disabled:opacity-50"
+            >
+              {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors disabled:opacity-50"
+          >
+            {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+            {uploading ? "Uploading..." : "Signed PDF"}
+          </button>
+        )
+      ) : (
+        hasSigned ? (
+          <button
+            onClick={() => window.open(`/admin/timetable/download-principal-signed-report?id=${r.id}`, "_blank")}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors"
+          >
+            <Download size={12} />
+            Signed
+          </button>
+        ) : (
+          <span className="text-[10px] text-slate-400 italic">Expired</span>
+        )
+      )}
+    </>
+  );
+}
+
 function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2661,6 +2846,9 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
                         )}
                         DOCX
                       </button>
+                      {r.adminApproval === "verified" && (
+                        <PrincipalSignedUpload r={r} onRefresh={() => { setLoading(true); _axios.get("/admin/timetable/my-submissions").then((res) => { if (res.data?.success) setSubmissions(res.data.data || []); }).catch(() => setSubmissions([])).finally(() => setLoading(false)); }} />
+                      )}
                     </div>
                   </td>
                 </tr>

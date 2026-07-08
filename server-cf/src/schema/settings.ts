@@ -124,6 +124,8 @@ export const reportSubmissions = sqliteTable("report_submissions", {
   adminComment: text("admin_comment"),
   reviewedAt: text("reviewed_at"),
   reviewedBy: text("reviewed_by"),
+  principalSignedKey: text("principal_signed_key"),
+  principalSignedAt: text("principal_signed_at"),
   isDeleted: integer("is_deleted").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
