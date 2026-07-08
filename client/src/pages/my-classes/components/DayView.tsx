@@ -250,7 +250,8 @@ export function DayView({
   const completedCount = entries.filter((e) => e.status === "completed").length;
   const dow = date.getDay();
   const showActions = !effectiveReadOnly || isSuperAdmin;
-  const actionColumnClass = effectiveReadOnly ? "w-[72px]" : "w-[176px]";
+  const actionColumnClass = effectiveReadOnly ? "w-[72px]" : "w-[160px]";
+  const stickyActionCellClass = `${actionColumnClass} sticky right-0 z-10 bg-[var(--neo-bg)] shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)]`;
 
   // Track non-break period index for color rotation
   let colorIdx = 0;
@@ -290,11 +291,11 @@ export function DayView({
         {/* Loading state */}
         {isLoading && (
           <div className="p-4">
-            <Table className="table-fixed">
+            <Table className="min-w-[640px] table-fixed">
               <TableHeader>
                 <TableRow className="bg-[var(--neo-bg-dark)]/40 hover:bg-[var(--neo-bg-dark)]/40 border-b border-white/30">
                   <TableHead className="w-[64px]"><Skeleton className="h-4 w-8" /></TableHead>
-                  <TableHead className="w-[100px]"><Skeleton className="h-4 w-16" /></TableHead>
+                  <TableHead className="w-[132px]"><Skeleton className="h-4 w-16" /></TableHead>
                   <TableHead><Skeleton className="h-4 w-32" /></TableHead>
                   <TableHead className="w-[90px] hidden sm:table-cell"><Skeleton className="h-4 w-14" /></TableHead>
                   {showActions && <TableHead className={actionColumnClass}><Skeleton className="h-4 w-8" /></TableHead>}
@@ -327,13 +328,13 @@ export function DayView({
 
         {/* Schedule table */}
         {!isLoading && sortedPeriods.length > 0 && (
-          <Table className="table-fixed">
+          <Table className="min-w-[640px] table-fixed">
             <TableHeader>
               <TableRow className="bg-[var(--neo-bg-dark)]/40 hover:bg-[var(--neo-bg-dark)]/40 border-b border-white/30">
                 <TableHead className="w-[64px] text-[11px] font-black uppercase tracking-wider text-slate-400 pl-5">
                   Period
                 </TableHead>
-                <TableHead className="w-[110px] text-[11px] font-black uppercase tracking-wider text-slate-400">
+                <TableHead className="w-[132px] text-[11px] font-black uppercase tracking-wider text-slate-400">
                   Time
                 </TableHead>
                 <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">
@@ -343,7 +344,7 @@ export function DayView({
                   Status
                 </TableHead>
                  {showActions && (
-                  <TableHead className={`${actionColumnClass} text-[11px] font-black uppercase tracking-wider text-slate-400 text-right pr-5`}>
+                  <TableHead className={`${actionColumnClass} sticky right-0 z-20 bg-[var(--neo-bg-dark)] text-[11px] font-black uppercase tracking-wider text-slate-400 text-right pr-5`}>
                     Actions
                   </TableHead>
                 )}
@@ -380,9 +381,8 @@ export function DayView({
                           P{period.periodNumber}
                         </span>
                       </TableCell>
-                      <TableCell className="align-top pt-3">
-                        <span className="text-sm font-semibold text-slate-600">{formatTime12Hour(period.startTime)}</span>
-                        <span className="text-xs text-slate-500 ml-0.5">– {formatTime12Hour(period.endTime)}</span>
+                      <TableCell className="align-top pt-3 whitespace-normal">
+                        <TimeRange startTime={period.startTime} endTime={period.endTime} muted />
                       </TableCell>
                       <TableCell className="align-top pt-3 whitespace-normal">
                         <span className="text-sm text-slate-400 italic">No class scheduled</span>
@@ -391,7 +391,7 @@ export function DayView({
                         <span className="text-[11px] text-slate-400 font-medium">&mdash;</span>
                       </TableCell>
                       {showActions && (
-                        <TableCell className={`${actionColumnClass} align-top pt-3 pr-4`} />
+                        <TableCell className={`${stickyActionCellClass} align-top pt-3 pr-4`} />
                       )}
                     </TableRow>
                   ) : (
@@ -601,6 +601,27 @@ function BreakRow({
   );
 }
 
+function TimeRange({
+  startTime,
+  endTime,
+  muted = false,
+}: {
+  startTime: string;
+  endTime: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-baseline gap-x-1 gap-y-0.5 leading-tight">
+      <span className={`whitespace-nowrap text-sm font-semibold ${muted ? "text-slate-600" : "text-slate-700"}`}>
+        {formatTime12Hour(startTime)}
+      </span>
+      <span className="whitespace-nowrap text-xs text-slate-500">
+        - {formatTime12Hour(endTime)}
+      </span>
+    </div>
+  );
+}
+
 /* ─── Scheduled Row ─── */
 function ScheduledRow({
   period,
@@ -632,7 +653,8 @@ function ScheduledRow({
   const classLabel = getClassLabel(entry.classId);
   const additionalClasses = entry.additionalClasses || [];
   const bookLabel = getBookLabel(entry.gradeBookId);
-  const actionColumnClass = readOnly ? "w-[72px]" : "w-[176px]";
+  const actionColumnClass = readOnly ? "w-[72px]" : "w-[160px]";
+  const stickyActionCellClass = `${actionColumnClass} sticky right-0 z-10 bg-[var(--neo-bg)] shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)]`;
 
   return (
     <TableRow
@@ -650,9 +672,8 @@ function ScheduledRow({
       </TableCell>
 
       {/* Time */}
-      <TableCell className="align-top pt-3">
-        <span className="text-sm font-semibold text-slate-700">{formatTime12Hour(period.startTime)}</span>
-        <span className="text-xs text-slate-500 ml-0.5">– {formatTime12Hour(period.endTime)}</span>
+      <TableCell className="align-top pt-3 whitespace-normal">
+        <TimeRange startTime={period.startTime} endTime={period.endTime} />
       </TableCell>
 
       {/* Class / Subject */}
@@ -743,7 +764,7 @@ function ScheduledRow({
 
       {/* Actions (only in non-readOnly mode or for super admin) */}
       {(!readOnly || isSuperAdmin) && (
-        <TableCell className={`${actionColumnClass} align-top pt-3 text-right pr-4`}>
+        <TableCell className={`${stickyActionCellClass} align-top pt-3 text-right pr-4`}>
           <div className="flex items-center justify-end gap-1">
             {!readOnly && (
               <>
@@ -809,9 +830,8 @@ function EmptyRow({
       </TableCell>
 
       {/* Time */}
-      <TableCell className="align-top pt-3">
-        <span className="text-sm font-semibold text-slate-600">{formatTime12Hour(period.startTime)}</span>
-        <span className="text-xs text-slate-500 ml-0.5">– {formatTime12Hour(period.endTime)}</span>
+      <TableCell className="align-top pt-3 whitespace-normal">
+        <TimeRange startTime={period.startTime} endTime={period.endTime} muted />
       </TableCell>
 
       {/* Empty label */}
@@ -828,7 +848,7 @@ function EmptyRow({
       </TableCell>
 
       {/* Add button */}
-      <TableCell className="w-[176px] align-top pt-3 text-right pr-4">
+      <TableCell className="w-[160px] sticky right-0 z-10 bg-[var(--neo-bg)] align-top pt-3 text-right pr-4 shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)]">
         <div
           className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-indigo-400 group-hover:text-indigo-600 group-hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(99,102,241,0.15)] transition-all opacity-60 group-hover:opacity-100"
           aria-label="Add class"
