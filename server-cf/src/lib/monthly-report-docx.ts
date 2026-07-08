@@ -626,6 +626,7 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
                     numbering: olMatch ? { reference: "report-numbering", level: 0 } : undefined,
                     spacing: { before: li === 0 ? 80 : 40, after: li === liItems.length - 1 ? 80 : 40, line: 276 },
                     pageBreakBefore: li === 0 ? pageBreakBefore : false,
+                    alignment: AlignmentType.JUSTIFIED,
                     children: parseHtmlInlineRuns(inner),
                   }),
                 );
@@ -640,6 +641,7 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
                   new Paragraph({
                     spacing: { before: pi === 0 ? 80 : 40, after: isLast ? 80 : 40, line: 276 },
                     pageBreakBefore: pi === 0 ? pageBreakBefore : false,
+                    alignment: AlignmentType.JUSTIFIED,
                     children: parseHtmlInlineRuns(inner),
                   }),
                 );
@@ -670,6 +672,7 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
                     bullet: item.content.format === "bullet" ? { level: 0 } : undefined,
                     spacing: { before: isFirst ? 80 : 40, after: isLast ? 80 : 40, line: 276 },
                     pageBreakBefore: isFirst ? pageBreakBefore : false,
+                    alignment: AlignmentType.JUSTIFIED,
                     children: parseInlineBold(itemText, isBold),
                   }),
                 );
@@ -679,6 +682,7 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
                 new Paragraph({
                   spacing: { before: 80, after: 80, line: 276 },
                   pageBreakBefore,
+                  alignment: AlignmentType.JUSTIFIED,
                   children: parseInlineBold(text, isBold),
                 }),
               );

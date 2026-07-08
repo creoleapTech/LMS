@@ -47,6 +47,51 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+function parseClassLabel(label: string) {
+  const match = label.trim().match(/^(\d+)\s*([a-zA-Z]*)$/);
+  if (match) {
+    return {
+      isNumeric: true,
+      grade: parseInt(match[1], 10),
+      section: match[2].toUpperCase(),
+    };
+  }
+  return {
+    isNumeric: false,
+    grade: label,
+    section: "",
+  };
+}
+
+function sortClassesLabel(classesLabel: string | undefined | null): string {
+  if (!classesLabel) return "—";
+  const cleaned = classesLabel.replace(/[\u2014—-]/g, "").trim();
+  if (!cleaned) return "—";
+
+  const parts = cleaned.split(",").map(s => s.trim()).filter(Boolean);
+
+  parts.sort((a, b) => {
+    const infoA = parseClassLabel(a);
+    const infoB = parseClassLabel(b);
+
+    if (infoA.isNumeric && infoB.isNumeric) {
+      const gradeA = infoA.grade as number;
+      const gradeB = infoB.grade as number;
+      if (gradeA !== gradeB) {
+        return gradeA - gradeB;
+      }
+      return infoA.section.localeCompare(infoB.section);
+    }
+
+    if (infoA.isNumeric && !infoB.isNumeric) return -1;
+    if (!infoA.isNumeric && infoB.isNumeric) return 1;
+
+    return a.localeCompare(b);
+  });
+
+  return parts.join(", ");
+}
+
 function normalizeReportData(data: any): any {
   if (!data) return data;
   data.isNormalized = true;
@@ -54,6 +99,7 @@ function normalizeReportData(data: any): any {
     data.classesLabel = data.classesLabel
       .replace(/(\d+),\s*([a-zA-Z])/g, "$1$2")
       .replace(/(\d+),([a-zA-Z])/g, "$1$2");
+    data.classesLabel = sortClassesLabel(data.classesLabel);
   }
   if (Array.isArray(data.rows)) {
     for (const row of data.rows) {
@@ -2919,44 +2965,52 @@ timetableController.get("/download-submitted-report", async (c) => {
       }
     }
 
-    let reportData = submission.reportData;
+    let reportData: any = submission.reportData;
     if (typeof reportData === "string") {
       try { reportData = JSON.parse(reportData); } catch { /* keep as string */ }
     }
 
-    const needsRegeneration = reportData && typeof reportData === "object" && !reportData.isNormalized;
-    let docxBuffer: Uint8Array;
+    let docxBuffer: Uint8Array | null = null;
 
     const { signatureData, signatureImageType } = await loadStaffSignature(db, c.env.BUCKET, submission.staffId);
 
-    if (needsRegeneration && reportData && signatureData) {
-      reportData = normalizeReportData(reportData);
-      docxBuffer = await generateMonthlyReportDocx({
-        ...reportData,
-        signatureData,
-        signatureImageType,
-        submittedOn: submission.submittedAt || reportData.submittedOn || formatSubmittedOn(),
-      });
-
-      // Lazy-update the database record
+    if (reportData && typeof reportData === "object" && signatureData) {
       try {
-        await db
-          .update(reportSubmissions)
-          .set({ reportData: JSON.stringify(reportData) })
-          .where(eq(reportSubmissions.id, submission.id));
-      } catch (dbErr) {
-        console.error("Failed to update normalized JSON in DB:", dbErr);
-      }
+        reportData = normalizeReportData(reportData);
+        docxBuffer = await generateMonthlyReportDocx({
+          ...reportData,
+          signatureData,
+          signatureImageType,
+          submittedOn: submission.submittedAt || reportData.submittedOn || formatSubmittedOn(),
+        });
 
-      // Lazy-update R2 with the clean version
-      if (c.env.BUCKET && submission.docxKey) {
+        // Lazy-update the database record
         try {
-          await c.env.BUCKET.put(submission.docxKey, docxBuffer);
-        } catch (e) {
-          console.error("Failed to update corrected report in R2:", e);
+          await db
+            .update(reportSubmissions)
+            .set({ reportData: JSON.stringify(reportData) })
+            .where(eq(reportSubmissions.id, submission.id));
+        } catch (dbErr) {
+          console.error("Failed to update normalized JSON in DB:", dbErr);
         }
+
+        // Lazy-update R2 with the clean version
+        if (c.env.BUCKET && submission.docxKey) {
+          try {
+            await c.env.BUCKET.put(submission.docxKey, docxBuffer);
+          } catch (e) {
+            console.error("Failed to update corrected report in R2:", e);
+          }
+        }
+      } catch (genErr) {
+        console.error("Failed to regenerate submitted report DOCX:", genErr);
       }
-    } else {
+    }
+
+    if (!docxBuffer) {
+      if (!submission.docxKey) {
+        throw new BadRequestError("File not found in storage (no key)");
+      }
       const file = await getFile(c.env.BUCKET, submission.docxKey);
       if (!file) {
         throw new BadRequestError("File not found in storage");

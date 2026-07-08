@@ -1515,7 +1515,8 @@ function renderParagraphContent(text: string, format?: "plain" | "bullet" | "num
   if (text.startsWith("<")) {
     return (
       <div
-        className="prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_p]:my-1"
+        className="prose prose-sm max-w-none text-justify [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_p]:my-1"
+        style={{ textAlign: "justify" }}
         dangerouslySetInnerHTML={{ __html: text }}
       />
     );
@@ -1547,7 +1548,7 @@ function renderParagraphContent(text: string, format?: "plain" | "bullet" | "num
   if (format === "bullet") {
     const items = normalized.split(/\n\n+|\n(?=\s*[•●◦▪➢►‣⁃\-*])\s*/).map(s => s.replace(/^\s*[•●◦▪➢►‣⁃\-*]\s*/, "").trim()).filter(l => l);
     return (
-      <ul style={{ margin: 0, paddingLeft: "20px", listStyleType: "disc" }}>
+      <ul style={{ margin: 0, paddingLeft: "20px", listStyleType: "disc", textAlign: "justify" }}>
         {items.map((item, idx) => (
           <li key={idx} style={{ marginBottom: "6px" }}>{renderMultiline(item)}</li>
         ))}
@@ -1557,14 +1558,14 @@ function renderParagraphContent(text: string, format?: "plain" | "bullet" | "num
   if (format === "number") {
     const items = normalized.split(/\n\n+|\n(?=\s*\d+[.)]\s)/).map(s => s.replace(/^\s*\d+[.)]\s*/, "").trim()).filter(l => l);
     return (
-      <ol style={{ margin: 0, paddingLeft: "20px" }}>
+      <ol style={{ margin: 0, paddingLeft: "20px", textAlign: "justify" }}>
         {items.map((item, idx) => (
           <li key={idx} style={{ marginBottom: "6px" }}>{renderMultiline(item)}</li>
         ))}
       </ol>
     );
   }
-  return <div style={{ whiteSpace: "pre-wrap" }}>{renderInline(normalized)}</div>;
+  return <div style={{ whiteSpace: "pre-wrap", textAlign: "justify" }}>{renderInline(normalized)}</div>;
 }
 
 function renderMeasurementContent(units: Unit[]): React.ReactNode {
@@ -1635,6 +1636,51 @@ function renderPageContent(units: Unit[], signatureUrl?: string | null): React.R
   return elements;
 }
 
+function parseClassLabel(label: string) {
+  const match = label.trim().match(/^(\d+)\s*([a-zA-Z]*)$/);
+  if (match) {
+    return {
+      isNumeric: true,
+      grade: parseInt(match[1], 10),
+      section: match[2].toUpperCase(),
+    };
+  }
+  return {
+    isNumeric: false,
+    grade: label,
+    section: "",
+  };
+}
+
+function sortClassesLabel(classesLabel: string | undefined | null): string {
+  if (!classesLabel) return "—";
+  const cleaned = classesLabel.replace(/[\u2014—-]/g, "").trim();
+  if (!cleaned) return "—";
+
+  const parts = cleaned.split(",").map(s => s.trim()).filter(Boolean);
+
+  parts.sort((a, b) => {
+    const infoA = parseClassLabel(a);
+    const infoB = parseClassLabel(b);
+
+    if (infoA.isNumeric && infoB.isNumeric) {
+      const gradeA = infoA.grade as number;
+      const gradeB = infoB.grade as number;
+      if (gradeA !== gradeB) {
+        return gradeA - gradeB;
+      }
+      return infoA.section.localeCompare(infoB.section);
+    }
+
+    if (infoA.isNumeric && !infoB.isNumeric) return -1;
+    if (!infoA.isNumeric && infoB.isNumeric) return 1;
+
+    return a.localeCompare(b);
+  });
+
+  return parts.join(", ");
+}
+
 // ─── Cover Page (always page 1) ───
 
 function CoverPage({ data }: { data: ReportParams }) {
@@ -1672,7 +1718,7 @@ function CoverPage({ data }: { data: ReportParams }) {
       <div style={{ marginTop: tw(240), marginBottom: tw(120), fontWeight: "bold", fontSize: hp(40) }}>School Information</div>
       {[
         { label: "School Name", value: data.schoolName, bold: true },
-        { label: "Class/Grade", value: data.classesLabel, bold: false },
+        { label: "Class/Grade", value: sortClassesLabel(data.classesLabel), bold: false },
         { label: "Subject/Program", value: data.subjectLabel, bold: false },
         { label: "No. of Sessions/Periods Planned", value: String(data.sessionsPlanned), bold: false },
         { label: "No. of Sessions/Periods Completed", value: String(data.sessionsCompleted), bold: false },

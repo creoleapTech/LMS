@@ -41,7 +41,7 @@ export function ReportBodyEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none w-full min-h-[60px] focus:outline-none p-3 text-sm",
+          "prose prose-sm max-w-none w-full min-h-[60px] focus:outline-none p-3 text-sm text-justify",
       },
     },
   });
