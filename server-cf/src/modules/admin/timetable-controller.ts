@@ -2570,6 +2570,10 @@ timetableController.post("/submit-report", async (c) => {
       .limit(1);
 
     if (existing) {
+      // Prevent re-submission if report is already approved
+      if (existing.adminApproval === "verified") {
+        return c.json({ success: false, message: "Cannot modify a verified report." }, 400);
+      }
       // Delete old DOCX from R2 if key changed
       if (existing.docxKey && existing.docxKey !== docxKey) {
         await deleteFile(c.env.BUCKET, existing.docxKey);
@@ -2610,6 +2614,81 @@ timetableController.post("/submit-report", async (c) => {
     if (err instanceof BadRequestError) throw err;
     console.error("Submit report error:", err);
     return c.json({ success: false, message: "Failed to submit report" }, 500);
+  }
+});
+
+// ═══ Report Approval endpoints ═══════════════════
+
+// ─── POST /approve-report — superadmin approves a report ──
+
+timetableController.post("/approve-report", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    if (user.role !== "super_admin" && user.role !== "admin") {
+      throw new BadRequestError("Only admin/super_admin can approve reports");
+    }
+
+    const { submissionId } = await c.req.json();
+    if (!submissionId) throw new BadRequestError("submissionId is required");
+
+    const db = getDb(c.env.DB);
+    const now = nowISO();
+
+    const [updated] = await db
+      .update(reportSubmissions)
+      .set({
+        adminApproval: "verified",
+        reviewedAt: now,
+        reviewedBy: user.id,
+        updatedAt: now,
+      })
+      .where(eq(reportSubmissions.id, submissionId))
+      .returning();
+
+    if (!updated) throw new BadRequestError("Submission not found");
+
+    return c.json({ success: true, data: updated });
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("Approve report error:", err);
+    return c.json({ success: false, message: "Failed to approve report" }, 500);
+  }
+});
+
+// ─── POST /reject-report — superadmin rejects a report with comment ──
+
+timetableController.post("/reject-report", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    if (user.role !== "super_admin" && user.role !== "admin") {
+      throw new BadRequestError("Only admin/super_admin can reject reports");
+    }
+
+    const { submissionId, comment } = await c.req.json();
+    if (!submissionId) throw new BadRequestError("submissionId is required");
+
+    const db = getDb(c.env.DB);
+    const now = nowISO();
+
+    const [updated] = await db
+      .update(reportSubmissions)
+      .set({
+        adminApproval: "rejected",
+        adminComment: comment || null,
+        reviewedAt: now,
+        reviewedBy: user.id,
+        updatedAt: now,
+      })
+      .where(eq(reportSubmissions.id, submissionId))
+      .returning();
+
+    if (!updated) throw new BadRequestError("Submission not found");
+
+    return c.json({ success: true, data: updated });
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("Reject report error:", err);
+    return c.json({ success: false, message: "Failed to reject report" }, 500);
   }
 });
 
@@ -2830,6 +2909,8 @@ timetableController.get("/my-submissions", async (c) => {
         status: reportSubmissions.status,
         submittedAt: reportSubmissions.submittedAt,
         docxKey: reportSubmissions.docxKey,
+        adminApproval: reportSubmissions.adminApproval,
+        adminComment: reportSubmissions.adminComment,
       })
       .from(reportSubmissions)
       .where(and(
@@ -2883,7 +2964,7 @@ timetableController.get("/submission-data", async (c) => {
     }
     reportData = normalizeReportData(reportData);
 
-    return c.json({ success: true, data: { reportData, submittedAt: submission.submittedAt, year: submission.year, month: submission.month } });
+    return c.json({ success: true, data: { reportData, submittedAt: submission.submittedAt, year: submission.year, month: submission.month, adminApproval: submission.adminApproval, adminComment: submission.adminComment } });
   } catch (err: any) {
     if (err instanceof BadRequestError || err instanceof ForbiddenError) throw err;
     console.error("Get submission data error:", err);
@@ -2939,6 +3020,8 @@ timetableController.get("/submitted-reports", async (c) => {
         status: reportSubmissions.status,
         submittedAt: reportSubmissions.submittedAt,
         docxKey: reportSubmissions.docxKey,
+        adminApproval: reportSubmissions.adminApproval,
+        adminComment: reportSubmissions.adminComment,
         staffName: staff.name,
         staffSalutation: staff.salutation,
         institutionName: institutions.name,

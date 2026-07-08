@@ -9,7 +9,7 @@ import { useReportEditor, type BodyItem, type ReportTable, type ReportParams } f
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ReportBodyEditor } from "@/components/editors/ReportBodyEditor";
+
 import {
   Select,
   SelectContent,
@@ -50,6 +50,9 @@ import {
   Inbox,
   Calendar,
   X,
+  ShieldCheck,
+  ShieldX,
+  MessageSquare,
 } from "lucide-react";
 
 const MONTH_NAMES = [
@@ -148,6 +151,8 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
     clearReport,
     updateField,
   } = useReportEditor();
+
+  const isApproved = submissionStatus?.adminApproval === "verified";
 
   const handlePrevMonth = () => {
     setCurrentMonth((prev) => {
@@ -440,100 +445,115 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
       {/* Report Editor */}
       {reportData && (
         <div className="space-y-6">
+          {/* Approved Banner */}
+          {isApproved && (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold">
+              <ShieldCheck size={18} />
+              This report has been verified and is now read-only.
+            </div>
+          )}
+
           {/* Floating Toolbar */}
           <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-lg px-4 py-2.5 space-y-2">
             {/* Row 1: Content actions + view toggle */}
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-700 shrink-0">Quick Actions:</span>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <Button
-                  onClick={() => addBodyItem({ kind: "content", content: { type: "heading", text: "" }, keepOnSamePage: true })}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1.5 rounded-lg font-semibold"
-                >
-                  <Heading2 size={14} />
-                  Heading
-                </Button>
-                <Button
-                  onClick={() => addBodyItem({ kind: "content", content: { type: "paragraph", text: "" }, keepOnSamePage: true })}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1.5 rounded-lg font-semibold"
-                >
-                  <Pilcrow size={14} />
-                  Paragraph
-                </Button>
-                <Button
-                  onClick={() => setShowAddTableDialog(true)}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1.5 rounded-lg font-semibold"
-                >
-                  <TableIcon size={14} />
-                  Add Table
-                </Button>
-              </div>
-              <div className="h-5 w-px bg-slate-300 mx-1 shrink-0" />
-              <div className="flex items-center gap-1.5">
-                {/* Preview disabled — uncomment to re-enable
-                <Button
-                  onClick={() => setPreviewMode(!previewMode)}
-                  variant={previewMode ? "default" : "outline"}
-                  size="sm"
-                  className="flex items-center gap-1.5 rounded-lg font-semibold"
-                >
-                  {previewMode ? <Pencil size={14} /> : <Eye size={14} />}
-                  {previewMode ? "Edit" : "Preview"}
-                </Button>
-                */}
-                <Button
-                  onClick={handleRegenerate}
-                  disabled={isGenerating}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1.5 rounded-lg font-semibold"
-                >
-                  <RefreshCw size={14} className={isGenerating ? "animate-spin" : ""} />
-                  Regenerate
-                </Button>
-              </div>
-              {/* Signature upload (teachers only) */}
-              {!isAdminRole && (
+              {!isApproved && (
                 <>
-                  <input
-                    ref={signatureFileRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleSignatureUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    onClick={() => signatureFileRef.current?.click()}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1.5 rounded-lg font-semibold"
-                  >
-                    <PenLine size={14} />
-                    {signatureUrl && !signatureLoadError ? "Change Signature" : "Upload Signature"}
-                  </Button>
-                  {signatureUrl && !signatureLoadError && (
-                    <img
-                      src={signatureUrl}
-                      alt="Signature"
-                      onError={() => setSignatureLoadError(true)}
-                      className="h-10 w-24 object-contain border border-slate-200 rounded"
-                    />
+                  <span className="text-sm font-bold text-slate-700 shrink-0">Quick Actions:</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Button
+                      onClick={() => addBodyItem({ kind: "content", content: { type: "heading", text: "" }, keepOnSamePage: true })}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1.5 rounded-lg font-semibold"
+                    >
+                      <Heading2 size={14} />
+                      Heading
+                    </Button>
+                    <Button
+                      onClick={() => addBodyItem({ kind: "content", content: { type: "paragraph", text: "" }, keepOnSamePage: true })}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1.5 rounded-lg font-semibold"
+                    >
+                      <Pilcrow size={14} />
+                      Paragraph
+                    </Button>
+                    <Button
+                      onClick={() => setShowAddTableDialog(true)}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1.5 rounded-lg font-semibold"
+                    >
+                      <TableIcon size={14} />
+                      Add Table
+                    </Button>
+                  </div>
+                  <div className="h-5 w-px bg-slate-300 mx-1 shrink-0" />
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      onClick={handleRegenerate}
+                      disabled={isGenerating}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1.5 rounded-lg font-semibold"
+                    >
+                      <RefreshCw size={14} className={isGenerating ? "animate-spin" : ""} />
+                      Regenerate
+                    </Button>
+                  </div>
+                  {/* Signature upload (teachers only) */}
+                  {!isAdminRole && (
+                    <>
+                      <input
+                        ref={signatureFileRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleSignatureUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        onClick={() => signatureFileRef.current?.click()}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-1.5 rounded-lg font-semibold"
+                      >
+                        <PenLine size={14} />
+                        {signatureUrl && !signatureLoadError ? "Change Signature" : "Upload Signature"}
+                      </Button>
+                      {signatureUrl && !signatureLoadError && (
+                        <img
+                          src={signatureUrl}
+                          alt="Signature"
+                          onError={() => setSignatureLoadError(true)}
+                          className="h-10 w-24 object-contain border border-slate-200 rounded"
+                        />
+                      )}
+                    </>
                   )}
                 </>
               )}
               <div className="flex-1" />
               {/* Submission status badge */}
               {submissionStatus?.submitted ? (
-                <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded-lg shrink-0">
-                  <CheckCircle2 size={14} />
-                  Submitted{submissionStatus.submittedAt ? ` on ${new Date(submissionStatus.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}` : ""}
-                </span>
+                <>
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded-lg shrink-0">
+                    <CheckCircle2 size={14} />
+                    Submitted{submissionStatus.submittedAt ? ` on ${new Date(submissionStatus.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}` : ""}
+                  </span>
+                  {submissionStatus.adminApproval === "verified" && (
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded-lg shrink-0">
+                      <ShieldCheck size={14} />
+                      Verified
+                    </span>
+                  )}
+                  {submissionStatus.adminApproval === "rejected" && (
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-red-700 bg-red-50 px-2.5 py-1.5 rounded-lg shrink-0">
+                      <ShieldX size={14} />
+                      Rejected
+                    </span>
+                  )}
+                </>
               ) : submissionStatus?.hasDraft ? (
                 <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg shrink-0">
                   <Clock size={14} />
@@ -545,11 +565,17 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                   Not Submitted
                 </span>
               ) : null}
+              {submissionStatus?.adminApproval === "rejected" && submissionStatus?.adminComment && (
+                <span className="text-xs text-red-600 max-w-[200px] truncate shrink-0" title={submissionStatus.adminComment}>
+                  <MessageSquare size={12} className="inline mr-1" />
+                  {submissionStatus.adminComment}
+                </span>
+              )}
             </div>
             {/* Row 2: Actions row (submit + download) */}
             <div className="flex items-center gap-2">
-              {/* Submit Report button (teachers only) */}
-              {!isAdminRole && (
+              {/* Submit Report button (teachers only, hidden if approved) */}
+              {!isAdminRole && !isApproved && (
                 <Button
                   onClick={handleSubmitReport}
                   disabled={isSubmitting || !signatureUrl}
@@ -565,8 +591,8 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                   {isSubmitting ? "Submitting..." : "Submit Report"}
                 </Button>
               )}
-              {/* Save Draft button (teachers only) */}
-              {!isAdminRole && reportData && (
+              {/* Save Draft button (teachers only, hidden if approved) */}
+              {!isAdminRole && !isApproved && reportData && (
                 <Button
                   onClick={handleSaveDraft}
                   disabled={isSavingDraft}
@@ -581,7 +607,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                   {isSavingDraft ? "Saving..." : "Save Draft"}
                 </Button>
               )}
-              {!isAdminRole && !signatureUrl && (
+              {!isAdminRole && !isApproved && !signatureUrl && (
                 <span className="text-xs font-semibold text-red-600">
                   Signature required to submit
                 </span>
@@ -652,7 +678,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
               {/* Report Metadata Card */}
               <div className="neo-card rounded-2xl border border-slate-200/80 p-5 bg-slate-50/50 space-y-4 mb-6">
                 <h2 className="text-lg font-bold text-slate-700 tracking-wide">Report Session Statistics</h2>
-                <p className="text-sm text-muted-foreground">Adjust the planned and completed sessions count for this monthly report.</p>
+                <p className="text-sm text-muted-foreground">{isApproved ? "Session statistics — read only" : "Adjust the planned and completed sessions count for this monthly report."}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-500">No. of Sessions/Periods Planned</label>
@@ -661,6 +687,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                       value={reportData.sessionsPlanned ?? ""}
                       onChange={(e) => updateField("sessionsPlanned", Number(e.target.value))}
                       className="rounded-lg bg-white"
+                      disabled={isApproved}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -670,6 +697,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                       value={reportData.sessionsCompleted ?? ""}
                       onChange={(e) => updateField("sessionsCompleted", Number(e.target.value))}
                       className="rounded-lg bg-white"
+                      disabled={isApproved}
                     />
                   </div>
                 </div>
@@ -680,17 +708,19 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                 <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-4 flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-extrabold text-white tracking-wide">Session Summary</h2>
-                    <p className="text-sm text-white/80">Edit column names and cell values — changes will appear in the downloaded docx</p>
+                    <p className="text-sm text-white/80">{isApproved ? "View-only session summary" : "Edit column names and cell values — changes will appear in the downloaded docx"}</p>
                   </div>
-                  <Button
-                    onClick={addRow}
-                    variant="secondary"
-                    size="sm"
-                    className="flex items-center gap-1.5 rounded-lg font-bold"
-                  >
-                    <Plus size={14} />
-                    Add Row
-                  </Button>
+                  {!isApproved && (
+                    <Button
+                      onClick={addRow}
+                      variant="secondary"
+                      size="sm"
+                      className="flex items-center gap-1.5 rounded-lg font-bold"
+                    >
+                      <Plus size={14} />
+                      Add Row
+                    </Button>
+                  )}
                 </div>
 
                 <div className="overflow-x-auto">
@@ -702,18 +732,19 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                             <input
                               value={col}
                               onChange={(e) => updateSessionColumn(ci, e.target.value)}
-                              className="bg-transparent text-white font-bold text-center w-full outline-none border-b border-white/30 focus:border-white/80 transition-colors"
+                              readOnly={isApproved}
+                              className={`bg-transparent text-white font-bold text-center w-full outline-none border-b border-white/30 focus:border-white/80 transition-colors ${isApproved ? "cursor-default" : ""}`}
                             />
                           </th>
                         ))}
-                        <th className="px-3 py-2.5 text-center font-bold w-12"></th>
+                        <th className={`px-3 py-2.5 text-center font-bold w-12 ${isApproved ? "hidden" : ""}`}></th>
                       </tr>
                     </thead>
                     <tbody>
                       {reportData.rows.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="text-center py-8 text-muted-foreground">
-                            No session entries. Click "Add Row" to create one.
+                          <td colSpan={isApproved ? 5 : 6} className="text-center py-8 text-muted-foreground">
+                            {isApproved ? "No session entries." : 'No session entries. Click "Add Row" to create one.'}
                           </td>
                         </tr>
                       ) : (
@@ -724,6 +755,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                                 value={row.date}
                                 onChange={(e) => updateRow(index, "date", e.target.value)}
                                 className="h-8 text-xs rounded-md text-center"
+                                readOnly={isApproved}
                               />
                             </td>
                             <td className="px-3 py-1.5">
@@ -741,6 +773,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                                   }
                                 }}
                                 className="h-8 text-xs rounded-md text-center"
+                                readOnly={isApproved}
                               />
                             </td>
                             <td className="px-3 py-1.5">
@@ -748,6 +781,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                                 value={row.chapterName}
                                 onChange={(e) => updateRow(index, "chapterName", e.target.value)}
                                 className="h-8 text-xs rounded-md"
+                                readOnly={isApproved}
                               />
                             </td>
                             <td className="px-3 py-1.5">
@@ -755,6 +789,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                                 value={row.topicName}
                                 onChange={(e) => updateRow(index, "topicName", e.target.value)}
                                 className="h-8 text-xs rounded-md"
+                                readOnly={isApproved}
                               />
                             </td>
                             <td className="px-3 py-1.5">
@@ -763,9 +798,10 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                                 onChange={(e) => updateRow(index, "remarks", e.target.value)}
                                 className="min-h-[32px] text-xs rounded-md resize-none"
                                 rows={1}
+                                readOnly={isApproved}
                               />
                             </td>
-                            <td className="px-3 py-1.5 text-center">
+                            <td className={`px-3 py-1.5 text-center ${isApproved ? "hidden" : ""}`}>
                               <button
                                 onClick={() => removeRow(index)}
                                 className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
@@ -789,6 +825,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                   item={item}
                   onUpdate={(newItem) => updateBodyItem(index, newItem)}
                   onRemove={() => removeBodyItem(index)}
+                  readOnly={isApproved}
                 />
               ))}
             </>
@@ -808,15 +845,17 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
               )}
               {isDownloading ? "Downloading..." : "Download as DOCX"}
             </Button>
-            <Button
-              onClick={handleRegenerate}
-              disabled={isGenerating}
-              variant="outline"
-              className="flex items-center gap-2 rounded-xl font-bold disabled:opacity-60"
-            >
-              <RefreshCw size={16} className={isGenerating ? "animate-spin" : ""} />
-              Regenerate
-            </Button>
+            {!isApproved && (
+              <Button
+                onClick={handleRegenerate}
+                disabled={isGenerating}
+                variant="outline"
+                className="flex items-center gap-2 rounded-xl font-bold disabled:opacity-60"
+              >
+                <RefreshCw size={16} className={isGenerating ? "animate-spin" : ""} />
+                Regenerate
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -880,15 +919,17 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                   className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-300/30"
                 >
                   <Eye size={16} className="mr-1.5" />
-                  View/Edit Submission
+                  {isApproved ? "View Submission" : "View/Edit Submission"}
                 </Button>
-                <Button
-                  onClick={handleGenerateClick}
-                  variant="outline"
-                  className="rounded-xl font-bold border-slate-200 hover:bg-slate-50"
-                >
-                  Start Fresh
-                </Button>
+                {!isApproved && (
+                  <Button
+                    onClick={handleGenerateClick}
+                    variant="outline"
+                    className="rounded-xl font-bold border-slate-200 hover:bg-slate-50"
+                  >
+                    Start Fresh
+                  </Button>
+                )}
               </div>
             </>
           ) : (
@@ -981,10 +1022,12 @@ function BodyItemEditor({
   item,
   onUpdate,
   onRemove,
+  readOnly,
 }: {
   item: BodyItem;
   onUpdate: (item: BodyItem) => void;
   onRemove: () => void;
+  readOnly?: boolean;
 }) {
   if (item.kind === "table" && item.table) {
     const table = item.table;
@@ -1013,25 +1056,30 @@ function BodyItemEditor({
           <input
             value={table.title}
             onChange={(e) => updateTitle(e.target.value)}
-            className="bg-transparent text-white font-extrabold text-lg tracking-wide outline-none border-b border-white/30 focus:border-white/80 transition-colors flex-1 mr-3"
+            readOnly={readOnly}
+            className={`bg-transparent text-white font-extrabold text-lg tracking-wide outline-none border-b border-white/30 focus:border-white/80 transition-colors flex-1 mr-3 ${readOnly ? "cursor-default" : ""}`}
           />
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-1.5 text-xs font-bold text-white/90 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={!!item.keepOnSamePage}
-                onChange={(e) => updateKeepOnSamePage(e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-white/40 bg-white/20 text-indigo-600 focus:ring-0"
-              />
-              Keep on same page
-            </label>
-            <Button onClick={addTableRow} variant="secondary" size="sm" className="flex items-center gap-1.5 rounded-lg font-bold">
-              <Plus size={14} />
-              Add Row
-            </Button>
-            <button onClick={onRemove} className="p-1.5 rounded-lg text-white/80 hover:bg-white/20 transition-colors" title="Remove table">
-              <Trash2 size={16} />
-            </button>
+            {!readOnly && (
+              <>
+                <label className="flex items-center gap-1.5 text-xs font-bold text-white/90 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={!!item.keepOnSamePage}
+                    onChange={(e) => updateKeepOnSamePage(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded border-white/40 bg-white/20 text-indigo-600 focus:ring-0"
+                  />
+                  Keep on same page
+                </label>
+                <Button onClick={addTableRow} variant="secondary" size="sm" className="flex items-center gap-1.5 rounded-lg font-bold">
+                  <Plus size={14} />
+                  Add Row
+                </Button>
+                <button onClick={onRemove} className="p-1.5 rounded-lg text-white/80 hover:bg-white/20 transition-colors" title="Remove table">
+                  <Trash2 size={16} />
+                </button>
+              </>
+            )}
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -1043,18 +1091,19 @@ function BodyItemEditor({
                     <input
                       value={col}
                       onChange={(e) => updateColumn(ci, e.target.value)}
-                      className="bg-transparent text-white font-bold text-center w-full outline-none border-b border-white/30 focus:border-white/80 transition-colors"
+                      readOnly={readOnly}
+                      className={`bg-transparent text-white font-bold text-center w-full outline-none border-b border-white/30 focus:border-white/80 transition-colors ${readOnly ? "cursor-default" : ""}`}
                     />
                   </th>
                 ))}
-                <th className="px-3 py-2.5 text-center font-bold w-12"></th>
+                <th className={`px-3 py-2.5 text-center font-bold w-12 ${readOnly ? "hidden" : ""}`}></th>
               </tr>
             </thead>
             <tbody>
               {table.rows.length === 0 ? (
                 <tr>
-                  <td colSpan={table.columns.length + 1} className="text-center py-6 text-muted-foreground">
-                    No rows. Click "Add Row" to create one.
+                  <td colSpan={readOnly ? table.columns.length : table.columns.length + 1} className="text-center py-6 text-muted-foreground">
+                    {readOnly ? "No rows." : 'No rows. Click "Add Row" to create one.'}
                   </td>
                 </tr>
               ) : (
@@ -1066,10 +1115,11 @@ function BodyItemEditor({
                           value={val}
                           onChange={(e) => updateCell(ri, ci, e.target.value)}
                           className={`h-8 text-xs rounded-md ${ci < 2 ? "text-center" : ""}`}
+                          readOnly={readOnly}
                         />
                       </td>
                     ))}
-                    <td className="px-3 py-1.5 text-center">
+                    <td className={`px-3 py-1.5 text-center ${readOnly ? "hidden" : ""}`}>
                       <button onClick={() => removeTableRow(ri)} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors" title="Remove row">
                         <Trash2 size={14} />
                       </button>
@@ -1087,7 +1137,6 @@ function BodyItemEditor({
   if (item.kind === "content" && item.content) {
     const content = item.content;
     const updateText = (text: string) => onUpdate({ kind: "content", content: { ...content, text }, keepOnSamePage: item.keepOnSamePage });
-    const updateKeepOnSamePage = (keepOnSamePage: boolean) => onUpdate({ kind: "content", content, keepOnSamePage });
 
     return (
       <div className="flex items-start gap-2 group">
@@ -1095,15 +1144,6 @@ function BodyItemEditor({
           <span className={`text-xs font-bold uppercase ${content.type === "heading" ? "text-indigo-600" : "text-slate-500"}`}>
             {content.type}
           </span>
-          <label className="flex items-center gap-1 text-[10px] font-semibold text-slate-500 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={!!item.keepOnSamePage}
-              onChange={(e) => updateKeepOnSamePage(e.target.checked)}
-              className="w-3 h-3 rounded border-slate-300 text-indigo-600 focus:ring-0"
-            />
-            Same page
-          </label>
         </div>
         <div className="flex-1 flex flex-col gap-1.5">
           {content.type === "heading" ? (
@@ -1112,22 +1152,23 @@ function BodyItemEditor({
               onChange={(e) => updateText(e.target.value)}
               placeholder="Heading text..."
               className="flex-1 rounded-lg font-bold text-base"
+              readOnly={readOnly}
             />
           ) : (
-            <ReportBodyEditor
-              content={content.text}
-              onChange={updateText}
-              placeholder="Write here..."
+            <div className="prose prose-sm max-w-none text-justify [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_p]:my-1 p-2 border border-slate-200 rounded-lg min-h-[40px] bg-white"
+              dangerouslySetInnerHTML={{ __html: content.text }}
             />
           )}
         </div>
-        <button
-          onClick={onRemove}
-          className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors shrink-0 mt-1"
-          title="Remove"
-        >
-          <Trash2 size={16} />
-        </button>
+        {!readOnly && (
+          <button
+            onClick={onRemove}
+            className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors shrink-0 mt-1"
+            title="Remove"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
       </div>
     );
   }
@@ -1913,10 +1954,12 @@ function SubmittedReportsView({
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
   const [filterStaffId, setFilterStaffId] = useState<string>("");
   const [filterInstitutionId, setFilterInstitutionId] = useState<string>("");
   const [filterMonth, setFilterMonth] = useState<string>("");
   const [filterYear, setFilterYear] = useState<string>("");
+  const [rejectDialog, setRejectDialog] = useState<{ report: any; comment: string } | null>(null);
 
   // View state
   const [viewingSubmission, setViewingSubmission] = useState<{
@@ -1954,6 +1997,37 @@ function SubmittedReportsView({
       })
       .finally(() => setLoading(false));
   }, [institutionId, filterInstitutionId, filterStaffId, filterMonth, filterYear, isSuperAdmin]);
+
+  const handleApprove = async (id: string) => {
+    setApprovingId(id);
+    try {
+      await _axios.post("/admin/timetable/approve-report", { submissionId: id });
+      toast.success("Report approved successfully");
+      setReports((prev) => prev.map((r) => r.id === id ? { ...r, adminApproval: "verified" } : r));
+    } catch {
+      toast.error("Failed to approve report");
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectDialog) return;
+    const { report, comment } = rejectDialog;
+    try {
+      await _axios.post("/admin/timetable/reject-report", { submissionId: report.id, comment });
+      toast.success("Report rejected");
+      setReports((prev) => prev.map((r) => r.id === report.id ? { ...r, adminApproval: "rejected", adminComment: comment } : r));
+    } catch {
+      toast.error("Failed to reject report");
+    } finally {
+      setRejectDialog(null);
+    }
+  };
+
+  const handleRejectClick = (report: any) => {
+    setRejectDialog({ report, comment: "" });
+  };
 
   const handleDownloadDocx = async (id: string) => {
     setDownloadingId(id);
@@ -2195,6 +2269,7 @@ function SubmittedReportsView({
                   {isSuperAdmin && <th className="px-4 py-3 text-center font-bold text-slate-700">School</th>}
                   <th className="px-4 py-3 text-center font-bold text-slate-700">Month</th>
                   <th className="px-4 py-3 text-center font-bold text-slate-700">Submitted On</th>
+                  <th className="px-4 py-3 text-center font-bold text-slate-700">Status</th>
                   <th className="px-4 py-3 text-center font-bold text-slate-700">Actions</th>
                 </tr>
               </thead>
@@ -2210,6 +2285,24 @@ function SubmittedReportsView({
                     </td>
                     <td className="px-4 py-3 text-center text-slate-600">
                       {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {r.adminApproval === "verified" ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">
+                          <ShieldCheck size={12} />
+                          Verified
+                        </span>
+                      ) : r.adminApproval === "rejected" ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-50 px-2 py-1 rounded-lg" title={r.adminComment || ""}>
+                          <ShieldX size={12} />
+                          Rejected
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">
+                          <Clock size={12} />
+                          Pending
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="inline-flex items-center gap-1.5">
@@ -2249,6 +2342,29 @@ function SubmittedReportsView({
                           )}
                           DOCX
                         </button>
+                        {r.adminApproval !== "verified" && (
+                          <button
+                            onClick={() => handleApprove(r.id)}
+                            disabled={approvingId === r.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                          >
+                            {approvingId === r.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <ShieldCheck size={14} />
+                            )}
+                            Approve
+                          </button>
+                        )}
+                        {r.adminApproval !== "rejected" && (
+                          <button
+                            onClick={() => handleRejectClick(r)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 font-semibold text-xs hover:bg-red-100 transition-colors"
+                          >
+                            <ShieldX size={14} />
+                            Reject
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -2280,6 +2396,38 @@ function SubmittedReportsView({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Reject Confirmation Dialog */}
+      <Dialog open={!!rejectDialog} onOpenChange={(open) => { if (!open) setRejectDialog(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Report</DialogTitle>
+            <DialogDescription>
+              Provide feedback for the trainer on why this report is being rejected. This comment will be visible to the trainer in their submissions view.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Textarea
+              value={rejectDialog?.comment || ""}
+              onChange={(e) => setRejectDialog((prev) => prev ? { ...prev, comment: e.target.value } : null)}
+              placeholder="Enter rejection reason..."
+              className="min-h-[100px] rounded-lg"
+            />
+          </div>
+          <DialogFooter className="flex gap-2 justify-end">
+            <DialogClose asChild>
+              <Button variant="outline" size="sm">Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={handleRejectConfirm}
+              size="sm"
+              className="bg-red-600 text-white hover:bg-red-700 font-bold"
+            >
+              Reject Report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -2299,8 +2447,10 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
     staffId: string | null;
     monthName: string;
     year: number;
+    adminComment?: string;
   } | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [viewingRejectionComment, setViewingRejectionComment] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -2368,14 +2518,17 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
         signatureUrl = `${Config.proxyUrl}${encodeURIComponent(sigKey)}`;
       }
 
+      const adminComment = dataRes.data?.data?.adminComment || r.adminComment || null;
       setViewingSubmission({
         reportData,
         signatureUrl,
-        staffName: r.staffName || "Unknown",
+        staffName: "My Report",
         staffId: r.staffId || null,
         monthName: MONTH_NAMES[(r.month || 1) - 1],
         year: r.year,
+        adminComment,
       });
+      setViewingRejectionComment(adminComment);
     } catch {
       toast.error("Failed to load report data");
     } finally {
@@ -2439,6 +2592,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-4 py-3 text-center font-bold text-slate-700">Month</th>
                 <th className="px-4 py-3 text-center font-bold text-slate-700">Submitted On</th>
+                <th className="px-4 py-3 text-center font-bold text-slate-700">Status</th>
                 <th className="px-4 py-3 text-center font-bold text-slate-700">Actions</th>
               </tr>
             </thead>
@@ -2452,13 +2606,36 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
                     {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                   </td>
                   <td className="px-4 py-3 text-center">
+                    {r.adminApproval === "verified" ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">
+                        <ShieldCheck size={12} />
+                        Verified
+                      </span>
+                    ) : r.adminApproval === "rejected" ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-50 px-2 py-1 rounded-lg" title={r.adminComment || ""}>
+                        <ShieldX size={12} />
+                        Rejected
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">
+                        <Clock size={12} />
+                        Pending
+                      </span>
+                    )}
+                    {r.adminApproval === "rejected" && r.adminComment && (
+                      <div className="text-[10px] text-red-600 mt-1 max-w-[150px] leading-tight truncate" title={r.adminComment}>
+                        {r.adminComment}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button
-                        onClick={() => onView(r.id)}
+                        onClick={() => r.adminApproval === "verified" ? handleViewInApp(r) : onView(r.id)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 font-semibold text-xs hover:bg-indigo-100 transition-colors"
                       >
                         <Eye size={14} />
-                        View / Edit
+                        {r.adminApproval === "verified" ? "View" : "View / Edit"}
                       </button>
                       <button
                         onClick={() => handleViewInApp(r)}
@@ -2501,6 +2678,12 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
               <DialogTitle className="text-lg font-bold">
                 {viewingSubmission?.staffName} — {viewingSubmission?.monthName} {viewingSubmission?.year}
               </DialogTitle>
+              {viewingRejectionComment && (
+                <div className="flex items-start gap-1.5 mt-2 text-sm text-red-700 bg-red-50 px-3 py-2 rounded-lg max-w-lg">
+                  <MessageSquare size={14} className="shrink-0 mt-0.5" />
+                  <span>{viewingRejectionComment}</span>
+                </div>
+              )}
             </div>
             <Button onClick={downloadPreviewPdf} size="sm" className="bg-red-600 hover:bg-red-700 text-white gap-1.5">
               <Download size={14} />

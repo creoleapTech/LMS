@@ -141,6 +141,13 @@
       "when": 1783338111370,
       "tag": "0019_robust_green_goblin",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1783501007597,
+      "tag": "0020_jittery_puck",
+      "breakpoints": true
     }
   ]
 }
