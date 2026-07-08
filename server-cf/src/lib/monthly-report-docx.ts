@@ -81,6 +81,9 @@ const COMPACT_CELL_MARGINS = {
 };
 const PAGE_MARGINS = { top: 1440, bottom: 1440, left: 1440, right: 480 };
 const PORTRAIT_LOGO_OFFSET = 3750000;
+const PAGE_WIDTH_DXA = 11906;
+const CONTENT_WIDTH_DXA = PAGE_WIDTH_DXA - PAGE_MARGINS.left - PAGE_MARGINS.right;
+const SESSION_SUMMARY_FIXED_WIDTHS = [1320, 560, 1580, 1440];
 
 // Load assets as ArrayBuffer at module level
 let blueStripeData: ArrayBuffer | null = null;
@@ -241,6 +244,7 @@ function buildStyledTable(
   columns: string[],
   dataRows: string[][],
   pageBreakBefore = false,
+  columnWidths?: number[],
 ): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
 
@@ -262,11 +266,13 @@ function buildStyledTable(
   );
 
   const colCount = columns.length;
-  // Custom widths: Date & Class narrow, Chapter medium, Topic small, Remarks wide
-  const fixedWidths = [12, 8, 18, 12, 50];
+  const fixedWidths = columnWidths && columnWidths.length === colCount
+    ? columnWidths
+    : undefined;
   const widths = Array.from({ length: colCount }, (_, i) => {
     if (colCount <= 2) return { size: 0, type: WidthType.AUTO };
-    const pct = i < fixedWidths.length ? fixedWidths[i] : Math.floor(100 / colCount);
+    if (fixedWidths) return { size: fixedWidths[i], type: WidthType.DXA };
+    const pct = Math.floor(100 / colCount);
     return { size: pct, type: WidthType.PERCENTAGE };
   });
 
@@ -306,7 +312,7 @@ function buildStyledTable(
       new TableCell({
         width: widths[i] as any,
         margins: COMPACT_CELL_MARGINS,
-        verticalAlign: VerticalAlign.CENTER,
+        verticalAlign: VerticalAlign.TOP,
         borders: ALL_BORDERS,
         children: [
           new Paragraph({
@@ -326,7 +332,7 @@ function buildStyledTable(
   const table = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     margins: COMPACT_CELL_MARGINS,
-    layout: TableLayoutType.AUTOFIT,
+    layout: fixedWidths ? TableLayoutType.FIXED : TableLayoutType.AUTOFIT,
     rows: [headerRow, ...rows],
   });
 
@@ -347,7 +353,12 @@ function buildSessionTable(
     return [row.date, classSection, row.chapterName, row.topicName, row.remarks];
   });
 
-  return buildStyledTable("Session Summary", columns, dataRows);
+  const fixedTotal = SESSION_SUMMARY_FIXED_WIDTHS.reduce((sum, width) => sum + width, 0);
+  const remarksWidth = Math.max(3600, CONTENT_WIDTH_DXA - fixedTotal);
+  return buildStyledTable("Session Summary", columns, dataRows, false, [
+    ...SESSION_SUMMARY_FIXED_WIDTHS,
+    remarksWidth,
+  ]);
 }
 
 function buildHeader(horizontalOffset: number): Header {
