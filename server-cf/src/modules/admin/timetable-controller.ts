@@ -3271,7 +3271,7 @@ timetableController.get("/download-principal-signed-report", async (c) => {
 
     if (!submission) throw new BadRequestError("Submission not found");
 
-    // Only the owner trainer or admin of same institution can download
+    // Only the owner trainer, admin of same institution, or super_admin can download
     if (user.role === "staff" && submission.staffId !== user.id) {
       throw new ForbiddenError("Access denied");
     }
@@ -3281,6 +3281,7 @@ timetableController.get("/download-principal-signed-report", async (c) => {
         throw new ForbiddenError("Access denied");
       }
     }
+    // super_admin passes through
 
     if (!submission.principalSignedKey) {
       throw new BadRequestError("No principal signed report uploaded yet");

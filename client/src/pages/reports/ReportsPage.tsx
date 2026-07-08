@@ -2191,6 +2191,27 @@ function SubmittedReportsView({
     }
   };
 
+  const handleDownloadPrincipalSigned = async (id: string) => {
+    setDownloadingId(id);
+    try {
+      const res = await _axios.get(`/admin/timetable/download-principal-signed-report?id=${id}`, { responseType: "blob" });
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Principal_Signed_Report.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      toast.success("Principal signed report downloaded");
+    } catch {
+      toast.error("Failed to download principal signed report");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   const handleViewInApp = async (r: any) => {
     setViewLoading(true);
     try {
@@ -2474,6 +2495,20 @@ function SubmittedReportsView({
                           )}
                           DOCX
                         </button>
+                        {r.adminApproval === "verified" && r.principalSignedKey && (
+                          <button
+                            onClick={() => handleDownloadPrincipalSigned(r.id)}
+                            disabled={downloadingId === r.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 font-semibold text-xs hover:bg-violet-100 transition-colors disabled:opacity-50"
+                          >
+                            {downloadingId === r.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Download size={14} />
+                            )}
+                            Signed
+                          </button>
+                        )}
                         {r.adminApproval !== "verified" && (
                           <button
                             onClick={() => handleApprove(r.id)}
