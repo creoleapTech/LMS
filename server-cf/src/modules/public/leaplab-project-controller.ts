@@ -18,7 +18,7 @@ const app = new Hono<{
   Variables: Variables;
 }>();
 
-// ─── PUBLIC SHARE ROUTES (no auth) ─────────────────────────────────────
+// ─── PUBLIC SHARE ROUTES (no auth)) ─────────────────────────────────────
 
 // GET /api/leaplab/projects/share/:shareId
 app.get("/share/:shareId", async (c) => {
