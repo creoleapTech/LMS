@@ -1182,6 +1182,26 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
   );
 }
 
+// ─── Paragraph Editor (contentEditable with ref to avoid cursor jumping) ───
+
+function ParagraphEditor({ content, onUpdate, readOnly }: { content: { text: string; type: string }; onUpdate: (text: string) => void; readOnly?: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (ref.current && ref.current.innerHTML !== content.text) {
+      ref.current.innerHTML = content.text;
+    }
+  });
+  return (
+    <div
+      ref={ref}
+      contentEditable={!readOnly}
+      suppressContentEditableWarning
+      onInput={(e) => onUpdate(e.currentTarget.innerHTML)}
+      className={`prose prose-sm max-w-none text-justify [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_p]:my-1 p-2 border border-slate-200 rounded-lg min-h-[40px] bg-white focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 ${readOnly ? "cursor-default" : "cursor-text"}`}
+    />
+  );
+}
+
 // ─── Sortable Body Item Editor (drag & drop wrapper) ───
 
 function SortableBodyItemEditor({ id, item, onUpdate, onRemove, readOnly }: { id: string; item: BodyItem; onUpdate: (item: BodyItem) => void; onRemove: () => void; readOnly?: boolean }) {
@@ -1347,9 +1367,7 @@ function BodyItemEditor({
               readOnly={readOnly}
             />
           ) : (
-            <div className="prose prose-sm max-w-none text-justify [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:my-0.5 [&_p]:my-1 p-2 border border-slate-200 rounded-lg min-h-[40px] bg-white"
-              dangerouslySetInnerHTML={{ __html: content.text }}
-            />
+            <ParagraphEditor content={content} onUpdate={updateText} readOnly={readOnly} />
           )}
         </div>
         {!readOnly && (
