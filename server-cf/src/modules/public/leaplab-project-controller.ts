@@ -43,6 +43,8 @@ app.get("/share/:shareId", async (c) => {
     throw new BadRequestError("Shared project not found");
   }
 
+  c.header("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+
   return c.json(
     {
       success: true,
