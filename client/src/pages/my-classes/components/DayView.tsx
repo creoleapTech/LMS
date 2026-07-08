@@ -255,7 +255,7 @@ export function DayView({
 
   return (
     <>
-      <div className="neo-card overflow-hidden">
+      <div className="neo-card">
         {/* Day header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/30">
           <div>

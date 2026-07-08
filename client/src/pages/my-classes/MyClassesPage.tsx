@@ -239,9 +239,9 @@ export default function MyClassesPage() {
       )}
 
       {showTimetable && (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 max-h-[calc(100vh-12rem)] items-stretch">
           {/* LEFT: Calendar Panel */}
-          <div className="lg:col-span-2 lg:sticky lg:top-8 self-start space-y-4">
+          <div className="lg:col-span-2 overflow-y-auto space-y-4 pr-1">
             {/* Calendar card */}
             <div className="neo-card border-2 border-indigo-300 rounded-2xl overflow-hidden bg-gradient-to-b from-[var(--neo-bg-alt)] via-[var(--neo-bg-alt)] to-indigo-50/40">
               {/* Colorful header band */}
@@ -321,7 +321,7 @@ export default function MyClassesPage() {
           </div>
 
           {/* RIGHT: Schedule Panel */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 overflow-y-auto">
             <DayView
               date={selectedDate}
               readOnly={isAdminRole}
