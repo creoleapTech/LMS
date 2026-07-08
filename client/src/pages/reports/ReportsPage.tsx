@@ -1171,7 +1171,7 @@ const PREVIEW_TABLE_CELL_TEXT: React.CSSProperties = {
   wordBreak: "break-word",
   whiteSpace: "normal",
 };
-const PREVIEW_SESSION_COL_WIDTHS = [79, 34, 76, 89];
+const PREVIEW_SESSION_COL_WIDTHS = [72, 34, 63, 76];
 
 // ─── Pagination types ───
 

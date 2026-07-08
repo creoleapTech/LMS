@@ -83,12 +83,12 @@ const PAGE_MARGINS = { top: 1440, bottom: 1440, left: 1440, right: 480 };
 const PORTRAIT_LOGO_OFFSET = 3750000;
 const PAGE_WIDTH_DXA = 11906;
 const CONTENT_WIDTH_DXA = PAGE_WIDTH_DXA - PAGE_MARGINS.left - PAGE_MARGINS.right;
-const SESSION_SUMMARY_FIXED_WIDTHS = [1220, 520, 1180, 1380];
+const SESSION_SUMMARY_FIXED_WIDTHS = [1120, 520, 980, 1180];
 const SESSION_CELL_MARGINS = {
   top: 40,
   bottom: 40,
-  left: 30,
-  right: 30,
+  left: 20,
+  right: 20,
   marginUnitType: WidthType.DXA,
 };
 
@@ -338,6 +338,7 @@ function buildStyledTable(
   });
 
   const table = new Table({
+    columnWidths: fixedWidths,
     width: fixedWidths
       ? { size: fixedWidths.reduce((sum, width) => sum + width, 0), type: WidthType.DXA }
       : { size: 100, type: WidthType.PERCENTAGE },
