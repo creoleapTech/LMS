@@ -249,6 +249,8 @@ export function DayView({
   const scheduledCount = entries.filter((e) => e.status === "scheduled").length;
   const completedCount = entries.filter((e) => e.status === "completed").length;
   const dow = date.getDay();
+  const showActions = !effectiveReadOnly || isSuperAdmin;
+  const actionColumnClass = effectiveReadOnly ? "w-[72px]" : "w-[176px]";
 
   // Track non-break period index for color rotation
   let colorIdx = 0;
@@ -288,14 +290,14 @@ export function DayView({
         {/* Loading state */}
         {isLoading && (
           <div className="p-4">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="bg-[var(--neo-bg-dark)]/40 hover:bg-[var(--neo-bg-dark)]/40 border-b border-white/30">
                   <TableHead className="w-[64px]"><Skeleton className="h-4 w-8" /></TableHead>
                   <TableHead className="w-[100px]"><Skeleton className="h-4 w-16" /></TableHead>
                   <TableHead><Skeleton className="h-4 w-32" /></TableHead>
                   <TableHead className="w-[90px] hidden sm:table-cell"><Skeleton className="h-4 w-14" /></TableHead>
-                  {(!effectiveReadOnly || isSuperAdmin) && <TableHead className="w-[72px]"><Skeleton className="h-4 w-8" /></TableHead>}
+                  {showActions && <TableHead className={actionColumnClass}><Skeleton className="h-4 w-8" /></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -305,7 +307,7 @@ export function DayView({
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                    {(!effectiveReadOnly || isSuperAdmin) && <TableCell><Skeleton className="h-6 w-6" /></TableCell>}
+                    {showActions && <TableCell className={actionColumnClass}><Skeleton className="h-6 w-6" /></TableCell>}
                   </TableRow>
                 ))}
               </TableBody>
@@ -325,7 +327,7 @@ export function DayView({
 
         {/* Schedule table */}
         {!isLoading && sortedPeriods.length > 0 && (
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow className="bg-[var(--neo-bg-dark)]/40 hover:bg-[var(--neo-bg-dark)]/40 border-b border-white/30">
                 <TableHead className="w-[64px] text-[11px] font-black uppercase tracking-wider text-slate-400 pl-5">
@@ -340,8 +342,8 @@ export function DayView({
                 <TableHead className="w-[90px] text-[11px] font-black uppercase tracking-wider text-slate-400 hidden sm:table-cell">
                   Status
                 </TableHead>
-                 {(!effectiveReadOnly || isSuperAdmin) && (
-                  <TableHead className="w-[72px] text-[11px] font-black uppercase tracking-wider text-slate-400 text-right pr-5">
+                 {showActions && (
+                  <TableHead className={`${actionColumnClass} text-[11px] font-black uppercase tracking-wider text-slate-400 text-right pr-5`}>
                     Actions
                   </TableHead>
                 )}
@@ -359,6 +361,7 @@ export function DayView({
                       key={period.periodNumber}
                       period={period}
                       readOnly={effectiveReadOnly}
+                      showActions={showActions}
                     />
                   );
                 }
@@ -372,21 +375,24 @@ export function DayView({
                       key={period.periodNumber}
                       className="border-l-[3px] border-l-slate-200 border-b border-white/20"
                     >
-                      <TableCell className="pl-4">
+                      <TableCell className="pl-4 align-top pt-3">
                         <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] bg-[var(--neo-bg)] text-slate-500 text-xs font-black">
                           P{period.periodNumber}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="align-top pt-3">
                         <span className="text-sm font-semibold text-slate-600">{formatTime12Hour(period.startTime)}</span>
                         <span className="text-xs text-slate-500 ml-0.5">– {formatTime12Hour(period.endTime)}</span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="align-top pt-3 whitespace-normal">
                         <span className="text-sm text-slate-400 italic">No class scheduled</span>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell">
+                      <TableCell className="hidden sm:table-cell align-top pt-3">
                         <span className="text-[11px] text-slate-400 font-medium">&mdash;</span>
                       </TableCell>
+                      {showActions && (
+                        <TableCell className={`${actionColumnClass} align-top pt-3 pr-4`} />
+                      )}
                     </TableRow>
                   ) : (
                     <EmptyRow
@@ -570,10 +576,18 @@ export function DayView({
 }
 
 /* ─── Break Row ─── */
-function BreakRow({ period, readOnly }: { period: IPeriodSlot; readOnly?: boolean }) {
+function BreakRow({
+  period,
+  readOnly,
+  showActions,
+}: {
+  period: IPeriodSlot;
+  readOnly?: boolean;
+  showActions?: boolean;
+}) {
   return (
     <TableRow className="bg-amber-50/30 hover:bg-amber-50/30 border-b border-amber-100/40">
-      <TableCell colSpan={readOnly ? 4 : 5} className="py-3 px-5">
+      <TableCell colSpan={readOnly && !showActions ? 4 : 5} className="py-3 px-5">
         <div className="flex items-center justify-center gap-3">
           <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-300/50 to-transparent" />
           <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5 shrink-0 bg-gradient-to-br from-amber-100 to-amber-50 px-4 py-1.5 rounded-full shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-amber-200/60">
@@ -618,6 +632,7 @@ function ScheduledRow({
   const classLabel = getClassLabel(entry.classId);
   const additionalClasses = entry.additionalClasses || [];
   const bookLabel = getBookLabel(entry.gradeBookId);
+  const actionColumnClass = readOnly ? "w-[72px]" : "w-[176px]";
 
   return (
     <TableRow
@@ -626,7 +641,7 @@ function ScheduledRow({
       }`}
     >
       {/* Period badge */}
-      <TableCell className="pl-4">
+      <TableCell className="pl-4 align-top pt-3">
         <span
           className={`inline-flex items-center justify-center w-9 h-9 rounded-xl text-xs font-black shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 ${badgeColor}`}
         >
@@ -635,15 +650,15 @@ function ScheduledRow({
       </TableCell>
 
       {/* Time */}
-      <TableCell>
+      <TableCell className="align-top pt-3">
         <span className="text-sm font-semibold text-slate-700">{formatTime12Hour(period.startTime)}</span>
         <span className="text-xs text-slate-500 ml-0.5">– {formatTime12Hour(period.endTime)}</span>
       </TableCell>
 
       {/* Class / Subject */}
-      <TableCell className="max-w-[220px] sm:max-w-[320px] md:max-w-[400px] break-words">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 flex-wrap">
+      <TableCell className="min-w-0 align-top pt-3 whitespace-normal break-words">
+        <div className="min-w-0 space-y-1 overflow-hidden">
+          <div className="flex min-w-0 items-center gap-2 flex-wrap">
             <span className="text-sm font-bold text-slate-800">
               {classLabel || "Class"}
             </span>
@@ -656,9 +671,9 @@ function ScheduledRow({
               </span>
             ))}
             {bookLabel && (
-              <span className="text-[11px] font-semibold text-slate-600 neo-inset-sm px-2.5 py-1 flex items-center gap-1">
-                <BookOpen size={10} />
-                {bookLabel}
+              <span className="min-w-0 max-w-full text-[11px] font-semibold text-slate-600 neo-inset-sm px-2.5 py-1 flex items-center gap-1">
+                <BookOpen size={10} className="shrink-0" />
+                <span className="truncate">{bookLabel}</span>
               </span>
             )}
             {!!entry.isRecurring && (
@@ -673,17 +688,17 @@ function ScheduledRow({
             </p>
           )}
           {entry.chapterTopics && entry.chapterTopics.length > 0 ? (
-            <div className="space-y-1.5">
+            <div className="max-h-32 space-y-1.5 overflow-y-auto pr-1">
               {entry.chapterTopics.map((group) => (
-                <div key={group.chapterId || "__no_chapter__"}>
+                <div key={group.chapterId || "__no_chapter__"} className="min-w-0">
                   {group.chapterTitle && (
-                    <p className="text-[10px] font-bold text-indigo-600 mb-0.5">{group.chapterTitle}</p>
+                    <p className="max-w-full truncate text-[10px] font-bold text-indigo-600 mb-0.5">{group.chapterTitle}</p>
                   )}
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex min-w-0 flex-wrap gap-1">
                     {group.subtopics.map((st, j) => (
                       <span
                         key={j}
-                        className="text-[10px] bg-[var(--neo-bg)] shadow-[inset_1px_1px_3px_var(--neo-shadow-dark),inset_-1px_-1px_3px_var(--neo-shadow-light)] text-slate-600 px-2 py-0.5 rounded-full font-semibold"
+                        className="max-w-full whitespace-normal break-words text-left text-[10px] leading-tight bg-[var(--neo-bg)] shadow-[inset_1px_1px_3px_var(--neo-shadow-dark),inset_-1px_-1px_3px_var(--neo-shadow-light)] text-slate-600 px-2 py-0.5 rounded-full font-semibold"
                       >
                         {st.title}
                       </span>
@@ -693,11 +708,11 @@ function ScheduledRow({
               ))}
             </div>
           ) : entry.topicsCovered && entry.topicsCovered.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex max-h-24 min-w-0 flex-wrap gap-1 overflow-y-auto pr-1">
               {entry.topicsCovered.map((t, i) => (
                 <span
                   key={i}
-                  className="text-[10px] bg-[var(--neo-bg)] shadow-[inset_1px_1px_3px_var(--neo-shadow-dark),inset_-1px_-1px_3px_var(--neo-shadow-light)] text-slate-600 px-2 py-0.5 rounded-full font-semibold"
+                  className="max-w-full whitespace-normal break-words text-left text-[10px] leading-tight bg-[var(--neo-bg)] shadow-[inset_1px_1px_3px_var(--neo-shadow-dark),inset_-1px_-1px_3px_var(--neo-shadow-light)] text-slate-600 px-2 py-0.5 rounded-full font-semibold"
                 >
                   {t}
                 </span>
@@ -714,7 +729,7 @@ function ScheduledRow({
       </TableCell>
 
       {/* Status */}
-      <TableCell className="hidden sm:table-cell">
+      <TableCell className="hidden sm:table-cell align-top pt-3">
         {isCompleted ? (
           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60 px-2.5 py-1.5 rounded-full shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)]">
             <CheckCircle2 size={12} /> Done
@@ -728,7 +743,7 @@ function ScheduledRow({
 
       {/* Actions (only in non-readOnly mode or for super admin) */}
       {(!readOnly || isSuperAdmin) && (
-        <TableCell className="text-right pr-4">
+        <TableCell className={`${actionColumnClass} align-top pt-3 text-right pr-4`}>
           <div className="flex items-center justify-end gap-1">
             {!readOnly && (
               <>
@@ -787,20 +802,20 @@ function EmptyRow({
       onClick={onAddClick}
     >
       {/* Period badge */}
-      <TableCell className="pl-4">
+      <TableCell className="pl-4 align-top pt-3">
         <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] bg-[var(--neo-bg)] text-slate-500 text-xs font-black group-hover:shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] group-hover:bg-gradient-to-br group-hover:from-indigo-100 group-hover:to-indigo-50 group-hover:text-indigo-700 transition-all">
           P{period.periodNumber}
         </span>
       </TableCell>
 
       {/* Time */}
-      <TableCell>
+      <TableCell className="align-top pt-3">
         <span className="text-sm font-semibold text-slate-600">{formatTime12Hour(period.startTime)}</span>
         <span className="text-xs text-slate-500 ml-0.5">– {formatTime12Hour(period.endTime)}</span>
       </TableCell>
 
       {/* Empty label */}
-      <TableCell>
+      <TableCell className="align-top pt-3 whitespace-normal">
         <span className="inline-flex items-center gap-1.5 text-sm text-slate-400 group-hover:text-indigo-500 transition-colors">
           <Plus size={13} className="opacity-50 group-hover:opacity-100" />
           <span className="italic group-hover:not-italic">Add a class</span>
@@ -808,12 +823,12 @@ function EmptyRow({
       </TableCell>
 
       {/* Status */}
-      <TableCell className="hidden sm:table-cell">
+      <TableCell className="hidden sm:table-cell align-top pt-3">
         <span className="text-[11px] text-slate-400 font-medium">&mdash;</span>
       </TableCell>
 
       {/* Add button */}
-      <TableCell className="text-right pr-4">
+      <TableCell className="w-[176px] align-top pt-3 text-right pr-4">
         <div
           className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-indigo-400 group-hover:text-indigo-600 group-hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(99,102,241,0.15)] transition-all opacity-60 group-hover:opacity-100"
           aria-label="Add class"
