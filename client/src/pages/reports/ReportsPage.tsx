@@ -1165,10 +1165,105 @@ const BORDER_CSS = "1px solid #999999";
 const PREVIEW_TABLE_CELL_TEXT: React.CSSProperties = {
   boxSizing: "border-box",
   lineHeight: 1.12,
+  minWidth: 0,
   overflowWrap: "anywhere",
   wordBreak: "break-word",
   whiteSpace: "normal",
 };
+const PREVIEW_SESSION_COL_WIDTHS = [90, 42, 110, 90];
+const PDF_PT_PER_PX = 72 / 96;
+
+async function waitForPreviewResources(container: HTMLElement): Promise<void> {
+  if ("fonts" in document) {
+    try {
+      await document.fonts.ready;
+    } catch {
+      // Browser font readiness is best-effort for preview export.
+    }
+  }
+
+  const images = Array.from(container.querySelectorAll("img"));
+  await Promise.all(
+    images.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete && img.naturalWidth !== 0) {
+            resolve();
+            return;
+          }
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+        }),
+    ),
+  );
+
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+}
+
+async function getPreviewPagesForPdf(container: HTMLElement): Promise<HTMLElement[]> {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const pages = Array.from(container.querySelectorAll<HTMLElement>("[data-report-page]"));
+    const hasContentPage = pages.some((page) => page.dataset.reportPage === "content");
+    if (pages.length > 0 && hasContentPage) return pages;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error("Preview pages are still loading");
+}
+
+async function downloadPreviewPagesAsPdf(container: HTMLElement, filename: string): Promise<void> {
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import("html2canvas-pro"),
+    import("jspdf"),
+  ]);
+
+  const pages = await getPreviewPagesForPdf(container);
+  await waitForPreviewResources(container);
+
+  const pageWidthPt = PAGE_W * PDF_PT_PER_PX;
+  const pageHeightPt = PAGE_H * PDF_PT_PER_PX;
+  const renderScale = Math.max(2, Math.min(window.devicePixelRatio || 1, 3));
+  const pdf = new jsPDF({
+    unit: "pt",
+    format: [pageWidthPt, pageHeightPt],
+    orientation: "portrait",
+    compress: true,
+  });
+
+  for (let i = 0; i < pages.length; i++) {
+    if (i > 0) pdf.addPage([pageWidthPt, pageHeightPt], "portrait");
+
+    const canvas = await html2canvas(pages[i], {
+      backgroundColor: "#ffffff",
+      height: PAGE_H,
+      logging: false,
+      scale: renderScale,
+      scrollX: 0,
+      scrollY: 0,
+      useCORS: true,
+      width: PAGE_W,
+      windowHeight: PAGE_H,
+      windowWidth: PAGE_W,
+    });
+
+    pdf.addImage(
+      canvas.toDataURL("image/png"),
+      "PNG",
+      0,
+      0,
+      pageWidthPt,
+      pageHeightPt,
+      undefined,
+      "FAST",
+    );
+  }
+
+  pdf.setProperties({
+    title: filename.replace(/\.pdf$/i, ""),
+    subject: "Monthly Lesson Completion Report",
+  });
+  pdf.save(filename);
+}
 
 // ─── Pagination types ───
 
@@ -1401,18 +1496,21 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
   const rowUnits = units.filter(u => u.type === "table-row");
   const columns = headerUnit?.columns || [];
   const colCount = columns.length;
-  // Match column widths of the generated DOCX: Date (12%), Class (8%), Chapter (18%), Topic (12%), Remarks (50%)
-  const fixedWidths = colCount === 5 ? [12, 8, 18, 12, 50] : [];
+  const sessionSummaryWidths = headerUnit?.id === "session-header" && colCount === 5
+    ? PREVIEW_SESSION_COL_WIDTHS
+    : [];
 
   return (
     <table key={key} style={{ width: "100%", borderCollapse: "collapse", border: BORDER_CSS, tableLayout: "fixed" }}>
       <colgroup>
         {colCount <= 2
           ? columns.map((_, i) => <col key={i} />)
-          : columns.map((_, i) => {
-              const widthPct = i < fixedWidths.length ? fixedWidths[i] : Math.floor(100 / colCount);
-              return <col key={i} style={{ width: `${widthPct}%` }} />;
-            })
+          : columns.map((_, i) => (
+              <col
+                key={i}
+                style={sessionSummaryWidths[i] ? { width: `${sessionSummaryWidths[i]}px` } : undefined}
+              />
+            ))
         }
       </colgroup>
       <thead>
@@ -1918,6 +2016,7 @@ function SubmittedReportsView({
     year: number;
   } | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const previewExportRef = useRef<HTMLDivElement>(null);
 
   const currentYear = new Date().getFullYear();
   const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
@@ -2014,24 +2113,18 @@ function SubmittedReportsView({
 
   const downloadPreviewPdf = useCallback(async () => {
     if (!viewingSubmission) return;
+    if (!previewExportRef.current) {
+      toast.error("Report preview is still loading");
+      return;
+    }
     try {
-      const staffParam = viewingSubmission.staffId ? `?staffId=${viewingSubmission.staffId}` : "";
-      const res = await _axios.post(
-        `/admin/timetable/generate-report-pdf${staffParam}`,
-        viewingSubmission.reportData,
-        { responseType: "blob" },
+      await downloadPreviewPagesAsPdf(
+        previewExportRef.current,
+        `Monthly_Report_${viewingSubmission.monthName}_${viewingSubmission.year}.pdf`,
       );
-      const blob = new Blob([res.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Monthly_Report_${viewingSubmission.monthName}_${viewingSubmission.year}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
       toast.success("PDF downloaded");
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to generate PDF");
     }
   }, [viewingSubmission]);
@@ -2264,7 +2357,9 @@ function SubmittedReportsView({
           </DialogHeader>
           <div className="overflow-auto max-h-[calc(90vh-80px)] px-6 pb-6">
             {viewingSubmission && (
-              <ReportPreview data={viewingSubmission.reportData} signatureUrl={viewingSubmission.signatureUrl} />
+              <div ref={previewExportRef}>
+                <ReportPreview data={viewingSubmission.reportData} signatureUrl={viewingSubmission.signatureUrl} />
+              </div>
             )}
           </div>
         </DialogContent>
@@ -2290,6 +2385,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
     year: number;
   } | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const previewExportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -2374,24 +2470,18 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
 
   const downloadPreviewPdf = useCallback(async () => {
     if (!viewingSubmission) return;
+    if (!previewExportRef.current) {
+      toast.error("Report preview is still loading");
+      return;
+    }
     try {
-      const staffParam = viewingSubmission.staffId ? `?staffId=${viewingSubmission.staffId}` : "";
-      const res = await _axios.post(
-        `/admin/timetable/generate-report-pdf${staffParam}`,
-        viewingSubmission.reportData,
-        { responseType: "blob" },
+      await downloadPreviewPagesAsPdf(
+        previewExportRef.current,
+        `Monthly_Report_${viewingSubmission.monthName}_${viewingSubmission.year}.pdf`,
       );
-      const blob = new Blob([res.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Monthly_Report_${viewingSubmission.monthName}_${viewingSubmission.year}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
       toast.success("PDF downloaded");
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to generate PDF");
     }
   }, [viewingSubmission]);
@@ -2497,7 +2587,9 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
           </DialogHeader>
           <div className="overflow-auto max-h-[calc(90vh-80px)] px-6 pb-6">
             {viewingSubmission && (
-              <ReportPreview data={viewingSubmission.reportData} signatureUrl={viewingSubmission.signatureUrl} />
+              <div ref={previewExportRef}>
+                <ReportPreview data={viewingSubmission.reportData} signatureUrl={viewingSubmission.signatureUrl} />
+              </div>
             )}
           </div>
         </DialogContent>
