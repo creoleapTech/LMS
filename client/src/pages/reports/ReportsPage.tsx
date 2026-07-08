@@ -1162,6 +1162,13 @@ const PAGE_SHADOW = "0 4px 6px -1px rgba(0,0,0,0.1), 0 10px 15px -3px rgba(0,0,0
 
 const CELL_PADDING = `${tw(40)} ${tw(80)}`;
 const BORDER_CSS = "1px solid #999999";
+const PREVIEW_TABLE_CELL_TEXT: React.CSSProperties = {
+  boxSizing: "border-box",
+  lineHeight: 1.12,
+  overflowWrap: "anywhere",
+  wordBreak: "break-word",
+  whiteSpace: "normal",
+};
 
 // ─── Pagination types ───
 
@@ -1412,8 +1419,9 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
         <tr data-unit-id={headerUnit?.id} style={{ backgroundColor: "#4FA3D1" }}>
           {columns.map((col, ci) => (
             <th key={ci} style={{
+              ...PREVIEW_TABLE_CELL_TEXT,
               color: "#FFFFFF", fontWeight: "bold", fontSize: hp(24),
-              textAlign: "center", padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "middle", lineHeight: 1,
+              textAlign: "center", padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "middle",
             }}>{col}</th>
           ))}
         </tr>
@@ -1422,8 +1430,9 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
         {rowUnits.length === 0 ? (
           <tr>
             <td colSpan={colCount} style={{
+              ...PREVIEW_TABLE_CELL_TEXT,
               fontSize: hp(24), textAlign: "center", color: "#999",
-              padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "middle", lineHeight: 1,
+              padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "middle",
             }}>No rows</td>
           </tr>
         ) : (
@@ -1431,9 +1440,10 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
             <tr key={ri} data-unit-id={unit.id}>
               {unit.cells?.map((val, ci) => (
                 <td key={ci} style={{
+                  ...PREVIEW_TABLE_CELL_TEXT,
                   fontSize: hp(24),
                   textAlign: ci < 2 ? "center" : "left",
-                  padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "middle", lineHeight: 1,
+                  padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "top",
                 }}>{val || ""}</td>
               ))}
             </tr>
