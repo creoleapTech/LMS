@@ -717,7 +717,11 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
       {
         properties: {
           page: {
-            size: { orientation: PageOrientation.PORTRAIT },
+            size: {
+              width: 11909,
+              height: 16834,
+              orientation: PageOrientation.PORTRAIT,
+            },
             margin: PAGE_MARGINS,
           },
         },
@@ -728,7 +732,11 @@ export async function generateMonthlyReportDocx(params: ReportParams): Promise<U
         properties: {
           type: SectionType.NEXT_PAGE,
           page: {
-            size: { orientation: PageOrientation.PORTRAIT },
+            size: {
+              width: 11909,
+              height: 16834,
+              orientation: PageOrientation.PORTRAIT,
+            },
             margin: PAGE_MARGINS,
           },
         },

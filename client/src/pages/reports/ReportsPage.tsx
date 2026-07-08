@@ -1141,8 +1141,8 @@ function BodyItemEditor({
 //   Font size (half-points) → px:  hp / 2 * 96/72
 //   Spacing (twips)         → px:  tw / 20 * 96/72
 //   Line spacing (240 base) → ratio:  val / 240
-//   Page: Letter portrait 8.5"×11" = 816×1056px, margins 1" = 96px
-//   Content area: 624×864px
+//   Page: A4 portrait 8.27"×11.69" = 794×1122px, margins 1" = 96px
+//   Content area: 647×930px
 
 const PX_PER_PT = 96 / 72; // 1.333
 const hp = (n: number) => `${(n / 2) * PX_PER_PT}px`; // half-points → px
@@ -1150,13 +1150,13 @@ const tw = (n: number) => `${(n / 20) * PX_PER_PT}px`; // twips → px
 const LINE_276 = 276 / 240; // 1.15
 const LINE_SINGLE = 1; // Word default single spacing for empty paragraphs
 
-const PAGE_W = 8.5 * 96; // 816px
-const PAGE_H = 11 * 96; // 1056px
+const PAGE_W = 794; // A4 width: 8.27" * 96 = 793.92px -> 794px
+const PAGE_H = 1122; // A4 height: 11.69" * 96 = 1122.24px -> 1122px
 const MARGIN = 96; // 1 inch = 96px
 const LEFT_MARGIN = 115; // stripe width + 10px safety margin
 const RIGHT_MARGIN = 32; // right margin of 480 twips = 32px
-const CONTENT_W = PAGE_W - LEFT_MARGIN - RIGHT_MARGIN; // 669px
-const CONTENT_H = PAGE_H - 2 * MARGIN; // 864px
+const CONTENT_W = PAGE_W - LEFT_MARGIN - RIGHT_MARGIN; // 647px
+const CONTENT_H = PAGE_H - 2 * MARGIN; // 930px
 const PAGE_GAP = 32; // px between preview pages
 const PAGE_SHADOW = "0 4px 6px -1px rgba(0,0,0,0.1), 0 10px 15px -3px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)";
 
@@ -1781,7 +1781,7 @@ function PageHeader({ assets }: { assets: ReportAssets | null }) {
 
 function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUrl?: string | null }) {
   const [pages, setPages] = useState<Unit[][] | null>(null);
-  const [scale, setScale] = useState(1);
+  const scale = 1; // Fixed scale for proper page layouts and reading (A4 size: 794x1122 px)
   const [assets, setAssets] = useState<ReportAssets | null>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1797,21 +1797,6 @@ function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUr
       })
       .catch(() => { /* ignore — preview works without assets */ });
     return () => { cancelled = true; };
-  }, []);
-
-  // Measure container width and compute scale to fit
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const el = containerRef.current;
-    const update = () => {
-      const avail = el.clientWidth;
-      const s = Math.min(1, avail / PAGE_W);
-      setScale(s);
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
   }, []);
 
   useEffect(() => {
@@ -1842,7 +1827,7 @@ function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUr
   const scaledPageW = PAGE_W * scale;
 
   return (
-    <div ref={containerRef} className="w-full flex flex-col items-center">
+    <div ref={containerRef} className="w-full overflow-x-auto pb-4 flex flex-col items-center">
       {/* Cover Page — scaled */}
       <div style={{ width: `${scaledPageW}px`, height: `${scaledPageH}px`, marginBottom: `${PAGE_GAP}px`, overflow: "hidden" }}>
         <div style={{ width: `${PAGE_W}px`, transformOrigin: "top left", transform: `scale(${scale})` }}>
@@ -2267,7 +2252,7 @@ function SubmittedReportsView({
               Download PDF
             </Button>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-80px)] px-6 pb-6">
+          <div className="overflow-auto max-h-[calc(90vh-80px)] px-6 pb-6">
             {viewingSubmission && (
               <ReportPreview data={viewingSubmission.reportData} signatureUrl={viewingSubmission.signatureUrl} />
             )}
@@ -2500,7 +2485,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
               Download PDF
             </Button>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-80px)] px-6 pb-6">
+          <div className="overflow-auto max-h-[calc(90vh-80px)] px-6 pb-6">
             {viewingSubmission && (
               <ReportPreview data={viewingSubmission.reportData} signatureUrl={viewingSubmission.signatureUrl} />
             )}
