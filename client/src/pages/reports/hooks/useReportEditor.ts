@@ -234,7 +234,7 @@ export function useReportEditor() {
       const res = await _axios.post("/admin/timetable/submit-report", data);
       if (res.data?.success) {
         toast.success("Report submitted successfully");
-        setSubmissionStatus({ submitted: true, submittedAt: res.data.data?.submittedAt, submissionId: res.data.data?.id });
+        setSubmissionStatus({ submitted: true, submittedAt: res.data.data?.submittedAt, submissionId: res.data.data?.id, adminApproval: "pending", adminComment: undefined });
       } else {
         throw new Error("Submit failed");
       }

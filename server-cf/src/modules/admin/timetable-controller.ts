@@ -2586,6 +2586,10 @@ timetableController.post("/submit-report", async (c) => {
           status: "submitted",
           submittedAt: now,
           updatedAt: now,
+          adminApproval: "pending",
+          adminComment: null,
+          reviewedAt: null,
+          reviewedBy: null,
         })
         .where(eq(reportSubmissions.id, existing.id))
         .returning();
