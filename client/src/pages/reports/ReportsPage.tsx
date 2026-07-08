@@ -1161,6 +1161,7 @@ const PAGE_GAP = 32; // px between preview pages
 const PAGE_SHADOW = "0 4px 6px -1px rgba(0,0,0,0.1), 0 10px 15px -3px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)";
 
 const CELL_PADDING = `${tw(40)} ${tw(80)}`;
+const SESSION_CELL_PADDING = `${tw(40)} ${tw(30)}`;
 const BORDER_CSS = "1px solid #999999";
 const PREVIEW_TABLE_CELL_TEXT: React.CSSProperties = {
   boxSizing: "border-box",
@@ -1170,7 +1171,7 @@ const PREVIEW_TABLE_CELL_TEXT: React.CSSProperties = {
   wordBreak: "break-word",
   whiteSpace: "normal",
 };
-const PREVIEW_SESSION_COL_WIDTHS = [85, 36, 102, 92];
+const PREVIEW_SESSION_COL_WIDTHS = [79, 34, 76, 89];
 
 // ─── Pagination types ───
 
@@ -1403,9 +1404,11 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
   const rowUnits = units.filter(u => u.type === "table-row");
   const columns = headerUnit?.columns || [];
   const colCount = columns.length;
-  const sessionSummaryWidths = headerUnit?.id === "session-header" && colCount === 5
+  const isSessionSummary = headerUnit?.id === "session-header" && colCount === 5;
+  const sessionSummaryWidths = isSessionSummary
     ? PREVIEW_SESSION_COL_WIDTHS
     : [];
+  const cellPadding = isSessionSummary ? SESSION_CELL_PADDING : CELL_PADDING;
 
   return (
     <table key={key} style={{ width: "100%", borderCollapse: "collapse", border: BORDER_CSS, tableLayout: "fixed" }}>
@@ -1426,7 +1429,7 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
             <th key={ci} style={{
               ...PREVIEW_TABLE_CELL_TEXT,
               color: "#FFFFFF", fontWeight: "bold", fontSize: hp(24),
-              textAlign: "center", padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "middle",
+              textAlign: "center", padding: cellPadding, border: BORDER_CSS, verticalAlign: "middle",
             }}>{col}</th>
           ))}
         </tr>
@@ -1437,7 +1440,7 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
             <td colSpan={colCount} style={{
               ...PREVIEW_TABLE_CELL_TEXT,
               fontSize: hp(24), textAlign: "center", color: "#999",
-              padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "middle",
+              padding: cellPadding, border: BORDER_CSS, verticalAlign: "middle",
             }}>No rows</td>
           </tr>
         ) : (
@@ -1448,7 +1451,7 @@ function renderTableUnits(units: Unit[], key: string): React.ReactNode {
                   ...PREVIEW_TABLE_CELL_TEXT,
                   fontSize: hp(24),
                   textAlign: ci < 2 ? "center" : "left",
-                  padding: CELL_PADDING, border: BORDER_CSS, verticalAlign: "top",
+                  padding: cellPadding, border: BORDER_CSS, verticalAlign: "top",
                 }}>{val || ""}</td>
               ))}
             </tr>

@@ -83,7 +83,14 @@ const PAGE_MARGINS = { top: 1440, bottom: 1440, left: 1440, right: 480 };
 const PORTRAIT_LOGO_OFFSET = 3750000;
 const PAGE_WIDTH_DXA = 11906;
 const CONTENT_WIDTH_DXA = PAGE_WIDTH_DXA - PAGE_MARGINS.left - PAGE_MARGINS.right;
-const SESSION_SUMMARY_FIXED_WIDTHS = [1320, 560, 1580, 1440];
+const SESSION_SUMMARY_FIXED_WIDTHS = [1220, 520, 1180, 1380];
+const SESSION_CELL_MARGINS = {
+  top: 40,
+  bottom: 40,
+  left: 30,
+  right: 30,
+  marginUnitType: WidthType.DXA,
+};
 
 // Load assets as ArrayBuffer at module level
 let blueStripeData: ArrayBuffer | null = null;
@@ -245,6 +252,7 @@ function buildStyledTable(
   dataRows: string[][],
   pageBreakBefore = false,
   columnWidths?: number[],
+  cellMargins = COMPACT_CELL_MARGINS,
 ): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
 
@@ -279,7 +287,7 @@ function buildStyledTable(
   const headerCells = columns.map((col, i) =>
     new TableCell({
       width: widths[i] as any,
-      margins: COMPACT_CELL_MARGINS,
+      margins: cellMargins,
       shading: { type: ShadingType.SOLID, color: HEADER_BLUE, fill: HEADER_BLUE },
       verticalAlign: VerticalAlign.CENTER,
       borders: ALL_BORDERS,
@@ -311,7 +319,7 @@ function buildStyledTable(
     const cells = row.map((val, i) =>
       new TableCell({
         width: widths[i] as any,
-        margins: COMPACT_CELL_MARGINS,
+        margins: cellMargins,
         verticalAlign: VerticalAlign.TOP,
         borders: ALL_BORDERS,
         children: [
@@ -330,8 +338,10 @@ function buildStyledTable(
   });
 
   const table = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    margins: COMPACT_CELL_MARGINS,
+    width: fixedWidths
+      ? { size: fixedWidths.reduce((sum, width) => sum + width, 0), type: WidthType.DXA }
+      : { size: 100, type: WidthType.PERCENTAGE },
+    margins: cellMargins,
     layout: fixedWidths ? TableLayoutType.FIXED : TableLayoutType.AUTOFIT,
     rows: [headerRow, ...rows],
   });
@@ -358,7 +368,7 @@ function buildSessionTable(
   return buildStyledTable("Session Summary", columns, dataRows, false, [
     ...SESSION_SUMMARY_FIXED_WIDTHS,
     remarksWidth,
-  ]);
+  ], SESSION_CELL_MARGINS);
 }
 
 function buildHeader(horizontalOffset: number): Header {
