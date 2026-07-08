@@ -305,6 +305,25 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
     if (reportData) downloadDocx(reportData);
   };
 
+  const downloadPrincipalSignedBlob = async (submissionId?: string) => {
+    if (!submissionId) return;
+    try {
+      const res = await _axios.get(`/admin/timetable/download-principal-signed-report?id=${submissionId}`, { responseType: "blob" });
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Principal_Signed_Report.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      toast.success("Principal signed report downloaded");
+    } catch {
+      toast.error("Failed to download principal signed report");
+    }
+  };
+
   const handleAddTable = () => {
     const cols = newTableCols.split(",").map((c) => c.trim()).filter(Boolean);
     if (cols.length === 0 || !newTableTitle.trim()) return;
@@ -673,7 +692,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                               variant="outline"
                               size="sm"
                               className="flex items-center gap-1.5 rounded-lg font-semibold border-emerald-300 text-emerald-700"
-                              onClick={() => window.open(`/admin/timetable/download-principal-signed-report?id=${submissionStatus?.submissionId}`, "_blank")}
+                              onClick={() => downloadPrincipalSignedBlob(submissionStatus?.submissionId)}
                             >
                               <Download size={14} />
                               Signed PDF
@@ -709,7 +728,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                             variant="outline"
                             size="sm"
                             className="flex items-center gap-1.5 rounded-lg font-semibold border-emerald-300 text-emerald-700"
-                            onClick={() => window.open(`/admin/timetable/download-principal-signed-report?id=${submissionStatus?.submissionId}`, "_blank")}
+                            onClick={() => downloadPrincipalSignedBlob(submissionStatus?.submissionId)}
                           >
                             <Download size={14} />
                             Signed PDF
@@ -2578,7 +2597,22 @@ function PrincipalSignedUpload({ r, onRefresh }: { r: any; onRefresh: () => void
         hasSigned ? (
           <div className="flex items-center gap-1">
             <button
-              onClick={() => window.open(`/admin/timetable/download-principal-signed-report?id=${r.id}`, "_blank")}
+              onClick={async () => {
+                try {
+                  const res = await _axios.get(`/admin/timetable/download-principal-signed-report?id=${r.id}`, { responseType: "blob" });
+                  const blob = new Blob([res.data], { type: "application/pdf" });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "Principal_Signed_Report.pdf";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+                } catch {
+                  toast.error("Failed to download");
+                }
+              }}
               className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors"
             >
               <Download size={12} />
@@ -2605,7 +2639,22 @@ function PrincipalSignedUpload({ r, onRefresh }: { r: any; onRefresh: () => void
       ) : (
         hasSigned ? (
           <button
-            onClick={() => window.open(`/admin/timetable/download-principal-signed-report?id=${r.id}`, "_blank")}
+            onClick={async () => {
+              try {
+                const res = await _axios.get(`/admin/timetable/download-principal-signed-report?id=${r.id}`, { responseType: "blob" });
+                const blob = new Blob([res.data], { type: "application/pdf" });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "Principal_Signed_Report.pdf";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+              } catch {
+                toast.error("Failed to download");
+              }
+            }}
             className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors"
           >
             <Download size={12} />
