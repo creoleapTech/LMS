@@ -83,7 +83,8 @@ const PAGE_MARGINS = { top: 1440, bottom: 1440, left: 1440, right: 480 };
 const PORTRAIT_LOGO_OFFSET = 3750000;
 const PAGE_WIDTH_DXA = 11906;
 const CONTENT_WIDTH_DXA = PAGE_WIDTH_DXA - PAGE_MARGINS.left - PAGE_MARGINS.right;
-const SESSION_SUMMARY_FIXED_WIDTHS = [1120, 520, 980, 1180];
+const SESSION_SUMMARY_FIXED_WIDTHS = [1060, 620, 1220, 1300];
+const SESSION_TABLE_FONT_SIZE = 20;
 const SESSION_CELL_MARGINS = {
   top: 40,
   bottom: 40,
@@ -253,6 +254,7 @@ function buildStyledTable(
   pageBreakBefore = false,
   columnWidths?: number[],
   cellMargins = COMPACT_CELL_MARGINS,
+  fontSize = 24,
 ): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
 
@@ -299,7 +301,7 @@ function buildStyledTable(
             new TextRun({
               text: col,
               bold: true,
-              size: 24,
+              size: fontSize,
               font: "Times New Roman",
               color: "FFFFFF",
             }),
@@ -327,7 +329,7 @@ function buildStyledTable(
             alignment: i < 2 ? AlignmentType.CENTER : AlignmentType.LEFT,
             spacing: { before: 0, after: 0 },
             children: [
-              new TextRun({ text: val || "", size: 24, font: "Times New Roman" }),
+              new TextRun({ text: val || "", size: fontSize, font: "Times New Roman" }),
             ],
           }),
         ],
@@ -369,7 +371,7 @@ function buildSessionTable(
   return buildStyledTable("Session Summary", columns, dataRows, false, [
     ...SESSION_SUMMARY_FIXED_WIDTHS,
     remarksWidth,
-  ], SESSION_CELL_MARGINS);
+  ], SESSION_CELL_MARGINS, SESSION_TABLE_FONT_SIZE);
 }
 
 function buildHeader(horizontalOffset: number): Header {
