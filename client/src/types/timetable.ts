@@ -51,6 +51,7 @@ export interface IMonthSummary {
   [dateString: string]: {
     entryCount: number;
     hasCompleted: boolean;
+    completedCount?: number;
   };
 }
 

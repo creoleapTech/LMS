@@ -151,6 +151,23 @@ function formatSubmittedOn(): string {
   });
 }
 
+function formatDateString(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) {
+      return dateStr;
+    }
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
 function signatureImageTypeFromKey(signatureKey: string | null | undefined): "png" | "jpg" {
   const key = signatureKey?.toLowerCase() || "";
   return key.endsWith(".jpg") || key.endsWith(".jpeg") ? "jpg" : "png";
@@ -459,7 +476,7 @@ function buildMonthSummary(
 ) {
   const endDate = new Date(year, month, 0); // last day of month
   const daysInMonth = endDate.getDate();
-  const dates: Record<string, { entryCount: number; hasCompleted: boolean }> = {};
+  const dates: Record<string, { entryCount: number; hasCompleted: boolean; completedCount?: number }> = {};
 
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month - 1, d);
@@ -497,6 +514,7 @@ function buildMonthSummary(
       dates[dateStr] = {
         entryCount: merged.length,
         hasCompleted: merged.some((e: any) => e.status === "completed"),
+        completedCount: merged.filter((e: any) => e.status === "completed").length,
       };
     }
   }
@@ -2059,7 +2077,7 @@ timetableController.post("/generate-report-docx", async (c) => {
       ...body,
       signatureData,
       signatureImageType,
-      submittedOn: body.submittedOn || formatSubmittedOn(),
+      submittedOn: formatDateString(body.submittedOn) || formatSubmittedOn(),
     });
     const monthName = body.monthName || "Report";
     const year = body.year || "";
@@ -2134,7 +2152,7 @@ timetableController.post("/generate-report-pdf", async (c) => {
       ...body,
       signatureData,
       signatureImageType,
-      submittedOn: body.submittedOn || formatSubmittedOn(),
+      submittedOn: formatDateString(body.submittedOn) || formatSubmittedOn(),
     });
 
     let pdfBytes = await convertToPdf(wasmModule, docxBuffer);
@@ -2981,7 +2999,7 @@ timetableController.get("/download-submitted-report", async (c) => {
           ...reportData,
           signatureData,
           signatureImageType,
-          submittedOn: submission.submittedAt || reportData.submittedOn || formatSubmittedOn(),
+          submittedOn: formatDateString(submission.submittedAt || reportData.submittedOn) || formatSubmittedOn(),
         });
 
         // Lazy-update the database record

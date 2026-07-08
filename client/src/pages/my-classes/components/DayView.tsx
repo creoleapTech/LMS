@@ -152,6 +152,7 @@ export function DayView({
   const dateStr = formatDateString(date);
   const isAdminView = !!staffId && !!institutionId;
   const currentUser = useAuthStore((s) => s.user);
+  const isSuperAdmin = currentUser?.role === "super_admin";
 
   // Freeze dates older than 30 days — always read-only regardless of prop
   const todayMidnight = new Date();
@@ -294,7 +295,7 @@ export function DayView({
                   <TableHead className="w-[100px]"><Skeleton className="h-4 w-16" /></TableHead>
                   <TableHead><Skeleton className="h-4 w-32" /></TableHead>
                   <TableHead className="w-[90px] hidden sm:table-cell"><Skeleton className="h-4 w-14" /></TableHead>
-                  {!effectiveReadOnly && <TableHead className="w-[72px]"><Skeleton className="h-4 w-8" /></TableHead>}
+                  {(!effectiveReadOnly || isSuperAdmin) && <TableHead className="w-[72px]"><Skeleton className="h-4 w-8" /></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -304,7 +305,7 @@ export function DayView({
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                    {!effectiveReadOnly && <TableCell><Skeleton className="h-6 w-6" /></TableCell>}
+                    {(!effectiveReadOnly || isSuperAdmin) && <TableCell><Skeleton className="h-6 w-6" /></TableCell>}
                   </TableRow>
                 ))}
               </TableBody>
@@ -339,7 +340,7 @@ export function DayView({
                 <TableHead className="w-[90px] text-[11px] font-black uppercase tracking-wider text-slate-400 hidden sm:table-cell">
                   Status
                 </TableHead>
-                {!effectiveReadOnly && (
+                 {(!effectiveReadOnly || isSuperAdmin) && (
                   <TableHead className="w-[72px] text-[11px] font-black uppercase tracking-wider text-slate-400 text-right pr-5">
                     Actions
                   </TableHead>
@@ -412,6 +413,7 @@ export function DayView({
                     isCompleted={isCompleted}
                     colors={colors}
                     readOnly={effectiveReadOnly}
+                    isSuperAdmin={isSuperAdmin}
                     session={matchedSession}
                     onEditClick={() =>
                       setScheduleDialog({
@@ -591,7 +593,8 @@ function ScheduledRow({
   entry,
   isCompleted,
   colors,
-  readOnly,
+  readOnly = false,
+  isSuperAdmin = false,
   session,
   onEditClick,
   onCompleteClick,
@@ -603,6 +606,7 @@ function ScheduledRow({
   isCompleted: boolean;
   colors: { border: string; badge: string };
   readOnly?: boolean;
+  isSuperAdmin?: boolean;
   session?: IClassSession;
   onEditClick: () => void;
   onCompleteClick: () => void;
@@ -722,32 +726,36 @@ function ScheduledRow({
         )}
       </TableCell>
 
-      {/* Actions (only in non-readOnly mode) */}
-      {!readOnly && (
+      {/* Actions (only in non-readOnly mode or for super admin) */}
+      {(!readOnly || isSuperAdmin) && (
         <TableCell className="text-right pr-4">
           <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={onEditClick}
-              className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-indigo-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(99,102,241,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
-              title="Edit schedule"
-            >
-              <Pencil size={14} />
-            </button>
-            <button
-              onClick={onCompleteClick}
-              className={`inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-emerald-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(16,185,129,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer`}
-              title={isCompleted ? "Edit work done" : "Mark done"}
-            >
-              {isCompleted ? <CheckCircle2 size={14} /> : <Check size={14} />}
-            </button>
-            {!isCompleted && (
-              <button
-                onClick={onTeachClick}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-violet-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(139,92,246,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
-                title="Teach"
-              >
-                <GraduationCap size={14} />
-              </button>
+            {!readOnly && (
+              <>
+                <button
+                  onClick={onEditClick}
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-indigo-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(99,102,241,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
+                  title="Edit schedule"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={onCompleteClick}
+                  className={`inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-emerald-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(16,185,129,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer`}
+                  title={isCompleted ? "Edit work done" : "Mark done"}
+                >
+                  {isCompleted ? <CheckCircle2 size={14} /> : <Check size={14} />}
+                </button>
+                {!isCompleted && (
+                  <button
+                    onClick={onTeachClick}
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-violet-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(139,92,246,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
+                    title="Teach"
+                  >
+                    <GraduationCap size={14} />
+                  </button>
+                )}
+              </>
             )}
             {!isCompleted && (
               <button
