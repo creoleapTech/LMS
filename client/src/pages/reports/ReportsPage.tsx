@@ -2904,14 +2904,14 @@ function SubmittedReportsView({
 
       {/* Email Preview & Customization Dialog */}
       <Dialog open={!!emailPreviewData} onOpenChange={(open) => { if (!open) setEmailPreviewData(null); }}>
-        <DialogContent className="sm:max-w-lg md:max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg md:max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2 border-b border-slate-100 shrink-0">
             <DialogTitle>Email Report to School</DialogTitle>
             <DialogDescription>
               Review and customize the email subject and message before sending it to the school. The signed PDF report will be attached automatically.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 my-2">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Recipient (School Email)</label>
               <Input
@@ -2934,7 +2934,7 @@ function SubmittedReportsView({
               <Textarea
                 value={emailPreviewData?.body || ""}
                 onChange={(e) => setEmailPreviewData((prev) => prev ? { ...prev, body: e.target.value } : null)}
-                className="min-h-[250px] font-sans text-sm rounded-xl border-slate-200 resize-y p-3 focus-visible:ring-indigo-500"
+                className="min-h-[200px] md:min-h-[250px] font-sans text-sm rounded-xl border-slate-200 resize-y p-3 focus-visible:ring-indigo-500"
                 placeholder="Enter message body..."
               />
             </div>
@@ -2947,7 +2947,7 @@ function SubmittedReportsView({
               </div>
             </div>
           </div>
-          <DialogFooter className="flex gap-2 justify-end pt-2 border-t border-slate-100">
+          <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0 flex gap-2 justify-end">
             <DialogClose asChild>
               <Button variant="outline" size="sm" className="rounded-xl">Cancel</Button>
             </DialogClose>
