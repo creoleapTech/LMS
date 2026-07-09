@@ -45,10 +45,10 @@ export function InstitutionProfileSection() {
       setName(institution.name || "");
       setType(institution.type || "school");
       setAddress(institution.address || "");
-      setInchargePerson(institution.contactDetails?.inchargePerson || "");
-      setMobileNumber(institution.contactDetails?.mobileNumber || "");
-      setEmail(institution.contactDetails?.email || "");
-      setOfficePhone(institution.contactDetails?.officePhone || "");
+      setInchargePerson(institution.contactInchargePerson || institution.contactDetails?.inchargePerson || "");
+      setMobileNumber(institution.contactMobile || institution.contactDetails?.mobileNumber || "");
+      setEmail(institution.contactEmail || institution.contactDetails?.email || "");
+      setOfficePhone(institution.contactOfficePhone || institution.contactDetails?.officePhone || "");
     }
   }, [institution]);
 

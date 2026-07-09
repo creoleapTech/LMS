@@ -243,7 +243,21 @@ app.get("/institution-profile", async (c) => {
     .from(institutions)
     .where(and(eq(institutions.id, institutionId), eq(institutions.isDeleted, 0)));
 
-  return c.json({ success: true, data: institution || null });
+  if (!institution) {
+    return c.json({ success: true, data: null });
+  }
+
+  const formatted = {
+    ...institution,
+    contactDetails: {
+      inchargePerson: institution.contactInchargePerson || "",
+      mobileNumber: institution.contactMobile || "",
+      email: institution.contactEmail || "",
+      officePhone: institution.contactOfficePhone || "",
+    }
+  };
+
+  return c.json({ success: true, data: formatted });
 });
 
 // ─── PATCH /institution-profile ──────────────────────────
@@ -294,7 +308,17 @@ app.patch("/institution-profile", async (c) => {
     throw new BadRequestError("Institution not found");
   }
 
-  return c.json({ success: true, message: "Institution profile updated", data: updated });
+  const formatted = {
+    ...updated,
+    contactDetails: {
+      inchargePerson: updated.contactInchargePerson || "",
+      mobileNumber: updated.contactMobile || "",
+      email: updated.contactEmail || "",
+      officePhone: updated.contactOfficePhone || "",
+    }
+  };
+
+  return c.json({ success: true, message: "Institution profile updated", data: formatted });
 });
 
 // ═══════════════════════════════════════════════════════
