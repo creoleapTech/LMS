@@ -49,11 +49,12 @@ fileController.get("/proxy", async (c) => {
 
     const isImage = mimeType.startsWith("image/");
     const isVideo = mimeType.startsWith("video/");
+    const isInline = c.req.query("inline") === "true";
 
     const headers = new Headers();
     headers.set("Content-Type", mimeType);
-    // Videos and images are inline (no download prompt); other files use attachment
-    headers.set("Content-Disposition", (isImage || isVideo) ? "inline" : `attachment; filename="${filename}"`);
+    // Videos and images are inline (no download prompt); other files use attachment unless inline is specified
+    headers.set("Content-Disposition", (isImage || isVideo || isInline) ? "inline" : `attachment; filename="${filename}"`);
     headers.set("X-Content-Type-Options", "nosniff");
     headers.set("Cache-Control", "private, max-age=3600");
 

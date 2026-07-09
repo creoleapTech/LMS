@@ -2179,6 +2179,12 @@ function SubmittedReportsView({
     monthName: string;
     year: number;
   } | null>(null);
+  const [viewingSignedReport, setViewingSignedReport] = useState<{
+    staffName: string;
+    monthName: string;
+    year: number;
+    url: string;
+  } | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
   const currentYear = new Date().getFullYear();
@@ -2312,7 +2318,13 @@ function SubmittedReportsView({
 
   const handleViewSigned = (r: any) => {
     if (r.principalSignedKey) {
-      window.open(`${Config.proxyUrl}${encodeURIComponent(r.principalSignedKey)}`, "_blank");
+      const url = `${Config.proxyUrl}${encodeURIComponent(r.principalSignedKey)}&inline=true`;
+      setViewingSignedReport({
+        staffName: r.staffName || "Unknown",
+        monthName: MONTH_NAMES[(r.month || 1) - 1],
+        year: r.year,
+        url,
+      });
     } else {
       toast.error("No signed report uploaded yet");
     }
@@ -2816,6 +2828,44 @@ function SubmittedReportsView({
               Reject Report
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Signed Report Viewer Dialog */}
+      <Dialog open={!!viewingSignedReport} onOpenChange={(open) => { if (!open) setViewingSignedReport(null); }}>
+        <DialogContent className="sm:max-w-[90vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-2 border-b border-slate-100 flex flex-row items-center justify-between">
+            <div>
+              <DialogTitle className="text-lg font-bold">
+                Signed Report — {viewingSignedReport?.staffName} ({viewingSignedReport?.monthName} {viewingSignedReport?.year})
+              </DialogTitle>
+            </div>
+            <button
+              onClick={() => {
+                if (viewingSignedReport) {
+                  const a = document.createElement("a");
+                  a.href = viewingSignedReport.url.replace("&inline=true", "");
+                  a.download = `Principal_Signed_Report_${viewingSignedReport.monthName}_${viewingSignedReport.year}.pdf`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 font-semibold text-xs hover:bg-indigo-100 transition-colors mr-6"
+            >
+              <Download size={14} />
+              Download PDF
+            </button>
+          </DialogHeader>
+          <div className="flex-1 w-full bg-slate-100 overflow-hidden">
+            {viewingSignedReport && (
+              <iframe
+                src={viewingSignedReport.url}
+                className="w-full h-full border-0"
+                title="Signed Report PDF Viewer"
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>
