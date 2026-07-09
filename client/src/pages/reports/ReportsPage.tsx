@@ -72,6 +72,8 @@ import {
   Upload,
   Shield,
   GripVertical,
+  Mail,
+  MailCheck,
 } from "lucide-react";
 
 const MONTH_NAMES = [
@@ -2165,6 +2167,7 @@ function SubmittedReportsView({
   const [filterMonth, setFilterMonth] = useState<string>("");
   const [filterYear, setFilterYear] = useState<string>("");
   const [rejectDialog, setRejectDialog] = useState<{ report: any; comment: string } | null>(null);
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
 
   // View state
   const [viewingSubmission, setViewingSubmission] = useState<{
@@ -2282,6 +2285,27 @@ function SubmittedReportsView({
       toast.error("Failed to download principal signed report");
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handleSendEmail = async (id: string) => {
+    setSendingEmailId(id);
+    try {
+      const res = await _axios.post("/admin/timetable/send-report-email", { submissionId: id });
+      if (res.data?.success) {
+        toast.success("Email sent successfully to the school!");
+        const mailSentAt = res.data.mailSentAt;
+        setReports((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, mailSentAt } : r))
+        );
+      } else {
+        toast.error(res.data?.message || "Failed to send email");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to send email");
+    } finally {
+      setSendingEmailId(null);
     }
   };
 
@@ -2513,22 +2537,33 @@ function SubmittedReportsView({
                       {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {r.adminApproval === "verified" ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">
-                          <ShieldCheck size={12} />
-                          Verified
-                        </span>
-                      ) : r.adminApproval === "rejected" ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-50 px-2 py-1 rounded-lg" title={r.adminComment || ""}>
-                          <ShieldX size={12} />
-                          Rejected
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">
-                          <Clock size={12} />
-                          Pending
-                        </span>
-                      )}
+                      <div className="flex flex-col items-center gap-1 justify-center">
+                        {r.adminApproval === "verified" ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">
+                            <ShieldCheck size={12} />
+                            Verified
+                          </span>
+                        ) : r.adminApproval === "rejected" ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-50 px-2 py-1 rounded-lg" title={r.adminComment || ""}>
+                            <ShieldX size={12} />
+                            Rejected
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">
+                            <Clock size={12} />
+                            Pending
+                          </span>
+                        )}
+                        {r.mailSentAt && (
+                          <span
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md"
+                            title={`Mailed on ${new Date(r.mailSentAt).toLocaleString("en-GB")}`}
+                          >
+                            <Mail size={10} />
+                            Mailed
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="inline-flex items-center gap-1.5">
@@ -2569,18 +2604,39 @@ function SubmittedReportsView({
                           DOCX
                         </button>
                         {r.adminApproval === "verified" && r.principalSignedKey && (
-                          <button
-                            onClick={() => handleDownloadPrincipalSigned(r.id)}
-                            disabled={downloadingId === r.id}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 font-semibold text-xs hover:bg-violet-100 transition-colors disabled:opacity-50"
-                          >
-                            {downloadingId === r.id ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <Download size={14} />
-                            )}
-                            Signed
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleDownloadPrincipalSigned(r.id)}
+                              disabled={downloadingId === r.id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 font-semibold text-xs hover:bg-violet-100 transition-colors disabled:opacity-50"
+                            >
+                              {downloadingId === r.id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Download size={14} />
+                              )}
+                              Signed
+                            </button>
+                            <button
+                              onClick={() => handleSendEmail(r.id)}
+                              disabled={sendingEmailId === r.id}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors disabled:opacity-50 ${
+                                r.mailSentAt
+                                  ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                  : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                              }`}
+                              title={r.mailSentAt ? `Sent on ${new Date(r.mailSentAt).toLocaleString("en-GB")}` : "Send report to school email"}
+                            >
+                              {sendingEmailId === r.id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : r.mailSentAt ? (
+                                <MailCheck size={14} />
+                              ) : (
+                                <Mail size={14} />
+                              )}
+                              {r.mailSentAt ? "Resend Mail" : "Mail School"}
+                            </button>
+                          </>
                         )}
                         {r.adminApproval !== "verified" && (
                           <button

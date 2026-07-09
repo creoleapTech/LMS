@@ -5,6 +5,7 @@ export interface Bindings {
   JWT_ADMIN_SECRET: string;
   JWT_SUPERADMIN_SECRET: string;
   CORS_ORIGINS?: string;
+  RESEND_API_KEY?: string;
 }
 
 export interface Variables {
