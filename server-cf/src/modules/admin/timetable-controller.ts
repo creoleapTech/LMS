@@ -2739,6 +2739,10 @@ timetableController.post("/save-report-draft", async (c) => {
         .set({
           reportData: reportDataJson,
           status: "draft",
+          adminApproval: "pending",
+          adminComment: null,
+          reviewedAt: null,
+          reviewedBy: null,
           updatedAt: now,
         })
         .where(eq(reportSubmissions.id, existing.id))
