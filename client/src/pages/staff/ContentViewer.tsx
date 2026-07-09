@@ -176,7 +176,7 @@ export function ContentViewer({
           <Badge className="bg-white/25 text-white border-0 px-2 py-0.5 font-mono text-sm">
             {displayNum}
           </Badge>
-          {content.isFree && (
+          {!!content.isFree && (
             <Badge className="bg-green-500/80 text-white border-0">Free Preview</Badge>
           )}
         </div>

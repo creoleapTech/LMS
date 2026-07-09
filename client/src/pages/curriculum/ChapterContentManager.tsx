@@ -443,7 +443,7 @@ function SortableContentItem({
             <Badge variant="outline" className="text-xs uppercase">
               {item.type}
             </Badge>
-            {item.isFree && (
+            {!!item.isFree && (
               <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                 Free Preview
               </Badge>
