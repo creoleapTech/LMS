@@ -232,7 +232,6 @@ export function DayView({
     ? fallbackPeriodConfig.periods
     : [];
   const periods = dayPeriods.length > 0 ? dayPeriods : fallbackPeriods;
-  const sortedPeriods = [...periods].sort((a, b) => a.periodNumber - b.periodNumber);
 
   const entryMap = new Map<number, ITimetableEntry>();
   for (const entry of entries) {
@@ -327,7 +326,7 @@ export function DayView({
         )}
 
         {/* Schedule table */}
-        {!isLoading && sortedPeriods.length > 0 && (
+        {!isLoading && periods.length > 0 && (
           <Table className="min-w-[640px] table-fixed">
             <TableHeader>
               <TableRow className="bg-[var(--neo-bg-dark)]/40 hover:bg-[var(--neo-bg-dark)]/40 border-b border-white/30">
@@ -351,7 +350,7 @@ export function DayView({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedPeriods.map((period) => {
+              {periods.map((period) => {
                 const entry = entryMap.get(period.periodNumber);
                 const isBreak = period.isBreak;
                 const isCompleted = entry?.status === "completed";

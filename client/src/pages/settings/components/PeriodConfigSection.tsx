@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,9 +60,23 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
     }
   }, [config, isLoading]);
 
+  // Renumber: non-break periods get sequential numbers; breaks get high unique numbers
+  const renumberedPeriods = useMemo(() => {
+    let counter = 0;
+    let breakCounter = 0;
+    return periods.map((p) => {
+      if (!p.isBreak) {
+        counter++;
+        return { ...p, periodNumber: counter };
+      }
+      breakCounter++;
+      return { ...p, periodNumber: 10000 + breakCounter };
+    });
+  }, [periods]);
+
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload: any = { periods, workingDays };
+      const payload: any = { periods: renumberedPeriods, workingDays };
       if (institutionId) payload.institutionId = institutionId;
       const { data: res } = await _axios.post("/admin/period-config", payload);
       return res.data;
@@ -77,7 +91,8 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
   });
 
   const addPeriod = () => {
-    const nextNum = periods.length > 0 ? Math.max(...periods.map((p) => p.periodNumber)) + 1 : 1;
+    const nonBreakMax = Math.max(0, ...periods.filter((p) => !p.isBreak).map((p) => p.periodNumber));
+    const nextNum = nonBreakMax + 1;
     const lastPeriod = periods[periods.length - 1];
     const newPeriod: IPeriodSlot = {
       periodNumber: nextNum,
