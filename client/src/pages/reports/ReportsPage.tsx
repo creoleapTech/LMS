@@ -2188,6 +2188,7 @@ function SubmittedReportsView({
   const [emailPreviewData, setEmailPreviewData] = useState<{
     submissionId: string;
     to: string;
+    cc: string;
     subject: string;
     body: string;
     attachmentName: string;
@@ -2303,13 +2304,14 @@ function SubmittedReportsView({
     }
   };
 
-  const handleSendEmail = async (id: string, customSubject?: string, customBody?: string) => {
+  const handleSendEmail = async (id: string, customSubject?: string, customBody?: string, customCc?: string) => {
     setSendingEmailId(id);
     try {
       const res = await _axios.post("/admin/timetable/send-report-email", {
         submissionId: id,
         customSubject,
         customBody,
+        customCc,
       });
       if (res.data?.success) {
         toast.success("Email sent successfully to the school!");
@@ -2921,6 +2923,15 @@ function SubmittedReportsView({
               />
             </div>
             <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">CC (comma-separated emails)</label>
+              <Input
+                value={emailPreviewData?.cc || ""}
+                onChange={(e) => setEmailPreviewData((prev) => prev ? { ...prev, cc: e.target.value } : null)}
+                className="rounded-xl border-slate-200 font-semibold"
+                placeholder="cto@creoleap.com, ceo@creoleap.com"
+              />
+            </div>
+            <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject</label>
               <Input
                 value={emailPreviewData?.subject || ""}
@@ -2957,7 +2968,8 @@ function SubmittedReportsView({
                   handleSendEmail(
                     emailPreviewData.submissionId,
                     emailPreviewData.subject,
-                    emailPreviewData.body
+                    emailPreviewData.body,
+                    emailPreviewData.cc
                   );
                 }
               }}

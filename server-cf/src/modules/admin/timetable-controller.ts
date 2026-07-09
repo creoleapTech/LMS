@@ -3352,15 +3352,21 @@ timetableController.get("/email-preview", async (c) => {
 
     const subject = `Monthly AI Integrated STEM Robotics Lesson Completion Report – ${monthName} ${year} | ${schoolName}`;
     const body = `Respected Sir/Ma’am,
+
 Greetings from Creoleap Technologies Pvt. Ltd.
+
 Please find attached the Monthly Lesson Completion Report for the AI Integrated STEM Robotics Program conducted during ${monthName} ${year} at ${schoolNameAndLocation}.
+
 The report provides a comprehensive summary of the sessions conducted, including:
 • Lessons and topics completed as per the curriculum
 • Student attendance, participation, and engagement
 • Learning outcomes and skills achieved
 • Trainer observations and recommendations, where applicable
+
 This report is submitted for your kind reference and institutional records. Should you require any additional information or clarification, please feel free to contact us. Our team will be happy to assist you.
+
 Thank you for your continued trust and partnership with Creoleap Technologies. We look forward to empowering students with future ready skills through AI, STEM, and Robotics education.
+
 Warm Regards,
 Learning & Development Department
 Creoleap Technologies Pvt. Ltd.
@@ -3374,6 +3380,7 @@ Creoleap Technologies Pvt. Ltd.
       success: true,
       data: {
         to: inst.contactEmail || "",
+        cc: "cto@creoleap.com, ceo@creoleap.com",
         subject,
         body,
         attachmentName,
@@ -3395,8 +3402,22 @@ timetableController.post("/send-report-email", async (c) => {
       throw new ForbiddenError("Access denied");
     }
 
-    const { submissionId, customSubject, customBody } = await c.req.json();
+    const { submissionId, customSubject, customBody, customCc } = await c.req.json();
     if (!submissionId) throw new BadRequestError("submissionId is required");
+
+    let ccList: string[] = [];
+    if (customCc !== undefined) {
+      if (typeof customCc === "string") {
+        ccList = customCc
+          .split(",")
+          .map((email: string) => email.trim())
+          .filter((email: string) => email.length > 0);
+      } else if (Array.isArray(customCc)) {
+        ccList = customCc;
+      }
+    } else {
+      ccList = ["cto@creoleap.com", "ceo@creoleap.com"];
+    }
 
     const db = getDb(c.env.DB);
 
@@ -3457,7 +3478,7 @@ timetableController.post("/send-report-email", async (c) => {
     // Email templates
     const subject = customSubject || `Monthly AI Integrated STEM Robotics Lesson Completion Report – ${monthName} ${year} | ${schoolName}`;
     const html = customBody
-      ? customBody.replace(/\n/g, "<br/>")
+      ? customBody.replace(/\r?\n/g, "<br/>")
       : `
         <p>Respected Sir/Ma’am,</p>
         <p>Greetings from Creoleap Technologies Pvt. Ltd.</p>
@@ -3487,6 +3508,7 @@ timetableController.post("/send-report-email", async (c) => {
       body: JSON.stringify({
         from: "Creoleap Technologies <info@creoleap.com>",
         to: [inst.contactEmail],
+        cc: ccList.length > 0 ? ccList : undefined,
         subject: subject,
         html: html,
         attachments: [
