@@ -3308,6 +3308,86 @@ timetableController.get("/download-principal-signed-report", async (c) => {
 
 // ─── POST /send-report-email — send trainer report to school email via Resend ──
 
+// ─── GET /email-preview — preview email content before sending ──
+
+timetableController.get("/email-preview", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    if (user.role !== "super_admin" && user.role !== "admin") {
+      throw new ForbiddenError("Access denied");
+    }
+
+    const submissionId = c.req.query("id");
+    if (!submissionId) throw new BadRequestError("id is required");
+
+    const db = getDb(c.env.DB);
+    const [submission] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(and(eq(reportSubmissions.id, submissionId), eq(reportSubmissions.isDeleted, 0)))
+      .limit(1);
+
+    if (!submission) throw new BadRequestError("Submission not found");
+
+    if (user.role === "admin") {
+      const adminInstId = resolveInstitutionId(user);
+      if (submission.institutionId !== adminInstId) {
+        throw new ForbiddenError("Access denied");
+      }
+    }
+
+    const [inst] = await db
+      .select()
+      .from(institutions)
+      .where(eq(institutions.id, submission.institutionId))
+      .limit(1);
+
+    if (!inst) throw new BadRequestError("Institution not found");
+
+    const monthName = MONTH_NAMES[submission.month - 1] || "Report";
+    const year = submission.year;
+    const schoolName = inst.name;
+    const schoolLocation = inst.address || "";
+    const schoolNameAndLocation = schoolName + (schoolLocation ? `, ${schoolLocation}` : "");
+
+    const subject = `Monthly AI Integrated STEM Robotics Lesson Completion Report – ${monthName} ${year} | ${schoolName}`;
+    const body = `Respected Sir/Ma’am,
+Greetings from Creoleap Technologies Pvt. Ltd.
+Please find attached the Monthly Lesson Completion Report for the AI Integrated STEM Robotics Program conducted during ${monthName} ${year} at ${schoolNameAndLocation}.
+The report provides a comprehensive summary of the sessions conducted, including:
+• Lessons and topics completed as per the curriculum
+• Student attendance, participation, and engagement
+• Learning outcomes and skills achieved
+• Trainer observations and recommendations, where applicable
+This report is submitted for your kind reference and institutional records. Should you require any additional information or clarification, please feel free to contact us. Our team will be happy to assist you.
+Thank you for your continued trust and partnership with Creoleap Technologies. We look forward to empowering students with future ready skills through AI, STEM, and Robotics education.
+Warm Regards,
+Learning & Development Department
+Creoleap Technologies Pvt. Ltd.
+📧 Email: info@creoleap.com
+🌐 Website: www.creoleap.com
+📞 Contact: +91 93632 08701`;
+
+    const attachmentName = `Principal_Signed_Report_${monthName}_${year}.pdf`;
+
+    return c.json({
+      success: true,
+      data: {
+        to: inst.contactEmail || "",
+        subject,
+        body,
+        attachmentName,
+      }
+    });
+  } catch (err: any) {
+    if (err instanceof BadRequestError || err instanceof ForbiddenError) throw err;
+    console.error("Get email preview error:", err);
+    return c.json({ success: false, message: "Failed to get email preview" }, 500);
+  }
+});
+
+// ─── POST /send-report-email — send signed PDF report to school email via Resend ──
+
 timetableController.post("/send-report-email", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
@@ -3315,7 +3395,7 @@ timetableController.post("/send-report-email", async (c) => {
       throw new ForbiddenError("Access denied");
     }
 
-    const { submissionId } = await c.req.json();
+    const { submissionId, customSubject, customBody } = await c.req.json();
     if (!submissionId) throw new BadRequestError("submissionId is required");
 
     const db = getDb(c.env.DB);
@@ -3358,68 +3438,44 @@ timetableController.post("/send-report-email", async (c) => {
       throw new BadRequestError("Email sending is not configured (missing Resend API key)");
     }
 
-    // Load and build the DOCX file buffer
-    let reportData: any = submission.reportData;
-    if (typeof reportData === "string") {
-      try { reportData = JSON.parse(reportData); } catch { /* keep as string */ }
+    // Load the signed PDF document from R2 BUCKET
+    const file = await getFile(c.env.BUCKET, submission.principalSignedKey);
+    if (!file) {
+      throw new BadRequestError("Principal signed report file not found in storage");
     }
 
-    let docxBuffer: Uint8Array | null = null;
-    const { signatureData, signatureImageType } = await loadStaffSignature(db, c.env.BUCKET, submission.staffId);
-
-    if (reportData && typeof reportData === "object" && signatureData) {
-      try {
-        reportData = normalizeReportData(reportData);
-        docxBuffer = await generateMonthlyReportDocx({
-          ...reportData,
-          signatureData,
-          signatureImageType,
-          submittedOn: formatDateString(submission.submittedAt || reportData.submittedOn) || formatSubmittedOn(),
-        });
-      } catch (genErr) {
-        console.error("Failed to regenerate submitted report DOCX:", genErr);
-      }
-    }
-
-    if (!docxBuffer) {
-      if (!submission.docxKey) {
-        throw new BadRequestError("File not found in storage (no key)");
-      }
-      const file = await getFile(c.env.BUCKET, submission.docxKey);
-      if (!file) {
-        throw new BadRequestError("File not found in storage");
-      }
-      docxBuffer = new Uint8Array(await file.arrayBuffer());
-    }
+    const pdfBuffer = new Uint8Array(await file.arrayBuffer());
+    const base64Content = Buffer.from(pdfBuffer).toString("base64");
 
     const monthName = MONTH_NAMES[submission.month - 1] || "Report";
     const year = submission.year;
     const schoolName = inst.name;
     const schoolLocation = inst.address || "";
     const schoolNameAndLocation = schoolName + (schoolLocation ? `, ${schoolLocation}` : "");
-    const filename = `Monthly_Report_${monthName}_${year}.docx`;
-    const base64Content = Buffer.from(docxBuffer).toString("base64");
+    const filename = `Principal_Signed_Report_${monthName}_${year}.pdf`;
 
     // Email templates
-    const subject = `Monthly AI Integrated STEM Robotics Lesson Completion Report – ${monthName} ${year} | ${schoolName}`;
-    const html = `
-      <p>Respected Sir/Ma’am,</p>
-      <p>Greetings from Creoleap Technologies Pvt. Ltd.</p>
-      <p>Please find attached the Monthly Lesson Completion Report for the AI Integrated STEM Robotics Program conducted during ${monthName} ${year} at ${schoolNameAndLocation}.</p>
-      <p>The report provides a comprehensive summary of the sessions conducted, including:</p>
-      <p>• Lessons and topics completed as per the curriculum<br/>
-      • Student attendance, participation, and engagement<br/>
-      • Learning outcomes and skills achieved<br/>
-      • Trainer observations and recommendations, where applicable</p>
-      <p>This report is submitted for your kind reference and institutional records. Should you require any additional information or clarification, please feel free to contact us. Our team will be happy to assist you.</p>
-      <p>Thank you for your continued trust and partnership with Creoleap Technologies. We look forward to empowering students with future ready skills through AI, STEM, and Robotics education.</p>
-      <p>Warm Regards,<br/>
-      Learning & Development Department<br/>
-      Creoleap Technologies Pvt. Ltd.<br/>
-      📧 Email: <a href="mailto:info@creoleap.com">info@creoleap.com</a><br/>
-      🌐 Website: <a href="http://www.creoleap.com">www.creoleap.com</a><br/>
-      📞 Contact: +91 93632 08701</p>
-    `;
+    const subject = customSubject || `Monthly AI Integrated STEM Robotics Lesson Completion Report – ${monthName} ${year} | ${schoolName}`;
+    const html = customBody
+      ? customBody.replace(/\n/g, "<br/>")
+      : `
+        <p>Respected Sir/Ma’am,</p>
+        <p>Greetings from Creoleap Technologies Pvt. Ltd.</p>
+        <p>Please find attached the Monthly Lesson Completion Report for the AI Integrated STEM Robotics Program conducted during ${monthName} ${year} at ${schoolNameAndLocation}.</p>
+        <p>The report provides a comprehensive summary of the sessions conducted, including:</p>
+        <p>• Lessons and topics completed as per the curriculum<br/>
+        • Student attendance, participation, and engagement<br/>
+        • Learning outcomes and skills achieved<br/>
+        • Trainer observations and recommendations, where applicable</p>
+        <p>This report is submitted for your kind reference and institutional records. Should you require any additional information or clarification, please feel free to contact us. Our team will be happy to assist you.</p>
+        <p>Thank you for your continued trust and partnership with Creoleap Technologies. We look forward to empowering students with future ready skills through AI, STEM, and Robotics education.</p>
+        <p>Warm Regards,<br/>
+        Learning & Development Department<br/>
+        Creoleap Technologies Pvt. Ltd.<br/>
+        📧 Email: <a href="mailto:info@creoleap.com">info@creoleap.com</a><br/>
+        🌐 Website: <a href="http://www.creoleap.com">www.creoleap.com</a><br/>
+        📞 Contact: +91 93632 08701</p>
+      `;
 
     // Send email using Resend API
     const response = await fetch("https://api.resend.com/emails", {
@@ -3437,6 +3493,7 @@ timetableController.post("/send-report-email", async (c) => {
           {
             content: base64Content,
             filename: filename,
+            content_type: "application/pdf"
           }
         ]
       }),

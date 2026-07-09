@@ -2185,6 +2185,14 @@ function SubmittedReportsView({
     year: number;
     url: string;
   } | null>(null);
+  const [emailPreviewData, setEmailPreviewData] = useState<{
+    submissionId: string;
+    to: string;
+    subject: string;
+    body: string;
+    attachmentName: string;
+  } | null>(null);
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
   const currentYear = new Date().getFullYear();
@@ -2295,16 +2303,21 @@ function SubmittedReportsView({
     }
   };
 
-  const handleSendEmail = async (id: string) => {
+  const handleSendEmail = async (id: string, customSubject?: string, customBody?: string) => {
     setSendingEmailId(id);
     try {
-      const res = await _axios.post("/admin/timetable/send-report-email", { submissionId: id });
+      const res = await _axios.post("/admin/timetable/send-report-email", {
+        submissionId: id,
+        customSubject,
+        customBody,
+      });
       if (res.data?.success) {
         toast.success("Email sent successfully to the school!");
         const mailSentAt = res.data.mailSentAt;
         setReports((prev) =>
           prev.map((r) => (r.id === id ? { ...r, mailSentAt } : r))
         );
+        setEmailPreviewData(null);
       } else {
         toast.error(res.data?.message || "Failed to send email");
       }
@@ -2313,6 +2326,26 @@ function SubmittedReportsView({
       toast.error(err.response?.data?.message || "Failed to send email");
     } finally {
       setSendingEmailId(null);
+    }
+  };
+
+  const handleOpenEmailPreview = async (id: string) => {
+    setLoadingPreviewId(id);
+    try {
+      const res = await _axios.get(`/admin/timetable/email-preview?id=${id}`);
+      if (res.data?.success) {
+        setEmailPreviewData({
+          submissionId: id,
+          ...res.data.data,
+        });
+      } else {
+        toast.error(res.data?.message || "Failed to load email preview");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to load email preview");
+    } finally {
+      setLoadingPreviewId(null);
     }
   };
 
@@ -2635,8 +2668,8 @@ function SubmittedReportsView({
                           Download Signed
                         </button>
                         <button
-                          onClick={() => handleSendEmail(r.id)}
-                          disabled={sendingEmailId === r.id}
+                          onClick={() => handleOpenEmailPreview(r.id)}
+                          disabled={loadingPreviewId === r.id || sendingEmailId === r.id}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors disabled:opacity-50 ${
                             r.mailSentAt
                               ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
@@ -2644,7 +2677,7 @@ function SubmittedReportsView({
                           }`}
                           title={r.mailSentAt ? `Sent on ${new Date(r.mailSentAt).toLocaleString("en-GB")}` : "Send report to school email"}
                         >
-                          {sendingEmailId === r.id ? (
+                          {loadingPreviewId === r.id || sendingEmailId === r.id ? (
                             <Loader2 size={14} className="animate-spin" />
                           ) : r.mailSentAt ? (
                             <MailCheck size={14} />
@@ -2866,6 +2899,80 @@ function SubmittedReportsView({
               />
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Preview & Customization Dialog */}
+      <Dialog open={!!emailPreviewData} onOpenChange={(open) => { if (!open) setEmailPreviewData(null); }}>
+        <DialogContent className="sm:max-w-lg md:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Email Report to School</DialogTitle>
+            <DialogDescription>
+              Review and customize the email subject and message before sending it to the school. The signed PDF report will be attached automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 my-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Recipient (School Email)</label>
+              <Input
+                value={emailPreviewData?.to || ""}
+                disabled
+                className="bg-slate-50 text-slate-500 font-medium rounded-xl border-slate-200"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject</label>
+              <Input
+                value={emailPreviewData?.subject || ""}
+                onChange={(e) => setEmailPreviewData((prev) => prev ? { ...prev, subject: e.target.value } : null)}
+                className="rounded-xl border-slate-200 font-semibold"
+                placeholder="Enter email subject"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Message Body</label>
+              <Textarea
+                value={emailPreviewData?.body || ""}
+                onChange={(e) => setEmailPreviewData((prev) => prev ? { ...prev, body: e.target.value } : null)}
+                className="min-h-[250px] font-sans text-sm rounded-xl border-slate-200 resize-y p-3 focus-visible:ring-indigo-500"
+                placeholder="Enter message body..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Attachment</label>
+              <div className="flex items-center gap-2.5 p-3 bg-red-50/50 border border-red-100 rounded-xl text-red-700">
+                <FileText size={18} className="text-red-500 shrink-0" />
+                <span className="text-sm font-semibold truncate">{emailPreviewData?.attachmentName}</span>
+                <span className="text-xs text-red-500/80 font-bold ml-auto uppercase tracking-wide">PDF Document</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2 justify-end pt-2 border-t border-slate-100">
+            <DialogClose asChild>
+              <Button variant="outline" size="sm" className="rounded-xl">Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={() => {
+                if (emailPreviewData) {
+                  handleSendEmail(
+                    emailPreviewData.submissionId,
+                    emailPreviewData.subject,
+                    emailPreviewData.body
+                  );
+                }
+              }}
+              disabled={sendingEmailId === emailPreviewData?.submissionId}
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 gap-1.5"
+            >
+              {sendingEmailId === emailPreviewData?.submissionId ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Send size={14} />
+              )}
+              Send Email
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
