@@ -2168,6 +2168,7 @@ function SubmittedReportsView({
   const [filterYear, setFilterYear] = useState<string>("");
   const [rejectDialog, setRejectDialog] = useState<{ report: any; comment: string } | null>(null);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
+  const [subTab, setSubTab] = useState<"submitted" | "signed">("submitted");
 
   // View state
   const [viewingSubmission, setViewingSubmission] = useState<{
@@ -2309,6 +2310,14 @@ function SubmittedReportsView({
     }
   };
 
+  const handleViewSigned = (r: any) => {
+    if (r.principalSignedKey) {
+      window.open(`${Config.proxyUrl}${encodeURIComponent(r.principalSignedKey)}`, "_blank");
+    } else {
+      toast.error("No signed report uploaded yet");
+    }
+  };
+
   const handleViewInApp = async (r: any) => {
     setViewLoading(true);
     try {
@@ -2377,6 +2386,15 @@ function SubmittedReportsView({
     (filterMonth && filterMonth !== "all") ||
     (filterYear && filterYear !== "all");
 
+  const displayedReports = useMemo(() => {
+    if (!isSuperAdmin) return reports;
+    if (subTab === "signed") {
+      return reports.filter((r) => r.adminApproval === "verified" && r.principalSignedKey);
+    } else {
+      return reports.filter((r) => !(r.adminApproval === "verified" && r.principalSignedKey));
+    }
+  }, [reports, subTab, isSuperAdmin]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -2399,11 +2417,38 @@ function SubmittedReportsView({
     <>
       <div className="neo-card rounded-2xl border border-slate-200/80 overflow-hidden">
         <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-5 py-4">
-          <h2 className="text-lg font-extrabold text-white tracking-wide">Submitted Reports</h2>
+          <h2 className="text-lg font-extrabold text-white tracking-wide">
+            {isSuperAdmin && subTab === "signed" ? "Signed Reports" : "Submitted Reports"}
+          </h2>
           <p className="text-sm text-white/80">
-            {isSuperAdmin ? "All schools" : "Your school"} — {reports.length} report{reports.length !== 1 ? "s" : ""}
+            {isSuperAdmin ? "All schools" : "Your school"} — {displayedReports.length} report{displayedReports.length !== 1 ? "s" : ""}
           </p>
         </div>
+
+        {isSuperAdmin && (
+          <div className="flex border-b border-slate-200 bg-slate-50/50">
+            <button
+              onClick={() => setSubTab("submitted")}
+              className={`flex-1 py-3 text-center font-bold text-sm border-b-2 transition-all ${
+                subTab === "submitted"
+                  ? "border-indigo-600 text-indigo-600 bg-white"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Submitted Reports ({reports.filter((r) => !(r.adminApproval === "verified" && r.principalSignedKey)).length})
+            </button>
+            <button
+              onClick={() => setSubTab("signed")}
+              className={`flex-1 py-3 text-center font-bold text-sm border-b-2 transition-all ${
+                subTab === "signed"
+                  ? "border-indigo-600 text-indigo-600 bg-white"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Signed Reports ({reports.filter((r) => r.adminApproval === "verified" && r.principalSignedKey).length})
+            </button>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/50 space-y-3">
@@ -2504,11 +2549,104 @@ function SubmittedReportsView({
           </div>
         </div>
 
-        {reports.length === 0 ? (
+        {displayedReports.length === 0 ? (
           <div className="p-12 text-center">
             <Inbox className="h-10 w-10 text-slate-300 mx-auto mb-2" />
-            <p className="text-slate-500 font-medium">No reports match your filters</p>
-            <p className="text-slate-400 text-xs mt-1">Try adjusting your filter criteria</p>
+            <p className="text-slate-500 font-medium">
+              {subTab === "signed" ? "No signed reports found" : "No reports match your filters"}
+            </p>
+            <p className="text-slate-400 text-xs mt-1">
+              {subTab === "signed" ? "Signed reports will appear here once approved and signed by the principal." : "Try adjusting your filter criteria"}
+            </p>
+          </div>
+        ) : subTab === "signed" ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-4 py-3 text-center font-bold text-slate-700">Teacher</th>
+                  {isSuperAdmin && <th className="px-4 py-3 text-center font-bold text-slate-700">School</th>}
+                  <th className="px-4 py-3 text-center font-bold text-slate-700">Month</th>
+                  <th className="px-4 py-3 text-center font-bold text-slate-700">Submitted On</th>
+                  <th className="px-4 py-3 text-center font-bold text-slate-700">Emailed Status</th>
+                  <th className="px-4 py-3 text-center font-bold text-slate-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayedReports.map((r, i) => (
+                  <tr key={r.id || i} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 text-center font-medium">
+                      {r.staffSalutation ? `${r.staffSalutation} ` : ""}{r.staffName || "Unknown"}
+                    </td>
+                    {isSuperAdmin && <td className="px-4 py-3 text-center text-slate-600">{r.institutionName || "—"}</td>}
+                    <td className="px-4 py-3 text-center">
+                      {MONTH_NAMES[(r.month || 1) - 1]} {r.year}
+                    </td>
+                    <td className="px-4 py-3 text-center text-slate-600">
+                      {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {r.mailSentAt ? (
+                        <span
+                          className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg"
+                          title={`Mailed on ${new Date(r.mailSentAt).toLocaleString("en-GB")}`}
+                        >
+                          <MailCheck size={12} />
+                          Mailed
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
+                          <Mail size={12} />
+                          Not Mailed
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="inline-flex items-center gap-1.5 justify-center">
+                        <button
+                          onClick={() => handleViewSigned(r)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-semibold text-xs hover:bg-blue-100 transition-colors"
+                        >
+                          <Eye size={14} />
+                          View Signed
+                        </button>
+                        <button
+                          onClick={() => handleDownloadPrincipalSigned(r.id)}
+                          disabled={downloadingId === r.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 font-semibold text-xs hover:bg-violet-100 transition-colors disabled:opacity-50"
+                        >
+                          {downloadingId === r.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Download size={14} />
+                          )}
+                          Download Signed
+                        </button>
+                        <button
+                          onClick={() => handleSendEmail(r.id)}
+                          disabled={sendingEmailId === r.id}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors disabled:opacity-50 ${
+                            r.mailSentAt
+                              ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                              : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                          }`}
+                          title={r.mailSentAt ? `Sent on ${new Date(r.mailSentAt).toLocaleString("en-GB")}` : "Send report to school email"}
+                        >
+                          {sendingEmailId === r.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : r.mailSentAt ? (
+                            <MailCheck size={14} />
+                          ) : (
+                            <Mail size={14} />
+                          )}
+                          {r.mailSentAt ? "Resend Mail" : "Mail School"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -2524,7 +2662,7 @@ function SubmittedReportsView({
                 </tr>
               </thead>
               <tbody>
-                {reports.map((r, i) => (
+                {displayedReports.map((r, i) => (
                   <tr key={r.id || i} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3 text-center font-medium">
                       {r.staffSalutation ? `${r.staffSalutation} ` : ""}{r.staffName || "Unknown"}
@@ -2552,15 +2690,6 @@ function SubmittedReportsView({
                           <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">
                             <Clock size={12} />
                             Pending
-                          </span>
-                        )}
-                        {r.mailSentAt && (
-                          <span
-                            className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md"
-                            title={`Mailed on ${new Date(r.mailSentAt).toLocaleString("en-GB")}`}
-                          >
-                            <Mail size={10} />
-                            Mailed
                           </span>
                         )}
                       </div>
@@ -2603,41 +2732,6 @@ function SubmittedReportsView({
                           )}
                           DOCX
                         </button>
-                        {r.adminApproval === "verified" && r.principalSignedKey && (
-                          <>
-                            <button
-                              onClick={() => handleDownloadPrincipalSigned(r.id)}
-                              disabled={downloadingId === r.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 font-semibold text-xs hover:bg-violet-100 transition-colors disabled:opacity-50"
-                            >
-                              {downloadingId === r.id ? (
-                                <Loader2 size={14} className="animate-spin" />
-                              ) : (
-                                <Download size={14} />
-                              )}
-                              Signed
-                            </button>
-                            <button
-                              onClick={() => handleSendEmail(r.id)}
-                              disabled={sendingEmailId === r.id}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors disabled:opacity-50 ${
-                                r.mailSentAt
-                                  ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
-                                  : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-                              }`}
-                              title={r.mailSentAt ? `Sent on ${new Date(r.mailSentAt).toLocaleString("en-GB")}` : "Send report to school email"}
-                            >
-                              {sendingEmailId === r.id ? (
-                                <Loader2 size={14} className="animate-spin" />
-                              ) : r.mailSentAt ? (
-                                <MailCheck size={14} />
-                              ) : (
-                                <Mail size={14} />
-                              )}
-                              {r.mailSentAt ? "Resend Mail" : "Mail School"}
-                            </button>
-                          </>
-                        )}
                         {r.adminApproval !== "verified" && (
                           <button
                             onClick={() => handleApprove(r.id)}
