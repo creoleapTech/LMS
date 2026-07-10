@@ -29,6 +29,9 @@ import { courseController } from "./course-controller";
 import { batchController } from "./batch-controller";
 import { quizController } from "./quiz-controller";
 
+// ─── LeapBlocks version management ─────────────────
+import { leapblocksAdminController } from "../leapblocks/leapblocks-controller";
+
 // ─── Import staff-module controllers (mounted under admin) ─
 import { classSessionController } from "../staff/class-session-controller";
 import { teachingProgressController } from "../staff/teaching-progress-controller";
@@ -85,5 +88,8 @@ adminBaseRouter.route("/batches", batchController);
 
 // Quizzes
 adminBaseRouter.route("/quizzes", quizController);
+
+// LeapBlocks version management
+adminBaseRouter.route("/leapblocks/versions", leapblocksAdminController);
 
 export { adminBaseRouter };

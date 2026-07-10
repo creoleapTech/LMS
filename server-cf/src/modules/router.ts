@@ -5,6 +5,7 @@ import { adminBaseRouter } from "./admin/admin-router";
 import { leaplabAuthController } from "./public/leaplab-auth-controller";
 import { leaplabProjectController } from "./public/leaplab-project-controller";
 import { leaplabQuizController } from "./public/leaplab-quiz-controller";
+import { leapblocksPublicController } from "./leapblocks/leapblocks-controller";
 
 export const baseRouter = new Hono<{
   Bindings: Bindings;
@@ -16,3 +17,4 @@ baseRouter.route("/admin", adminBaseRouter);
 baseRouter.route("/leaplab/auth", leaplabAuthController);
 baseRouter.route("/leaplab/projects", leaplabProjectController);
 baseRouter.route("/leaplab/quiz", leaplabQuizController);
+baseRouter.route("/leapblocks/versions", leapblocksPublicController);

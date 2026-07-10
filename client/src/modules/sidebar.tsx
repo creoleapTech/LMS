@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
-import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, Book, BookOpenText, Users, LogOut, GraduationCap, ClipboardList, NotebookPen, CheckCircle2, FileEdit, HelpCircle } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Building, BarChart, Settings, ChevronLeft, ChevronRight, Book, BookOpenText, Users, LogOut, GraduationCap, ClipboardList, NotebookPen, CheckCircle2, FileEdit, HelpCircle, Package } from 'lucide-react';
 import { useAuthStore } from '@/store/userAuthStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 
@@ -26,6 +26,7 @@ const navItems: NavItem[] = [
   { name: 'Students', path: '/students', icon: <GraduationCap className="w-5 h-5" />, roles: ['admin', 'super_admin'] },
   { name: 'Reports', path: '/reports', icon: <BarChart className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'My Drafts', path: '/my-drafts', icon: <FileEdit className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
+  { name: 'LeapBlocks', path: '/leapblocks', icon: <Package className="w-5 h-5" />, roles: ['admin', 'super_admin'] },
   { name: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'My Courses', path: '/instructor/courses', icon: <Book className="w-5 h-5" />, roles: ['instructor'] },
   { name: 'My Batches', path: '/instructor/batches', icon: <Users className="w-5 h-5" />, roles: ['instructor'] },

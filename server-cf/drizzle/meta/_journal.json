@@ -162,6 +162,13 @@
       "when": 1783577441900,
       "tag": "0022_thin_jetstream",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1783675954870,
+      "tag": "0023_whole_albert_cleary",
+      "breakpoints": true
     }
   ]
 }

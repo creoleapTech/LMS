@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkDoneRouteImport } from './routes/work-done'
 import { Route as TeachingDiaryRouteImport } from './routes/teaching-diary'
+import { Route as LeapblocksRouteImport } from './routes/leapblocks'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentsIndexRouteImport } from './routes/students/index'
 import { Route as StaffIndexRouteImport } from './routes/staff/index'
@@ -44,6 +45,11 @@ const WorkDoneRoute = WorkDoneRouteImport.update({
 const TeachingDiaryRoute = TeachingDiaryRouteImport.update({
   id: '/teaching-diary',
   path: '/teaching-diary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeapblocksRoute = LeapblocksRouteImport.update({
+  id: '/leapblocks',
+  path: '/leapblocks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -170,6 +176,7 @@ const InstructorBatchesBatchIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/leapblocks': typeof LeapblocksRoute
   '/teaching-diary': typeof TeachingDiaryRoute
   '/work-done': typeof WorkDoneRoute
   '/courses/$id': typeof CoursesIdRoute
@@ -198,6 +205,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/leapblocks': typeof LeapblocksRoute
   '/teaching-diary': typeof TeachingDiaryRoute
   '/work-done': typeof WorkDoneRoute
   '/courses/$id': typeof CoursesIdRoute
@@ -227,6 +235,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/leapblocks': typeof LeapblocksRoute
   '/teaching-diary': typeof TeachingDiaryRoute
   '/work-done': typeof WorkDoneRoute
   '/courses/$id': typeof CoursesIdRoute
@@ -257,6 +266,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/leapblocks'
     | '/teaching-diary'
     | '/work-done'
     | '/courses/$id'
@@ -285,6 +295,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/leapblocks'
     | '/teaching-diary'
     | '/work-done'
     | '/courses/$id'
@@ -313,6 +324,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/leapblocks'
     | '/teaching-diary'
     | '/work-done'
     | '/courses/$id'
@@ -342,6 +354,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LeapblocksRoute: typeof LeapblocksRoute
   TeachingDiaryRoute: typeof TeachingDiaryRoute
   WorkDoneRoute: typeof WorkDoneRoute
   CoursesIdRoute: typeof CoursesIdRoute
@@ -383,6 +396,13 @@ declare module '@tanstack/react-router' {
       path: '/teaching-diary'
       fullPath: '/teaching-diary'
       preLoaderRoute: typeof TeachingDiaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leapblocks': {
+      id: '/leapblocks'
+      path: '/leapblocks'
+      fullPath: '/leapblocks'
+      preLoaderRoute: typeof LeapblocksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -558,6 +578,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LeapblocksRoute: LeapblocksRoute,
   TeachingDiaryRoute: TeachingDiaryRoute,
   WorkDoneRoute: WorkDoneRoute,
   CoursesIdRoute: CoursesIdRoute,
