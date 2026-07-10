@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { useAuthStore } from "@/store/userAuthStore";
 import {
@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import {
   CheckCircle2,
   Building2,
@@ -29,6 +30,7 @@ import {
   ChevronRight,
   Clock,
   Timer,
+  Trash2,
 } from "lucide-react";
 
 function formatDate(iso: string): string {
@@ -209,6 +211,27 @@ export default function WorkDonePage() {
     setApplied((prev) => ({ ...prev, page: newPage }));
   };
 
+  const queryClient = useQueryClient();
+
+  const deleteEntry = useMutation({
+    mutationFn: async (entryId: string) => {
+      await _axios.delete(`/admin/timetable/${entryId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["work-done"] });
+      toast.success("Entry deleted");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to delete entry");
+    },
+  });
+
+  const confirmDelete = (entryId: string) => {
+    if (window.confirm("Are you sure you want to delete this work-done entry? This action cannot be undone.")) {
+      deleteEntry.mutate(entryId);
+    }
+  };
+
   return (
     <div className="py-8 px-5 sm:px-8 max-w-screen-2xl mx-auto">
       {/* Header */}
@@ -356,6 +379,9 @@ export default function WorkDonePage() {
                   {isSuperAdmin && (
                     <TableHead className="hidden lg:table-cell text-[11px] font-black uppercase tracking-wider text-slate-400">Institution</TableHead>
                   )}
+                  {isSuperAdmin && (
+                    <TableHead className="w-16 text-[11px] font-black uppercase tracking-wider text-slate-400"></TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -442,6 +468,19 @@ export default function WorkDonePage() {
                         <span className="text-sm text-slate-600">
                           {entry.institution?.name || "—"}
                         </span>
+                      </TableCell>
+                    )}
+                    {isSuperAdmin && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                          onClick={() => confirmDelete(entry.id || entry._id)}
+                          title="Delete entry"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
                       </TableCell>
                     )}
                   </TableRow>

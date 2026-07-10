@@ -1312,6 +1312,10 @@ timetableController.patch("/:id/complete", async (c) => {
 // ─── DELETE /:id — soft delete ─────────────────────
 
 timetableController.delete("/:id", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  if (user.role !== "admin" && user.role !== "super_admin") {
+    throw new BadRequestError("Only admin/super_admin can delete timetable entries");
+  }
   const { id } = c.req.param();
   const dateQuery = c.req.query("date");
   const db = getDb(c.env.DB);
@@ -1434,12 +1438,25 @@ timetableController.delete("/:id", async (c) => {
 
   // No date/scope provided — attempting to delete the recurring template
   if (workdoneEntries.length > 0) {
-    throw new BadRequestError(
-      `Cannot delete this recurring schedule because ${workdoneEntries.length} workdone entry(ies) exist. Remove this period for a specific day instead.`,
-    );
+    if (user.role === "super_admin") {
+      // Superadmin can force-delete: also soft-delete all associated workdone entries
+      await db
+        .update(timetableEntries)
+        .set({ isDeleted: 1, updatedAt: now })
+        .where(
+          inArray(
+            timetableEntries.id,
+            workdoneEntries.map((e: any) => e.id),
+          ),
+        );
+    } else {
+      throw new BadRequestError(
+        `Cannot delete this recurring schedule because ${workdoneEntries.length} workdone entry(ies) exist. Remove this period for a specific day instead.`,
+      );
+    }
   }
 
-  // No workdone entries — safe to delete the recurring template
+  // Delete the recurring template
   await db
     .update(timetableEntries)
     .set({ isDeleted: 1, updatedAt: now })
