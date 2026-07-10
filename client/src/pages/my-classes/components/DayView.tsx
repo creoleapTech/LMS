@@ -792,11 +792,11 @@ function ScheduledRow({
                 )}
               </>
             )}
-            {!isCompleted && (
+            {(!isCompleted || isSuperAdmin) && (
               <button
                 onClick={onDeleteClick}
                 className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-rose-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(225,29,72,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
-                title="Delete schedule"
+                title={isCompleted ? "Delete work done entry" : "Delete schedule"}
               >
                 <Trash2 size={14} />
               </button>
