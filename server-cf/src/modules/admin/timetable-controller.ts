@@ -1313,9 +1313,6 @@ timetableController.patch("/:id/complete", async (c) => {
 
 timetableController.delete("/:id", async (c) => {
   const user = c.get("user") as Record<string, any>;
-  if (user.role !== "admin" && user.role !== "super_admin") {
-    throw new BadRequestError("Only admin/super_admin can delete timetable entries");
-  }
   const { id } = c.req.param();
   const dateQuery = c.req.query("date");
   const db = getDb(c.env.DB);
@@ -1328,6 +1325,16 @@ timetableController.delete("/:id", async (c) => {
 
   if (!entry) {
     throw new BadRequestError("Timetable entry not found");
+  }
+
+  // Teachers/staff can only delete their own non-completed entries
+  if (user.role !== "admin" && user.role !== "super_admin") {
+    if (entry.staffId !== user.id) {
+      throw new BadRequestError("You can only delete your own timetable entries");
+    }
+    if (entry.status === "completed") {
+      throw new BadRequestError("Cannot delete completed entries");
+    }
   }
 
   const now = nowISO();
@@ -1372,6 +1379,10 @@ timetableController.delete("/:id", async (c) => {
     );
 
     if (oneOffForDate) {
+      // Teachers/staff cannot delete completed entries
+      if (user.role !== "admin" && user.role !== "super_admin" && oneOffForDate.status === "completed") {
+        throw new BadRequestError("Cannot delete completed entries");
+      }
       // Soft-delete the one-off entry for this date
       await db
         .update(timetableEntries)
