@@ -418,12 +418,12 @@ function parseColor(el: Element | null, themeColors: Map<string, string>): strin
   return undefined;
 }
 
-/** Parse a fill element (solidFill, gradFill, noFill) */
+/** Parse a fill element (solidFill, gradFill, noFill) — direct children only to avoid picking up fills inside border (ln*) elements */
 function parseFill(parent: Element, themeColors: Map<string, string>): FillData | undefined {
-  const noFill = getFirstByLocal(parent, "noFill");
+  const noFill = getDirectChildByLocal(parent, "noFill");
   if (noFill) return { type: "none" };
 
-  const solidFill = getFirstByLocal(parent, "solidFill");
+  const solidFill = getDirectChildByLocal(parent, "solidFill");
   if (solidFill) {
     return {
       type: "solid",
@@ -431,7 +431,7 @@ function parseFill(parent: Element, themeColors: Map<string, string>): FillData 
     };
   }
 
-  const gradFill = getFirstByLocal(parent, "gradFill");
+  const gradFill = getDirectChildByLocal(parent, "gradFill");
   if (gradFill) {
     const stops: { position: number; color: string }[] = [];
     for (const gs of getElementsByLocal(gradFill, "gs")) {
