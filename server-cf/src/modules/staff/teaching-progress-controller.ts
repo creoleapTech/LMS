@@ -352,10 +352,8 @@ teachingProgressController.put("/:classId/:gradeBookId/content/:contentId", asyn
     });
   }
 
-  // Recalculate percentage if completion changed
-  if (body.isCompleted !== undefined) {
-    await recalculatePercentage(db, progress.id, gradeBookId);
-  }
+  // Recalculate percentage on every save/access
+  await recalculatePercentage(db, progress.id, gradeBookId);
 
   return c.json({ success: true, data: { updated: true } });
 });
@@ -522,19 +520,16 @@ async function recalculatePercentage(db: any, progressId: string, gradeBookId: s
   const totalContent = totalResult?.cnt || 0;
   if (totalContent === 0) return;
 
-  // Count completed content entries for this progress
+  // Count entries for this progress (both completed and in-progress)
   const [completedResult] = await db
     .select({ cnt: count() })
     .from(teachingProgressContents)
     .where(
-      and(
-        eq(teachingProgressContents.teachingProgressId, progressId),
-        eq(teachingProgressContents.isCompleted, 1),
-      ),
+      eq(teachingProgressContents.teachingProgressId, progressId),
     );
 
   const completedCount = completedResult?.cnt || 0;
-  const percentage = Math.round((completedCount / totalContent) * 100);
+  const percentage = Number(((completedCount / totalContent) * 100).toFixed(2));
 
   await db
     .update(teachingProgress)

@@ -16,6 +16,8 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  Calendar,
+  X,
 } from "lucide-react";
 import {
   BarChart,
@@ -79,11 +81,12 @@ interface TeacherLeaderboardItem {
 
 interface SchoolProgressPageProps {
   initialSchoolId?: string;
+  lockedToSchool?: boolean;
 }
 
 const COLORS = ["#6366f1", "#a855f7", "#ec4899", "#f59e0b", "#10b981", "#3b82f6"];
 
-export default function SchoolProgressPage({ initialSchoolId }: SchoolProgressPageProps) {
+export default function SchoolProgressPage({ initialSchoolId, lockedToSchool }: SchoolProgressPageProps) {
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(initialSchoolId || null);
 
   // Class filters & pagination
@@ -98,6 +101,35 @@ export default function SchoolProgressPage({ initialSchoolId }: SchoolProgressPa
 
   const [activeTab, setActiveTab] = useState<"classes" | "teachers">("classes");
 
+  // Date / class filters
+  const [classFilter, setClassFilter] = useState("all");
+  const [datePreset, setDatePreset] = useState("all");  // all | today | week | month | custom
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // Compute dateFrom/dateTo from preset
+  const getDateRange = () => {
+    const now = new Date();
+    if (datePreset === "today") {
+      const d = now.toISOString().slice(0, 10);
+      return { from: d, to: d };
+    } else if (datePreset === "week") {
+      const day = now.getDay();
+      const mon = new Date(now);
+      mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      const sun = new Date(mon);
+      sun.setDate(mon.getDate() + 6);
+      return { from: mon.toISOString().slice(0, 10), to: sun.toISOString().slice(0, 10) };
+    } else if (datePreset === "month") {
+      const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+      return { from, to };
+    } else if (datePreset === "custom") {
+      return { from: dateFrom, to: dateTo };
+    }
+    return { from: "", to: "" };
+  };
+
   // Query: Schools Overview list
   const schoolsQuery = useQuery<SchoolOverviewItem[]>({
     queryKey: ["school-progress-schools"],
@@ -106,6 +138,16 @@ export default function SchoolProgressPage({ initialSchoolId }: SchoolProgressPa
       return res.data.data;
     },
     enabled: selectedSchoolId === null,
+  });
+
+  // Query: Classes list (for class filter dropdown)
+  const classListQuery = useQuery<{ id: string; label: string }[]>({
+    queryKey: ["school-progress-classes-list", selectedSchoolId],
+    queryFn: async () => {
+      const res = await _axios.get(`/admin/school-progress/classes-list?institutionId=${selectedSchoolId}`);
+      return res.data.data;
+    },
+    enabled: selectedSchoolId !== null,
   });
 
   // Query: Courses metadata list (only when a school is selected)
@@ -140,11 +182,21 @@ export default function SchoolProgressPage({ initialSchoolId }: SchoolProgressPa
 
   // Query: Paginated Classes
   const classesQuery = useQuery<{ items: DetailedClassProgress[]; total: number }>({
-    queryKey: ["school-progress-classes", selectedSchoolId, classPage, classSearch, classCourse, classStatus],
+    queryKey: ["school-progress-classes", selectedSchoolId, classPage, classSearch, classCourse, classStatus, classFilter, datePreset, dateFrom, dateTo],
     queryFn: async () => {
-      const res = await _axios.get(
-        `/admin/school-progress/classes?institutionId=${selectedSchoolId}&page=${classPage}&limit=10&search=${classSearch}&courseId=${classCourse}&status=${classStatus}`
-      );
+      const range = getDateRange();
+      const params = new URLSearchParams({
+        institutionId: selectedSchoolId!,
+        page: String(classPage),
+        limit: "10",
+        search: classSearch,
+        courseId: classCourse,
+        status: classStatus,
+        classId: classFilter,
+        dateFrom: range.from,
+        dateTo: range.to,
+      });
+      const res = await _axios.get(`/admin/school-progress/classes?${params.toString()}`);
       return res.data.data;
     },
     enabled: selectedSchoolId !== null && activeTab === "classes",
@@ -184,8 +236,8 @@ export default function SchoolProgressPage({ initialSchoolId }: SchoolProgressPa
     setActiveTab("classes");
   };
 
-  // RENDER VIEW 1: Schools Grid Overview
-  if (selectedSchoolId === null) {
+  // RENDER VIEW 1: Schools Grid Overview (only for super_admin)
+  if (selectedSchoolId === null && !lockedToSchool) {
     return (
       <div className="p-6 lg:p-8 space-y-8 bg-slate-50/50 dark:bg-slate-950/20 min-h-screen">
         <div className="flex justify-between items-center">
@@ -282,7 +334,9 @@ export default function SchoolProgressPage({ initialSchoolId }: SchoolProgressPa
   }
 
   // RENDER VIEW 2: Selected School Drilldown
-  const activeSchoolName = schoolsQuery.data?.find((s) => s.id === selectedSchoolId)?.name || "Institution Progress";
+  const activeSchoolName = lockedToSchool
+    ? "My School Progress"
+    : schoolsQuery.data?.find((s) => s.id === selectedSchoolId)?.name || "Institution Progress";
   const schoolKpis = kpisQuery.data;
   const schoolCharts = chartsQuery.data;
 
@@ -291,13 +345,15 @@ export default function SchoolProgressPage({ initialSchoolId }: SchoolProgressPa
       {/* Navigation Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <button
-            onClick={handleBackToOverview}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors uppercase tracking-wider mb-2 cursor-pointer"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Schools List
-          </button>
+          {!lockedToSchool && (
+            <button
+              onClick={handleBackToOverview}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors uppercase tracking-wider mb-2 cursor-pointer"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to Schools List
+            </button>
+          )}
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <TrendingUp className="h-6 w-6 text-indigo-600" />
             {activeSchoolName}
@@ -465,60 +521,115 @@ export default function SchoolProgressPage({ initialSchoolId }: SchoolProgressPa
         {/* Tab Content */}
         {activeTab === "classes" ? (
           <div className="space-y-4">
-            {/* Class Filter bar */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search class grade, section, course, or teacher..."
-                  value={classSearch}
-                  onChange={(e) => {
-                    setClassSearch(e.target.value);
-                    setClassPage(1);
-                  }}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                />
+            {/* Class Filter bar — row 1: search + dropdowns */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="flex flex-col md:flex-row md:items-center gap-3">
+                {/* Search */}
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by grade, section, course, or teacher..."
+                    value={classSearch}
+                    onChange={(e) => { setClassSearch(e.target.value); setClassPage(1); }}
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Class Dropdown */}
+                  <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300">
+                    <Users className="h-4 w-4 text-slate-400 shrink-0" />
+                    <select
+                      value={classFilter}
+                      onChange={(e) => { setClassFilter(e.target.value); setClassPage(1); }}
+                      className="bg-transparent text-xs font-semibold focus:outline-hidden border-none cursor-pointer pr-1"
+                    >
+                      <option value="all">All Classes</option>
+                      {classListQuery.data?.map((cl) => (
+                        <option key={cl.id} value={cl.id}>{cl.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Course Dropdown */}
+                  <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300">
+                    <BookOpen className="h-4 w-4 text-slate-400 shrink-0" />
+                    <select
+                      value={classCourse}
+                      onChange={(e) => { setClassCourse(e.target.value); setClassPage(1); }}
+                      className="bg-transparent text-xs font-semibold focus:outline-hidden border-none cursor-pointer pr-1"
+                    >
+                      <option value="all">All Courses</option>
+                      {coursesQuery.data?.map((c) => (
+                        <option key={c.id} value={c.id}>{c.title}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Status Dropdown */}
+                  <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300">
+                    <Filter className="h-4 w-4 text-slate-400 shrink-0" />
+                    <select
+                      value={classStatus}
+                      onChange={(e) => { setClassStatus(e.target.value); setClassPage(1); }}
+                      className="bg-transparent text-xs font-semibold focus:outline-hidden border-none cursor-pointer pr-1"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="not_started">Not Started (0%)</option>
+                      <option value="ongoing">Ongoing (1-99%)</option>
+                      <option value="completed">Completed (100%)</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                {/* Course Dropdown */}
-                <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300">
-                  <BookOpen className="h-4 w-4 text-slate-400" />
-                  <select
-                    value={classCourse}
-                    onChange={(e) => {
-                      setClassCourse(e.target.value);
-                      setClassPage(1);
-                    }}
-                    className="bg-transparent text-xs font-semibold focus:outline-hidden border-none cursor-pointer pr-4"
+              {/* Date range row */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider shrink-0">
+                  <Calendar className="h-3.5 w-3.5" /> Last Active
+                </span>
+                {(["all", "today", "week", "month", "custom"] as const).map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => { setDatePreset(preset); setClassPage(1); }}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer capitalize ${
+                      datePreset === preset
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                    }`}
                   >
-                    <option value="all">All Courses</option>
-                    {coursesQuery.data?.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    {preset === "all" ? "All Time" : preset === "today" ? "Today" : preset === "week" ? "This Week" : preset === "month" ? "This Month" : "Custom Range"}
+                  </button>
+                ))}
 
-                {/* Status Dropdown */}
-                <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300">
-                  <Filter className="h-4 w-4 text-slate-400" />
-                  <select
-                    value={classStatus}
-                    onChange={(e) => {
-                      setClassStatus(e.target.value);
-                      setClassPage(1);
-                    }}
-                    className="bg-transparent text-xs font-semibold focus:outline-hidden border-none cursor-pointer pr-4"
-                  >
-                    <option value="all">All Progress Status</option>
-                    <option value="not_started">Not Started (0%)</option>
-                    <option value="ongoing">Ongoing (1-99%)</option>
-                    <option value="completed">Completed (100%)</option>
-                  </select>
-                </div>
+                {/* Custom date pickers */}
+                {datePreset === "custom" && (
+                  <div className="flex items-center gap-2 ml-1">
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => { setDateFrom(e.target.value); setClassPage(1); }}
+                      className="px-2 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                    <span className="text-slate-400 text-xs">to</span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => { setDateTo(e.target.value); setClassPage(1); }}
+                      className="px-2 py-1 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                    {(dateFrom || dateTo) && (
+                      <button
+                        onClick={() => { setDateFrom(""); setDateTo(""); setClassPage(1); }}
+                        className="p-1 text-slate-400 hover:text-slate-600 rounded-md"
+                        title="Clear dates"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

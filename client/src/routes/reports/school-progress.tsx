@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Suspense, lazy } from 'react';
+import { useAuthStore } from '@/store/userAuthStore';
 
 const SchoolProgressPage = lazy(() => import('@/pages/reports/SchoolProgressPage'));
 
@@ -16,9 +17,11 @@ export const Route = createFileRoute('/reports/school-progress')({
 
 function RouteComponent() {
   const { schoolId } = Route.useSearch();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
   return (
     <Suspense fallback={<div className="p-8 text-center text-slate-400 font-medium">Loading school progress...</div>}>
-      <SchoolProgressPage initialSchoolId={schoolId} />
+      <SchoolProgressPage initialSchoolId={schoolId} lockedToSchool={isAdmin} />
     </Suspense>
   );
 }

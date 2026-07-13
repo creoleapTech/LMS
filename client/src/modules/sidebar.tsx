@@ -25,7 +25,7 @@ const navItems: NavItem[] = [
   { name: 'Quizzes', path: '/quizzes', icon: <HelpCircle className="w-5 h-5" />, roles: ['super_admin', 'teacher'] },
   { name: 'Students', path: '/students', icon: <GraduationCap className="w-5 h-5" />, roles: ['admin', 'super_admin'] },
   { name: 'Reports', path: '/reports', icon: <BarChart className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
-  { name: 'School Progress', path: '/reports/school-progress', icon: <TrendingUp className="w-5 h-5" />, roles: ['super_admin'] },
+  { name: 'School Progress', path: '/reports/school-progress', icon: <TrendingUp className="w-5 h-5" />, roles: ['super_admin', 'admin'] },
   { name: 'My Drafts', path: '/my-drafts', icon: <FileEdit className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'LeapLab', path: '/leaplab', icon: <Package className="w-5 h-5" />, roles: ['admin', 'super_admin'] },
   { name: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
@@ -104,13 +104,22 @@ const Sidebar: React.FC = () => {
         <nav className="flex-1 px-3  transition-all duration-300  py-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
           <ul className="space-y-1">
             {filteredNavItems.map((item) => {
-              const isActive = location.pathname === item.path;
+              const isActive = location.pathname === item.path || (item.path === '/reports/school-progress' && location.pathname.startsWith('/reports/school-progress'));
               const displayName = item.path === '/my-classes' && (user?.role === 'admin' || user?.role === 'super_admin')
                 ? 'Class Management' : item.name;
+
+              // For admin, School Progress goes directly to their school
+              const adminInstitutionId = user?.role === 'admin'
+                ? (typeof user.institutionId === 'object' ? (user.institutionId as any)?._id : user.institutionId)
+                : null;
+              const linkTo = item.path === '/reports/school-progress' && adminInstitutionId
+                ? `${item.path}?schoolId=${adminInstitutionId}`
+                : item.path;
+
               return (
                 <li key={item.path}>
                   <Link
-                    to={item.path}
+                    to={linkTo as any}
                     className={`flex items-center ${isExpanded ? 'px-3' : 'justify-center'} py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
                       ${isActive
                         ? 'bg-gradient-to-br from-white/20 to-white/5 text-white shadow-[4px_4px_12px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(99,102,241,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] border border-white/30 translate-x-[2px]'

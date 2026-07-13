@@ -99,7 +99,7 @@ app.get("/schools", async (c) => {
     }
   }
 
-  // Completed content counts per class-gradebook
+  // Completed and in-progress content counts per class-gradebook
   const completedCounts = await db
     .select({
       institutionId: teachingProgress.institutionId,
@@ -109,7 +109,6 @@ app.get("/schools", async (c) => {
     })
     .from(teachingProgressContents)
     .innerJoin(teachingProgress, eq(teachingProgress.id, teachingProgressContents.teachingProgressId))
-    .where(eq(teachingProgressContents.isCompleted, 1))
     .groupBy(teachingProgress.institutionId, teachingProgress.classId, teachingProgress.gradeBookId);
 
   const completedMap = new Map<string, number>();
@@ -174,7 +173,7 @@ app.get("/schools", async (c) => {
       studentsCount: studentCountMap.get(inst.id) || 0,
       staffCount: staffCountMap.get(inst.id) || 0,
       classesCount: instClasses.length,
-      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+      completionRate: total > 0 ? Number(((completed / total) * 100).toFixed(2)) : 0,
     };
   });
 
@@ -249,7 +248,7 @@ app.get("/kpis", async (c) => {
       } else if (percentage > 0) {
         ongoingClasses++;
       }
-      completedSubchapters += Math.round((percentage / 100) * total);
+      completedSubchapters += (percentage / 100) * total;
     }
   }
 
@@ -259,7 +258,7 @@ app.get("/kpis", async (c) => {
       totalClasses,
       ongoingClasses,
       completedClasses,
-      overallCompletionRate: totalSubchapters > 0 ? Math.round((completedSubchapters / totalSubchapters) * 100) : 0,
+      overallCompletionRate: totalSubchapters > 0 ? Number(((completedSubchapters / totalSubchapters) * 100).toFixed(2)) : 0,
     },
   });
 });
@@ -328,7 +327,7 @@ app.get("/charts", async (c) => {
     const progressContents = await db
       .select({ contentId: teachingProgressContents.contentId })
       .from(teachingProgressContents)
-      .where(and(inArray(teachingProgressContents.teachingProgressId, progressIds), eq(teachingProgressContents.isCompleted, 1)));
+      .where(inArray(teachingProgressContents.teachingProgressId, progressIds));
 
     for (const pc of progressContents) {
       if (pc.contentId) {
@@ -341,7 +340,7 @@ app.get("/charts", async (c) => {
     }
   }
 
-  const contentTypeData = Object.entries(completedContentTypesMap).map(([type, count]) => ({
+  const contentTypeData = Array.from(completedContentTypesMap.entries()).map(([type, count]) => ({
     name: type,
     value: count,
   }));
@@ -371,6 +370,9 @@ app.get("/classes", async (c) => {
   const search = c.req.query("search") || "";
   const courseId = c.req.query("courseId") || "all";
   const status = c.req.query("status") || "all";
+  const classId = c.req.query("classId") || "all";
+  const dateFrom = c.req.query("dateFrom") || "";
+  const dateTo = c.req.query("dateTo") || "";
 
   if (!institutionId) {
     return c.json({ success: false, message: "Missing institutionId query parameter" }, 400);
@@ -478,13 +480,30 @@ app.get("/classes", async (c) => {
       teacherName.toLowerCase().includes(search.toLowerCase());
 
     const matchesCourse = courseId === "all" || gbId === courseId;
+    const matchesClass = classId === "all" || cls.id === classId;
+
+    // Date range filter on lastAccessedAt
+    let matchesDate = true;
+    if (dateFrom || dateTo) {
+      const lastAt = pr?.lastAccessedAt ? new Date(pr.lastAccessedAt).getTime() : null;
+      if (!lastAt) {
+        matchesDate = false;
+      } else {
+        if (dateFrom) matchesDate = matchesDate && lastAt >= new Date(dateFrom).getTime();
+        if (dateTo) {
+          const toEnd = new Date(dateTo);
+          toEnd.setHours(23, 59, 59, 999);
+          matchesDate = matchesDate && lastAt <= toEnd.getTime();
+        }
+      }
+    }
 
     let matchesStatus = true;
     if (status === "not_started") matchesStatus = progressPercentage === 0;
     else if (status === "ongoing") matchesStatus = progressPercentage > 0 && progressPercentage < 100;
     else if (status === "completed") matchesStatus = progressPercentage === 100;
 
-    if (matchesSearch && matchesCourse && matchesStatus) {
+    if (matchesSearch && matchesCourse && matchesClass && matchesDate && matchesStatus) {
       list.push({
         classId: cls.id,
         className,
@@ -515,7 +534,7 @@ app.get("/classes", async (c) => {
     const progressContents = await db
       .select({ teachingProgressId: teachingProgressContents.teachingProgressId, contentId: teachingProgressContents.contentId })
       .from(teachingProgressContents)
-      .where(and(inArray(teachingProgressContents.teachingProgressId, paginatedProgressIds), eq(teachingProgressContents.isCompleted, 1)));
+      .where(inArray(teachingProgressContents.teachingProgressId, paginatedProgressIds));
 
     for (const pc of progressContents) {
       if (pc.contentId) {
@@ -711,6 +730,28 @@ app.get("/courses", async (c) => {
     .where(inArray(gradeBooks.id, gbIds));
 
   return c.json({ success: true, data: courseList });
+});
+
+// 7. GET /classes-list — Lightweight class filter metadata list
+app.get("/classes-list", async (c) => {
+  const db = getDb(c.env.DB);
+  const institutionId = c.req.query("institutionId");
+
+  if (!institutionId) {
+    return c.json({ success: false, message: "Missing institutionId query parameter" }, 400);
+  }
+
+  const instClasses = await db
+    .select({ id: classes.id, grade: classes.grade, section: classes.section })
+    .from(classes)
+    .where(and(eq(classes.institutionId, institutionId), eq(classes.isDeleted, 0), eq(classes.isActive, 1)));
+
+  const classList = instClasses.map((cls: any) => ({
+    id: cls.id,
+    label: `${cls.grade}–${cls.section}`,
+  }));
+
+  return c.json({ success: true, data: classList });
 });
 
 export { app as schoolProgressController };
