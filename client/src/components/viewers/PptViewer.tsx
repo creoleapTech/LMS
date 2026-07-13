@@ -539,7 +539,7 @@ export const PptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
     { storageKey, title, onPageChange, onFullscreenChange, initialPage, watermarkText },
     ref,
   ) {
-    const [useLegacyRenderer, setUseLegacyRenderer] = useState(false);
+    const [useLegacyRenderer, setUseLegacyRenderer] = useState(true);
     const fileUrl = `${Config.pptPreviewUrl}${encodeURIComponent(storageKey)}`;
 
     if (useLegacyRenderer) {

@@ -27,6 +27,7 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as CurriculumIndexRouteImport } from './routes/curriculum/index'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
 import { Route as StudentMyCoursesRouteImport } from './routes/student/my-courses'
+import { Route as ReportsSchoolProgressRouteImport } from './routes/reports/school-progress'
 import { Route as QuizzesIdRouteImport } from './routes/quizzes/$id'
 import { Route as LessonPlansIdRouteImport } from './routes/lesson-plans/$id'
 import { Route as InstructorDashboardRouteImport } from './routes/instructor/dashboard'
@@ -127,6 +128,11 @@ const StudentMyCoursesRoute = StudentMyCoursesRouteImport.update({
   path: '/student/my-courses',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportsSchoolProgressRoute = ReportsSchoolProgressRouteImport.update({
+  id: '/reports/school-progress',
+  path: '/reports/school-progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const QuizzesIdRoute = QuizzesIdRouteImport.update({
   id: '/quizzes/$id',
   path: '/quizzes/$id',
@@ -186,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/instructor/dashboard': typeof InstructorDashboardRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/quizzes/$id': typeof QuizzesIdRoute
+  '/reports/school-progress': typeof ReportsSchoolProgressRoute
   '/student/my-courses': typeof StudentMyCoursesRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/instructor/dashboard': typeof InstructorDashboardRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/quizzes/$id': typeof QuizzesIdRoute
+  '/reports/school-progress': typeof ReportsSchoolProgressRoute
   '/student/my-courses': typeof StudentMyCoursesRoute
   '/courses': typeof CoursesIndexRoute
   '/curriculum': typeof CurriculumIndexRoute
@@ -245,6 +253,7 @@ export interface FileRoutesById {
   '/instructor/dashboard': typeof InstructorDashboardRoute
   '/lesson-plans/$id': typeof LessonPlansIdRoute
   '/quizzes/$id': typeof QuizzesIdRoute
+  '/reports/school-progress': typeof ReportsSchoolProgressRoute
   '/student/my-courses': typeof StudentMyCoursesRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/instructor/dashboard'
     | '/lesson-plans/$id'
     | '/quizzes/$id'
+    | '/reports/school-progress'
     | '/student/my-courses'
     | '/courses/'
     | '/curriculum/'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
     | '/instructor/dashboard'
     | '/lesson-plans/$id'
     | '/quizzes/$id'
+    | '/reports/school-progress'
     | '/student/my-courses'
     | '/courses'
     | '/curriculum'
@@ -334,6 +345,7 @@ export interface FileRouteTypes {
     | '/instructor/dashboard'
     | '/lesson-plans/$id'
     | '/quizzes/$id'
+    | '/reports/school-progress'
     | '/student/my-courses'
     | '/courses/'
     | '/curriculum/'
@@ -364,6 +376,7 @@ export interface RootRouteChildren {
   InstructorDashboardRoute: typeof InstructorDashboardRoute
   LessonPlansIdRoute: typeof LessonPlansIdRoute
   QuizzesIdRoute: typeof QuizzesIdRoute
+  ReportsSchoolProgressRoute: typeof ReportsSchoolProgressRoute
   StudentMyCoursesRoute: typeof StudentMyCoursesRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
   CurriculumIndexRoute: typeof CurriculumIndexRoute
@@ -510,6 +523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentMyCoursesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports/school-progress': {
+      id: '/reports/school-progress'
+      path: '/reports/school-progress'
+      fullPath: '/reports/school-progress'
+      preLoaderRoute: typeof ReportsSchoolProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/quizzes/$id': {
       id: '/quizzes/$id'
       path: '/quizzes/$id'
@@ -588,6 +608,7 @@ const rootRouteChildren: RootRouteChildren = {
   InstructorDashboardRoute: InstructorDashboardRoute,
   LessonPlansIdRoute: LessonPlansIdRoute,
   QuizzesIdRoute: QuizzesIdRoute,
+  ReportsSchoolProgressRoute: ReportsSchoolProgressRoute,
   StudentMyCoursesRoute: StudentMyCoursesRoute,
   CoursesIndexRoute: CoursesIndexRoute,
   CurriculumIndexRoute: CurriculumIndexRoute,

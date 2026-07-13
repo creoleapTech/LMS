@@ -28,6 +28,7 @@ import { examinationController } from "./examination-controller";
 import { courseController } from "./course-controller";
 import { batchController } from "./batch-controller";
 import { quizController } from "./quiz-controller";
+import { schoolProgressController } from "./school-progress-controller";
 
 // ─── LeapLab version management ────────────────────
 import { leaplabAdminController } from "../leaplab/leaplab-controller";
@@ -88,6 +89,9 @@ adminBaseRouter.route("/batches", batchController);
 
 // Quizzes
 adminBaseRouter.route("/quizzes", quizController);
+
+// School Progress
+adminBaseRouter.route("/school-progress", schoolProgressController);
 
 // LeapLab version management
 adminBaseRouter.route("/leaplab/versions", leaplabAdminController);

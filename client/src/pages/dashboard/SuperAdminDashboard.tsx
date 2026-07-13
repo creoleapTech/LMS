@@ -170,7 +170,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
                 </thead>
                 <tbody>
                   {data.institutionOverview.map((inst: any) => (
-                    <tr key={inst._id} className="border-b border-white/30 hover:bg-white/20 transition-colors cursor-pointer" onClick={() => navigate({ to: '/institutions/$id', params: { id: inst._id } })}>
+                    <tr key={inst._id} className="border-b border-white/30 hover:bg-white/20 transition-colors cursor-pointer" onClick={() => navigate({ to: '/reports/school-progress', search: { schoolId: inst._id } })}>
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-2.5">
                           <div className={`w-2 h-2 rounded-full ${inst.isActive ? 'bg-emerald-400' : 'bg-slate-300'}`} />
