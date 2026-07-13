@@ -451,9 +451,7 @@ function RenderElement({
     height: `${pct(position.height, slideHeight)}%`,
     transform: transforms.length > 0 ? transforms.join(" ") : undefined,
     transformOrigin: "center center",
-    // Images clip to their box; text/shapes use visible so text that renders
-    // slightly taller than the declared PPTX height isn't cut off.
-    overflow: element.type === "image" ? "hidden" : "visible",
+    overflow: "hidden",
     boxShadow: shouldShowShadow ? shadowToCss(element.shadow) : undefined,
   };
 
@@ -475,26 +473,39 @@ function RenderElement({
       );
     }
 
-    // Crop mode: expand image beyond container, shift with negative margins
+    // Crop mode: OOXML srcRect defines percentages of the ORIGINAL image to remove.
+    // The visible portion (100-l-r)% × (100-t-b)% is stretched to fill the frame.
+    // The img element must be oversized so the visible portion = frame size.
+    //   imgWidth  = frame × 100/(100-l-r)   imgHeight = frame × 100/(100-t-b)
+    //   top/left offsets use multiplicative formulas (not additive).
+    // NOTE: For absolutely positioned elements, top% resolves against containing
+    // block HEIGHT and left% against WIDTH — which is exactly what we need.
     if (crop || sizing === "crop") {
-      const imgStyle: React.CSSProperties = {
-        width: crop ? `${100 + crop.l + crop.r}%` : "100%",
-        height: crop ? `${100 + crop.t + crop.b}%` : "100%",
-        objectFit: "fill",
-        objectPosition: crop ? `${-crop.l}% ${-crop.t}%` : "center",
-        pointerEvents: "none",
-        marginLeft: crop ? `${-crop.l}%` : undefined,
-        marginTop: crop ? `${-crop.t}%` : undefined,
-      };
+      const safeLR = crop ? (100 - crop.l - crop.r) : 100;
+      const safeTB = crop ? (100 - crop.t - crop.b) : 100;
+      const imgW = crop && safeLR > 0 ? 10000 / safeLR : 100;
+      const imgH = crop && safeTB > 0 ? 10000 / safeTB : 100;
+      const offL = crop && safeLR > 0 ? (-crop.l / safeLR) * 100 : 0;
+      const offT = crop && safeTB > 0 ? (-crop.t / safeTB) * 100 : 0;
+
       return (
-        <div style={baseStyle}>
+        <div style={{ ...baseStyle, overflow: "hidden" }}>
           <img
             src={element.imageData}
             alt=""
             loading="lazy"
             decoding="async"
             draggable={false}
-            style={imgStyle}
+            style={{
+              position: "absolute",
+              top: `${offT}%`,
+              left: `${offL}%`,
+              width: `${imgW}%`,
+              height: `${imgH}%`,
+              maxWidth: "none",
+              objectFit: "fill",
+              pointerEvents: "none",
+            }}
             onContextMenu={(e) => e.preventDefault()}
           />
         </div>
@@ -530,7 +541,7 @@ function RenderElement({
       );
     }
 
-    // Fallback: preserve aspect ratio, fill container (may crop edges)
+    // Fallback: preserve aspect ratio, contain within container (no crop)
     return (
       <div style={baseStyle}>
         <img
@@ -542,7 +553,7 @@ function RenderElement({
           style={{
             width: "100%",
             height: "100%",
-            objectFit: "cover",
+            objectFit: "contain",
             pointerEvents: "none",
           }}
           onContextMenu={(e) => e.preventDefault()}
