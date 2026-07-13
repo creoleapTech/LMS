@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkDoneRouteImport } from './routes/work-done'
 import { Route as TeachingDiaryRouteImport } from './routes/teaching-diary'
-import { Route as LeapblocksRouteImport } from './routes/leapblocks'
+import { Route as LeaplabRouteImport } from './routes/leaplab'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentsIndexRouteImport } from './routes/students/index'
 import { Route as StaffIndexRouteImport } from './routes/staff/index'
@@ -47,9 +47,9 @@ const TeachingDiaryRoute = TeachingDiaryRouteImport.update({
   path: '/teaching-diary',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LeapblocksRoute = LeapblocksRouteImport.update({
-  id: '/leapblocks',
-  path: '/leapblocks',
+const LeaplabRoute = LeaplabRouteImport.update({
+  id: '/leaplab',
+  path: '/leaplab',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -176,7 +176,7 @@ const InstructorBatchesBatchIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/leapblocks': typeof LeapblocksRoute
+  '/leaplab': typeof LeaplabRoute
   '/teaching-diary': typeof TeachingDiaryRoute
   '/work-done': typeof WorkDoneRoute
   '/courses/$id': typeof CoursesIdRoute
@@ -205,7 +205,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/leapblocks': typeof LeapblocksRoute
+  '/leaplab': typeof LeaplabRoute
   '/teaching-diary': typeof TeachingDiaryRoute
   '/work-done': typeof WorkDoneRoute
   '/courses/$id': typeof CoursesIdRoute
@@ -235,7 +235,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/leapblocks': typeof LeapblocksRoute
+  '/leaplab': typeof LeaplabRoute
   '/teaching-diary': typeof TeachingDiaryRoute
   '/work-done': typeof WorkDoneRoute
   '/courses/$id': typeof CoursesIdRoute
@@ -266,7 +266,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/leapblocks'
+    | '/leaplab'
     | '/teaching-diary'
     | '/work-done'
     | '/courses/$id'
@@ -295,7 +295,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/leapblocks'
+    | '/leaplab'
     | '/teaching-diary'
     | '/work-done'
     | '/courses/$id'
@@ -324,7 +324,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/leapblocks'
+    | '/leaplab'
     | '/teaching-diary'
     | '/work-done'
     | '/courses/$id'
@@ -354,7 +354,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  LeapblocksRoute: typeof LeapblocksRoute
+  LeaplabRoute: typeof LeaplabRoute
   TeachingDiaryRoute: typeof TeachingDiaryRoute
   WorkDoneRoute: typeof WorkDoneRoute
   CoursesIdRoute: typeof CoursesIdRoute
@@ -398,11 +398,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeachingDiaryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/leapblocks': {
-      id: '/leapblocks'
-      path: '/leapblocks'
-      fullPath: '/leapblocks'
-      preLoaderRoute: typeof LeapblocksRouteImport
+    '/leaplab': {
+      id: '/leaplab'
+      path: '/leaplab'
+      fullPath: '/leaplab'
+      preLoaderRoute: typeof LeaplabRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -578,7 +578,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  LeapblocksRoute: LeapblocksRoute,
+  LeaplabRoute: LeaplabRoute,
   TeachingDiaryRoute: TeachingDiaryRoute,
   WorkDoneRoute: WorkDoneRoute,
   CoursesIdRoute: CoursesIdRoute,

@@ -1,7 +1,7 @@
 import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 
-export const leapblocksVersions = sqliteTable(
-  "leapblocks_versions",
+export const leaplabVersions = sqliteTable(
+  "leaplab_versions",
   {
     id: text("id").primaryKey(),
     version: text("version").notNull(),
@@ -14,6 +14,6 @@ export const leapblocksVersions = sqliteTable(
     createdAt: text("created_at"),
   },
   (table) => [
-    index("leapblocks_versions_is_latest_idx").on(table.isLatest),
+    index("leaplab_versions_is_latest_idx").on(table.isLatest),
   ],
 );

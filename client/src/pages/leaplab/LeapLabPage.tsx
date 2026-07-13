@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { UploadCloud, FileText, CheckCircle2, AlertTriangle, RefreshCw, Download, Layers, Calendar, Terminal } from 'lucide-react';
 
-interface LeapBlocksVersion {
+interface LeapLabVersion {
   id: string;
   version: string;
   exeUrl: string;
@@ -25,9 +25,9 @@ interface LeapBlocksVersion {
   createdAt: string;
 }
 
-export default function LeapBlocksPage() {
+export default function LeapLabPage() {
   const user = useAuthStore((s) => s.user);
-  const [versions, setVersions] = useState<LeapBlocksVersion[]>([]);
+  const [versions, setVersions] = useState<LeapLabVersion[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   
   // Upload States
@@ -67,7 +67,7 @@ export default function LeapBlocksPage() {
         <AlertTriangle className="h-16 w-16 text-destructive mb-4 animate-bounce" />
         <h2 className="text-2xl font-bold tracking-tight text-foreground">Access Denied</h2>
         <p className="text-muted-foreground mt-2 max-w-md">
-          You do not have the required permissions to access the LeapBlocks version management console.
+          You do not have the required permissions to access the LeapLab version management console.
         </p>
       </div>
     );
@@ -76,7 +76,7 @@ export default function LeapBlocksPage() {
   const fetchVersions = async () => {
     setLoading(true);
     try {
-      const response = await _axios.get('/admin/leapblocks/versions');
+      const response = await _axios.get('/admin/leaplab/versions');
       if (response.data?.success) {
         setVersions(response.data.data || []);
       } else {
@@ -264,7 +264,7 @@ export default function LeapBlocksPage() {
     }
 
     try {
-      const response = await _axios.post('/admin/leapblocks/versions', formData, {
+      const response = await _axios.post('/admin/leaplab/versions', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -277,7 +277,7 @@ export default function LeapBlocksPage() {
       });
 
       if (response.data?.success) {
-        toast.success(`LeapBlocks v${parsedVersion} published successfully!`);
+        toast.success(`LeapLab v${parsedVersion} published successfully!`);
         // Reset states
         setParsedVersion('');
         setParsedExeName('');
@@ -330,7 +330,7 @@ export default function LeapBlocksPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">LeapBlocks Releases</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">LeapLab Releases</h1>
           <p className="text-muted-foreground mt-1">
             Manage auto-update builds, upload installers, and monitor client versions.
           </p>
@@ -467,7 +467,7 @@ export default function LeapBlocksPage() {
               Release History
             </CardTitle>
             <CardDescription>
-              All published versions of LeapBlocks available to clients for update.
+              All published versions of LeapLab available to clients for update.
             </CardDescription>
           </CardHeader>
           <CardContent>

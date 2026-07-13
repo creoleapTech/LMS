@@ -5,26 +5,26 @@ import { eq, desc } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
-import { leapblocksVersions } from "../../schema/leapblocks-versions";
+import { leaplabVersions } from "../../schema/leaplab-versions";
 import { deliverFile } from "../../lib/file";
 import { nowISO } from "../../lib/utils";
 import { adminAuth } from "../../middleware/admin-auth";
 import { BadRequestError } from "../../lib/errors/bad-request";
 
 // ─── Public version query (no auth) ────────────────────────────────────
-export const leapblocksPublicController = new Hono<{
+export const leaplabPublicController = new Hono<{
   Bindings: Bindings;
   Variables: Variables;
 }>();
 
-leapblocksPublicController.get("/latest", async (c) => {
+leaplabPublicController.get("/latest", async (c) => {
   const db = getDb(c.env.DB);
 
   const [row] = await db
     .select()
-    .from(leapblocksVersions)
-    .where(eq(leapblocksVersions.isLatest, 1))
-    .orderBy(desc(leapblocksVersions.createdAt))
+    .from(leaplabVersions)
+    .where(eq(leaplabVersions.isLatest, 1))
+    .orderBy(desc(leaplabVersions.createdAt))
     .limit(1);
 
   if (!row) {
@@ -32,7 +32,7 @@ leapblocksPublicController.get("/latest", async (c) => {
   }
 
   // Build download URLs relative to the version folder
-  const baseUrl = `/api/file/proxy?key=${encodeURIComponent(`leapblocks/releases/v${row.version}/`)}`;
+  const baseUrl = `/api/file/proxy?key=${encodeURIComponent(`leaplab/releases/v${row.version}/`)}`;
 
   return c.json({
     success: true,
@@ -50,19 +50,19 @@ leapblocksPublicController.get("/latest", async (c) => {
 });
 
 // ─── Admin version upload (admin/super_admin only) ─────────────────────
-export const leapblocksAdminController = new Hono<{
+export const leaplabAdminController = new Hono<{
   Bindings: Bindings;
   Variables: Variables;
 }>();
 
-leapblocksAdminController.use("*", adminAuth);
+leaplabAdminController.use("*", adminAuth);
 
 const uploadSchema = z.object({
   version: z.string().min(1, "Version is required"),
   releaseNotes: z.string().optional(),
 });
 
-leapblocksAdminController.post("/", zValidator("form", uploadSchema), async (c) => {
+leaplabAdminController.post("/", zValidator("form", uploadSchema), async (c) => {
   const formData = await c.req.formData();
   const version = getFormString(formData, "version");
   const releaseNotes = getFormString(formData, "releaseNotes");
@@ -88,10 +88,10 @@ leapblocksAdminController.post("/", zValidator("form", uploadSchema), async (c) 
   const db = getDb(c.env.DB);
   const now = nowISO();
   const id = uuid();
-  const folder = `leapblocks/releases/v${version}`;
+  const folder = `leaplab/releases/v${version}`;
 
   // Store the installer exe with its original filename
-  const exeName = exeFile.name || `LeapBlocks-Setup-${version}-x64.exe`;
+  const exeName = exeFile.name || `LeapLab-Setup-${version}-x64.exe`;
   const exeKey = `${folder}/${exeName}`;
   await bucket.put(exeKey, exeFile);
 
@@ -102,7 +102,7 @@ leapblocksAdminController.post("/", zValidator("form", uploadSchema), async (c) 
   // Store blockmap if provided
   let blockmapKey: string | null = null;
   if (blockmapFile) {
-    blockmapKey = `${folder}/${blockmapFile.name || `LeapBlocks-Setup-${version}-x64.exe.blockmap`}`;
+    blockmapKey = `${folder}/${blockmapFile.name || `LeapLab-Setup-${version}-x64.exe.blockmap`}`;
     await bucket.put(blockmapKey, blockmapFile);
   }
 
@@ -111,13 +111,13 @@ leapblocksAdminController.post("/", zValidator("form", uploadSchema), async (c) 
 
   // Mark previous latest as not latest
   await db
-    .update(leapblocksVersions)
+    .update(leaplabVersions)
     .set({ isLatest: 0 })
-    .where(eq(leapblocksVersions.isLatest, 1));
+    .where(eq(leaplabVersions.isLatest, 1));
 
   // Insert new version
   await db
-    .insert(leapblocksVersions)
+    .insert(leaplabVersions)
     .values({
       id,
       version,
@@ -133,7 +133,7 @@ leapblocksAdminController.post("/", zValidator("form", uploadSchema), async (c) 
 
   return c.json({
     success: true,
-    message: `LeapBlocks v${version} published`,
+    message: `LeapLab v${version} published`,
     data: {
       id,
       version,
@@ -148,13 +148,13 @@ leapblocksAdminController.post("/", zValidator("form", uploadSchema), async (c) 
 });
 
 // ─── GET / list all versions (admin) ───────────────────────────────────
-leapblocksAdminController.get("/", async (c) => {
+leaplabAdminController.get("/", async (c) => {
   const db = getDb(c.env.DB);
 
   const rows = await db
     .select()
-    .from(leapblocksVersions)
-    .orderBy(desc(leapblocksVersions.createdAt));
+    .from(leaplabVersions)
+    .orderBy(desc(leaplabVersions.createdAt));
 
   return c.json({
     success: true,
@@ -179,7 +179,7 @@ leapblocksAdminController.get("/", async (c) => {
  * Format:
  *   sha512: <base64-hash>
  * or
- *   path: LeapBlocks-Setup-1.0.0-x64.exe
+ *   path: LeapLab-Setup-1.0.0-x64.exe
  *   sha512: <base64-hash>
  */
 function parseSha512FromYml(yml: string): string | null {
