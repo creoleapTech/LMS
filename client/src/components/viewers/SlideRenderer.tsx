@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState, useRef, useLayoutEffect } from "react";
 import type {
   SlideData,
   SlideElement,
@@ -654,33 +654,79 @@ export const SlideRenderer = memo(function SlideRenderer({
   const bgStyle = bgToCss(slide.background);
   const aspectRatio = slideWidth / slideHeight;
 
+  const slideWidthPt = slideWidth / EMU_PER_POINT;
+  const slideHeightPt = slideHeight / EMU_PER_POINT;
+  const referenceWidth = slideWidthPt * (4 / 3);
+  const referenceHeight = slideHeightPt * (4 / 3);
+
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    setContainerWidth(el.getBoundingClientRect().width);
+
+    if (typeof ResizeObserver === "undefined") {
+      const handleResize = () => {
+        setContainerWidth(el.getBoundingClientRect().width);
+      };
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      if (!entries || entries.length === 0) return;
+      const { width } = entries[0].contentRect;
+      if (width > 0) {
+        setContainerWidth(width);
+      }
+    });
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   // Sort elements by their position to handle z-order (elements later in array are on top)
   const sortedElements = useMemo(() => {
     // Keep original order - PPT elements are already in z-order
     return slide.elements;
   }, [slide.elements]);
 
+  const scale = containerWidth ? containerWidth / referenceWidth : 1;
+
   return (
     <div
+      ref={containerRef}
       style={{
-        containerType: "inline-size",
         position: "relative",
         width: "100%",
+        aspectRatio: `${aspectRatio}`,
+        overflow: "hidden",
       }}
     >
       <div
         style={{
-          position: "relative",
-          width: "100%",
-          aspectRatio: `${aspectRatio}`,
+          containerType: "inline-size",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: `${referenceWidth}px`,
+          height: `${referenceHeight}px`,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
           ...bgStyle,
-    overflow: "visible",
+          overflow: "visible",
           borderRadius: "4px",
           fontFamily: "'Calibri', 'Segoe UI', Arial, sans-serif",
           lineHeight: 1.2,
           WebkitFontSmoothing: "antialiased",
           MozOsxFontSmoothing: "grayscale",
           textRendering: "optimizeLegibility",
+          opacity: containerWidth === null ? 0 : 1,
         }}
       >
         {sortedElements.map((el, i) => (
