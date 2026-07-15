@@ -450,7 +450,11 @@ export default function SchoolProgressPage({ initialSchoolId, lockedToSchool }: 
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                   <Tooltip cursor={{ fill: "rgba(99, 102, 241, 0.05)" }} />
-                  <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {(schoolCharts?.distribution || []).map((_: any, index: number) => (
+                      <Cell key={index} fill={["#f59e0b", "#fb923c", "#6366f1", "#3b82f6", "#10b981", "#22c55e"][index]} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             )}
