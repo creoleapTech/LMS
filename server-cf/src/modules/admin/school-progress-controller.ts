@@ -515,8 +515,6 @@ app.get("/classes", async (c) => {
     }
   }
 
-  const total = list.length;
-  
   // Slice current page
   const offset = (page - 1) * limit;
   const paginatedList = list.slice(offset, offset + limit);
