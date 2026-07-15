@@ -348,15 +348,15 @@ function MiniMonthStats({ monthData }: { monthData: Record<string, { entryCount:
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <div className="neo-card-flat bg-gradient-to-br from-indigo-50 to-violet-50 rounded-xl border-2 border-indigo-300 p-3 text-center">
         <p className="text-2xl font-extrabold text-indigo-600">{totalClasses}</p>
-        <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mt-0.5">Classes</p>
+        <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mt-0.5">Scheduled Classes</p>
       </div>
       <div className="neo-card-flat bg-gradient-to-br from-emerald-50 to-cyan-50 rounded-xl border-2 border-emerald-400 p-3 text-center">
         <p className="text-2xl font-extrabold text-emerald-600">{completedClasses}</p>
-        <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mt-0.5">Done Classes</p>
+        <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mt-0.5">Completed Classes</p>
       </div>
       <div className="neo-card-flat bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl border-2 border-teal-400 p-3 text-center">
         <p className="text-2xl font-extrabold text-teal-600">{completedDays}</p>
-        <p className="text-xs font-bold text-teal-600 uppercase tracking-wider mt-0.5">Done Days</p>
+        <p className="text-xs font-bold text-teal-600 uppercase tracking-wider mt-0.5">Completed Days</p>
       </div>
       <div className="neo-card-flat bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-400 p-3 text-center">
         <p className="text-2xl font-extrabold text-amber-600">{activeDays}</p>
