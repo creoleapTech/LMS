@@ -2687,6 +2687,51 @@ timetableController.post("/approve-report", async (c) => {
   }
 });
 
+// ─── POST /cancel-approve-report — admin/superadmin cancels approval ──
+
+timetableController.post("/cancel-approve-report", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    if (user.role !== "super_admin" && user.role !== "admin") {
+      throw new BadRequestError("Only admin/super_admin can cancel approval");
+    }
+
+    const { submissionId } = await c.req.json();
+    if (!submissionId) throw new BadRequestError("submissionId is required");
+
+    const db = getDb(c.env.DB);
+    const now = nowISO();
+
+    const [existing] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(eq(reportSubmissions.id, submissionId))
+      .limit(1);
+
+    if (!existing) throw new BadRequestError("Submission not found");
+    if (existing.adminApproval !== "verified") {
+      throw new BadRequestError("Only verified reports can have their approval cancelled");
+    }
+
+    const [updated] = await db
+      .update(reportSubmissions)
+      .set({
+        adminApproval: "pending",
+        reviewedAt: null,
+        reviewedBy: null,
+        updatedAt: now,
+      })
+      .where(eq(reportSubmissions.id, submissionId))
+      .returning();
+
+    return c.json({ success: true, data: updated });
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("Cancel approval error:", err);
+    return c.json({ success: false, message: "Failed to cancel approval" }, 500);
+  }
+});
+
 // ─── POST /reject-report — superadmin rejects a report with comment ──
 
 timetableController.post("/reject-report", async (c) => {
@@ -2761,6 +2806,9 @@ timetableController.post("/save-report-draft", async (c) => {
       .limit(1);
 
     if (existing) {
+      if (existing.adminApproval === "verified") {
+        return c.json({ success: false, message: "Cannot modify a verified report." }, 400);
+      }
       // Update existing record (whether draft or submitted — saving draft overwrites)
       const [updated] = await db
         .update(reportSubmissions)

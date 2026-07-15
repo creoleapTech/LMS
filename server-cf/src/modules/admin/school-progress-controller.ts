@@ -3,7 +3,7 @@ import { eq, and, sql, count, inArray } from "drizzle-orm";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { institutions, staff, classes, students } from "../../schema/admin";
-import { gradeBooks, chapters, chapterContents } from "../../schema/books";
+import { curricula, gradeBooks, chapters, chapterContents } from "../../schema/books";
 import { teachingProgress } from "../../schema/staff";
 import {
   institutionCurriculumAccess,
@@ -388,7 +388,7 @@ app.get("/classes", async (c) => {
 
   // Gradebooks
   const gradeBookRows = await db
-    .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade })
+    .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade, curriculumId: gradeBooks.curriculumId })
     .from(gradeBooks);
 
   const gbMap = new Map(gradeBookRows.map((gb) => [gb.id, gb]));
@@ -479,7 +479,7 @@ app.get("/classes", async (c) => {
       courseTitle.toLowerCase().includes(search.toLowerCase()) ||
       teacherName.toLowerCase().includes(search.toLowerCase());
 
-    const matchesCourse = courseId === "all" || gbId === courseId;
+    const matchesCourse = courseId === "all" || (gb && gb.curriculumId === courseId);
     const matchesClass = classId === "all" || cls.id === classId;
 
     // Date range filter on lastAccessedAt
@@ -701,7 +701,7 @@ app.get("/teachers", async (c) => {
   });
 });
 
-// 6. GET /courses — Lightweight courses filter metadata list
+// 6. GET /courses — Lightweight courses filter metadata list (unique curricula)
 app.get("/courses", async (c) => {
   const db = getDb(c.env.DB);
   const institutionId = c.req.query("institutionId");
@@ -710,24 +710,11 @@ app.get("/courses", async (c) => {
     return c.json({ success: false, message: "Missing institutionId query parameter" }, 400);
   }
 
-  const allAccess = await db
-    .select({ gradeBookId: institutionAccessibleGradebooks.gradeBookId })
-    .from(institutionCurriculumAccess)
-    .innerJoin(
-      institutionAccessibleGradebooks,
-      eq(institutionAccessibleGradebooks.accessId, institutionCurriculumAccess.id),
-    )
-    .where(eq(institutionCurriculumAccess.institutionId, institutionId));
-
-  const gbIds = allAccess.map((a: any) => a.gradeBookId);
-  if (gbIds.length === 0) {
-    return c.json({ success: true, data: [] });
-  }
-
   const courseList = await db
-    .select({ id: gradeBooks.id, title: gradeBooks.bookTitle })
-    .from(gradeBooks)
-    .where(inArray(gradeBooks.id, gbIds));
+    .selectDistinct({ id: curricula.id, title: curricula.name })
+    .from(institutionCurriculumAccess)
+    .innerJoin(curricula, eq(institutionCurriculumAccess.curriculumId, curricula.id))
+    .where(eq(institutionCurriculumAccess.institutionId, institutionId));
 
   return c.json({ success: true, data: courseList });
 });

@@ -74,6 +74,7 @@ import {
   GripVertical,
   Mail,
   MailCheck,
+  Undo2,
 } from "lucide-react";
 
 const MONTH_NAMES = [
@@ -2162,6 +2163,8 @@ function SubmittedReportsView({
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelApproveDialog, setCancelApproveDialog] = useState<any | null>(null);
   const [filterStaffId, setFilterStaffId] = useState<string>("");
   const [filterInstitutionId, setFilterInstitutionId] = useState<string>("");
   const [filterMonth, setFilterMonth] = useState<string>("");
@@ -2232,6 +2235,22 @@ function SubmittedReportsView({
       toast.error("Failed to approve report");
     } finally {
       setApprovingId(null);
+    }
+  };
+
+  const handleCancelApproveConfirm = async () => {
+    if (!cancelApproveDialog) return;
+    const id = cancelApproveDialog.id;
+    setCancellingId(id);
+    try {
+      await _axios.post("/admin/timetable/cancel-approve-report", { submissionId: id });
+      toast.success("Report approval cancelled");
+      setReports((prev) => prev.map((r) => r.id === id ? { ...r, adminApproval: "pending", reviewedAt: null, reviewedBy: null } : r));
+    } catch {
+      toast.error("Failed to cancel approval");
+    } finally {
+      setCancellingId(null);
+      setCancelApproveDialog(null);
     }
   };
 
@@ -2802,6 +2821,20 @@ function SubmittedReportsView({
                             Reject
                           </button>
                         )}
+                        {r.adminApproval === "verified" && (
+                          <button
+                            onClick={() => setCancelApproveDialog(r)}
+                            disabled={cancellingId === r.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 text-orange-700 font-semibold text-xs hover:bg-orange-100 transition-colors disabled:opacity-50"
+                          >
+                            {cancellingId === r.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Undo2 size={14} />
+                            )}
+                            Cancel Approval
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -2861,6 +2894,30 @@ function SubmittedReportsView({
               className="bg-red-600 text-white hover:bg-red-700 font-bold"
             >
               Reject Report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Approval Confirmation Dialog */}
+      <Dialog open={!!cancelApproveDialog} onOpenChange={(open) => { if (!open) setCancelApproveDialog(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel Approval</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel the approval for this report? The report will be returned to pending status, allowing the trainer to resubmit if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 justify-end">
+            <DialogClose asChild>
+              <Button variant="outline" size="sm">No, Keep Approved</Button>
+            </DialogClose>
+            <Button
+              onClick={handleCancelApproveConfirm}
+              size="sm"
+              className="bg-orange-600 text-white hover:bg-orange-700 font-bold"
+            >
+              Yes, Cancel Approval
             </Button>
           </DialogFooter>
         </DialogContent>
