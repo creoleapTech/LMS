@@ -393,10 +393,11 @@ app.get("/classes", async (c) => {
 
   const gbMap = new Map(gradeBookRows.map((gb) => [gb.id, gb]));
 
-  // Chapters & Contents count maps
+  // Chapters & Contents count maps (ordered for position-based calculation)
   const allChapters = await db
-    .select({ id: chapters.id, gradeBookId: chapters.gradeBookId })
-    .from(chapters);
+    .select({ id: chapters.id, gradeBookId: chapters.gradeBookId, order: chapters.order })
+    .from(chapters)
+    .orderBy(chapters.order);
 
   const gbChaptersMap = new Map<string, string[]>();
   for (const ch of allChapters) {
@@ -406,8 +407,9 @@ app.get("/classes", async (c) => {
   }
 
   const allContents = await db
-    .select({ id: chapterContents.id, chapterId: chapterContents.chapterId })
-    .from(chapterContents);
+    .select({ id: chapterContents.id, chapterId: chapterContents.chapterId, order: chapterContents.order })
+    .from(chapterContents)
+    .orderBy(chapterContents.order);
 
   const chContentsMap = new Map<string, string[]>();
   for (const cnt of allContents) {
@@ -466,7 +468,6 @@ app.get("/classes", async (c) => {
     if (!gb) continue;
 
     const pr = progressKeyMap.get(`${cls.id}_${gbId}`);
-    const progressPercentage = pr?.overallPercentage || 0;
 
     // Filters check
     const teacherId = classTeacherMap.get(cls.id);
@@ -498,12 +499,7 @@ app.get("/classes", async (c) => {
       }
     }
 
-    let matchesStatus = true;
-    if (status === "not_started") matchesStatus = progressPercentage === 0;
-    else if (status === "ongoing") matchesStatus = progressPercentage > 0 && progressPercentage < 100;
-    else if (status === "completed") matchesStatus = progressPercentage === 100;
-
-    if (matchesSearch && matchesCourse && matchesClass && matchesDate && matchesStatus) {
+    if (matchesSearch && matchesCourse && matchesClass && matchesDate) {
       list.push({
         classId: cls.id,
         className,
@@ -514,7 +510,6 @@ app.get("/classes", async (c) => {
         progressId: pr?.id || null,
         totalChapters: gbChaptersMap.get(gbId)?.length || 0,
         totalSubchapters: gbContentMap.get(gbId) || 0,
-        progressPercentage,
         lastAccessedAt: pr?.lastAccessedAt || null,
       });
     }
@@ -546,17 +541,36 @@ app.get("/classes", async (c) => {
     }
   }
 
-  // Hydrate completed values
+  // Hydrate with position-based progress percentage and completed counts
   const hydratedItems = paginatedList.map((item) => {
     let completedSubchapters = 0;
     let completedChapters = 0;
+    let progressPercentage = 0;
 
     if (item.progressId) {
       const completedSet = completedContentsMap.get(item.progressId);
       if (completedSet) {
         completedSubchapters = completedSet.size;
 
+        // Position-based percentage: find farthest accessed content
         const chapterIds = gbChaptersMap.get(item.courseId) || [];
+        const orderedContentIds: string[] = [];
+        for (const chId of chapterIds) {
+          const chContents = chContentsMap.get(chId) || [];
+          orderedContentIds.push(...chContents);
+        }
+
+        let maxPosition = 0;
+        for (let i = 0; i < orderedContentIds.length; i++) {
+          if (completedSet.has(orderedContentIds[i])) {
+            maxPosition = i + 1;
+          }
+        }
+
+        progressPercentage = orderedContentIds.length > 0
+          ? Number(((maxPosition / orderedContentIds.length) * 100).toFixed(2))
+          : 0;
+
         for (const chId of chapterIds) {
           const chContents = chContentsMap.get(chId) || [];
           if (chContents.length > 0 && chContents.every((c) => completedSet.has(c))) {
@@ -570,13 +584,26 @@ app.get("/classes", async (c) => {
       ...item,
       completedChapters,
       completedSubchapters,
+      progressPercentage,
     };
   });
+
+  // Apply status filter after hydration
+  const filteredByStatus = status === "all"
+    ? hydratedItems
+    : hydratedItems.filter((item) => {
+        if (status === "not_started") return item.progressPercentage === 0;
+        if (status === "ongoing") return item.progressPercentage > 0 && item.progressPercentage < 100;
+        if (status === "completed") return item.progressPercentage === 100;
+        return true;
+      });
+
+  const total = filteredByStatus.length;
 
   return c.json({
     success: true,
     data: {
-      items: hydratedItems,
+      items: filteredByStatus,
       total,
     },
   });

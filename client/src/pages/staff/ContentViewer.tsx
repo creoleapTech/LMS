@@ -164,6 +164,14 @@ export function ContentViewer({
     [autoSave]
   );
 
+  // PPT: track slide changes (reuse pdfPage field)
+  const handlePptSlideChange = useCallback(
+    (page: number) => {
+      autoSave({ pdfPage: page });
+    },
+    [autoSave]
+  );
+
   return (
     <div className="flex-1 overflow-y-auto">
       {/* Header */}
@@ -308,6 +316,8 @@ export function ContentViewer({
                 storageKey={(content.fileUrl || content.videoUrl)!}
                 title={content.title}
                 watermarkText={watermarkText}
+                initialPage={contentProgress?.pdfPage}
+                onPageChange={handlePptSlideChange}
                 onFullscreenChange={setPptIsFullscreen}
               />
             </ContentProtectionWrapper>
