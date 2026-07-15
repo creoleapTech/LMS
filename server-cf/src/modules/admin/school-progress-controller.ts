@@ -210,7 +210,7 @@ app.get("/kpis", async (c) => {
 
   // Progress records for the institution
   const progressRows = await db
-    .select({ id: teachingProgress.id, classId: teachingProgress.classId, gradeBookId: teachingProgress.gradeBookId, overallPercentage: teachingProgress.overallPercentage })
+    .select({ id: teachingProgress.id, classId: teachingProgress.classId, gradeBookId: teachingProgress.gradeBookId })
     .from(teachingProgress)
     .where(eq(teachingProgress.institutionId, institutionId));
 
@@ -220,6 +220,51 @@ app.get("/kpis", async (c) => {
     if (pr.classId && pr.gradeBookId) {
       classProgressGbMap.set(pr.classId, pr.gradeBookId);
       progressKeyMap.set(`${pr.classId}_${pr.gradeBookId}`, pr);
+    }
+  }
+
+  // Build ordered content maps for position-based calculation
+  const allChaptersForKpi = await db
+    .select({ id: chapters.id, gradeBookId: chapters.gradeBookId, order: chapters.order })
+    .from(chapters)
+    .orderBy(chapters.order);
+
+  const gbChaptersMapForKpi = new Map<string, string[]>();
+  for (const ch of allChaptersForKpi) {
+    const list = gbChaptersMapForKpi.get(ch.gradeBookId) || [];
+    list.push(ch.id);
+    gbChaptersMapForKpi.set(ch.gradeBookId, list);
+  }
+
+  const allContentsForKpi = await db
+    .select({ id: chapterContents.id, chapterId: chapterContents.chapterId, order: chapterContents.order })
+    .from(chapterContents)
+    .orderBy(chapterContents.order);
+
+  const chContentsMapForKpi = new Map<string, string[]>();
+  for (const cnt of allContentsForKpi) {
+    const list = chContentsMapForKpi.get(cnt.chapterId) || [];
+    list.push(cnt.id);
+    chContentsMapForKpi.set(cnt.chapterId, list);
+  }
+
+  // Fetch all accessed content for progress records
+  const kpiProgressIds = progressRows.map((p) => p.id);
+  const kpiCompletedMap = new Map<string, Set<string>>();
+
+  if (kpiProgressIds.length > 0) {
+    const progressContents = await db
+      .select({ teachingProgressId: teachingProgressContents.teachingProgressId, contentId: teachingProgressContents.contentId })
+      .from(teachingProgressContents)
+      .where(inArray(teachingProgressContents.teachingProgressId, kpiProgressIds));
+
+    for (const pc of progressContents) {
+      if (pc.contentId) {
+        if (!kpiCompletedMap.has(pc.teachingProgressId)) {
+          kpiCompletedMap.set(pc.teachingProgressId, new Set());
+        }
+        kpiCompletedMap.get(pc.teachingProgressId)!.add(pc.contentId);
+      }
     }
   }
 
@@ -242,13 +287,14 @@ app.get("/kpis", async (c) => {
 
     const pr = progressKeyMap.get(`${cls.id}_${gbId}`);
     if (pr) {
-      const percentage = pr.overallPercentage || 0;
-      if (percentage === 100) {
+      const completedSet = kpiCompletedMap.get(pr.id);
+      const completedCount = completedSet?.size || 0;
+      completedSubchapters += completedCount;
+      if (completedCount === total && total > 0) {
         completedClasses++;
-      } else if (percentage > 0) {
+      } else if (completedCount > 0) {
         ongoingClasses++;
       }
-      completedSubchapters += (percentage / 100) * total;
     }
   }
 
@@ -281,7 +327,7 @@ app.get("/charts", async (c) => {
 
   // Progress records for the institution
   const progressRows = await db
-    .select({ id: teachingProgress.id, classId: teachingProgress.classId, gradeBookId: teachingProgress.gradeBookId, overallPercentage: teachingProgress.overallPercentage })
+    .select({ id: teachingProgress.id, classId: teachingProgress.classId, gradeBookId: teachingProgress.gradeBookId })
     .from(teachingProgress)
     .where(eq(teachingProgress.institutionId, institutionId));
 
@@ -291,6 +337,51 @@ app.get("/charts", async (c) => {
     if (pr.classId && pr.gradeBookId) {
       classProgressGbMap.set(pr.classId, pr.gradeBookId);
       progressKeyMap.set(`${pr.classId}_${pr.gradeBookId}`, pr);
+    }
+  }
+
+  // Build ordered content maps for position-based calculation
+  const allChapters = await db
+    .select({ id: chapters.id, gradeBookId: chapters.gradeBookId, order: chapters.order })
+    .from(chapters)
+    .orderBy(chapters.order);
+
+  const gbChaptersMap = new Map<string, string[]>();
+  for (const ch of allChapters) {
+    const list = gbChaptersMap.get(ch.gradeBookId) || [];
+    list.push(ch.id);
+    gbChaptersMap.set(ch.gradeBookId, list);
+  }
+
+  const allContents = await db
+    .select({ id: chapterContents.id, chapterId: chapterContents.chapterId, order: chapterContents.order })
+    .from(chapterContents)
+    .orderBy(chapterContents.order);
+
+  const chContentsMap = new Map<string, string[]>();
+  for (const cnt of allContents) {
+    const list = chContentsMap.get(cnt.chapterId) || [];
+    list.push(cnt.id);
+    chContentsMap.set(cnt.chapterId, list);
+  }
+
+  // Fetch all accessed content for progress records
+  const progressIds = progressRows.map((p) => p.id);
+  const completedContentsMap = new Map<string, Set<string>>();
+
+  if (progressIds.length > 0) {
+    const progressContents = await db
+      .select({ teachingProgressId: teachingProgressContents.teachingProgressId, contentId: teachingProgressContents.contentId })
+      .from(teachingProgressContents)
+      .where(inArray(teachingProgressContents.teachingProgressId, progressIds));
+
+    for (const pc of progressContents) {
+      if (pc.contentId) {
+        if (!completedContentsMap.has(pc.teachingProgressId)) {
+          completedContentsMap.set(pc.teachingProgressId, new Set());
+        }
+        completedContentsMap.get(pc.teachingProgressId)!.add(pc.contentId);
+      }
     }
   }
 
@@ -304,7 +395,30 @@ app.get("/charts", async (c) => {
     if (!gbId) continue;
 
     const pr = progressKeyMap.get(`${cls.id}_${gbId}`);
-    const pct = pr?.overallPercentage || 0;
+    let pct = 0;
+
+    if (pr) {
+      const completedSet = completedContentsMap.get(pr.id);
+      if (completedSet && completedSet.size > 0) {
+        const chapterIds = gbChaptersMap.get(gbId) || [];
+        const orderedContentIds: string[] = [];
+        for (const chId of chapterIds) {
+          const chContents = chContentsMap.get(chId) || [];
+          orderedContentIds.push(...chContents);
+        }
+
+        let maxPosition = 0;
+        for (let i = 0; i < orderedContentIds.length; i++) {
+          if (completedSet.has(orderedContentIds[i])) {
+            maxPosition = i + 1;
+          }
+        }
+
+        pct = orderedContentIds.length > 0
+          ? Number(((maxPosition / orderedContentIds.length) * 100).toFixed(2))
+          : 0;
+      }
+    }
 
     if (pct === 0) progressBrackets.notStarted++;
     else if (pct === 100) progressBrackets.completed++;
@@ -315,12 +429,11 @@ app.get("/charts", async (c) => {
   }
 
   // Content type breakdown
-  const progressIds = progressRows.map((p) => p.id);
   const completedContentTypesMap = new Map<string, number>();
 
   if (progressIds.length > 0) {
     // Fetch all content type metadata
-    const allContents = await db
+    const allContentsMeta = await db
       .select({ id: chapterContents.id, type: chapterContents.type })
       .from(chapterContents);
 
@@ -331,7 +444,7 @@ app.get("/charts", async (c) => {
 
     for (const pc of progressContents) {
       if (pc.contentId) {
-        const matchingContent = allContents.find((c) => c.id === pc.contentId);
+        const matchingContent = allContentsMeta.find((c) => c.id === pc.contentId);
         if (matchingContent) {
           const type = matchingContent.type || "other";
           completedContentTypesMap.set(type, (completedContentTypesMap.get(type) || 0) + 1);
@@ -654,7 +767,7 @@ app.get("/teachers", async (c) => {
 
   // Progress records for the institution
   const progressRows = await db
-    .select({ id: teachingProgress.id, classId: teachingProgress.classId, gradeBookId: teachingProgress.gradeBookId, overallPercentage: teachingProgress.overallPercentage })
+    .select({ id: teachingProgress.id, classId: teachingProgress.classId, gradeBookId: teachingProgress.gradeBookId })
     .from(teachingProgress)
     .where(eq(teachingProgress.institutionId, institutionId));
 
@@ -664,6 +777,51 @@ app.get("/teachers", async (c) => {
     if (pr.classId && pr.gradeBookId) {
       classProgressGbMap.set(pr.classId, pr.gradeBookId);
       progressKeyMap.set(`${pr.classId}_${pr.gradeBookId}`, pr);
+    }
+  }
+
+  // Build ordered content maps for position-based calculation
+  const allChaptersForTeachers = await db
+    .select({ id: chapters.id, gradeBookId: chapters.gradeBookId, order: chapters.order })
+    .from(chapters)
+    .orderBy(chapters.order);
+
+  const gbChaptersMapForTeachers = new Map<string, string[]>();
+  for (const ch of allChaptersForTeachers) {
+    const list = gbChaptersMapForTeachers.get(ch.gradeBookId) || [];
+    list.push(ch.id);
+    gbChaptersMapForTeachers.set(ch.gradeBookId, list);
+  }
+
+  const allContentsForTeachers = await db
+    .select({ id: chapterContents.id, chapterId: chapterContents.chapterId, order: chapterContents.order })
+    .from(chapterContents)
+    .orderBy(chapterContents.order);
+
+  const chContentsMapForTeachers = new Map<string, string[]>();
+  for (const cnt of allContentsForTeachers) {
+    const list = chContentsMapForTeachers.get(cnt.chapterId) || [];
+    list.push(cnt.id);
+    chContentsMapForTeachers.set(cnt.chapterId, list);
+  }
+
+  // Fetch all accessed content for progress records
+  const teacherProgressIds = progressRows.map((p) => p.id);
+  const teacherCompletedMap = new Map<string, Set<string>>();
+
+  if (teacherProgressIds.length > 0) {
+    const progressContents = await db
+      .select({ teachingProgressId: teachingProgressContents.teachingProgressId, contentId: teachingProgressContents.contentId })
+      .from(teachingProgressContents)
+      .where(inArray(teachingProgressContents.teachingProgressId, teacherProgressIds));
+
+    for (const pc of progressContents) {
+      if (pc.contentId) {
+        if (!teacherCompletedMap.has(pc.teachingProgressId)) {
+          teacherCompletedMap.set(pc.teachingProgressId, new Set());
+        }
+        teacherCompletedMap.get(pc.teachingProgressId)!.add(pc.contentId);
+      }
     }
   }
 
@@ -683,10 +841,9 @@ app.get("/teachers", async (c) => {
     const teacherName = staffMap.get(teacherId);
     if (!teacherName) continue;
 
-    const totalSubchapters = gbContentMap.get(gbId) || 0;
     const pr = progressKeyMap.get(`${cls.id}_${gbId}`);
-    const pct = pr?.overallPercentage || 0;
-    const completedSubchapters = Math.round((pct / 100) * totalSubchapters);
+    const completedSet = teacherCompletedMap.get(pr?.id || "");
+    const completedCount = completedSet?.size || 0;
 
     const stats = teacherStatsMap.get(teacherId) || {
       id: teacherId,
@@ -696,8 +853,8 @@ app.get("/teachers", async (c) => {
       total: 0,
     };
     stats.totalAssigned++;
-    stats.completed += completedSubchapters;
-    stats.total += totalSubchapters;
+    stats.completed += completedCount;
+    stats.total += gbContentMap.get(gbId) || 0;
     teacherStatsMap.set(teacherId, stats);
   }
 
