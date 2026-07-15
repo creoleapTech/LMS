@@ -462,12 +462,12 @@ app.get("/charts", async (c) => {
     success: true,
     data: {
       distribution: [
-        { name: "Getting Started", value: progressBrackets.notStarted },
-        { name: "Building", value: progressBrackets.bracket1 },
-        { name: "On Track", value: progressBrackets.bracket2 },
-        { name: "Advancing", value: progressBrackets.bracket3 },
-        { name: "Almost Done", value: progressBrackets.bracket4 },
-        { name: "Completed", value: progressBrackets.completed },
+        { name: "Yet to start", value: progressBrackets.notStarted },
+        { name: "1–25%", value: progressBrackets.bracket1 },
+        { name: "26–50%", value: progressBrackets.bracket2 },
+        { name: "51–75%", value: progressBrackets.bracket3 },
+        { name: "76–99%", value: progressBrackets.bracket4 },
+        { name: "Done", value: progressBrackets.completed },
       ],
       contentTypeData,
     },
