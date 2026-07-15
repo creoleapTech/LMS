@@ -2688,25 +2688,27 @@ function SubmittedReportsView({
                           )}
                           Download Signed
                         </button>
-                        <button
-                          onClick={() => handleOpenEmailPreview(r.id)}
-                          disabled={loadingPreviewId === r.id || sendingEmailId === r.id}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors disabled:opacity-50 ${
-                            r.mailSentAt
-                              ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
-                              : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-                          }`}
-                          title={r.mailSentAt ? `Sent on ${new Date(r.mailSentAt).toLocaleString("en-GB")}` : "Send report to school email"}
-                        >
-                          {loadingPreviewId === r.id || sendingEmailId === r.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : r.mailSentAt ? (
-                            <MailCheck size={14} />
-                          ) : (
-                            <Mail size={14} />
-                          )}
-                          {r.mailSentAt ? "Resend Mail" : "Mail School"}
-                        </button>
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => handleOpenEmailPreview(r.id)}
+                            disabled={loadingPreviewId === r.id || sendingEmailId === r.id}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors disabled:opacity-50 ${
+                              r.mailSentAt
+                                ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                            }`}
+                            title={r.mailSentAt ? `Sent on ${new Date(r.mailSentAt).toLocaleString("en-GB")}` : "Send report to school email"}
+                          >
+                            {loadingPreviewId === r.id || sendingEmailId === r.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : r.mailSentAt ? (
+                              <MailCheck size={14} />
+                            ) : (
+                              <Mail size={14} />
+                            )}
+                            {r.mailSentAt ? "Resend Mail" : "Mail School"}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -2798,7 +2800,7 @@ function SubmittedReportsView({
                           )}
                           DOCX
                         </button>
-                        {r.adminApproval !== "verified" && (
+                        {isSuperAdmin && r.adminApproval !== "verified" && (
                           <button
                             onClick={() => handleApprove(r.id)}
                             disabled={approvingId === r.id}
@@ -2812,7 +2814,7 @@ function SubmittedReportsView({
                             Approve
                           </button>
                         )}
-                        {r.adminApproval !== "rejected" && (
+                        {isSuperAdmin && r.adminApproval !== "rejected" && (
                           <button
                             onClick={() => handleRejectClick(r)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 font-semibold text-xs hover:bg-red-100 transition-colors"
@@ -2821,7 +2823,7 @@ function SubmittedReportsView({
                             Reject
                           </button>
                         )}
-                        {r.adminApproval === "verified" && (
+                        {isSuperAdmin && r.adminApproval === "verified" && (
                           <button
                             onClick={() => setCancelApproveDialog(r)}
                             disabled={cancellingId === r.id}

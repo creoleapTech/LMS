@@ -2656,8 +2656,8 @@ timetableController.post("/submit-report", async (c) => {
 timetableController.post("/approve-report", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
-    if (user.role !== "super_admin" && user.role !== "admin") {
-      throw new BadRequestError("Only admin/super_admin can approve reports");
+    if (user.role !== "super_admin") {
+      throw new BadRequestError("Only super_admin can approve reports");
     }
 
     const { submissionId } = await c.req.json();
@@ -2692,8 +2692,8 @@ timetableController.post("/approve-report", async (c) => {
 timetableController.post("/cancel-approve-report", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
-    if (user.role !== "super_admin" && user.role !== "admin") {
-      throw new BadRequestError("Only admin/super_admin can cancel approval");
+    if (user.role !== "super_admin") {
+      throw new BadRequestError("Only super_admin can cancel approval");
     }
 
     const { submissionId } = await c.req.json();
@@ -2737,8 +2737,8 @@ timetableController.post("/cancel-approve-report", async (c) => {
 timetableController.post("/reject-report", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
-    if (user.role !== "super_admin" && user.role !== "admin") {
-      throw new BadRequestError("Only admin/super_admin can reject reports");
+    if (user.role !== "super_admin") {
+      throw new BadRequestError("Only super_admin can reject reports");
     }
 
     const { submissionId, comment } = await c.req.json();
@@ -3393,7 +3393,7 @@ timetableController.get("/download-principal-signed-report", async (c) => {
 timetableController.get("/email-preview", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
-    if (user.role !== "super_admin" && user.role !== "admin") {
+    if (user.role !== "super_admin") {
       throw new ForbiddenError("Access denied");
     }
 
@@ -3408,13 +3408,6 @@ timetableController.get("/email-preview", async (c) => {
       .limit(1);
 
     if (!submission) throw new BadRequestError("Submission not found");
-
-    if (user.role === "admin") {
-      const adminInstId = resolveInstitutionId(user);
-      if (submission.institutionId !== adminInstId) {
-        throw new ForbiddenError("Access denied");
-      }
-    }
 
     const [inst] = await db
       .select()
@@ -3478,7 +3471,7 @@ Creoleap Technologies Pvt. Ltd.
 timetableController.post("/send-report-email", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
-    if (user.role !== "super_admin" && user.role !== "admin") {
+    if (user.role !== "super_admin") {
       throw new ForbiddenError("Access denied");
     }
 
@@ -3508,13 +3501,6 @@ timetableController.post("/send-report-email", async (c) => {
       .limit(1);
 
     if (!submission) throw new BadRequestError("Submission not found");
-
-    if (user.role === "admin") {
-      const adminInstId = resolveInstitutionId(user);
-      if (submission.institutionId !== adminInstId) {
-        throw new ForbiddenError("Access denied");
-      }
-    }
 
     if (submission.adminApproval !== "verified") {
       throw new BadRequestError("Report must be approved by admin first");
