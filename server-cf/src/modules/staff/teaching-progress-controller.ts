@@ -502,34 +502,37 @@ teachingProgressController.post("/:classId/:gradeBookId/content/:contentId/compl
 // ─── Helper: recalculate overall percentage ────────
 
 async function recalculatePercentage(db: any, progressId: string, gradeBookId: string) {
-  // Count total content items in this grade book
-  const chapterRows = await db
-    .select({ id: chapters.id })
-    .from(chapters)
-    .where(eq(chapters.gradeBookId, gradeBookId));
-
-  if (chapterRows.length === 0) return;
-
-  const chapterIds = chapterRows.map((ch: any) => ch.id);
-
-  const [totalResult] = await db
-    .select({ cnt: count() })
+  // Get all content items in this gradebook, ordered sequentially (chapter order → content order)
+  const allContent = await db
+    .select({
+      id: chapterContents.id,
+      contentOrder: chapterContents.order,
+      chapterOrder: chapters.order,
+    })
     .from(chapterContents)
-    .where(inArray(chapterContents.chapterId, chapterIds));
+    .innerJoin(chapters, eq(chapterContents.chapterId, chapters.id))
+    .where(eq(chapters.gradeBookId, gradeBookId))
+    .orderBy(chapters.order, chapterContents.order);
 
-  const totalContent = totalResult?.cnt || 0;
-  if (totalContent === 0) return;
+  if (allContent.length === 0) return;
 
-  // Count entries for this progress (both completed and in-progress)
-  const [completedResult] = await db
-    .select({ cnt: count() })
+  // Get all accessed content IDs for this progress
+  const accessedRows = await db
+    .select({ contentId: teachingProgressContents.contentId })
     .from(teachingProgressContents)
-    .where(
-      eq(teachingProgressContents.teachingProgressId, progressId),
-    );
+    .where(eq(teachingProgressContents.teachingProgressId, progressId));
 
-  const completedCount = completedResult?.cnt || 0;
-  const percentage = Number(((completedCount / totalContent) * 100).toFixed(2));
+  const accessedIds = new Set(accessedRows.map((r: any) => r.contentId));
+
+  // Find the farthest (highest sequential position) accessed content
+  let maxPosition = 0;
+  for (let i = 0; i < allContent.length; i++) {
+    if (accessedIds.has(allContent[i].id)) {
+      maxPosition = i + 1;
+    }
+  }
+
+  const percentage = Number(((maxPosition / allContent.length) * 100).toFixed(2));
 
   await db
     .update(teachingProgress)

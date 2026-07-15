@@ -183,6 +183,9 @@ export function CourseraLayout({
 
   const handleContentSelect = (content: ContentItem) => {
     setActiveContent(content);
+    if (!isViewMode && !completedContentIds.has(content._id)) {
+      markInProgressMutation.mutate(content._id);
+    }
   };
 
   const handleMarkComplete = async (contentId: string) => {
