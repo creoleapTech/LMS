@@ -367,7 +367,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <DashCard onClick={() => navigate({ to: '/curriculum' })}>
             <SectionHeader icon={PieChartIcon} title="Course Distribution" subtitle="Grade books per curriculum" accent="text-violet-600 bg-violet-50" />
-            <div className="h-[300px] mt-3 flex items-center">
+            <div className="h-[350px] mt-3 flex items-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <defs>
@@ -383,7 +383,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
                     cx="50%"
                     cy="50%"
                     innerRadius={40}
-                    outerRadius={110}
+                    outerRadius={90}
                     paddingAngle={3}
                     dataKey="value"
                     strokeWidth={0}
