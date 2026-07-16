@@ -242,7 +242,7 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                 {filteredCurriculums.map((curriculum) => (
                   <Card
                     key={curriculum._id}
-                    className="group w-64 p-0 m-0 relative neo-card-hover transition-all duration-300 cursor-pointer overflow-hidden border-2 hover:border-indigo-400 rounded-2xl"
+                    className="group w-64 min-h-[280px] p-0 m-0 relative neo-card-hover transition-all duration-300 cursor-pointer overflow-hidden border-2 hover:border-indigo-400 rounded-2xl"
                     onClick={() => setSelectedCurriculum(curriculum)}
                   >
                     <Badge variant="secondary" className="right-0 absolute mb-2">
@@ -263,7 +263,7 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
+                        <div className="w-full h-full min-h-[280px] bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
                           <BookOpen className="h-16 w-16 text-white/80" />
                         </div>
                       )}
@@ -273,7 +273,7 @@ export default function StaffCurriculumViewer({ resumeGradeBookId, resumeClassId
 
                       {/* Text */}
                       <div className="absolute bottom-4 left-4 right-4 text-white">
-                        <h3 className="text-xl font-bold drop-shadow-lg">
+                        <h3 className="text-xl font-bold drop-shadow-lg break-words">
                           {curriculum.name}
                         </h3>
                         <p className="text-sm font-medium mt-1">
