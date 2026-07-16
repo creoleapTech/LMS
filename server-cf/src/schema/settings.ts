@@ -54,6 +54,12 @@ export const timetableEntries = sqliteTable("timetable_entries", {
   index("timetable_entries_is_recurring_idx").on(table.isRecurring),
   index("timetable_entries_day_of_week_idx").on(table.dayOfWeek),
   index("timetable_entries_specific_date_idx").on(table.specificDate),
+  index("timetable_entries_staff_recurring_deleted_date_idx").on(
+    table.staffId,
+    table.isRecurring,
+    table.isDeleted,
+    table.specificDate
+  ),
 ]);
 
 // ─── institution_settings ───────────────────────────

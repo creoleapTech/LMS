@@ -21,10 +21,4 @@ CREATE INDEX `report_submissions_staff_id_idx` ON `report_submissions` (`staff_i
 ALTER TABLE `staff` ADD `signature_key` text;--> statement-breakpoint
 ALTER TABLE `students` ADD `username` text;--> statement-breakpoint
 ALTER TABLE `students` ADD `password` text;--> statement-breakpoint
-CREATE UNIQUE INDEX `students_username_unique` ON `students` (`username`);--> statement-breakpoint
-ALTER TABLE `timetable_topics_covered` ADD `chapter_id` text;--> statement-breakpoint
-ALTER TABLE `timetable_topics_covered` ADD `content_id` text;--> statement-breakpoint
-CREATE INDEX `timetable_topics_covered_chapter_id_idx` ON `timetable_topics_covered` (`chapter_id`);--> statement-breakpoint
-CREATE INDEX `timetable_topics_covered_content_id_idx` ON `timetable_topics_covered` (`content_id`);--> statement-breakpoint
-ALTER TABLE `leaplab_credentials` ADD `is_unlimited` integer DEFAULT 0;--> statement-breakpoint
-ALTER TABLE `timetable_entries` ADD `additional_class_id` text;
+CREATE UNIQUE INDEX `students_username_unique` ON `students` (`username`);

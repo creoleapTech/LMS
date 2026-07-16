@@ -64,7 +64,7 @@ export const institutionAccessibleGradebooks = sqliteTable("institution_accessib
   accessId: text("access_id").notNull().references(() => institutionCurriculumAccess.id, { onDelete: "cascade" }),
   gradeBookId: text("grade_book_id").notNull().references(() => gradeBooks.id, { onDelete: "cascade" }),
 }, (table) => [
-  index("institution_accessible_gradebooks_access_id_idx").on(table.accessId),
+  index("institution_accessible_gradebooks_access_id_idx").on(table.accessId, table.gradeBookId),
   index("institution_accessible_gradebooks_grade_book_id_idx").on(table.gradeBookId),
 ]);
 
@@ -103,7 +103,7 @@ export const curriculumLevels = sqliteTable("curriculum_levels", {
   curriculumId: text("curriculum_id").notNull().references(() => curricula.id, { onDelete: "cascade" }),
   level: text("level").notNull(),
 }, (table) => [
-  index("curriculum_levels_curriculum_id_idx").on(table.curriculumId),
+  index("curriculum_levels_curriculum_id_idx").on(table.curriculumId, table.level),
 ]);
 
 // ─── curriculum_grades ──────────────────────────────
@@ -112,7 +112,7 @@ export const curriculumGrades = sqliteTable("curriculum_grades", {
   curriculumId: text("curriculum_id").notNull().references(() => curricula.id, { onDelete: "cascade" }),
   grade: integer("grade").notNull(),
 }, (table) => [
-  index("curriculum_grades_curriculum_id_idx").on(table.curriculumId),
+  index("curriculum_grades_curriculum_id_idx").on(table.curriculumId, table.grade),
 ]);
 
 // ─── academic_year_terms ────────────────────────────

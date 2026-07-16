@@ -21,7 +21,7 @@ export const classSessions = sqliteTable("class_sessions", {
   index("class_sessions_staff_id_idx").on(table.staffId),
   index("class_sessions_institution_id_idx").on(table.institutionId),
   index("class_sessions_class_id_idx").on(table.classId),
-  index("class_sessions_status_idx").on(table.status),
+  index("class_sessions_status_updated_at_idx").on(table.status, table.updatedAt),
 ]);
 
 // ─── teaching_progress ──────────────────────────────
