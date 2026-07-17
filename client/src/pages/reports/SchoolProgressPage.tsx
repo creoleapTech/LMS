@@ -444,7 +444,7 @@ export default function SchoolProgressPage({ initialSchoolId, lockedToSchool }: 
             {chartsQuery.isLoading ? (
               <div className="w-full h-full bg-slate-50 dark:bg-slate-800 animate-pulse rounded-lg" />
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <BarChart data={schoolCharts?.distribution || []}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} />
@@ -472,7 +472,7 @@ export default function SchoolProgressPage({ initialSchoolId, lockedToSchool }: 
                 No content items completed yet in this school.
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <PieChart>
                   <Pie
                     data={schoolCharts.contentTypeData}

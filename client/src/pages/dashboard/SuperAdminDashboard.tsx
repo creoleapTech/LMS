@@ -82,7 +82,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
           />
           <div className="h-[280px] mt-4">
             {data.enrollmentTrend?.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <AreaChart data={data.enrollmentTrend} margin={{ left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="enrollGrad" x1="0" y1="0" x2="0" y2="1">
@@ -113,7 +113,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
           />
           <div className="h-[280px] mt-4 flex items-center justify-center">
             {contentPieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <PieChart>
                   <Pie
                     data={contentPieData}

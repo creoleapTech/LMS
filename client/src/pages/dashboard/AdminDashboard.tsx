@@ -108,7 +108,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
         <SectionHeader icon={BarChart3} title="Class-wise Progress" subtitle="Average curriculum completion per class" accent="text-indigo-600 bg-indigo-50" />
         <div className="h-[300px] mt-3">
           {data.classwiseProgress?.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={0}>
               <BarChart data={data.classwiseProgress} layout="vertical" margin={{ left: 10, right: 50, top: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="classwiseGrad" x1="0" y1="0" x2="1" y2="0">
@@ -138,7 +138,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
           <SectionHeader icon={TrendingUp} title="Student Growth & Teaching Sessions" subtitle="Enrollment and session trends" />
           <div className="h-[320px] mt-3">
             {(data.studentGrowth?.length > 0 || data.sessionsByMonth?.length > 0) ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <ComposedChart data={mergeMonthData(data.studentGrowth, data.sessionsByMonth)} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="enrollGrad" x1="0" y1="0" x2="0" y2="1">
@@ -173,7 +173,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
           <div className="h-[320px] mt-3 flex flex-col items-center justify-center">
             {data.genderDistribution?.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={250} minHeight={0}>
                   <PieChart>
                     <defs>
                       <linearGradient id="genderMaleGrad" x1="0" y1="0" x2="1" y2="1">
@@ -235,7 +235,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
           <SectionHeader icon={Activity} title="Class Engagement" subtitle="Students & sessions per class" accent="text-cyan-600 bg-cyan-50" />
           <div className="h-[300px] mt-3">
             {data.classSizeDistribution?.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <BarChart data={mergeClassData(data.classSizeDistribution, data.classActivity)} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="studentsGrad" x1="0" y1="0" x2="0" y2="1">
@@ -266,7 +266,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
           <SectionHeader icon={BookOpen} title="Curriculum Progress" subtitle="Average teaching completion per book" accent="text-indigo-600 bg-indigo-50" />
           <div className="h-[300px] mt-3">
             {data.teachingProgressByBook?.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <BarChart data={data.teachingProgressByBook} layout="vertical" margin={{ left: 10, right: 40, top: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="progressGrad" x1="0" y1="0" x2="1" y2="0">
@@ -294,7 +294,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
         <DashCard className="flex flex-col items-center justify-center" onClick={() => navigate({ to: '/curriculum' })}>
           <SectionHeader icon={TrendingUp} title="School Progress" subtitle="Overall teaching completion" accent="text-emerald-600 bg-emerald-50" />
           <div className="h-[260px] w-full mt-3 relative flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={0}>
               <RadialBarChart
                 cx="50%"
                 cy="50%"
@@ -368,7 +368,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
           <DashCard onClick={() => navigate({ to: '/curriculum' })}>
             <SectionHeader icon={PieChartIcon} title="Course Distribution" subtitle="Grade books per curriculum" accent="text-violet-600 bg-violet-50" />
             <div className="h-[320px] mt-3">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
                   <defs>
                     {data.courseDistribution.map((_: any, i: number) => (
@@ -406,7 +406,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
             <SectionHeader icon={BarChart3} title="Student Growth" subtitle="New enrollments over time" accent="text-rose-600 bg-rose-50" />
             <div className="h-[300px] mt-3">
               {data.studentGrowth?.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                   <AreaChart data={data.studentGrowth} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="roseGrad" x1="0" y1="0" x2="0" y2="1">
