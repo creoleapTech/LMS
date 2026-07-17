@@ -302,32 +302,37 @@ staffController.post("/bulk-upload", async (c) => {
     (row: any, rowIndex: number) => {
       const errors: string[] = [];
 
-      if (!row.name || row.name.trim() === "") errors.push("Name is required");
-      if (!row.email || row.email.trim() === "")
+      // Coerce all values to strings (Excel may return numbers for fields like mobileNumber)
+      const r = Object.fromEntries(
+        Object.entries(row).map(([k, v]) => [k, v == null ? "" : String(v)])
+      );
+
+      if (!r.name || r.name.trim() === "") errors.push("Name is required");
+      if (!r.email || r.email.trim() === "")
         errors.push("Email is required");
-      if (!row.mobileNumber || row.mobileNumber.trim() === "")
+      if (!r.mobileNumber || r.mobileNumber.trim() === "")
         errors.push("Mobile number is required");
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (row.email && !emailRegex.test(row.email))
+      if (r.email && !emailRegex.test(r.email))
         errors.push("Invalid email format");
 
       if (errors.length > 0) return { isValid: false, errors };
 
-      const subjects = row.subjects
-        ? row.subjects.split(",").map((s: string) => s.trim())
+      const subjects = r.subjects
+        ? r.subjects.split(",").map((s: string) => s.trim())
         : [];
 
       return {
         isValid: true,
         errors: [],
         data: {
-          name: row.name.trim(),
-          email: row.email.trim().toLowerCase(),
-          mobileNumber: row.mobileNumber.trim(),
-          type: row.type || "teacher",
+          name: r.name.trim(),
+          email: r.email.trim().toLowerCase(),
+          mobileNumber: r.mobileNumber.trim(),
+          type: r.type || "teacher",
           subjects,
-          joiningDate: row.joiningDate || nowISO(),
+          joiningDate: r.joiningDate || nowISO(),
           institutionId,
           password:
             Math.random().toString(36).slice(-8) +

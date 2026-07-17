@@ -216,46 +216,51 @@ studentController.post("/bulk-upload", async (c) => {
     (row: any, rowIndex: number) => {
       const errors: string[] = [];
 
+      // Coerce all values to strings (Excel may return numbers for fields like mobileNumber)
+      const r = Object.fromEntries(
+        Object.entries(row).map(([k, v]) => [k, v == null ? "" : String(v)])
+      );
+
       // Validate class info
       let classId = defaultClassId;
       if (!classId) {
-        if (!row.section) {
+        if (!r.section) {
           errors.push("Section is required (or select a default Class)");
         } else {
           const key =
-            `${row.grade || ""}-${row.section}`.trim().toUpperCase();
+            `${r.grade || ""}-${r.section}`.trim().toUpperCase();
           if (classMap.has(key)) {
             const cls = classMap.get(key)!;
             if (!cls.isActive) {
               errors.push(
-                `Class ${row.grade}-${row.section} is inactive.`
+                `Class ${r.grade}-${r.section} is inactive.`
               );
             } else {
               classId = cls.id;
             }
           } else {
             errors.push(
-              `Class not found for Grade: ${row.grade}, Section: ${row.section}. Create the class first.`
+              `Class not found for Grade: ${r.grade}, Section: ${r.section}. Create the class first.`
             );
           }
         }
       }
 
       // Validate required fields
-      if (!row.name || row.name.trim() === "") {
+      if (!r.name || r.name.trim() === "") {
         errors.push("Name is required");
       }
 
       // Validate email format if provided
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (row.email && !emailRegex.test(row.email)) {
+      if (r.email && !emailRegex.test(r.email)) {
         errors.push("Invalid email format");
       }
 
       // Validate gender
       if (
-        row.gender &&
-        !["male", "female", "other"].includes(row.gender.toLowerCase())
+        r.gender &&
+        !["male", "female", "other"].includes(r.gender.toLowerCase())
       ) {
         errors.push("Gender must be male, female, or other");
       }
@@ -268,19 +273,19 @@ studentController.post("/bulk-upload", async (c) => {
         isValid: true,
         errors: [],
         data: {
-          name: row.name.trim(),
-          rollNumber: row.rollNumber?.trim(),
-          admissionNumber: row.admissionNumber?.trim(),
-          email: row.email?.trim().toLowerCase(),
-          username: row.username?.trim().toLowerCase(),
-          mobileNumber: row.mobileNumber?.trim(),
-          parentName: row.parentName?.trim(),
-          parentMobile: row.parentMobile?.trim(),
-          parentEmail: row.parentEmail?.trim().toLowerCase(),
-          dateOfBirth: row.dateOfBirth || undefined,
-          gender: row.gender?.toLowerCase(),
-          address: row.address?.trim(),
-          admissionDate: row.admissionDate || nowISO(),
+          name: r.name.trim(),
+          rollNumber: r.rollNumber?.trim() || undefined,
+          admissionNumber: r.admissionNumber?.trim() || undefined,
+          email: r.email?.trim().toLowerCase() || undefined,
+          username: r.username?.trim().toLowerCase() || undefined,
+          mobileNumber: r.mobileNumber?.trim() || undefined,
+          parentName: r.parentName?.trim() || undefined,
+          parentMobile: r.parentMobile?.trim() || undefined,
+          parentEmail: r.parentEmail?.trim().toLowerCase() || undefined,
+          dateOfBirth: r.dateOfBirth || undefined,
+          gender: r.gender?.toLowerCase() || undefined,
+          address: r.address?.trim() || undefined,
+          admissionDate: r.admissionDate || nowISO(),
           classId,
           institutionId,
         },

@@ -1,11 +1,67 @@
-import bcrypt from "bcryptjs";
+const ITERATIONS = 100000;
+const KEY_LENGTH = 256;
+const SALT_BYTES = 16;
 
-const SALT_ROUNDS = 10;
-
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, SALT_ROUNDS);
+function base64Encode(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+function base64Decode(str: string): Uint8Array {
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"],
+  );
+  const hash = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt, iterations: ITERATIONS, hash: "SHA-256" },
+    keyMaterial,
+    KEY_LENGTH,
+  );
+  return `pbkdf2:${ITERATIONS}:${base64Encode(salt.buffer)}:${base64Encode(hash)}`;
+}
+
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const parts = stored.split(":");
+  if (parts[0] === "pbkdf2") {
+    const iterations = parseInt(parts[1], 10);
+    const salt = base64Decode(parts[2]);
+    const storedHash = base64Decode(parts[3]);
+
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(password),
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits"],
+    );
+    const hash = await crypto.subtle.deriveBits(
+      { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+      keyMaterial,
+      KEY_LENGTH,
+    );
+
+    const hashBytes = new Uint8Array(hash);
+    if (hashBytes.length !== storedHash.length) return false;
+    return hashBytes.every((byte, i) => byte === storedHash[i]);
+  }
+
+  // Fallback for legacy bcrypt hashes (from old server) — won't work in Workers
+  return false;
 }
