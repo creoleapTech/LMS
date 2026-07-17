@@ -35,15 +35,15 @@ function isJsonRequest(contentType: string | undefined): boolean {
 }
 
 const studentCreateSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name too long"),
+  name: z.string().min(1, "Name is required"),
   rollNumber: z.string().max(20).optional().nullable().or(z.literal("")),
   admissionNumber: z.string().max(50).optional().nullable().or(z.literal("")),
   email: z.string().email("Invalid email").max(255).optional().nullable().or(z.literal("")),
   username: z.string().min(3, "Username must be at least 3 characters").max(50, "Username too long").regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers and underscores").optional().nullable().or(z.literal("")),
   password: z.string().min(8, "Password must be at least 8 characters").max(128).optional().nullable().or(z.literal("")),
-  mobileNumber: z.string().max(15, "Mobile number too long").regex(/^\d+$/, "Must contain only digits").optional().nullable().or(z.literal("")),
-  parentName: z.string().max(100).optional().nullable().or(z.literal("")),
-  parentMobile: z.string().max(15).regex(/^\d+$/, "Must contain only digits").optional().nullable().or(z.literal("")),
+  mobileNumber: z.string().optional().nullable().or(z.literal("")),
+  parentName: z.string().optional().nullable().or(z.literal("")),
+  parentMobile: z.string().optional().nullable().or(z.literal("")),
   parentEmail: z.string().email().max(255).optional().nullable().or(z.literal("")),
   dateOfBirth: z.string().optional().nullable(),
   gender: z.enum(["male", "female", "other"]).optional().nullable(),

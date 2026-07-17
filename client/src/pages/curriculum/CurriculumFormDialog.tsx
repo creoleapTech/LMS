@@ -19,7 +19,7 @@ import { Config } from "@/lib/config";
 import { compressImage } from "@/lib/imageUtils";
 
 const schema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters").max(200, "Name too long"),
+  name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
   tags: z.string().max(500, "Tags too long").optional().or(z.literal("")),
   level: z.array(z.string()).min(1, "Please select at least one level"),

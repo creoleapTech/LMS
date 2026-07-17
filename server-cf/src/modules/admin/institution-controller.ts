@@ -14,14 +14,14 @@ import { superAdminAuth } from "../../middleware/super-admin-auth";
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 const institutionCreateSchema = z.object({
-  name: z.string().min(2, "Institution name is required").max(200, "Name too long"),
+  name: z.string().min(2, "Institution name is required"),
   type: z.enum(["school", "college"], { message: "Type must be school or college" }),
   address: z.string().min(5, "Address is required").max(500, "Address too long").optional(),
   contactDetails: z.object({
-    inchargePerson: z.string().min(2, "Incharge person name required").max(100, "Name too long").optional(),
-    mobileNumber: z.string().min(10, "Mobile number must be at least 10 digits").max(15, "Invalid mobile number").regex(/^\d+$/, "Must contain only digits").optional().or(z.literal("")),
+    inchargePerson: z.string().min(2, "Incharge person name required").optional(),
+    mobileNumber: z.string().optional().or(z.literal("")),
     email: z.string().email().max(255).optional().or(z.literal("")),
-    officePhone: z.string().regex(/^\d+$/, "Must contain only digits").max(15).optional().or(z.literal("")),
+    officePhone: z.string().optional().or(z.literal("")),
   }).optional(),
 });
 

@@ -101,12 +101,12 @@ export interface ColumnConfigFormValues {
 // ---------------------------------------------------------------------------
 
 export const examinationSchema = z.object({
-  name: z.string().trim().min(1, "Examination name is required").max(200),
+  name: z.string().trim().min(1, "Examination name is required"),
 });
 
 export const columnConfigSchema = z
   .object({
-    name: z.string().min(1, "Column name is required").max(100, "Column name too long"),
+    name: z.string().min(1, "Column name is required"),
     type: z.enum(["number", "text", "formula"]),
     formula: z.string().max(500, "Formula too long").optional().or(z.literal("")),
   })

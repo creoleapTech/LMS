@@ -116,9 +116,7 @@ examinationController.post("/", async (c) => {
   if (!body.name || typeof body.name !== "string" || body.name.trim().length === 0) {
     throw new BadRequestError("name is required");
   }
-  if (body.name.trim().length > 200) {
-    throw new BadRequestError("name must be 200 characters or fewer");
-  }
+
 
   // Case-insensitive duplicate check within the same institution
   const trimmedName = body.name.trim();

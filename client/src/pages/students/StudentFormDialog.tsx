@@ -14,7 +14,7 @@ import type { IStudent, CreateStudentDTO } from "@/types/student";
 import type { IClass } from "@/types/class";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name too long"),
+  name: z.string().min(1, "Name is required"),
   classId: z.string().min(1, "Class is required"),
   admissionNumber: z.string().max(50).optional().or(z.literal("")),
   rollNumber: z.string().max(20).optional().or(z.literal("")),

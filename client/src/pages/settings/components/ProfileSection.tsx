@@ -95,9 +95,7 @@ export function ProfileSection() {
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-      if (name.length > 100) throw new Error("Name must be 100 characters or less");
-      if (mobileNumber && !/^\d+$/.test(mobileNumber)) throw new Error("Mobile number must contain only digits");
-      if (mobileNumber && (mobileNumber.length < 10 || mobileNumber.length > 15)) throw new Error("Mobile number must be 10-15 digits");
+
 
       const formData = new FormData();
       formData.append("name", name);
@@ -232,11 +230,8 @@ export function ProfileSection() {
               <Input
                 value={mobileNumber}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  setMobileNumber(val);
-                  if (val && !/^\d+$/.test(val)) setMobileError("Must contain only digits");
-                  else if (val && (val.length < 10 || val.length > 15)) setMobileError("Must be 10-15 digits");
-                  else setMobileError("");
+                  setMobileNumber(e.target.value);
+                  setMobileError("");
                 }}
               />
               {mobileError && <p className="text-xs text-destructive">{mobileError}</p>}

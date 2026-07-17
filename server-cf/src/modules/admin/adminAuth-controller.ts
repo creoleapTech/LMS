@@ -41,8 +41,8 @@ async function decodeTokenFromHeaders(
 const registerSchema = z.object({
   email: z.string().email("Invalid email").max(255, "Email too long"),
   password: z.string().min(6, "Password must be at least 6 characters").max(128, "Password too long"),
-  name: z.string().max(100, "Name too long").optional(),
-  mobileNumber: z.string().max(15, "Mobile number too long").regex(/^\d+$/, "Must contain only digits").optional().or(z.literal("")),
+  name: z.string().optional(),
+  mobileNumber: z.string().optional().or(z.literal("")),
   role: z.enum(["super_admin", "admin"]).optional(),
   institutionId: z.string().optional(),
 });
@@ -320,9 +320,9 @@ app.get("/profile", async (c) => {
 
 // ─── PATCH /profile ────────────────────────────────────
 const updateProfileSchema = z.object({
-  name: z.string().max(100, "Name too long").optional(),
+  name: z.string().optional(),
   salutation: z.enum(["Mr", "Mrs", "Ms", "Dr"]).optional(),
-  mobileNumber: z.string().max(15, "Mobile number too long").regex(/^\d+$/, "Must contain only digits").optional().or(z.literal("")),
+  mobileNumber: z.string().optional().or(z.literal("")),
   profileImage: z.string().optional(),
   fcmToken: z.string().optional(),
 });

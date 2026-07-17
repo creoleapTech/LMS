@@ -19,7 +19,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 // ─── POST / — Create Department ────────────────────────
 const createSchema = z.object({
-  name: z.string().max(100),
+  name: z.string(),
   institutionId: z.string(),
 });
 

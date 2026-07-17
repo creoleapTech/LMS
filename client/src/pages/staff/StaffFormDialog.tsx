@@ -15,9 +15,9 @@ import type { IStaff, CreateStaffDTO, StaffType } from "@/types/staff";
 import { toast } from "sonner";
 
 const staffSchema = z.object({
-  name: z.string().min(2, "Name is required").max(100, "Name too long"),
+  name: z.string().min(2, "Name is required"),
   email: z.string().email("Invalid email").max(255, "Email too long"),
-  mobileNumber: z.string().min(10, "Mobile number must be at least 10 digits").max(15, "Invalid mobile number").regex(/^\d+$/, "Must contain only digits"),
+  mobileNumber: z.string(),
   type: z.enum(["teacher", "admin"]),
   subjects: z.string().max(500).optional(),
   joiningDate: z.string(),

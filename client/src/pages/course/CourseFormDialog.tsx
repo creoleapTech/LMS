@@ -28,7 +28,7 @@ type Course = {
 
 const courseSchema = z.object({
   code: z.string().min(3, "Code must be at least 3 characters").max(10, "Code too long").toUpperCase(),
-  name: z.string().min(3, "Name must be at least 3 characters").max(200, "Name too long"),
+  name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
   thumbnail: z.string().optional(),
   level: z.enum(["Beginner", "Intermediate", "Advanced"]),

@@ -16,7 +16,7 @@ courseController.use("*", adminAuth);
 
 const courseSchema = z.object({
   code: z.string().min(1, "Code is required").max(20, "Code too long"),
-  name: z.string().min(1, "Name is required").max(200, "Name too long"),
+  name: z.string().min(1, "Name is required"),
   description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
   thumbnail: z.string().optional(),
   level: z.enum(["Beginner", "Intermediate", "Advanced"]).optional(),

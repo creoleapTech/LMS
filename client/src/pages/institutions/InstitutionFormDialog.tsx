@@ -25,14 +25,14 @@ import { Loader2, Building2, MapPin, Phone, Mail, User, Smartphone, ImagePlus, X
 import { Config } from "@/lib/config";
 
 const institutionSchema = z.object({
-  name: z.string().min(2, "Institution name is required").max(200, "Name too long"),
+  name: z.string().min(2, "Institution name is required"),
   type: z.enum(["school", "college"], { message: "Select school or college" }),
   address: z.string().min(5, "Address is required").max(500, "Address too long"),
   contactDetails: z.object({
-    inchargePerson: z.string().min(2, "Incharge person name required").max(100, "Name too long"),
-    mobileNumber: z.string().min(10, "Mobile number must be at least 10 digits").max(15, "Invalid mobile number").regex(/^\d+$/, "Must contain only digits"),
+    inchargePerson: z.string().min(2, "Incharge person name required"),
+    mobileNumber: z.string(),
     email: z.string().email().max(255).optional().or(z.literal("")),
-    officePhone: z.string().regex(/^\d+$/, "Must contain only digits").max(15).optional().or(z.literal("")),
+    officePhone: z.string().optional().or(z.literal("")),
   }),
 });
 

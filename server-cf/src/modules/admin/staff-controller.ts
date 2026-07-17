@@ -104,10 +104,10 @@ async function getStaffRelations(
 }
 
 const staffCreateSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name too long"),
+  name: z.string().min(1, "Name is required"),
   salutation: z.enum(["Mr", "Mrs", "Ms", "Dr"]).optional().nullable(),
   email: z.string().email("Invalid email").max(255, "Email too long"),
-  mobileNumber: z.string().max(15, "Mobile number too long").regex(/^\d+$/, "Must contain only digits").optional().nullable().or(z.literal("")),
+  mobileNumber: z.string().optional().nullable().or(z.literal("")),
   type: z.enum(["teacher", "admin"]).optional(),
   joiningDate: z.string().optional().nullable(),
   institutionId: z.string().min(1, "Institution is required"),
