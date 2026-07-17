@@ -1,3 +1,5 @@
+import bcrypt from "bcryptjs";
+
 const ITERATIONS = 100000;
 const KEY_LENGTH = 256;
 const SALT_BYTES = 16;
@@ -62,6 +64,11 @@ export async function verifyPassword(password: string, stored: string): Promise<
     return hashBytes.every((byte, i) => byte === storedHash[i]);
   }
 
-  // Fallback for legacy bcrypt hashes (from old server) — won't work in Workers
-  return false;
+  // Fallback for legacy bcrypt hashes (from old server)
+  try {
+    return await bcrypt.compare(password, stored);
+  } catch (err) {
+    console.error("Legacy bcrypt verification failed:", err);
+    return false;
+  }
 }
