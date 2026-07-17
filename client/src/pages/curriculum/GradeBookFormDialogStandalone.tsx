@@ -19,9 +19,9 @@ import { toast } from "sonner";
 const schema = z.object({
     curriculumId: z.string().min(1, "Please select a curriculum"),
     grade: z.number().min(1).max(12),
-    bookTitle: z.string().min(3, "Book title must be at least 3 characters"),
-    subtitle: z.string().optional(),
-    description: z.string().optional(),
+    bookTitle: z.string().min(3, "Book title must be at least 3 characters").max(200, "Title too long"),
+    subtitle: z.string().max(200, "Subtitle too long").optional().or(z.literal("")),
+    description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
     isPublished: z.boolean().optional(),
 });
 

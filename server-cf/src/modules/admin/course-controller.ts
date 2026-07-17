@@ -15,13 +15,13 @@ const courseController = new Hono<{ Bindings: Bindings; Variables: Variables }>(
 courseController.use("*", adminAuth);
 
 const courseSchema = z.object({
-  code: z.string().min(1),
-  name: z.string().min(1),
-  description: z.string().optional(),
+  code: z.string().min(1, "Code is required").max(20, "Code too long"),
+  name: z.string().min(1, "Name is required").max(200, "Name too long"),
+  description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
   thumbnail: z.string().optional(),
   level: z.enum(["Beginner", "Intermediate", "Advanced"]).optional(),
-  duration: z.string().optional(),
-  fees: z.number().optional(),
+  duration: z.string().max(100, "Duration too long").optional().or(z.literal("")),
+  fees: z.number().min(0, "Fees cannot be negative").optional(),
   status: z.enum(["Active", "Inactive", "Archived"]).optional(),
   startDate: z.string().optional(),
   institutionId: z.string().optional(),

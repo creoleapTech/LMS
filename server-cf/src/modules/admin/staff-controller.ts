@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
@@ -102,6 +103,20 @@ async function getStaffRelations(
   };
 }
 
+const staffCreateSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name too long"),
+  salutation: z.enum(["Mr", "Mrs", "Ms", "Dr"]).optional().nullable(),
+  email: z.string().email("Invalid email").max(255, "Email too long"),
+  mobileNumber: z.string().max(15, "Mobile number too long").regex(/^\d+$/, "Must contain only digits").optional().nullable().or(z.literal("")),
+  type: z.enum(["teacher", "admin"]).optional(),
+  joiningDate: z.string().optional().nullable(),
+  institutionId: z.string().min(1, "Institution is required"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128).optional().nullable().or(z.literal("")),
+  subjects: z.array(z.string()).optional().nullable(),
+  assignedClasses: z.array(z.string()).optional().nullable(),
+  profileImage: z.string().optional(),
+});
+
 // ─── CREATE Single Staff ───────────────────────────
 staffController.post("/", async (c) => {
   const user = c.get("user") as Record<string, any>;
@@ -138,6 +153,13 @@ staffController.post("/", async (c) => {
       profileImageFile = imgInput as unknown as File;
     }
   }
+
+  // Validate with Zod
+  const parsed = staffCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new BadRequestError(parsed.error.errors.map((e) => e.message).join(", "));
+  }
+  body = parsed.data as any;
 
   // Verify institution
   const [inst] = await db

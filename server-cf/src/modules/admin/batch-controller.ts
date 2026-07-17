@@ -15,8 +15,8 @@ const batchController = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 batchController.use("*", adminAuth);
 
 const batchSchema = z.object({
-  name: z.string().min(1),
-  courseId: z.string().min(1),
+  name: z.string().min(1, "Name is required").max(200, "Name too long"),
+  courseId: z.string().min(1, "Course is required"),
   instructorId: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),

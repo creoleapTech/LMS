@@ -44,6 +44,7 @@ export function ProfileSection() {
   const [name, setName] = useState("");
   const [salutation, setSalutation] = useState<string>("");
   const [mobileNumber, setMobileNumber] = useState("");
+  const [mobileError, setMobileError] = useState("");
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState("");
 
@@ -54,6 +55,7 @@ export function ProfileSection() {
       setMobileNumber(profile.mobileNumber || "");
       setProfileImagePreview(resolveProfileImageSrc(profile.profileImage));
       setProfileImageFile(null);
+      setMobileError("");
     }
   }, [profile]);
 
@@ -93,6 +95,10 @@ export function ProfileSection() {
 
   const updateMutation = useMutation({
     mutationFn: async () => {
+      if (name.length > 100) throw new Error("Name must be 100 characters or less");
+      if (mobileNumber && !/^\d+$/.test(mobileNumber)) throw new Error("Mobile number must contain only digits");
+      if (mobileNumber && (mobileNumber.length < 10 || mobileNumber.length > 15)) throw new Error("Mobile number must be 10-15 digits");
+
       const formData = new FormData();
       formData.append("name", name);
       if (salutation) {
@@ -225,8 +231,15 @@ export function ProfileSection() {
               <Label>Mobile Number</Label>
               <Input
                 value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setMobileNumber(val);
+                  if (val && !/^\d+$/.test(val)) setMobileError("Must contain only digits");
+                  else if (val && (val.length < 10 || val.length > 15)) setMobileError("Must be 10-15 digits");
+                  else setMobileError("");
+                }}
               />
+              {mobileError && <p className="text-xs text-destructive">{mobileError}</p>}
             </div>
           </div>
 

@@ -21,10 +21,10 @@ import { compressImage } from "@/lib/imageUtils";
 const schema = z.object({
     curriculumId: z.string().optional(),
     gradeBookId: z.string().min(1, "Please select a grade book"),
-    title: z.string().min(3, "Title must be at least 3 characters"),
+    title: z.string().min(3, "Title must be at least 3 characters").max(200, "Title too long"),
     chapterNumber: z.number().min(1, "Chapter number must be at least 1"),
-    description: z.string().optional(),
-    learningObjectives: z.string().optional(),
+    description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
+    learningObjectives: z.string().max(2000, "Learning objectives too long").optional().or(z.literal("")),
 });
 
 type FormData = z.infer<typeof schema>;

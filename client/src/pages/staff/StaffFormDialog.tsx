@@ -15,13 +15,13 @@ import type { IStaff, CreateStaffDTO, StaffType } from "@/types/staff";
 import { toast } from "sonner";
 
 const staffSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  email: z.string().email("Invalid email"),
-  mobileNumber: z.string().min(10, "Mobile number too short"),
+  name: z.string().min(2, "Name is required").max(100, "Name too long"),
+  email: z.string().email("Invalid email").max(255, "Email too long"),
+  mobileNumber: z.string().min(10, "Mobile number must be at least 10 digits").max(15, "Invalid mobile number").regex(/^\d+$/, "Must contain only digits"),
   type: z.enum(["teacher", "admin"]),
-  subjects: z.string().optional(), // We'll handle comma-separated string <-> array conversion
+  subjects: z.string().max(500).optional(),
   joiningDate: z.string(),
-  password: z.string().optional(),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128).optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof staffSchema>;

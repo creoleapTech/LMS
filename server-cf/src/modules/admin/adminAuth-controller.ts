@@ -39,10 +39,10 @@ async function decodeTokenFromHeaders(
 
 // ─── POST /register ────────────────────────────────────
 const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  name: z.string().max(100).optional(),
-  mobileNumber: z.string().max(10).optional(),
+  email: z.string().email("Invalid email").max(255, "Email too long"),
+  password: z.string().min(6, "Password must be at least 6 characters").max(128, "Password too long"),
+  name: z.string().max(100, "Name too long").optional(),
+  mobileNumber: z.string().max(15, "Mobile number too long").regex(/^\d+$/, "Must contain only digits").optional().or(z.literal("")),
   role: z.enum(["super_admin", "admin"]).optional(),
   institutionId: z.string().optional(),
 });
@@ -102,8 +102,8 @@ app.post("/register", zValidator("json", registerSchema), async (c) => {
 
 // ─── POST /login ───────────────────────────────────────
 const loginSchema = z.object({
-  email: z.string().min(1),
-  password: z.string(),
+  email: z.string().min(1, "Email is required"),
+  password: z.string().min(1, "Password is required"),
 });
 
 app.post("/login", zValidator("json", loginSchema), async (c) => {
@@ -320,9 +320,9 @@ app.get("/profile", async (c) => {
 
 // ─── PATCH /profile ────────────────────────────────────
 const updateProfileSchema = z.object({
-  name: z.string().max(100).optional(),
+  name: z.string().max(100, "Name too long").optional(),
   salutation: z.enum(["Mr", "Mrs", "Ms", "Dr"]).optional(),
-  mobileNumber: z.string().max(10).optional(),
+  mobileNumber: z.string().max(15, "Mobile number too long").regex(/^\d+$/, "Must contain only digits").optional().or(z.literal("")),
   profileImage: z.string().optional(),
   fcmToken: z.string().optional(),
 });
@@ -383,8 +383,8 @@ app.patch("/profile", zValidator("json", updateProfileSchema), async (c) => {
 
 // ─── PATCH /change-password ────────────────────────────
 const changePasswordSchema = z.object({
-  currentPassword: z.string(),
-  newPassword: z.string().min(6),
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(6, "New password must be at least 6 characters").max(128, "Password too long"),
 });
 
 app.patch(

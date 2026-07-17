@@ -15,10 +15,10 @@ import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 
 const schema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters"),
+  title: z.string().min(3, "Title must be at least 3 characters").max(200, "Title too long"),
   chapterNumber: z.number().min(1, "Chapter number must be at least 1"),
-  description: z.string().optional(),
-  learningObjectives: z.string().optional(),
+  description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
+  learningObjectives: z.string().max(2000, "Learning objectives too long").optional().or(z.literal("")),
 });
 
 type FormData = z.infer<typeof schema>;

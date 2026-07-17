@@ -106,9 +106,9 @@ export const examinationSchema = z.object({
 
 export const columnConfigSchema = z
   .object({
-    name: z.string().min(1, "Column name is required").max(100),
+    name: z.string().min(1, "Column name is required").max(100, "Column name too long"),
     type: z.enum(["number", "text", "formula"]),
-    formula: z.string().optional(),
+    formula: z.string().max(500, "Formula too long").optional().or(z.literal("")),
   })
   .refine(
     (data) =>

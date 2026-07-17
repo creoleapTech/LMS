@@ -82,9 +82,9 @@ export interface GroupedLessonPlans {
 // ─── Zod validation schema ────────────────────────────────────────────────────
 
 export const lessonPlanSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  subject: z.string().min(1, "Subject is required"),
-  gradeOrClass: z.string().min(1, "Grade or class is required"),
+  title: z.string().min(1, "Title is required").max(200, "Title too long"),
+  subject: z.string().min(1, "Subject is required").max(200, "Subject too long"),
+  gradeOrClass: z.string().min(1, "Grade or class is required").max(100, "Grade too long"),
   date: z
     .string()
     .min(1, "Date is required")
@@ -98,13 +98,13 @@ export const lessonPlanSchema = z.object({
     .number({ invalid_type_error: "Duration must be a number" })
     .int("Duration must be a whole number")
     .positive("Duration must be a positive number"),
-  learningObjectives: z.string().optional(),
-  materialsNeeded: z.string().optional(),
-  introduction: z.string().optional(),
-  mainActivity: z.string().optional(),
-  conclusion: z.string().optional(),
-  assessmentMethod: z.string().optional(),
-  homeworkNotes: z.string().optional(),
+  learningObjectives: z.string().max(2000).optional().or(z.literal("")),
+  materialsNeeded: z.string().max(2000).optional().or(z.literal("")),
+  introduction: z.string().max(5000).optional().or(z.literal("")),
+  mainActivity: z.string().max(5000).optional().or(z.literal("")),
+  conclusion: z.string().max(5000).optional().or(z.literal("")),
+  assessmentMethod: z.string().max(2000).optional().or(z.literal("")),
+  homeworkNotes: z.string().max(2000).optional().or(z.literal("")),
   gradeBookId: z.string().optional(),
   chapterId: z.string().optional(),
 });

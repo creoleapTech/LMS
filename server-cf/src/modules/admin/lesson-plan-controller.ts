@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
@@ -118,30 +119,37 @@ lessonPlanController.get("/", async (c) => {
   );
 });
 
+const lessonPlanCreateSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200, "Title too long"),
+  subject: z.string().min(1, "Subject is required").max(200, "Subject too long"),
+  gradeOrClass: z.string().min(1, "Grade or class is required").max(100, "Grade too long"),
+  date: z.string().min(1, "Date is required").regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  periodNumber: z.number().int("Period must be a whole number").positive("Period must be a positive number").optional().nullable(),
+  durationMinutes: z.number({ invalid_type_error: "Duration must be a number" }).int("Duration must be a whole number").positive("Duration must be a positive number"),
+  learningObjectives: z.string().max(2000).optional().nullable().or(z.literal("")),
+  materialsNeeded: z.string().max(2000).optional().nullable().or(z.literal("")),
+  introduction: z.string().max(5000).optional().nullable().or(z.literal("")),
+  mainActivity: z.string().max(5000).optional().nullable().or(z.literal("")),
+  conclusion: z.string().max(5000).optional().nullable().or(z.literal("")),
+  assessmentMethod: z.string().max(2000).optional().nullable().or(z.literal("")),
+  homeworkNotes: z.string().max(2000).optional().nullable().or(z.literal("")),
+  gradeBookId: z.string().optional().nullable(),
+  chapterId: z.string().optional().nullable(),
+});
+
 // ─── POST / — Create lesson plan ───────────────────
 lessonPlanController.post("/", async (c) => {
   const body = await c.req.json();
   const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
 
-  // Validate required fields
-  const requiredFields = ["title", "subject", "gradeOrClass", "date", "durationMinutes"] as const;
-  for (const field of requiredFields) {
-    if (body[field] === undefined || body[field] === null || body[field] === "") {
-      throw new BadRequestError(`Missing required field: ${field}`);
-    }
+  // Validate with Zod
+  const parsed = lessonPlanCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new BadRequestError(parsed.error.errors.map((e) => e.message).join(", "));
   }
 
-  if (typeof body.durationMinutes !== "number" || body.durationMinutes <= 0) {
-    throw new BadRequestError("durationMinutes must be a positive number");
-  }
-
-  if (body.periodNumber !== undefined && body.periodNumber !== null) {
-    if (!Number.isInteger(body.periodNumber) || body.periodNumber <= 0) {
-      throw new BadRequestError("periodNumber must be a positive whole number");
-    }
-  }
-
+  const data = parsed.data;
   const id = uuid();
   const now = nowISO();
 
@@ -151,22 +159,22 @@ lessonPlanController.post("/", async (c) => {
       id,
       staffId: user.id as string,
       institutionId: user.institutionId as string,
-      title: body.title,
-      subject: body.subject,
-      gradeOrClass: body.gradeOrClass,
-      date: body.date,
-      periodNumber: body.periodNumber ?? null,
-      durationMinutes: body.durationMinutes,
-      status: "draft", // Always start as draft regardless of payload
-      learningObjectives: body.learningObjectives ?? null,
-      materialsNeeded: body.materialsNeeded ?? null,
-      introduction: body.introduction ?? null,
-      mainActivity: body.mainActivity ?? null,
-      conclusion: body.conclusion ?? null,
-      assessmentMethod: body.assessmentMethod ?? null,
-      homeworkNotes: body.homeworkNotes ?? null,
-      gradeBookId: body.gradeBookId ?? null,
-      chapterId: body.chapterId ?? null,
+      title: data.title,
+      subject: data.subject,
+      gradeOrClass: data.gradeOrClass,
+      date: data.date,
+      periodNumber: data.periodNumber ?? null,
+      durationMinutes: data.durationMinutes,
+      status: "draft",
+      learningObjectives: data.learningObjectives ?? null,
+      materialsNeeded: data.materialsNeeded ?? null,
+      introduction: data.introduction ?? null,
+      mainActivity: data.mainActivity ?? null,
+      conclusion: data.conclusion ?? null,
+      assessmentMethod: data.assessmentMethod ?? null,
+      homeworkNotes: data.homeworkNotes ?? null,
+      gradeBookId: data.gradeBookId ?? null,
+      chapterId: data.chapterId ?? null,
       isDeleted: 0,
       createdAt: now,
       updatedAt: now,

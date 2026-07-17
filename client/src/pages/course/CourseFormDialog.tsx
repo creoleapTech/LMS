@@ -27,13 +27,13 @@ type Course = {
 };
 
 const courseSchema = z.object({
-  code: z.string().min(3).max(10).toUpperCase(),
-  name: z.string().min(3),
-  description: z.string().optional(),
+  code: z.string().min(3, "Code must be at least 3 characters").max(10, "Code too long").toUpperCase(),
+  name: z.string().min(3, "Name must be at least 3 characters").max(200, "Name too long"),
+  description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
   thumbnail: z.string().optional(),
   level: z.enum(["Beginner", "Intermediate", "Advanced"]),
-  duration: z.string().min(2),
-  fees: z.coerce.number().min(0),
+  duration: z.string().min(2, "Duration is required").max(100, "Duration too long"),
+  fees: z.coerce.number().min(0, "Fees cannot be negative"),
   status: z.enum(["Active", "Inactive", "Archived"]),
   startDate: z.string(),
 });

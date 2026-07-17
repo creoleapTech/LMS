@@ -14,13 +14,13 @@ import type { IStudent, CreateStudentDTO } from "@/types/student";
 import type { IClass } from "@/types/class";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "Name is required").max(100, "Name too long"),
   classId: z.string().min(1, "Class is required"),
-  admissionNumber: z.string().optional(),
-  rollNumber: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
-  username: z.string().min(3, "Username must be at least 3 characters").optional().or(z.literal("")),
-  password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
+  admissionNumber: z.string().max(50).optional().or(z.literal("")),
+  rollNumber: z.string().max(20).optional().or(z.literal("")),
+  email: z.string().email().max(255).optional().or(z.literal("")),
+  username: z.string().min(3, "Username must be at least 3 characters").max(50, "Username too long").regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers and underscores allowed").optional().or(z.literal("")),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128).optional().or(z.literal("")),
   gender: z.enum(["male", "female", "other"]).optional(),
 });
 

@@ -69,8 +69,8 @@ export interface QuizAttempt {
 // ─── Schemas ───────────────────────────────────────────────────
 
 export const createQuizSchema = z.object({
-  title: z.string().min(1, "Title is required").max(200),
-  description: z.string().max(2000).optional(),
+  title: z.string().min(1, "Title is required").max(200, "Title too long"),
+  description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
   institutionId: z.string().optional(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
@@ -84,10 +84,10 @@ export const createQuizSchema = z.object({
 export type CreateQuizValues = z.infer<typeof createQuizSchema>;
 
 export const createQuestionSchema = z.object({
-  questionText: z.string().min(1, "Question text is required"),
+  questionText: z.string().min(1, "Question text is required").max(2000, "Question too long"),
   answerType: z.enum(["multiple_choice", "true_false"]).default("multiple_choice"),
-  correctAnswer: z.string().min(1, "Select the correct answer"),
-  explanation: z.string().optional(),
+  correctAnswer: z.string().min(1, "Select the correct answer").max(500, "Answer too long"),
+  explanation: z.string().max(2000, "Explanation too long").optional().or(z.literal("")),
   points: z.number().int().min(0).max(100).default(1),
 });
 

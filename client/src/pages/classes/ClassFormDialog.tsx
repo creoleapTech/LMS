@@ -22,9 +22,9 @@ import { useAuthStore } from "@/store/userAuthStore";
 import type { IClass, CreateClassDTO } from "@/types/class";
 
 const formSchema = z.object({
-    grade: z.string().max(50).optional(),
-    section: z.string().min(1, "Section is required").max(10),
-    year: z.string().max(50).optional(),
+    grade: z.string().max(20, "Grade too long").optional().or(z.literal("")),
+    section: z.string().min(1, "Section is required").max(10, "Section too long"),
+    year: z.string().max(20, "Year too long").optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof formSchema>;

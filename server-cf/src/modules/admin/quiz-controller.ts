@@ -68,10 +68,10 @@ const createQuizSchema = z.object({
 });
 
 const createQuestionSchema = z.object({
-  questionText: z.string().min(1, "Question text is required"),
+  questionText: z.string().min(1, "Question text is required").max(2000, "Question too long"),
   answerType: z.enum(["multiple_choice", "true_false"]).default("multiple_choice"),
-  correctAnswer: z.string().min(1, "Correct answer is required"),
-  explanation: z.string().optional(),
+  correctAnswer: z.string().min(1, "Correct answer is required").max(500, "Answer too long"),
+  explanation: z.string().max(2000, "Explanation too long").optional().or(z.literal("")),
   points: z.number().int().min(0).max(100).default(1),
   options: z
     .array(

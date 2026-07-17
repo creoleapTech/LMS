@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { eq, and, like, or, count, gte, sql } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
@@ -13,6 +12,18 @@ import { ForbiddenError } from "../../lib/errors/forbidden";
 import { superAdminAuth } from "../../middleware/super-admin-auth";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+
+const institutionCreateSchema = z.object({
+  name: z.string().min(2, "Institution name is required").max(200, "Name too long"),
+  type: z.enum(["school", "college"], { message: "Type must be school or college" }),
+  address: z.string().min(5, "Address is required").max(500, "Address too long").optional(),
+  contactDetails: z.object({
+    inchargePerson: z.string().min(2, "Incharge person name required").max(100, "Name too long").optional(),
+    mobileNumber: z.string().min(10, "Mobile number must be at least 10 digits").max(15, "Invalid mobile number").regex(/^\d+$/, "Must contain only digits").optional().or(z.literal("")),
+    email: z.string().email().max(255).optional().or(z.literal("")),
+    officePhone: z.string().regex(/^\d+$/, "Must contain only digits").max(15).optional().or(z.literal("")),
+  }).optional(),
+});
 
 function isJsonRequest(contentType: string | undefined): boolean {
   return (contentType ?? "").toLowerCase().includes("application/json");
@@ -103,6 +114,17 @@ app.post("/", async (c) => {
   }
 
   const contactDetails = parseContactDetails(contactDetailsRaw);
+
+  // Validate with Zod
+  const parsed = institutionCreateSchema.safeParse({
+    name,
+    type,
+    address,
+    contactDetails: Object.keys(contactDetails).length > 0 ? contactDetails : undefined,
+  });
+  if (!parsed.success) {
+    throw new BadRequestError(parsed.error.errors.map((e) => e.message).join(", "));
+  }
 
   // Handle logo upload
   let logoKey: string | null = null;
