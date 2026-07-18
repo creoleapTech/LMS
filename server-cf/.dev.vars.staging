@@ -1,3 +1,3 @@
-JWT_TEACHER_SECRET=staging-teacher-secret-key-32bytes!!
-JWT_ADMIN_SECRET=staging-admin-secret-key-32-bytes!!!
-JWT_SUPERADMIN_SECRET=staging-super-admin-secret-32-bytes
+JWT_TEACHER_SECRET=23wGAQJ-Qcw4HYjagqU6NADZgen7cMpy
+JWT_ADMIN_SECRET=J6Bw2qwuUQhb4dzc33PwZv86wM-KS-JV
+JWT_SUPERADMIN_SECRET=VMDJ7jQSpHDSrxh1Skc1q4uY05f9EXRw
