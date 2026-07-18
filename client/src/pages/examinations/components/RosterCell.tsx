@@ -6,6 +6,7 @@ interface RosterCellProps {
   columnType: ColumnType;
   isReadOnly: boolean;
   isFormula: boolean;
+  maxMarks?: number;
   error?: string | null;
   onChange?: (value: string) => void;
   onBlur?: () => void;
@@ -30,6 +31,7 @@ export function RosterCell({
   columnType,
   isReadOnly,
   isFormula,
+  maxMarks,
   error,
   onChange,
   onBlur,
@@ -100,13 +102,17 @@ export function RosterCell({
   // -------------------------------------------------------------------------
   if (columnType === "number") {
     function handleNumberBlur() {
-      if (
-        value !== "" &&
-        !(
-          !isNaN(parseFloat(value)) && isFinite(Number(value))
-        )
-      ) {
+      if (value === "") {
+        setLocalError(null);
+        onBlur?.();
+        return;
+      }
+
+      const num = Number(value);
+      if (isNaN(num) || !isFinite(num)) {
         setLocalError("Must be a number");
+      } else if (maxMarks !== undefined && maxMarks > 0 && num > maxMarks) {
+        setLocalError(`Max marks is ${maxMarks}`);
       } else {
         setLocalError(null);
       }

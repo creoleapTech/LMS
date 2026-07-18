@@ -438,6 +438,7 @@ examinationController.put("/:id/columns", async (c) => {
           name: col.name,
           type: col.type,
           formula: col.formula ?? null,
+          maxMarks: col.type === "number" ? (col.maxMarks ?? null) : null,
           order: col.order ?? 0,
           updatedAt: now,
         })
@@ -454,6 +455,7 @@ examinationController.put("/:id/columns", async (c) => {
           name: col.name,
           type: col.type,
           formula: col.formula ?? null,
+          maxMarks: col.type === "number" ? (col.maxMarks ?? null) : null,
           order: col.order ?? 0,
           createdAt: now,
           updatedAt: now,

@@ -143,6 +143,7 @@ export function ColumnConfigSheet({
       name: values.name.trim(),
       type: values.type,
       formula: values.type === "formula" ? values.formula : undefined,
+      maxMarks: values.type === "number" && values.maxMarks ? values.maxMarks : undefined,
     });
     onOpenChange(false);
   };
@@ -223,6 +224,37 @@ export function ColumnConfigSheet({
               <p className="text-xs text-destructive">{errors.type.message}</p>
             )}
           </div>
+
+          {/* ── Max Marks (only when type === "number") ──────────────────── */}
+          {watchedType === "number" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="column-max-marks" className="text-sm font-medium">
+                Max Marks
+              </Label>
+              <Controller
+                name="maxMarks"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    id="column-max-marks"
+                    type="number"
+                    min="1"
+                    step="any"
+                    placeholder="e.g. 100"
+                    value={field.value ?? ""}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value ? Number(e.target.value) : undefined
+                      )
+                    }
+                  />
+                )}
+              />
+              {errors.maxMarks && (
+                <p className="text-xs text-destructive">{errors.maxMarks.message}</p>
+              )}
+            </div>
+          )}
 
           {/* ── Formula field (only when type === "formula") ───────────────── */}
           {watchedType === "formula" && (

@@ -11,6 +11,7 @@ export interface ExaminationColumn {
   name: string;     // Display name, used in formula references
   type: ColumnType;
   formula?: string; // Only for type === "formula"
+  maxMarks?: number; // Only for type === "number"
   order: number;    // Display order (0-indexed, after default columns)
 }
 
@@ -94,6 +95,7 @@ export interface ColumnConfigFormValues {
   name: string;
   type: ColumnType;
   formula?: string;
+  maxMarks?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -109,6 +111,10 @@ export const columnConfigSchema = z
     name: z.string().min(1, "Column name is required"),
     type: z.enum(["number", "text", "formula"]),
     formula: z.string().max(500, "Formula too long").optional().or(z.literal("")),
+    maxMarks: z
+      .number({ invalid_type_error: "Must be a number" })
+      .positive("Max marks must be positive")
+      .optional(),
   })
   .refine(
     (data) =>

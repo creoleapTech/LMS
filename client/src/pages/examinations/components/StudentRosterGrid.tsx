@@ -62,7 +62,7 @@ export function StudentRosterGrid({
         {/* ------------------------------------------------------------------ */}
         {/* THEAD                                                               */}
         {/* ------------------------------------------------------------------ */}
-        <thead>
+        <thead className="sticky top-0 z-20 bg-[var(--neo-bg)]">
           <tr>
             {/* Default: Student Name */}
             <th className={`${defaultThClass} left-0`}>
@@ -189,6 +189,7 @@ export function StudentRosterGrid({
                           columnType={column.type}
                           isReadOnly={isReadOnly}
                           isFormula={true}
+                          maxMarks={column.maxMarks}
                           error={result.error}
                           aria-label={`${student.name} — ${column.name}`}
                         />
@@ -209,6 +210,7 @@ export function StudentRosterGrid({
                         columnType={column.type}
                         isReadOnly={isReadOnly}
                         isFormula={false}
+                        maxMarks={column.maxMarks}
                         onChange={(val) =>
                           onCellChange(student.studentId, column.id, val)
                         }

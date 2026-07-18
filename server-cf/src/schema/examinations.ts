@@ -28,6 +28,7 @@ export const examinationColumns = sqliteTable("examination_columns", {
   name:           text("name").notNull(),
   type:           text("type", { enum: ["number", "text", "formula"] }).notNull(),
   formula:        text("formula"),   // Only populated when type === "formula"
+  maxMarks:       integer("max_marks"), // Only populated when type === "number"
   order:          integer("order").notNull().default(0),
   createdAt:      text("created_at"),
   updatedAt:      text("updated_at"),

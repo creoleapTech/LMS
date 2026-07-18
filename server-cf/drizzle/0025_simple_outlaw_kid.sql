@@ -1,0 +1,1 @@
+ALTER TABLE `examination_columns` ADD `max_marks` integer;
