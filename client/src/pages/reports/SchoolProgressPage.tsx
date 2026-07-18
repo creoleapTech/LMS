@@ -648,7 +648,7 @@ export default function SchoolProgressPage({ initialSchoolId, lockedToSchool }: 
                       <th className="p-4">Assigned Teacher</th>
                       <th className="p-4 text-center">Chapters Done</th>
                       <th className="p-4 text-center">Subchapters Done</th>
-                      <th className="p-4">Completion Progress</th>
+                      <th className="p-4" title="Based on content viewed/scrolled through. Chapters Done reflects fully completed chapters.">Learning Progress</th>
                       <th className="p-4 pr-6">Last Active</th>
                     </tr>
                   </thead>

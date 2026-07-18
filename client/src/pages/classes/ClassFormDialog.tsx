@@ -24,7 +24,7 @@ import type { IClass, CreateClassDTO } from "@/types/class";
 const formSchema = z.object({
     grade: z.string().max(20, "Grade too long").optional().or(z.literal("")),
     section: z.string().min(1, "Section is required").max(10, "Section too long"),
-    year: z.string().max(20, "Year too long").optional().or(z.literal("")),
+    year: z.string().regex(/^\d{4}(-\d{4})?$/, "Enter a valid year (e.g. 2024 or 2024-2025)").optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof formSchema>;
