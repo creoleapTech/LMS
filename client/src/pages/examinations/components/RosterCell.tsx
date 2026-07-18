@@ -101,21 +101,23 @@ export function RosterCell({
   // 2. Number column
   // -------------------------------------------------------------------------
   if (columnType === "number") {
-    function handleNumberBlur() {
-      if (value === "") {
-        setLocalError(null);
-        onBlur?.();
-        return;
-      }
+    function validateNumber(val: string): string | null {
+      if (val === "") return null;
+      const num = Number(val);
+      if (isNaN(num) || !isFinite(num)) return "Must be a number";
+      if (maxMarks !== undefined && maxMarks > 0 && num > maxMarks)
+        return `Max marks is ${maxMarks}`;
+      return null;
+    }
 
-      const num = Number(value);
-      if (isNaN(num) || !isFinite(num)) {
-        setLocalError("Must be a number");
-      } else if (maxMarks !== undefined && maxMarks > 0 && num > maxMarks) {
-        setLocalError(`Max marks is ${maxMarks}`);
-      } else {
-        setLocalError(null);
-      }
+    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+      const val = e.target.value;
+      onChange?.(val);
+      setLocalError(validateNumber(val));
+    }
+
+    function handleNumberBlur() {
+      setLocalError(validateNumber(value));
       onBlur?.();
     }
 
@@ -132,10 +134,11 @@ export function RosterCell({
           type="text"
           inputMode="decimal"
           value={value}
+          max={maxMarks}
           className={inputClass}
           aria-label={ariaLabel}
           data-cell-input="true"
-          onChange={(e) => onChange?.(e.target.value)}
+          onChange={handleChange}
           onBlur={handleNumberBlur}
           onKeyDown={handleKeyDown}
         />

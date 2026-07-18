@@ -57,7 +57,7 @@ export function StudentRosterGrid({
     "sticky z-10 bg-[var(--neo-bg)] px-3 py-2 text-sm border border-border/40 whitespace-nowrap";
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto max-h-[calc(100vh-16rem)] rounded-xl">
       <table className="border-collapse text-sm w-full">
         {/* ------------------------------------------------------------------ */}
         {/* THEAD                                                               */}
@@ -83,7 +83,7 @@ export function StudentRosterGrid({
             {sortedColumns.map((column, index) => (
               <th
                 key={column.id}
-                className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider border border-border/40 whitespace-nowrap min-w-[120px]"
+                className="bg-[var(--neo-bg)] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider border border-border/40 whitespace-nowrap min-w-[120px]"
               >
                 <div className="flex items-center gap-1">
                   <span>{column.name}</span>
