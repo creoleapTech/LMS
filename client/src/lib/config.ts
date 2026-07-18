@@ -23,15 +23,23 @@ function ensureApiSuffix(value: string): string {
 }
 
 function resolveApiBaseUrl(): string {
-  const rawUrl =
-    (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-    (import.meta.env.VITE_BACKEND_BASE_URL as string | undefined)?.trim();
+	// Runtime detection: if deployed on a Pages preview branch, auto-route to matching staging API
+	if (typeof window !== "undefined") {
+		const hostname = window.location.hostname;
+		if (hostname.includes("lms-staging")) {
+			return ensureApiSuffix("https://lms-api-staging.creoleap.workers.dev");
+		}
+	}
 
-  if (!rawUrl) {
-    return DEFAULT_CF_API_BASE_URL;
-  }
+	const rawUrl =
+		(import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+		(import.meta.env.VITE_BACKEND_BASE_URL as string | undefined)?.trim();
 
-  return ensureApiSuffix(rawUrl);
+	if (!rawUrl) {
+		return DEFAULT_CF_API_BASE_URL;
+	}
+
+	return ensureApiSuffix(rawUrl);
 }
 
 const BACKEND_BASE_URL = resolveApiBaseUrl();

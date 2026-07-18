@@ -69,7 +69,7 @@ crons = ["* * * * *"]
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "lms-staging"
-database_id = "REPLACE_WITH_STAGING_DB_ID"
+database_id = "ffb4e3dc-d784-43f5-9150-3e6ee1d06e58"
 migrations_dir = "drizzle"
 
 [[env.staging.r2_buckets]]
@@ -77,4 +77,4 @@ binding = "BUCKET"
 bucket_name = "lms-uploads-staging"
 
 [env.staging.vars]
-CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-staging.vercel.app"
+CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-staging.vercel.app,https://lms-staging.pages.dev"

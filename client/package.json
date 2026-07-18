@@ -7,6 +7,8 @@
     "dev:staging": "vite --port 3001 --mode staging",
     "build": "vite build && tsc",
     "build:staging": "vite build --mode staging",
+    "pages:deploy": "vite build && npx wrangler pages deploy dist --project-name lms-staging",
+    "pages:deploy:staging": "vite build --mode staging && npx wrangler pages deploy dist --project-name lms-staging --branch staging",
     "serve": "vite preview",
     "test": "vitest run",
     "postinstall": "node scripts/patch-compose-refs.cjs"

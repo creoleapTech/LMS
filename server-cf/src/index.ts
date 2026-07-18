@@ -17,6 +17,15 @@ const DEFAULT_ALLOWED_ORIGINS = [
 	"https://lms.creoleap.com",
 ];
 
+function isAllowedPagesDevOrigin(origin: string): boolean {
+	try {
+		const url = new URL(origin);
+		return url.hostname.endsWith(".pages.dev");
+	} catch {
+		return false;
+	}
+}
+
 function getAllowedOrigins(rawOrigins?: string): Set<string> {
 	const configuredOrigins =
 		rawOrigins
@@ -33,6 +42,10 @@ app.use(
 		origin: (origin, c) => {
 			if (!origin) {
 				return "";
+			}
+
+			if (isAllowedPagesDevOrigin(origin)) {
+				return origin;
 			}
 
 			const allowedOrigins = getAllowedOrigins(c.env.CORS_ORIGINS);
