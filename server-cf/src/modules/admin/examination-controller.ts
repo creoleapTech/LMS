@@ -32,12 +32,14 @@ examinationController.get("/", async (c) => {
   const conditions: any[] = [eq(examinations.isDeleted, 0)];
 
   if (user.role === "student") {
-    // Students see examinations for their institution
-    conditions.push(eq(examinations.institutionId, user.institutionId as string));
+    if (!user.institutionId) throw new ForbiddenError("No institution associated with this account");
+    conditions.push(eq(examinations.institutionId, user.institutionId));
   } else if (user.role === "teacher") {
-    conditions.push(eq(examinations.institutionId, user.institutionId as string));
+    if (!user.institutionId) throw new ForbiddenError("No institution associated with this account");
+    conditions.push(eq(examinations.institutionId, user.institutionId));
   } else if (user.role === "admin") {
-    conditions.push(eq(examinations.institutionId, user.institutionId as string));
+    if (!user.institutionId) throw new ForbiddenError("No institution associated with this account");
+    conditions.push(eq(examinations.institutionId, user.institutionId));
   } else if (user.role === "super_admin") {
     if (institutionId) {
       conditions.push(eq(examinations.institutionId, institutionId));
@@ -64,7 +66,7 @@ examinationController.get("/", async (c) => {
   // Fetch student counts per class for the institution in a single query,
   // then sum in memory — avoids inArray with potentially hundreds of IDs.
   const effectiveInstitutionId =
-    user.role === "super_admin" ? (institutionId ?? null) : (user.institutionId as string);
+    user.role === "super_admin" ? (institutionId ?? null) : user.institutionId;
 
   let studentCountByClass = new Map<string, number>();
   if (effectiveInstitutionId) {
@@ -113,6 +115,10 @@ examinationController.post("/", async (c) => {
   const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
 
+  if (!user.id || !user.institutionId) {
+    throw new ForbiddenError("No institution associated with this account");
+  }
+
   if (!body.name || typeof body.name !== "string" || body.name.trim().length === 0) {
     throw new BadRequestError("name is required");
   }
@@ -125,7 +131,7 @@ examinationController.post("/", async (c) => {
     .from(examinations)
     .where(
       and(
-        eq(examinations.institutionId, user.institutionId as string),
+        eq(examinations.institutionId, user.institutionId),
         eq(examinations.isDeleted, 0),
         sql`LOWER(${examinations.name}) = LOWER(${trimmedName})`
       )
@@ -144,8 +150,8 @@ examinationController.post("/", async (c) => {
     .values({
       id,
       name: body.name.trim(),
-      createdBy: user.id as string,
-      institutionId: user.institutionId as string,
+      createdBy: user.id,
+      institutionId: user.institutionId,
       selectedClassIds: JSON.stringify(body.selectedClassIds ?? []),
       isDeleted: 0,
       createdAt: now,

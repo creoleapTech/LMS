@@ -189,6 +189,17 @@ staffController.post("/", async (c) => {
     Math.random().toString(36).slice(-8) +
       Math.random().toString(36).slice(-2);
 
+  // Check for duplicate email
+  const [existingStaff] = await db
+    .select({ id: staff.id })
+    .from(staff)
+    .where(and(eq(staff.email, body.email.toLowerCase()), eq(staff.isDeleted, 0)))
+    .limit(1);
+
+  if (existingStaff) {
+    throw new BadRequestError(`A staff member with email "${body.email}" already exists`);
+  }
+
   const hashedPw = await hashPassword(plainPassword);
 
   const staffId = uuid();
@@ -381,11 +392,31 @@ staffController.post("/bulk-upload", async (c) => {
     );
   }
 
+  // Collect all existing emails for the institution to avoid UNIQUE constraint violations
+  const existingEmails = new Set(
+    (
+      await db
+        .select({ email: staff.email })
+        .from(staff)
+        .where(
+          and(
+            eq(staff.institutionId, institutionId),
+            eq(staff.isDeleted, 0),
+          ),
+        )
+    ).map((r) => r.email.toLowerCase()),
+  );
+
   // Hash passwords and insert
   const now = nowISO();
   const insertedStaff: any[] = [];
+  const skippedEmails: string[] = [];
 
   for (const staffData of result.data as any[]) {
+    if (existingEmails.has(staffData.email.toLowerCase())) {
+      skippedEmails.push(staffData.email);
+      continue;
+    }
     const hashedPw = await hashPassword(staffData.password);
     const staffId = uuid();
 
@@ -425,13 +456,13 @@ staffController.post("/bulk-upload", async (c) => {
   return c.json(
     {
       success: true,
-      message: `Successfully imported ${insertedStaff.length} staff members`,
+      message: `Successfully imported ${insertedStaff.length} staff members${skippedEmails.length > 0 ? ` (${skippedEmails.length} skipped due to duplicate email)` : ""}`,
       data: insertedStaff,
-      errors: result.errors,
+      errors: [...result.errors, ...(skippedEmails.length > 0 ? [`Skipped duplicates: ${skippedEmails.join(", ")}`] : [])],
       summary: {
         totalRows: result.totalRows,
         validRows: result.validRows,
-        errorRows: result.errors.length,
+        errorRows: result.errors.length + skippedEmails.length,
       },
     },
     201

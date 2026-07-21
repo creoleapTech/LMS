@@ -699,6 +699,10 @@ timetableController.get("/my-classes-list", async (c) => {
   const institutionId = user.institutionId;
   const db = getDb(c.env.DB);
 
+  if (!staffId || !institutionId) {
+    throw new ForbiddenError("No institution associated with this account");
+  }
+
   // First try: classes explicitly assigned to this teacher
   const junctionRows = await db
     .select({ classId: classTeacherIds.classId })
@@ -1976,6 +1980,9 @@ async function buildMonthlyReport(
 timetableController.get("/my-monthly-report", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
+    if (user.role !== "teacher" && user.role !== "staff" && user.role !== "super_admin") {
+      throw new BadRequestError("Only teachers can generate reports");
+    }
     const staffId = user.id;
     const queryInstitutionId = c.req.query("institutionId");
     const institutionId = queryInstitutionId || resolveInstitutionId(user);
@@ -2034,6 +2041,9 @@ timetableController.get("/staff-monthly-report", async (c) => {
 timetableController.get("/my-monthly-report-data", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
+    if (user.role !== "teacher" && user.role !== "staff" && user.role !== "super_admin") {
+      throw new BadRequestError("Only teachers can generate reports");
+    }
     const staffId = user.id;
     const queryInstitutionId = c.req.query("institutionId");
     const institutionId = queryInstitutionId || resolveInstitutionId(user);
@@ -2095,6 +2105,9 @@ timetableController.get("/staff-monthly-report-data", async (c) => {
 timetableController.post("/generate-report-docx", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
+    if (user.role === "admin") {
+      throw new BadRequestError("Admins cannot generate reports");
+    }
     let body = await c.req.json<ReportParams>();
     body = normalizeReportData(body);
     const db = getDb(c.env.DB);
@@ -2169,6 +2182,9 @@ async function resolveAssetBytes(asset: string | ArrayBuffer): Promise<Uint8Arra
 timetableController.post("/generate-report-pdf", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
+    if (user.role === "admin") {
+      throw new BadRequestError("Admins cannot generate reports");
+    }
     const queryStaffId = c.req.query("staffId");
     let body = await c.req.json<ReportParams>();
     body = normalizeReportData(body);
@@ -2546,6 +2562,9 @@ timetableController.get("/staff-signature", async (c) => {
 timetableController.post("/submit-report", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
+    if (user.role === "admin") {
+      throw new BadRequestError("Admins cannot submit reports");
+    }
     const staffId = user.id;
     const institutionId = resolveInstitutionId(user);
     let body = await c.req.json<ReportParams>();
@@ -2776,6 +2795,9 @@ timetableController.post("/reject-report", async (c) => {
 timetableController.post("/save-report-draft", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
+    if (user.role === "admin") {
+      throw new BadRequestError("Admins cannot save report drafts");
+    }
     const staffId = user.id;
     const institutionId = resolveInstitutionId(user);
     let body = await c.req.json<ReportParams>();
@@ -2854,7 +2876,7 @@ timetableController.post("/save-report-draft", async (c) => {
 timetableController.get("/my-report-drafts", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
-    if (user.role !== "teacher" && user.role !== "admin" && user.role !== "super_admin") {
+    if (user.role !== "teacher" && user.role !== "staff" && user.role !== "super_admin") {
       throw new BadRequestError("Access denied");
     }
 
@@ -2891,6 +2913,9 @@ timetableController.get("/my-report-drafts", async (c) => {
 timetableController.delete("/delete-report-draft", async (c) => {
   try {
     const user = c.get("user") as Record<string, any>;
+    if (user.role === "admin") {
+      throw new BadRequestError("Admins cannot delete report drafts");
+    }
     const draftId = c.req.query("id");
     if (!draftId) throw new BadRequestError("id is required");
 
