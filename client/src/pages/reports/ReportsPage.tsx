@@ -75,6 +75,7 @@ import {
   Mail,
   MailCheck,
   Undo2,
+  FileSignature,
 } from "lucide-react";
 
 const MONTH_NAMES = [
@@ -2443,9 +2444,8 @@ function SubmittedReportsView({
     if (!isSuperAdmin) return reports;
     if (subTab === "signed") {
       return reports.filter((r) => r.adminApproval === "verified" && r.principalSignedKey);
-    } else {
-      return reports.filter((r) => !(r.adminApproval === "verified" && r.principalSignedKey));
     }
+    return reports;
   }, [reports, subTab, isSuperAdmin]);
 
   if (loading) {
@@ -2488,7 +2488,7 @@ function SubmittedReportsView({
                   : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
             >
-              Submitted Reports ({reports.filter((r) => !(r.adminApproval === "verified" && r.principalSignedKey)).length})
+              Submitted Reports ({reports.length})
             </button>
             <button
               onClick={() => setSubTab("signed")}
@@ -2745,6 +2745,12 @@ function SubmittedReportsView({
                           <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">
                             <Clock size={12} />
                             Pending
+                          </span>
+                        )}
+                        {r.principalSignedKey && (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-violet-700 bg-violet-50 px-2 py-1 rounded-lg">
+                            <FileSignature size={12} />
+                            Signed
                           </span>
                         )}
                       </div>
