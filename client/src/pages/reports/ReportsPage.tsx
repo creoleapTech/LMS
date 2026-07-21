@@ -70,7 +70,6 @@ import {
   ShieldX,
   MessageSquare,
   Upload,
-  Shield,
   GripVertical,
   Mail,
   MailCheck,

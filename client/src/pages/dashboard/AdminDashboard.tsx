@@ -387,8 +387,8 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
                     paddingAngle={3}
                     dataKey="value"
                     strokeWidth={0}
-                    label={({ name, value }: { name: string; value: number }) => {
-                      const truncated = name.length > 18 ? name.slice(0, 16) + '…' : name;
+                    label={({ name, value }: any) => {
+                      const truncated = (name || '').length > 18 ? (name || '').slice(0, 16) + '…' : (name || '');
                       return `${truncated} (${value})`;
                     }}
                   >
