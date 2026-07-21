@@ -703,10 +703,10 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
               )}
               {/* Principal Signed Report (trainers only, after verification) */}
               {!isAdminRole && isApproved && (() => {
-                const submittedAt = submissionStatus?.submittedAt;
-                const daysSince = submittedAt ? (Date.now() - new Date(submittedAt).getTime()) / (1000 * 60 * 60 * 24) : Infinity;
-                const canEdit = daysSince <= 10;
-                const hasPrincipalSigned = !!submissionStatus?.principalSignedKey;
+                const hasSigned = !!submissionStatus?.principalSignedKey;
+                const signedAt = submissionStatus?.principalSignedAt;
+                const daysSince = signedAt ? (Date.now() - new Date(signedAt).getTime()) / (1000 * 60 * 60 * 24) : Infinity;
+                const canReplace = !hasSigned || daysSince <= 10;
                 return (
                   <>
                     <div className="h-5 w-px bg-slate-300 shrink-0" />
@@ -717,62 +717,49 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                       onChange={handlePrincipalPdfUpload}
                       className="hidden"
                     />
-                    {canEdit ? (
+                    {!hasSigned ? (
+                      <Button
+                        onClick={() => principalPdfRef.current?.click()}
+                        size="sm"
+                        className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold hover:from-violet-700 hover:to-purple-700 transition-all shadow-md"
+                      >
+                        <Upload size={14} />
+                        Upload Principal Signed PDF
+                      </Button>
+                    ) : canReplace ? (
                       <>
-                        {hasPrincipalSigned ? (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-1.5 rounded-lg font-semibold border-emerald-300 text-emerald-700"
-                              onClick={() => downloadPrincipalSignedBlob(submissionStatus?.submissionId)}
-                            >
-                              <Download size={14} />
-                              Signed PDF
-                            </Button>
-                            <Button
-                              onClick={() => principalPdfRef.current?.click()}
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-1.5 rounded-lg font-semibold"
-                            >
-                              <Upload size={14} />
-                              Replace
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            onClick={() => principalPdfRef.current?.click()}
-                            size="sm"
-                            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold hover:from-violet-700 hover:to-purple-700 transition-all shadow-md"
-                          >
-                            <Upload size={14} />
-                            Upload Principal Signed PDF
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1.5 rounded-lg font-semibold border-emerald-300 text-emerald-700"
+                          onClick={() => downloadPrincipalSignedBlob(submissionStatus?.submissionId)}
+                        >
+                          <Download size={14} />
+                          Signed PDF
+                        </Button>
+                        <Button
+                          onClick={() => principalPdfRef.current?.click()}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1.5 rounded-lg font-semibold"
+                        >
+                          <Upload size={14} />
+                          Replace
+                        </Button>
                         <span className="text-[10px] text-slate-500">
                           {Math.ceil(10 - daysSince)} days left
                         </span>
                       </>
                     ) : (
-                      <>
-                        {hasPrincipalSigned ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-1.5 rounded-lg font-semibold border-emerald-300 text-emerald-700"
-                            onClick={() => downloadPrincipalSignedBlob(submissionStatus?.submissionId)}
-                          >
-                            <Download size={14} />
-                            Signed PDF
-                          </Button>
-                        ) : (
-                          <span className="flex items-center gap-1 text-xs font-semibold text-slate-400">
-                            <Shield size={14} />
-                            Principal sign window expired
-                          </span>
-                        )}
-                      </>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-1.5 rounded-lg font-semibold border-emerald-300 text-emerald-700"
+                        onClick={() => downloadPrincipalSignedBlob(submissionStatus?.submissionId)}
+                      >
+                        <Download size={14} />
+                        Signed PDF
+                      </Button>
                     )}
                   </>
                 );
@@ -3055,10 +3042,10 @@ function SubmittedReportsView({
 function PrincipalSignedUpload({ r, onRefresh }: { r: any; onRefresh: () => void }) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const submittedAt = r.submittedAt;
-  const daysSince = submittedAt ? (Date.now() - new Date(submittedAt).getTime()) / (1000 * 60 * 60 * 24) : Infinity;
-  const canEdit = daysSince <= 10;
   const hasSigned = !!r.principalSignedKey;
+  const signedAt = r.principalSignedAt;
+  const daysSince = signedAt ? (Date.now() - new Date(signedAt).getTime()) / (1000 * 60 * 60 * 24) : Infinity;
+  const canReplace = !hasSigned || daysSince <= 10;
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -3079,51 +3066,17 @@ function PrincipalSignedUpload({ r, onRefresh }: { r: any; onRefresh: () => void
   return (
     <>
       <input ref={fileRef} type="file" accept="application/pdf" onChange={handleUpload} className="hidden" />
-      {canEdit ? (
-        hasSigned ? (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={async () => {
-                try {
-                  const res = await _axios.get(`/admin/timetable/download-principal-signed-report?id=${r.id}`, { responseType: "blob" });
-                  const blob = new Blob([res.data], { type: "application/pdf" });
-                  const url = window.URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "Principal_Signed_Report.pdf";
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-                } catch {
-                  toast.error("Failed to download");
-                }
-              }}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors"
-            >
-              <Download size={12} />
-              Signed
-            </button>
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors disabled:opacity-50"
-            >
-              {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors disabled:opacity-50"
-          >
-            {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-            {uploading ? "Uploading..." : "Signed PDF"}
-          </button>
-        )
-      ) : (
-        hasSigned ? (
+      {!hasSigned ? (
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors disabled:opacity-50"
+        >
+          {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+          {uploading ? "Uploading..." : "Signed PDF"}
+        </button>
+      ) : canReplace ? (
+        <div className="flex items-center gap-1">
           <button
             onClick={async () => {
               try {
@@ -3146,9 +3099,37 @@ function PrincipalSignedUpload({ r, onRefresh }: { r: any; onRefresh: () => void
             <Download size={12} />
             Signed
           </button>
-        ) : (
-          <span className="text-[10px] text-slate-400 italic">Expired</span>
-        )
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors disabled:opacity-50"
+          >
+            {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={async () => {
+            try {
+              const res = await _axios.get(`/admin/timetable/download-principal-signed-report?id=${r.id}`, { responseType: "blob" });
+              const blob = new Blob([res.data], { type: "application/pdf" });
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "Principal_Signed_Report.pdf";
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+            } catch {
+              toast.error("Failed to download");
+            }
+          }}
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-semibold text-[10px] hover:bg-violet-100 transition-colors"
+        >
+          <Download size={12} />
+          Signed
+        </button>
       )}
     </>
   );

@@ -3318,14 +3318,16 @@ timetableController.post("/upload-principal-signed-report", async (c) => {
       throw new BadRequestError("Principal signed report can only be uploaded after admin verification");
     }
 
-    // Must be within 10 days of initial submission
-    const submittedAt = submission.submittedAt;
-    if (!submittedAt) throw new BadRequestError("Submission date not found");
-    const submittedDate = new Date(submittedAt);
-    const now = new Date();
-    const daysSince = (now.getTime() - submittedDate.getTime()) / (1000 * 60 * 60 * 24);
-    if (daysSince > 10) {
-      throw new BadRequestError("10-day edit window for principal signed report has expired");
+    // If a signed PDF already exists, enforce 10-day replacement window
+    if (submission.principalSignedKey) {
+      const signedAt = submission.principalSignedAt;
+      if (!signedAt) throw new BadRequestError("Signed date not found");
+      const signedDate = new Date(signedAt);
+      const now = new Date();
+      const daysSince = (now.getTime() - signedDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince > 10) {
+        throw new BadRequestError("10-day replacement window for principal signed report has expired");
+      }
     }
 
     // Get the uploaded file
