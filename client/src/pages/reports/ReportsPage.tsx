@@ -334,7 +334,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "Principal_Signed_Report.pdf";
+      a.download = `CTPL_AI&Stem_Robotics_${MONTH_NAMES[currentMonth.month - 1]}${currentMonth.year}_monthly_report.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -2289,15 +2289,15 @@ function SubmittedReportsView({
     }
   };
 
-  const handleDownloadPrincipalSigned = async (id: string) => {
-    setDownloadingId(id);
+  const handleDownloadPrincipalSigned = async (r: any) => {
+    setDownloadingId(r.id);
     try {
-      const res = await _axios.get(`/admin/timetable/download-principal-signed-report?id=${id}`, { responseType: "blob" });
+      const res = await _axios.get(`/admin/timetable/download-principal-signed-report?id=${r.id}`, { responseType: "blob" });
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "Principal_Signed_Report.pdf";
+      a.download = `CTPL_AI&Stem_Robotics_${MONTH_NAMES[(r.month || 1) - 1]}${r.year}_monthly_report.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -2663,7 +2663,7 @@ function SubmittedReportsView({
                           View Signed
                         </button>
                         <button
-                          onClick={() => handleDownloadPrincipalSigned(r.id)}
+                          onClick={() => handleDownloadPrincipalSigned(r)}
                           disabled={downloadingId === r.id}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 font-semibold text-xs hover:bg-violet-100 transition-colors disabled:opacity-50"
                         >
@@ -2931,7 +2931,7 @@ function SubmittedReportsView({
                 if (viewingSignedReport) {
                   const a = document.createElement("a");
                   a.href = viewingSignedReport.url.replace("&inline=true", "");
-                  a.download = `Principal_Signed_Report_${viewingSignedReport.monthName}_${viewingSignedReport.year}.pdf`;
+                  a.download = `CTPL_AI&Stem_Robotics_${viewingSignedReport.monthName}${viewingSignedReport.year}_monthly_report.pdf`;
                   document.body.appendChild(a);
                   a.click();
                   document.body.removeChild(a);
@@ -3090,7 +3090,7 @@ function PrincipalSignedUpload({ r, onRefresh }: { r: any; onRefresh: () => void
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = "Principal_Signed_Report.pdf";
+                a.download = `CTPL_AI&Stem_Robotics_${MONTH_NAMES[(r.month || 1) - 1]}${r.year}_monthly_report.pdf`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -3121,7 +3121,7 @@ function PrincipalSignedUpload({ r, onRefresh }: { r: any; onRefresh: () => void
               const url = window.URL.createObjectURL(blob);
               const a = document.createElement("a");
               a.href = url;
-              a.download = "Principal_Signed_Report.pdf";
+              a.download = `CTPL_AI&Stem_Robotics_${MONTH_NAMES[(r.month || 1) - 1]}${r.year}_monthly_report.pdf`;
               document.body.appendChild(a);
               a.click();
               document.body.removeChild(a);

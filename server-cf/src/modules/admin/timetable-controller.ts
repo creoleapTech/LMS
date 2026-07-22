@@ -3403,7 +3403,7 @@ timetableController.get("/download-principal-signed-report", async (c) => {
     const buffer = await file.arrayBuffer();
     const headers = new Headers();
     headers.set("Content-Type", "application/pdf");
-    headers.set("Content-Disposition", `attachment; filename="Principal_Signed_Report_${MONTH_NAMES[submission.month - 1] || "Report"}_${submission.year}.pdf"`);
+    headers.set("Content-Disposition", `attachment; filename="CTPL_AI&Stem_Robotics_${MONTH_NAMES[submission.month - 1] || "Report"}${submission.year}_monthly_report.pdf"`);
 
     return new Response(buffer, { headers });
   } catch (err: any) {
@@ -3474,7 +3474,7 @@ Creoleap Technologies Pvt. Ltd.
 🌐 Website: www.creoleap.com
 📞 Contact: +91 93632 08701`;
 
-    const attachmentName = `Principal_Signed_Report_${monthName}_${year}.pdf`;
+    const attachmentName = `CTPL_AI&Stem_Robotics_${monthName}${year}_monthly_report.pdf`;
 
     return c.json({
       success: true,
@@ -3566,7 +3566,7 @@ timetableController.post("/send-report-email", async (c) => {
     const schoolName = inst.name;
     const schoolLocation = inst.address || "";
     const schoolNameAndLocation = schoolName + (schoolLocation ? `, ${schoolLocation}` : "");
-    const filename = `Principal_Signed_Report_${monthName}_${year}.pdf`;
+    const filename = `CTPL_AI&Stem_Robotics_${monthName}${year}_monthly_report.pdf`;
 
     // Email templates
     const subject = customSubject || `Monthly AI Integrated STEM Robotics Lesson Completion Report – ${monthName} ${year} | ${schoolName}`;
