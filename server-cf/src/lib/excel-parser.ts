@@ -75,19 +75,28 @@ const KEY_ALIASES: Record<string, string> = {
   qualifications: "qualification",
 };
 
+function toCamelCase(str: string): string {
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase());
+}
+
 export function normalizeRowObject(row: Record<string, any>): Record<string, string> {
   const normalized: Record<string, string> = {};
   for (const [key, val] of Object.entries(row)) {
     const valStr = val == null ? "" : String(val).trim();
-    const cleanKey = key.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-    const mappedKey = KEY_ALIASES[cleanKey] || key.trim();
+    const trimmedKey = key.trim();
+    const lowerKey = trimmedKey.toLowerCase();
+    const cleanKey = lowerKey.replace(/[^a-z0-9]/g, "");
+    const camelKey = toCamelCase(trimmedKey);
+    const mappedKey = KEY_ALIASES[cleanKey] || camelKey || trimmedKey;
+
     normalized[mappedKey] = valStr;
-    if (!normalized[cleanKey]) {
-      normalized[cleanKey] = valStr;
-    }
-    if (!normalized[key.trim()]) {
-      normalized[key.trim()] = valStr;
-    }
+    normalized[cleanKey] = valStr;
+    normalized[lowerKey] = valStr;
+    normalized[camelKey] = valStr;
+    normalized[trimmedKey] = valStr;
   }
   return normalized;
 }
@@ -118,9 +127,19 @@ export function parseExcelFile<T>(
     const firstRow = normalizedData[0];
 
     const missingColumns = requiredColumns.filter((col) => {
-      const cleanCol = col.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-      const canonicalReq = KEY_ALIASES[cleanCol] || col;
-      return !(canonicalReq in firstRow) && !(col in firstRow) && !(cleanCol in firstRow);
+      const trimmedCol = col.trim();
+      const lowerCol = trimmedCol.toLowerCase();
+      const cleanCol = lowerCol.replace(/[^a-z0-9]/g, "");
+      const camelCol = toCamelCase(trimmedCol);
+      const canonicalReq = KEY_ALIASES[cleanCol] || camelCol || col;
+
+      return (
+        !(canonicalReq in firstRow) &&
+        !(col in firstRow) &&
+        !(cleanCol in firstRow) &&
+        !(lowerCol in firstRow) &&
+        !(camelCol in firstRow)
+      );
     });
 
     if (missingColumns.length > 0) {
