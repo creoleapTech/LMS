@@ -243,39 +243,37 @@ studentController.post("/bulk-upload", async (c) => {
     (row: any, rowIndex: number) => {
       const errors: string[] = [];
 
-      // Coerce all values to strings (Excel may return numbers for fields like mobileNumber)
-      const r = Object.fromEntries(
-        Object.entries(row).map(([k, v]) => [k, v == null ? "" : String(v)])
-      );
+      const r = row;
+
+      // Validate compulsory fields: grade, section, name
+      if (!r.grade || String(r.grade).trim() === "") {
+        errors.push("Grade is required");
+      }
+
+      if (!r.section || String(r.section).trim() === "") {
+        errors.push("Section is required");
+      }
+
+      if (!r.name || String(r.name).trim() === "") {
+        errors.push("Name is required");
+      }
 
       // Validate class info
       let classId = defaultClassId;
-      if (!classId) {
-        if (!r.section) {
-          errors.push("Section is required (or select a default Class)");
-        } else {
-          const key =
-            `${r.grade || ""}-${r.section}`.trim().toUpperCase();
-          if (classMap.has(key)) {
-            const cls = classMap.get(key)!;
-            if (!cls.isActive) {
-              errors.push(
-                `Class ${r.grade}-${r.section} is inactive.`
-              );
-            } else {
-              classId = cls.id;
-            }
+      if (r.grade && r.section) {
+        const key = `${r.grade}-${r.section}`.trim().toUpperCase();
+        if (classMap.has(key)) {
+          const cls = classMap.get(key)!;
+          if (!cls.isActive) {
+            errors.push(`Class ${r.grade}-${r.section} is inactive.`);
           } else {
-            errors.push(
-              `Class not found for Grade: ${r.grade}, Section: ${r.section}. Create the class first.`
-            );
+            classId = cls.id;
           }
+        } else {
+          errors.push(
+            `Class not found for Grade: ${r.grade}, Section: ${r.section}. Create the class first.`
+          );
         }
-      }
-
-      // Validate required fields
-      if (!r.name || r.name.trim() === "") {
-        errors.push("Name is required");
       }
 
       // Validate email format if provided
@@ -284,10 +282,10 @@ studentController.post("/bulk-upload", async (c) => {
         errors.push("Invalid email format");
       }
 
-      // Validate gender
+      // Validate gender if provided
       if (
         r.gender &&
-        !["male", "female", "other"].includes(r.gender.toLowerCase())
+        !["male", "female", "other"].includes(String(r.gender).toLowerCase())
       ) {
         errors.push("Gender must be male, female, or other");
       }
@@ -300,25 +298,25 @@ studentController.post("/bulk-upload", async (c) => {
         isValid: true,
         errors: [],
         data: {
-          name: r.name.trim(),
-          rollNumber: r.rollNumber?.trim() || undefined,
-          admissionNumber: r.admissionNumber?.trim() || undefined,
-          email: r.email?.trim().toLowerCase() || undefined,
-          username: r.username?.trim().toLowerCase() || undefined,
-          mobileNumber: r.mobileNumber?.trim() || undefined,
-          parentName: r.parentName?.trim() || undefined,
-          parentMobile: r.parentMobile?.trim() || undefined,
-          parentEmail: r.parentEmail?.trim().toLowerCase() || undefined,
+          name: String(r.name).trim(),
+          rollNumber: r.rollNumber ? String(r.rollNumber).trim() : undefined,
+          admissionNumber: r.admissionNumber ? String(r.admissionNumber).trim() : undefined,
+          email: r.email ? String(r.email).trim().toLowerCase() : undefined,
+          username: r.username ? String(r.username).trim().toLowerCase() : undefined,
+          mobileNumber: r.mobileNumber ? String(r.mobileNumber).trim() : undefined,
+          parentName: r.parentName ? String(r.parentName).trim() : undefined,
+          parentMobile: r.parentMobile ? String(r.parentMobile).trim() : undefined,
+          parentEmail: r.parentEmail ? String(r.parentEmail).trim().toLowerCase() : undefined,
           dateOfBirth: r.dateOfBirth || undefined,
-          gender: r.gender?.toLowerCase() || undefined,
-          address: r.address?.trim() || undefined,
+          gender: r.gender ? String(r.gender).toLowerCase() : undefined,
+          address: r.address ? String(r.address).trim() : undefined,
           admissionDate: r.admissionDate || nowISO(),
           classId,
           institutionId,
         },
       };
     },
-    ["name"]
+    ["grade", "section", "name"]
   );
 
   // ── DEDUPLICATION ────────────────────────────────
@@ -488,14 +486,8 @@ studentController.get("/template", async (c) => {
     "grade",
     "section",
     "name",
-    "rollNumber",
-    "admissionNumber",
-    "email",
-    "mobileNumber",
-    "dateOfBirth",
+    "roll number",
     "gender",
-    "address",
-    "admissionDate",
   ];
 
   const sampleData = [
@@ -503,14 +495,8 @@ studentController.get("/template", async (c) => {
       grade: "10",
       section: "A",
       name: "Jane Smith",
-      rollNumber: "001",
-      admissionNumber: "ADM2024001",
-      email: "jane@example.com",
-      mobileNumber: "9876543210",
-      dateOfBirth: "2010-05-15",
+      "roll number": "001",
       gender: "female",
-      address: "123 Main St, City",
-      admissionDate: "2024-01-15",
     },
   ];
 

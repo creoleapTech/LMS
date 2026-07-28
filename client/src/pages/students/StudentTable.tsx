@@ -469,7 +469,7 @@ export function StudentTable({ institutionId }: Props) {
                 <p className="font-semibold mb-2">Instructions:</p>
                 <ol className="list-decimal pl-4 space-y-1">
                   <li>Download the template.</li>
-                  <li>Fill in student details. Ensure <b>Grade</b> and <b>Section</b> match existing classes.</li>
+                  <li>Fill in student details. <b>Grade</b>, <b>Section</b>, and <b>Name</b> are compulsory.</li>
                   <li>Upload the filled Excel file.</li>
                 </ol>
                 <Button variant="link" className="p-0 h-auto mt-2 text-brand-color" onClick={downloadTemplate}>
