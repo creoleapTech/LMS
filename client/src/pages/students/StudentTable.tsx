@@ -44,6 +44,7 @@ export function StudentTable({ institutionId }: Props) {
   const queryClient = useQueryClient();
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadErrors, setUploadErrors] = useState<any[]>([]);
   const [uploadSummary, setUploadSummary] = useState<any>(null);
   const [page, setPage] = useState(1);
@@ -163,12 +164,20 @@ export function StudentTable({ institutionId }: Props) {
   const handleBulkUpload = async () => {
     if (!bulkFile) return;
     setIsUploading(true);
+    setUploadProgress(0);
     try {
       const formData = new FormData();
       formData.append("file", bulkFile);
       formData.append("institutionId", institutionId);
 
-      const res = await _axios.post("/admin/students/bulk-upload", formData);
+      const res = await _axios.post("/admin/students/bulk-upload", formData, {
+        onUploadProgress: (progressEvent: any) => {
+          if (progressEvent.total) {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percent);
+          }
+        },
+      });
 
       const responseData = res.data;
 
@@ -481,7 +490,25 @@ export function StudentTable({ institutionId }: Props) {
             {!uploadErrors.length && (
               <div className="grid w-full max-w-sm items-center gap-1.5">
                 <Label htmlFor="picture">Excel File</Label>
-                <Input id="picture" type="file" accept=".xlsx, .xls" onChange={(e) => setBulkFile(e.target.files?.[0] || null)} />
+                <Input id="picture" type="file" accept=".xlsx, .xls" disabled={isUploading} onChange={(e) => setBulkFile(e.target.files?.[0] || null)} />
+              </div>
+            )}
+
+            {isUploading && (
+              <div className="space-y-2 p-3 bg-muted/50 rounded-lg border border-border">
+                <div className="flex justify-between items-center text-sm font-medium">
+                  <span className="flex items-center gap-2 text-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin text-brand-color" />
+                    {uploadProgress < 100 ? "Uploading file..." : "Processing Excel data..."}
+                  </span>
+                  <span className="font-mono text-brand-color font-bold">{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className="bg-brand-color h-2.5 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
               </div>
             )}
 
@@ -530,10 +557,16 @@ export function StudentTable({ institutionId }: Props) {
               </Button>
             ) : (
               <>
-                <Button variant="outline" onClick={() => setOpenBulkUpload(false)}>Cancel</Button>
+                <Button variant="outline" disabled={isUploading} onClick={() => setOpenBulkUpload(false)}>Cancel</Button>
                 <Button onClick={handleBulkUpload} disabled={!bulkFile || isUploading} className="bg-brand-color">
-                  {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Upload
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading ({uploadProgress}%)
+                    </>
+                  ) : (
+                    "Upload"
+                  )}
                 </Button>
               </>
             )}
