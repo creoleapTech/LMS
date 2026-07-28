@@ -246,6 +246,23 @@ studentController.post("/bulk-upload", async (c) => {
 
       const r = row;
 
+      // Silently skip non-data rows (empty rows, section headers, second headers)
+      const nameVal = r.name ? String(r.name).trim() : "";
+      const gradeVal = r.grade ? String(r.grade).trim() : "";
+      const sectionVal = r.section ? String(r.section).trim() : "";
+
+      if (!nameVal && !gradeVal && !sectionVal) {
+        return { isValid: false, errors: [] };
+      }
+
+      if (/^(GRADE|CLASS)\b/i.test(nameVal) && !gradeVal && !sectionVal) {
+        return { isValid: false, errors: [] };
+      }
+
+      if (/^(SI\.NO|SL\.NO|STUDENT\s+NAME|ROLL\s+NUMBER)\b/i.test(nameVal)) {
+        return { isValid: false, errors: [] };
+      }
+
       // Validate compulsory fields: grade, section, name
       if (!r.grade || String(r.grade).trim() === "") {
         errors.push("Grade is required");
@@ -299,6 +316,7 @@ studentController.post("/bulk-upload", async (c) => {
         isValid: true,
         errors: [],
         data: {
+          _rowNumber: rowIndex,
           name: String(r.name).trim(),
           rollNumber: r.rollNumber ? String(r.rollNumber).trim() : undefined,
           admissionNumber: r.admissionNumber ? String(r.admissionNumber).trim() : undefined,
@@ -332,7 +350,7 @@ studentController.post("/bulk-upload", async (c) => {
       const key = `${student.name.trim().toLowerCase()}-${student.classId}`;
       if (seenInFile.has(key)) {
         result.errors.push({
-          row: index + 2,
+          row: student._rowNumber,
           errors: [
             `Duplicate entry in this file: Student '${student.name}' appears multiple times.`,
           ],
@@ -377,7 +395,7 @@ studentController.post("/bulk-upload", async (c) => {
 
       if (isDuplicate) {
         result.errors.push({
-          row: index + 2,
+          row: newStudent._rowNumber,
           errors: [
             `Student '${newStudent.name}' already exists in this class.`,
           ],

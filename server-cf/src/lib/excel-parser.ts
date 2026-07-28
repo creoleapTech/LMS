@@ -6,6 +6,7 @@ export interface ExcelParseResult<T> {
   errors: Array<{ row: number; errors: string[] }>;
   totalRows: number;
   validRows: number;
+  rowNumbers: number[];
 }
 
 const KEY_ALIASES: Record<string, string> = {
@@ -111,7 +112,36 @@ export function parseExcelFile<T>(
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
 
-    const rawData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+    // Use header:1 to include ALL rows (including empty) for accurate row numbering
+    const rows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+    if (rows.length < 2) {
+      return {
+        success: false,
+        data: [],
+        errors: [{ row: 0, errors: ["Excel file is empty or has only headers"] }],
+        totalRows: 0,
+        validRows: 0,
+        rowNumbers: [],
+      };
+    }
+
+    // First row is the header
+    const headerRow = rows[0] as any[];
+
+    // Build row objects from data rows (rows[1] onwards)
+    const rawData: any[] = [];
+    for (let i = 1; i < rows.length; i++) {
+      const rowArr = rows[i];
+      const rowObj: Record<string, any> = {};
+      for (let j = 0; j < headerRow.length; j++) {
+        const key = String(headerRow[j] ?? "").trim();
+        if (key) {
+          rowObj[key] = rowArr[j] ?? "";
+        }
+      }
+      rawData.push(rowObj);
+    }
 
     if (rawData.length === 0) {
       return {
@@ -120,6 +150,7 @@ export function parseExcelFile<T>(
         errors: [{ row: 0, errors: ["Excel file is empty"] }],
         totalRows: 0,
         validRows: 0,
+        rowNumbers: [],
       };
     }
 
@@ -154,20 +185,25 @@ export function parseExcelFile<T>(
         ],
         totalRows: rawData.length,
         validRows: 0,
+        rowNumbers: [],
       };
     }
 
     const validData: T[] = [];
+    const validRowNumbers: number[] = [];
     const errors: Array<{ row: number; errors: string[] }> = [];
 
     normalizedData.forEach((row, index) => {
-      const result = validator(row, index + 2);
+      // Actual Excel row number (index=0 => Excel row 2, since row 1 is header)
+      const actualRowNumber = index + 2;
+      const result = validator(row, actualRowNumber);
 
       if (result.isValid && result.data) {
         validData.push(result.data);
-      } else {
+        validRowNumbers.push(actualRowNumber);
+      } else if (result.errors.length > 0) {
         errors.push({
-          row: index + 2,
+          row: actualRowNumber,
           errors: result.errors,
         });
       }
@@ -179,6 +215,7 @@ export function parseExcelFile<T>(
       errors,
       totalRows: rawData.length,
       validRows: validData.length,
+      rowNumbers: validRowNumbers,
     };
   } catch (error: any) {
     return {
@@ -187,6 +224,7 @@ export function parseExcelFile<T>(
       errors: [{ row: 0, errors: [`Failed to parse Excel file: ${error.message}`] }],
       totalRows: 0,
       validRows: 0,
+      rowNumbers: [],
     };
   }
 }
