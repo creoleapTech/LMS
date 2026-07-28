@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { useCreateQuiz } from "../hooks/useCreateQuiz";
 import { useUpdateQuiz } from "../hooks/useUpdateQuiz";
 import { createQuizSchema, type CreateQuizValues, type Quiz } from "../types";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 interface QuizFormDialogProps {
   open: boolean;
@@ -122,7 +123,7 @@ export function QuizFormDialog({ open, onOpenChange, institutionId, quiz }: Quiz
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
-            <Input id="title" placeholder="e.g. Chapter 5 Assessment" {...register("title")} />
+            <Input id="title" maxLength={TEXT_LIMITS.quizTitle} placeholder="e.g. Chapter 5 Assessment" {...register("title")} />
             {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
           </div>
 
@@ -131,6 +132,7 @@ export function QuizFormDialog({ open, onOpenChange, institutionId, quiz }: Quiz
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
+              maxLength={TEXT_LIMITS.quizDescription}
               placeholder="Optional description..."
               rows={3}
               {...register("description")}

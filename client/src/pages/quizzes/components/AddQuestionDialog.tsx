@@ -27,6 +27,7 @@ import {
 import { _axios } from "@/lib/axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { createQuestionSchema, type CreateQuestionValues } from "../types";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 interface AddQuestionDialogProps {
   open: boolean;
@@ -171,6 +172,7 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
             <Label htmlFor="questionText">Question *</Label>
             <Textarea
               id="questionText"
+              maxLength={TEXT_LIMITS.quizQuestion}
               placeholder="Enter your question..."
               rows={3}
               {...register("questionText")}
@@ -260,6 +262,7 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
                   </span>
                   <Input
                     placeholder={`Option ${idx + 1}`}
+                    maxLength={TEXT_LIMITS.optionText}
                     value={opt.text}
                     onChange={(e) => updateOptionText(idx, e.target.value)}
                   />
@@ -343,6 +346,7 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
             <Label htmlFor="explanation">Explanation (optional)</Label>
             <Textarea
               id="explanation"
+              maxLength={TEXT_LIMITS.quizExplanation}
               placeholder="Explain why this is the correct answer..."
               rows={2}
               {...register("explanation")}

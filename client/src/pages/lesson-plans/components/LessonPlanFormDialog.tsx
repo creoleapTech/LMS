@@ -42,6 +42,7 @@ import { useUpdateLessonPlan } from "../hooks/useUpdateLessonPlan";
 import { lessonPlanSchema } from "../types";
 import type { LessonPlanFormValues, PlanStatus } from "../types";
 import type { IClass } from "@/types/class";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -397,6 +398,7 @@ export function LessonPlanFormDialog({
                 <Input
                   id="title"
                   placeholder="e.g. Introduction to Fractions"
+                  maxLength={TEXT_LIMITS.lessonPlanTitle}
                   className="neo-input"
                   {...register("title")}
                 />
@@ -415,6 +417,7 @@ export function LessonPlanFormDialog({
                 <Input
                   id="subject"
                   placeholder="e.g. Mathematics"
+                  maxLength={TEXT_LIMITS.lessonPlanSubject}
                   className="neo-input"
                   {...register("subject")}
                 />
@@ -461,6 +464,7 @@ export function LessonPlanFormDialog({
                   <Input
                     id="gradeOrClass"
                     placeholder="e.g. Grade 5 - Section A"
+                    maxLength={TEXT_LIMITS.lessonPlanGradeOrClass}
                     className="neo-input"
                     {...register("gradeOrClass")}
                   />
@@ -517,6 +521,7 @@ export function LessonPlanFormDialog({
                   id="learningObjectives"
                   placeholder="What students will learn…"
                   rows={3}
+                  maxLength={TEXT_LIMITS.lessonPlanShortText}
                   {...register("learningObjectives")}
                 />
                 {errors.learningObjectives && (
@@ -535,6 +540,7 @@ export function LessonPlanFormDialog({
                   id="materialsNeeded"
                   placeholder="e.g. Fraction tiles, whiteboard…"
                   rows={3}
+                  maxLength={TEXT_LIMITS.lessonPlanShortText}
                   {...register("materialsNeeded")}
                 />
                 {errors.materialsNeeded && (
@@ -556,6 +562,7 @@ export function LessonPlanFormDialog({
                   id="assessmentMethod"
                   placeholder="How you will assess understanding…"
                   rows={3}
+                  maxLength={TEXT_LIMITS.lessonPlanShortText}
                   {...register("assessmentMethod")}
                 />
                 {errors.assessmentMethod && (
@@ -574,6 +581,7 @@ export function LessonPlanFormDialog({
                   id="homeworkNotes"
                   placeholder="Homework or follow-up tasks…"
                   rows={3}
+                  maxLength={TEXT_LIMITS.lessonPlanShortText}
                   {...register("homeworkNotes")}
                 />
                 {errors.homeworkNotes && (
@@ -601,6 +609,7 @@ export function LessonPlanFormDialog({
                   id="introduction"
                   placeholder="How you will open the lesson…"
                   rows={4}
+                  maxLength={TEXT_LIMITS.lessonPlanLongText}
                   {...register("introduction")}
                 />
                 {errors.introduction && (
@@ -619,6 +628,7 @@ export function LessonPlanFormDialog({
                   id="mainActivity"
                   placeholder="The core teaching activity…"
                   rows={4}
+                  maxLength={TEXT_LIMITS.lessonPlanLongText}
                   {...register("mainActivity")}
                 />
                 {errors.mainActivity && (
@@ -637,6 +647,7 @@ export function LessonPlanFormDialog({
                   id="conclusion"
                   placeholder="How you will close the lesson…"
                   rows={4}
+                  maxLength={TEXT_LIMITS.lessonPlanLongText}
                   {...register("conclusion")}
                 />
                 {errors.conclusion && (

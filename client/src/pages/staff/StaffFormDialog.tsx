@@ -13,15 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Eye, EyeOff, Copy, RefreshCw, UserCircle, Mail, Smartphone, BookOpen, CalendarDays, ShieldCheck, KeyRound } from "lucide-react";
 import type { IStaff, CreateStaffDTO, StaffType } from "@/types/staff";
 import { toast } from "sonner";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 const staffSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  email: z.string().email("Invalid email").max(255, "Email too long"),
-  mobileNumber: z.string(),
+  name: z.string().trim().min(2, "Name is required").max(TEXT_LIMITS.personName, "Name too long"),
+  email: z.string().trim().email("Invalid email").max(TEXT_LIMITS.email, "Email too long"),
+  mobileNumber: z.string().trim().max(TEXT_LIMITS.phone, "Mobile number too long").regex(/^[\d\s\-\+\(\)]+$/, "Invalid mobile number format"),
   type: z.enum(["teacher", "admin"]),
-  subjects: z.string().max(500).optional(),
+  subjects: z.string().trim().max(TEXT_LIMITS.staffSubjects, "Subjects too long").optional(),
   joiningDate: z.string(),
-  password: z.string().min(8, "Password must be at least 8 characters").max(128).optional().or(z.literal("")),
+  password: z.string().min(8, "Password must be at least 8 characters").max(TEXT_LIMITS.password).optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof staffSchema>;
@@ -121,7 +122,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                 <Label htmlFor="staff-name" className="text-sm font-medium">Full Name <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="staff-name" {...register("name")} placeholder="John Doe" className="pl-9" />
+                  <Input id="staff-name" maxLength={TEXT_LIMITS.personName} {...register("name")} placeholder="John Doe" className="pl-9" />
                 </div>
                 {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
               </div>
@@ -130,7 +131,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                 <Label htmlFor="staff-email" className="text-sm font-medium">Email <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="staff-email" type="email" {...register("email")} placeholder="john@school.edu" className="pl-9" />
+                  <Input id="staff-email" type="email" maxLength={TEXT_LIMITS.email} {...register("email")} placeholder="john@school.edu" className="pl-9" />
                 </div>
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
               </div>
@@ -139,7 +140,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                 <Label htmlFor="staff-mobile" className="text-sm font-medium">Mobile Number <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="staff-mobile" {...register("mobileNumber")} placeholder="+91 98765 43210" className="pl-9" />
+                  <Input id="staff-mobile" maxLength={TEXT_LIMITS.phone} {...register("mobileNumber")} placeholder="+91 98765 43210" className="pl-9" />
                 </div>
                 {errors.mobileNumber && <p className="text-sm text-destructive">{errors.mobileNumber.message}</p>}
               </div>
@@ -178,7 +179,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                 <Label htmlFor="staff-subjects" className="text-sm font-medium">Subjects <span className="text-muted-foreground font-normal">(optional)</span></Label>
                 <div className="relative">
                   <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="staff-subjects" {...register("subjects")} placeholder="Math, Science, English" className="pl-9" />
+                  <Input id="staff-subjects" maxLength={TEXT_LIMITS.staffSubjects} {...register("subjects")} placeholder="Math, Science, English" className="pl-9" />
                 </div>
                 <p className="text-sm text-muted-foreground">Comma-separated</p>
               </div>
@@ -202,6 +203,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                     type={showPassword ? "text" : "password"}
                     {...register("password")}
                     placeholder={staff ? "Enter to reset password" : "Min. 8 characters"}
+                    maxLength={TEXT_LIMITS.password}
                     className="pl-9 pr-10"
                   />
                   <Button

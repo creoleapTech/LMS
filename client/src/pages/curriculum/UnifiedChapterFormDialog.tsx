@@ -17,14 +17,15 @@ import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 import { Config } from "@/lib/config";
 import { compressImage } from "@/lib/imageUtils";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 const schema = z.object({
     curriculumId: z.string().optional(),
     gradeBookId: z.string().min(1, "Please select a grade book"),
-    title: z.string().min(3, "Title must be at least 3 characters").max(200, "Title too long"),
+    title: z.string().trim().min(3, "Title must be at least 3 characters").max(TEXT_LIMITS.chapterTitle, "Title too long"),
     chapterNumber: z.number().min(1, "Chapter number must be at least 1"),
-    description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
-    learningObjectives: z.string().max(2000, "Learning objectives too long").optional().or(z.literal("")),
+    description: z.string().trim().max(TEXT_LIMITS.chapterDescription, "Description too long").optional().or(z.literal("")),
+    learningObjectives: z.string().trim().max(TEXT_LIMITS.chapterObjectives, "Learning objectives too long").optional().or(z.literal("")),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -227,7 +228,7 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                         </div>
                         <div className="space-y-2">
                             <Label>Chapter Title *</Label>
-                            <Input {...register("title")} placeholder="Introduction to Algebra" />
+                            <Input {...register("title")} maxLength={TEXT_LIMITS.chapterTitle} placeholder="Introduction to Algebra" />
                             {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
                         </div>
                     </div>
@@ -277,13 +278,13 @@ export function UnifiedChapterFormDialog({ open, onOpenChange, gradeBookId: prov
                     {/* Description */}
                     <div className="space-y-2">
                         <Label>Description</Label>
-                        <Textarea {...register("description")} rows={3} placeholder="Brief description of this chapter..." />
+                        <Textarea {...register("description")} maxLength={TEXT_LIMITS.chapterDescription} rows={3} placeholder="Brief description of this chapter..." />
                     </div>
 
                     {/* Learning Objectives */}
                     <div className="space-y-2">
                         <Label>Learning Objectives</Label>
-                        <Textarea {...register("learningObjectives")} rows={3} placeholder="What students will learn in this chapter..." />
+                        <Textarea {...register("learningObjectives")} maxLength={TEXT_LIMITS.chapterObjectives} rows={3} placeholder="What students will learn in this chapter..." />
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t">

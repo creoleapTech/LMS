@@ -12,15 +12,16 @@ import { Loader2, GraduationCap, User, Hash, Mail, AtSign, Lock } from "lucide-r
 import { useEffect } from "react";
 import type { IStudent, CreateStudentDTO } from "@/types/student";
 import type { IClass } from "@/types/class";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().trim().min(1, "Name is required").max(TEXT_LIMITS.personName, "Name too long"),
   classId: z.string().min(1, "Class is required"),
-  admissionNumber: z.string().max(50).optional().or(z.literal("")),
-  rollNumber: z.string().max(20).optional().or(z.literal("")),
-  email: z.string().email().max(255).optional().or(z.literal("")),
-  username: z.string().min(3, "Username must be at least 3 characters").max(50, "Username too long").regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers and underscores allowed").optional().or(z.literal("")),
-  password: z.string().min(8, "Password must be at least 8 characters").max(128).optional().or(z.literal("")),
+  admissionNumber: z.string().trim().max(TEXT_LIMITS.studentAdmissionNumber).optional().or(z.literal("")),
+  rollNumber: z.string().trim().max(TEXT_LIMITS.studentRollNumber).optional().or(z.literal("")),
+  email: z.string().trim().email().max(TEXT_LIMITS.email).optional().or(z.literal("")),
+  username: z.string().trim().min(3, "Username must be at least 3 characters").max(TEXT_LIMITS.username, "Username too long").regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers and underscores allowed").optional().or(z.literal("")),
+  password: z.string().min(8, "Password must be at least 8 characters").max(TEXT_LIMITS.password).optional().or(z.literal("")),
   gender: z.enum(["male", "female", "other"]).optional(),
 });
 
@@ -125,7 +126,7 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                 <Label htmlFor="name" className="text-sm font-medium">Full Name <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="name" placeholder="Student Full Name" {...register("name")} className="pl-9" />
+                  <Input id="name" placeholder="Student Full Name" maxLength={TEXT_LIMITS.personName} {...register("name")} className="pl-9" />
                 </div>
                 {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
               </div>
@@ -167,7 +168,7 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                 <Label htmlFor="email" className="text-sm font-medium">Email <span className="text-muted-foreground font-normal">(optional)</span></Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="email" type="email" placeholder="student@example.com" {...register("email")} className="pl-9" />
+                  <Input id="email" type="email" placeholder="student@example.com" maxLength={TEXT_LIMITS.email} {...register("email")} className="pl-9" />
                 </div>
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
               </div>
@@ -182,7 +183,7 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                 <Label htmlFor="username" className="text-sm font-medium">Username</Label>
                 <div className="relative">
                   <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="username" placeholder="e.g. student01" {...register("username")} className="pl-9" />
+                  <Input id="username" placeholder="e.g. student01" maxLength={TEXT_LIMITS.username} {...register("username")} className="pl-9" />
                 </div>
                 {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
               </div>
@@ -191,7 +192,7 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                 <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="password" type="password" placeholder={student ? "••••••••" : "Set a password"} {...register("password")} className="pl-9" />
+                  <Input id="password" type="password" placeholder={student ? "••••••••" : "Set a password"} maxLength={TEXT_LIMITS.password} {...register("password")} className="pl-9" />
                 </div>
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
@@ -206,7 +207,7 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                 <Label htmlFor="admissionNumber" className="text-sm font-medium">Admission Number</Label>
                 <div className="relative">
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="admissionNumber" placeholder="e.g. ADM-2024-001" {...register("admissionNumber")} className="pl-9" />
+                  <Input id="admissionNumber" placeholder="e.g. ADM-2024-001" maxLength={TEXT_LIMITS.studentAdmissionNumber} {...register("admissionNumber")} className="pl-9" />
                 </div>
               </div>
 
@@ -214,7 +215,7 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
                 <Label htmlFor="rollNumber" className="text-sm font-medium">Roll Number</Label>
                 <div className="relative">
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="rollNumber" placeholder="e.g. 25" {...register("rollNumber")} className="pl-9" />
+                  <Input id="rollNumber" placeholder="e.g. 25" maxLength={TEXT_LIMITS.studentRollNumber} {...register("rollNumber")} className="pl-9" />
                 </div>
               </div>
             </div>

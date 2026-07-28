@@ -9,6 +9,7 @@ import { adminAuth } from "../../middleware/admin-auth";
 import { lessonPlans } from "../../schema/lesson-plans";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
+import { TEXT_LIMITS } from "../../lib/validation/text";
 
 const lessonPlanController = new Hono<{
   Bindings: Bindings;
@@ -120,19 +121,19 @@ lessonPlanController.get("/", async (c) => {
 });
 
 const lessonPlanCreateSchema = z.object({
-  title: z.string().min(1, "Title is required").max(200, "Title too long"),
-  subject: z.string().min(1, "Subject is required").max(200, "Subject too long"),
-  gradeOrClass: z.string().min(1, "Grade or class is required").max(100, "Grade too long"),
+  title: z.string().trim().min(1, "Title is required").max(TEXT_LIMITS.lessonPlanTitle, "Title too long"),
+  subject: z.string().trim().min(1, "Subject is required").max(TEXT_LIMITS.lessonPlanSubject, "Subject too long"),
+  gradeOrClass: z.string().trim().min(1, "Grade or class is required").max(TEXT_LIMITS.lessonPlanGradeOrClass, "Grade too long"),
   date: z.string().min(1, "Date is required").regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
   periodNumber: z.number().int("Period must be a whole number").positive("Period must be a positive number").optional().nullable(),
   durationMinutes: z.number({ invalid_type_error: "Duration must be a number" }).int("Duration must be a whole number").positive("Duration must be a positive number"),
-  learningObjectives: z.string().max(2000).optional().nullable().or(z.literal("")),
-  materialsNeeded: z.string().max(2000).optional().nullable().or(z.literal("")),
-  introduction: z.string().max(5000).optional().nullable().or(z.literal("")),
-  mainActivity: z.string().max(5000).optional().nullable().or(z.literal("")),
-  conclusion: z.string().max(5000).optional().nullable().or(z.literal("")),
-  assessmentMethod: z.string().max(2000).optional().nullable().or(z.literal("")),
-  homeworkNotes: z.string().max(2000).optional().nullable().or(z.literal("")),
+  learningObjectives: z.string().trim().max(TEXT_LIMITS.lessonPlanShortText).optional().nullable().or(z.literal("")),
+  materialsNeeded: z.string().trim().max(TEXT_LIMITS.lessonPlanShortText).optional().nullable().or(z.literal("")),
+  introduction: z.string().trim().max(TEXT_LIMITS.lessonPlanLongText).optional().nullable().or(z.literal("")),
+  mainActivity: z.string().trim().max(TEXT_LIMITS.lessonPlanLongText).optional().nullable().or(z.literal("")),
+  conclusion: z.string().trim().max(TEXT_LIMITS.lessonPlanLongText).optional().nullable().or(z.literal("")),
+  assessmentMethod: z.string().trim().max(TEXT_LIMITS.lessonPlanShortText).optional().nullable().or(z.literal("")),
+  homeworkNotes: z.string().trim().max(TEXT_LIMITS.lessonPlanShortText).optional().nullable().or(z.literal("")),
   gradeBookId: z.string().optional().nullable(),
   chapterId: z.string().optional().nullable(),
 });

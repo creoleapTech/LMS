@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 // ---------------------------------------------------------------------------
 // Column types
@@ -103,14 +104,14 @@ export interface ColumnConfigFormValues {
 // ---------------------------------------------------------------------------
 
 export const examinationSchema = z.object({
-  name: z.string().trim().min(1, "Examination name is required"),
+  name: z.string().trim().min(1, "Examination name is required").max(TEXT_LIMITS.examinationName, "Name too long"),
 });
 
 export const columnConfigSchema = z
   .object({
-    name: z.string().min(1, "Column name is required"),
+    name: z.string().trim().min(1, "Column name is required").max(TEXT_LIMITS.examinationColumnName, "Column name too long"),
     type: z.enum(["number", "text", "formula"]),
-    formula: z.string().max(500, "Formula too long").optional().or(z.literal("")),
+    formula: z.string().trim().max(TEXT_LIMITS.examinationFormula, "Formula too long").optional().or(z.literal("")),
     maxMarks: z
       .number({ invalid_type_error: "Must be a number" })
       .positive("Max marks must be positive")

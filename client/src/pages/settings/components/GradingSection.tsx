@@ -121,12 +121,14 @@ export function GradingSection() {
                   onChange={(e) => updateGrade(idx, "grade", e.target.value)}
                   placeholder="Grade"
                   className="max-w-[80px] h-8 text-sm"
+                  maxLength={10}
                 />
                 <Input
                   value={entry.label}
                   onChange={(e) => updateGrade(idx, "label", e.target.value)}
                   placeholder="Label"
                   className="max-w-[160px] h-8 text-sm"
+                  maxLength={50}
                 />
                 <Input
                   type="number"

@@ -10,18 +10,19 @@ import { nowISO } from "../../lib/utils";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { superAdminAuth } from "../../middleware/super-admin-auth";
+import { PHONE_PATTERN, TEXT_LIMITS } from "../../lib/validation/text";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 const institutionCreateSchema = z.object({
-  name: z.string().min(2, "Institution name is required"),
+  name: z.string().trim().min(2, "Institution name is required").max(TEXT_LIMITS.institutionName, "Name too long"),
   type: z.enum(["school", "college"], { message: "Type must be school or college" }),
-  address: z.string().min(5, "Address is required").max(500, "Address too long").optional(),
+  address: z.string().trim().min(5, "Address is required").max(TEXT_LIMITS.address, "Address too long").optional(),
   contactDetails: z.object({
-    inchargePerson: z.string().min(2, "Incharge person name required").optional(),
-    mobileNumber: z.string().optional().or(z.literal("")),
-    email: z.string().email().max(255).optional().or(z.literal("")),
-    officePhone: z.string().optional().or(z.literal("")),
+    inchargePerson: z.string().trim().min(2, "Incharge person name required").max(TEXT_LIMITS.personName, "Name too long").optional(),
+    mobileNumber: z.string().trim().max(TEXT_LIMITS.phone, "Mobile number too long").regex(PHONE_PATTERN, "Invalid phone format").optional().or(z.literal("")),
+    email: z.string().trim().email().max(TEXT_LIMITS.email).optional().or(z.literal("")),
+    officePhone: z.string().trim().max(TEXT_LIMITS.phone, "Phone too long").regex(PHONE_PATTERN, "Invalid phone format").optional().or(z.literal("")),
   }).optional(),
 });
 

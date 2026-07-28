@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { _axios } from "@/lib/axios";
 import { CourseContentManager } from "./CourseContentManager";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 interface Props {
   courseId: string;
@@ -840,7 +841,7 @@ export function CourseManagementPage({ courseId }: Props) {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Batch Name <span className="text-destructive">*</span></Label>
-              <Input value={batchName} onChange={e => setBatchName(e.target.value)} placeholder="e.g. Batch A - Morning" />
+              <Input value={batchName} maxLength={TEXT_LIMITS.batchName} onChange={e => setBatchName(e.target.value)} placeholder="e.g. Batch A - Morning" />
             </div>
             <div className="space-y-1.5">
               <Label>Instructor</Label>

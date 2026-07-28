@@ -23,6 +23,7 @@ import { useCreateExamination } from "../hooks/useCreateExamination";
 import { useUpdateExamination } from "../hooks/useUpdateExamination";
 import { examinationSchema, formatClassLabel } from "../types";
 import type { Examination, ExaminationFormValues } from "../types";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -194,6 +195,7 @@ export function ExaminationFormDialog({
               <Input
                 id="examination-name"
                 placeholder="e.g. Mid-Term Examination"
+                maxLength={TEXT_LIMITS.examinationName}
                 className="neo-input"
                 {...register("name")}
               />

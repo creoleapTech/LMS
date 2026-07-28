@@ -37,12 +37,19 @@ export function AcademicSection() {
   // Create academic year form
   const [showCreate, setShowCreate] = useState(false);
   const [newLabel, setNewLabel] = useState("");
+  const [labelError, setLabelError] = useState("");
   const [newStartDate, setNewStartDate] = useState("");
   const [newEndDate, setNewEndDate] = useState("");
   const [newTerms, setNewTerms] = useState<IAcademicYearTerm[]>([]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      setLabelError("");
+      if (!newLabel.trim()) { setLabelError("Label is required"); throw new Error("Validation failed"); }
+      if (newLabel.length > 100) { setLabelError("Label too long (max 100)"); throw new Error("Validation failed"); }
+      for (const term of newTerms) {
+        if (term.label && term.label.length > 100) { setLabelError("Term label too long (max 100)"); throw new Error("Validation failed"); }
+      }
       const { data: res } = await _axios.post("/admin/academic-year", {
         label: newLabel,
         startDate: newStartDate,
@@ -211,8 +218,9 @@ export function AcademicSection() {
                 <Input
                   placeholder="2026-2027"
                   value={newLabel}
-                  onChange={(e) => setNewLabel(e.target.value)}
+                  onChange={(e) => { setNewLabel(e.target.value); setLabelError(""); }}
                 />
+                {labelError && <p className="text-xs text-destructive">{labelError}</p>}
               </div>
               <div className="space-y-2">
                 <Label>Start Date</Label>
@@ -244,6 +252,7 @@ export function AcademicSection() {
                     value={term.label}
                     onChange={(e) => updateTerm(idx, "label", e.target.value)}
                     className="max-w-[160px]"
+                    maxLength={100}
                   />
                   <Input
                     type="date"

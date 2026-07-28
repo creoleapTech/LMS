@@ -17,12 +17,13 @@ import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 import { Config } from "@/lib/config";
 import { compressImage } from "@/lib/imageUtils";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 const schema = z.object({
   grade: z.number().min(1).max(12),
-  bookTitle: z.string().min(3, "Book title must be at least 3 characters").max(200, "Title too long"),
-  subtitle: z.string().max(200, "Subtitle too long").optional().or(z.literal("")),
-  description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
+  bookTitle: z.string().trim().min(3, "Book title must be at least 3 characters").max(TEXT_LIMITS.gradeBookTitle, "Title too long"),
+  subtitle: z.string().trim().max(TEXT_LIMITS.gradeBookSubtitle, "Subtitle too long").optional().or(z.literal("")),
+  description: z.string().trim().max(TEXT_LIMITS.curriculumDescription, "Description too long").optional().or(z.literal("")),
   isPublished: z.boolean().optional(),
 });
 
@@ -190,18 +191,18 @@ export function GradeBookFormDialog({ open, onOpenChange, curriculumId, gradeBoo
 
             <div className="sm:col-span-2 space-y-1.5">
               <Label className="text-sm font-medium">Book Title <span className="text-destructive">*</span></Label>
-              <Input {...register("bookTitle")} placeholder="Mathematics Grade 1" />
+              <Input {...register("bookTitle")} maxLength={TEXT_LIMITS.gradeBookTitle} placeholder="Mathematics Grade 1" />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Subtitle</Label>
-            <Input {...register("subtitle")} placeholder="An introduction to mathematics" />
+            <Input {...register("subtitle")} maxLength={TEXT_LIMITS.gradeBookSubtitle} placeholder="An introduction to mathematics" />
           </div>
 
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Description</Label>
-            <Textarea {...register("description")} rows={3} placeholder="What this grade book covers..." className="resize-none" />
+            <Textarea {...register("description")} maxLength={TEXT_LIMITS.curriculumDescription} rows={3} placeholder="What this grade book covers..." className="resize-none" />
           </div>
 
           <div className="border-t pt-4">

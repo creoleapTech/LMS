@@ -23,16 +23,17 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Building2, MapPin, Phone, Mail, User, Smartphone, ImagePlus, X } from "lucide-react";
 import { Config } from "@/lib/config";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 const institutionSchema = z.object({
-  name: z.string().min(2, "Institution name is required"),
+  name: z.string().trim().min(2, "Institution name is required").max(TEXT_LIMITS.institutionName, "Name too long"),
   type: z.enum(["school", "college"], { message: "Select school or college" }),
-  address: z.string().min(5, "Address is required").max(500, "Address too long"),
+  address: z.string().trim().min(5, "Address is required").max(TEXT_LIMITS.address, "Address too long"),
   contactDetails: z.object({
-    inchargePerson: z.string().min(2, "Incharge person name required"),
-    mobileNumber: z.string(),
-    email: z.string().email().max(255).optional().or(z.literal("")),
-    officePhone: z.string().optional().or(z.literal("")),
+    inchargePerson: z.string().trim().min(2, "Incharge person name required").max(TEXT_LIMITS.personName, "Name too long"),
+    mobileNumber: z.string().trim().max(TEXT_LIMITS.phone, "Mobile number too long").regex(/^[\d\s\-\+\(\)]*$/, "Invalid phone format"),
+    email: z.string().trim().email().max(TEXT_LIMITS.email).optional().or(z.literal("")),
+    officePhone: z.string().trim().max(TEXT_LIMITS.phone, "Phone too long").optional().or(z.literal("")),
   }),
 });
 
@@ -175,7 +176,7 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave,
                 <Label htmlFor="inst-name" className="text-sm font-medium">Institution Name <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="inst-name" {...register("name")} placeholder="Creoleap Matric Hr Sec School" className="pl-9" />
+                  <Input id="inst-name" maxLength={TEXT_LIMITS.institutionName} {...register("name")} placeholder="Creoleap Matric Hr Sec School" className="pl-9" />
                 </div>
                 {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
               </div>
@@ -198,7 +199,7 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave,
                 <Label htmlFor="inst-address" className="text-sm font-medium">Address <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="inst-address" {...register("address")} placeholder="Nagercoil, Tamil Nadu" className="pl-9" />
+                  <Input id="inst-address" maxLength={TEXT_LIMITS.address} {...register("address")} placeholder="Nagercoil, Tamil Nadu" className="pl-9" />
                 </div>
                 {errors.address && <p className="text-xs text-destructive mt-1">{errors.address.message}</p>}
               </div>
@@ -253,7 +254,7 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave,
                 <Label htmlFor="incharge" className="text-sm font-medium">Incharge Person <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="incharge" {...register("contactDetails.inchargePerson")} placeholder="Mahendran" className="pl-9" />
+                  <Input id="incharge" maxLength={TEXT_LIMITS.personName} {...register("contactDetails.inchargePerson")} placeholder="Mahendran" className="pl-9" />
                 </div>
                 {errors.contactDetails?.inchargePerson && (
                   <p className="text-xs text-destructive mt-1">{errors.contactDetails.inchargePerson.message}</p>
@@ -264,7 +265,7 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave,
                 <Label htmlFor="mobile" className="text-sm font-medium">Mobile Number <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="mobile" {...register("contactDetails.mobileNumber")} placeholder="9344676467" className="pl-9" />
+                  <Input id="mobile" maxLength={TEXT_LIMITS.phone} {...register("contactDetails.mobileNumber")} placeholder="9344676467" className="pl-9" />
                 </div>
                 {errors.contactDetails?.mobileNumber && (
                   <p className="text-xs text-destructive mt-1">{errors.contactDetails.mobileNumber.message}</p>
@@ -275,7 +276,7 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave,
                 <Label htmlFor="email" className="text-sm font-medium">Email <span className="text-muted-foreground font-normal">(optional)</span></Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="email" type="email" {...register("contactDetails.email")} placeholder="school@example.com" className="pl-9" />
+                  <Input id="email" type="email" maxLength={TEXT_LIMITS.email} {...register("contactDetails.email")} placeholder="school@example.com" className="pl-9" />
                 </div>
                 {errors.contactDetails?.email && (
                   <p className="text-xs text-destructive mt-1">{errors.contactDetails.email.message}</p>
@@ -286,7 +287,7 @@ export function InstitutionFormDialog({ open, onOpenChange, institution, onSave,
                 <Label htmlFor="office-phone" className="text-sm font-medium">Office Phone <span className="text-muted-foreground font-normal">(optional)</span></Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="office-phone" {...register("contactDetails.officePhone")} placeholder="0476-2223456" className="pl-9" />
+                  <Input id="office-phone" maxLength={TEXT_LIMITS.phone} {...register("contactDetails.officePhone")} placeholder="0476-2223456" className="pl-9" />
                 </div>
               </div>
             </div>

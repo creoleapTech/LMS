@@ -13,12 +13,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, FileText, BookOpen, Hash, AlignLeft, ListChecks } from "lucide-react";
 import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 const schema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters").max(200, "Title too long"),
+  title: z.string().trim().min(3, "Title must be at least 3 characters").max(TEXT_LIMITS.chapterTitle, "Title too long"),
   chapterNumber: z.number().min(1, "Chapter number must be at least 1"),
-  description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
-  learningObjectives: z.string().max(2000, "Learning objectives too long").optional().or(z.literal("")),
+  description: z.string().trim().max(TEXT_LIMITS.chapterDescription, "Description too long").optional().or(z.literal("")),
+  learningObjectives: z.string().trim().max(TEXT_LIMITS.chapterObjectives, "Learning objectives too long").optional().or(z.literal("")),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -110,7 +111,7 @@ export function ChapterFormDialog({ open, onOpenChange, gradeBookId, chapter, on
               <Label className="text-sm font-medium">Chapter Title <span className="text-destructive">*</span></Label>
               <div className="relative">
                 <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input {...register("title")} className="pl-9" placeholder="Introduction to Algebra" />
+                <Input {...register("title")} maxLength={TEXT_LIMITS.chapterTitle} className="pl-9" placeholder="Introduction to Algebra" />
               </div>
               {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
             </div>
@@ -139,6 +140,7 @@ export function ChapterFormDialog({ open, onOpenChange, gradeBookId, chapter, on
             </Label>
             <Textarea
               {...register("description")}
+              maxLength={TEXT_LIMITS.chapterDescription}
               rows={3}
               placeholder="Brief description of this chapter..."
               className="resize-none"
@@ -151,6 +153,7 @@ export function ChapterFormDialog({ open, onOpenChange, gradeBookId, chapter, on
             </Label>
             <Textarea
               {...register("learningObjectives")}
+              maxLength={TEXT_LIMITS.chapterObjectives}
               rows={4}
               placeholder="What students will learn in this chapter..."
               className="resize-none"

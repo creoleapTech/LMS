@@ -9,6 +9,7 @@ import { superAdminAuth } from "../../middleware/super-admin-auth";
 import { saveFile, deleteFile, isPptFile } from "../../lib/file";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
+import { TEXT_LIMITS } from "../../lib/validation/text";
 import {
   curricula,
   gradeBooks,
@@ -227,16 +228,19 @@ app.post("/", async (c) => {
   if (user.role !== "super_admin") throw new ForbiddenError("Only super_admin can create curriculums");
 
   const formData = await c.req.formData();
-  const name = formData.get("name") as string;
-  const description = (formData.get("description") as string) || null;
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim() || null;
   const isPublished = parseBool(formData.get("isPublished"));
-  const tags = toArray(formData.getAll("tags"));
+  const tags = toArray(formData.getAll("tags")).map((tag) => tag.trim()).filter(Boolean);
   const levels = toArray(formData.getAll("level"));
   const grades = toIntArray(formData.getAll("grades"));
   const thumbnailFile = formData.get("thumbnail") as File | null;
   const bannerFile = formData.get("banner") as File | null;
 
   if (!name || name.length < 3) throw new BadRequestError("Name is required (min 3 chars)");
+  if (name.length > TEXT_LIMITS.curriculumName) throw new BadRequestError(`Name must be at most ${TEXT_LIMITS.curriculumName} characters`);
+  if (description && description.length > TEXT_LIMITS.curriculumDescription) throw new BadRequestError(`Description must be at most ${TEXT_LIMITS.curriculumDescription} characters`);
+  if (tags.some((tag) => tag.length > TEXT_LIMITS.curriculumTags)) throw new BadRequestError(`Each tag must be at most ${TEXT_LIMITS.curriculumTags} characters`);
 
   const db = getDb(c.env.DB);
 
@@ -352,14 +356,18 @@ app.patch("/:id", async (c) => {
   const formData = await c.req.formData();
   const updateData: Record<string, any> = {};
 
-  const name = formData.get("name") as string | null;
+  const name = typeof formData.get("name") === "string" ? String(formData.get("name")).trim() : null;
   if (name) {
+    if (name.length > TEXT_LIMITS.curriculumName) throw new BadRequestError(`Name must be at most ${TEXT_LIMITS.curriculumName} characters`);
     updateData.name = name;
     updateData.slug = slugify(name);
   }
 
-  const description = formData.get("description") as string | null;
-  if (description !== null) updateData.description = description;
+  const description = typeof formData.get("description") === "string" ? String(formData.get("description")).trim() : null;
+  if (description !== null) {
+    if (description.length > TEXT_LIMITS.curriculumDescription) throw new BadRequestError(`Description must be at most ${TEXT_LIMITS.curriculumDescription} characters`);
+    updateData.description = description;
+  }
 
   const isPublished = formData.get("isPublished");
   if (isPublished !== null) updateData.isPublished = parseBool(isPublished) ? 1 : 0;
@@ -399,7 +407,7 @@ app.patch("/:id", async (c) => {
   await replaceCurriculumJunctions(
     db,
     id,
-    tagsRaw.length > 0 ? toArray(tagsRaw) : undefined,
+    tagsRaw.length > 0 ? toArray(tagsRaw).map((tag) => tag.trim()).filter(Boolean) : undefined,
     levelsRaw.length > 0 ? toArray(levelsRaw) : undefined,
     gradesRaw.length > 0 ? toIntArray(gradesRaw) : undefined,
   );
@@ -454,11 +462,16 @@ app.post("/:curriculumId/grades", async (c) => {
 
   const formData = await c.req.formData();
   const grade = parseIntSafe(formData.get("grade"));
-  const bookTitle = formData.get("bookTitle") as string;
-  const subtitle = (formData.get("subtitle") as string) || null;
-  const description = (formData.get("description") as string) || null;
+  const bookTitle = String(formData.get("bookTitle") ?? "").trim();
+  const subtitle = String(formData.get("subtitle") ?? "").trim() || null;
+  const description = String(formData.get("description") ?? "").trim() || null;
   const isPublished = parseBool(formData.get("isPublished"));
   const coverImageFile = formData.get("coverImage") as File | null;
+
+  if (bookTitle.length < 3) throw new BadRequestError("Book title must be at least 3 characters");
+  if (bookTitle.length > TEXT_LIMITS.gradeBookTitle) throw new BadRequestError(`Book title must be at most ${TEXT_LIMITS.gradeBookTitle} characters`);
+  if (subtitle && subtitle.length > TEXT_LIMITS.gradeBookSubtitle) throw new BadRequestError(`Subtitle must be at most ${TEXT_LIMITS.gradeBookSubtitle} characters`);
+  if (description && description.length > TEXT_LIMITS.curriculumDescription) throw new BadRequestError(`Description must be at most ${TEXT_LIMITS.curriculumDescription} characters`);
 
   // Check existing
   const [existingGrade] = await db
@@ -523,17 +536,27 @@ app.patch("/gradebook/:id", async (c) => {
   const formData = await c.req.formData();
   const updateData: Record<string, any> = {};
 
-  const bookTitle = formData.get("bookTitle") as string | null;
-  if (bookTitle !== null) updateData.bookTitle = bookTitle;
+  const bookTitle = typeof formData.get("bookTitle") === "string" ? String(formData.get("bookTitle")).trim() : null;
+  if (bookTitle !== null) {
+    if (bookTitle.length < 3) throw new BadRequestError("Book title must be at least 3 characters");
+    if (bookTitle.length > TEXT_LIMITS.gradeBookTitle) throw new BadRequestError(`Book title must be at most ${TEXT_LIMITS.gradeBookTitle} characters`);
+    updateData.bookTitle = bookTitle;
+  }
 
   const grade = formData.get("grade");
   if (grade !== null) updateData.grade = parseInt(String(grade), 10);
 
-  const subtitle = formData.get("subtitle") as string | null;
-  if (subtitle !== null) updateData.subtitle = subtitle;
+  const subtitle = typeof formData.get("subtitle") === "string" ? String(formData.get("subtitle")).trim() : null;
+  if (subtitle !== null) {
+    if (subtitle.length > TEXT_LIMITS.gradeBookSubtitle) throw new BadRequestError(`Subtitle must be at most ${TEXT_LIMITS.gradeBookSubtitle} characters`);
+    updateData.subtitle = subtitle;
+  }
 
-  const description = formData.get("description") as string | null;
-  if (description !== null) updateData.description = description;
+  const description = typeof formData.get("description") === "string" ? String(formData.get("description")).trim() : null;
+  if (description !== null) {
+    if (description.length > TEXT_LIMITS.curriculumDescription) throw new BadRequestError(`Description must be at most ${TEXT_LIMITS.curriculumDescription} characters`);
+    updateData.description = description;
+  }
 
   const isPublished = formData.get("isPublished");
   if (isPublished !== null) updateData.isPublished = parseBool(isPublished) ? 1 : 0;
@@ -642,15 +665,20 @@ app.post("/gradebook/:gradeBookId/chapters", async (c) => {
   if (contentType.includes("multipart/form-data")) {
     const formData = await c.req.formData();
     body = {
-      title: formData.get("title"),
+      title: typeof formData.get("title") === "string" ? String(formData.get("title")).trim() : formData.get("title"),
       chapterNumber: Number(formData.get("chapterNumber")),
-      description: formData.get("description"),
-      learningObjectives: formData.get("learningObjectives"),
+      description: typeof formData.get("description") === "string" ? String(formData.get("description")).trim() : formData.get("description"),
+      learningObjectives: typeof formData.get("learningObjectives") === "string" ? String(formData.get("learningObjectives")).trim() : formData.get("learningObjectives"),
     };
     thumbnailFile = formData.get("thumbnail") as File | null;
   } else {
     body = await c.req.json();
   }
+
+  if (typeof body.title !== "string" || body.title.trim().length < 3) throw new BadRequestError("Chapter title must be at least 3 characters");
+  if (body.title.trim().length > TEXT_LIMITS.chapterTitle) throw new BadRequestError(`Chapter title must be at most ${TEXT_LIMITS.chapterTitle} characters`);
+  if (body.description && String(body.description).length > TEXT_LIMITS.chapterDescription) throw new BadRequestError(`Description must be at most ${TEXT_LIMITS.chapterDescription} characters`);
+  if (body.learningObjectives && String(body.learningObjectives).length > TEXT_LIMITS.chapterObjectives) throw new BadRequestError(`Learning objectives must be at most ${TEXT_LIMITS.chapterObjectives} characters`);
 
   const [maxRow] = await db
     .select({ max: sql<number>`COALESCE(MAX(${chapters.order}), 0)` })
@@ -729,10 +757,10 @@ app.patch("/chapters/:id", async (c) => {
   if (contentType.includes("multipart/form-data")) {
     const formData = await c.req.formData();
     body = {
-      title: formData.get("title"),
+      title: typeof formData.get("title") === "string" ? String(formData.get("title")).trim() : formData.get("title"),
       chapterNumber: formData.get("chapterNumber") ? Number(formData.get("chapterNumber")) : undefined,
-      description: formData.get("description"),
-      learningObjectives: formData.get("learningObjectives"),
+      description: typeof formData.get("description") === "string" ? String(formData.get("description")).trim() : formData.get("description"),
+      learningObjectives: typeof formData.get("learningObjectives") === "string" ? String(formData.get("learningObjectives")).trim() : formData.get("learningObjectives"),
     };
     thumbnailFile = formData.get("thumbnail") as File | null;
   } else {
@@ -740,10 +768,20 @@ app.patch("/chapters/:id", async (c) => {
   }
 
   const updateData: Record<string, any> = {};
-  if (body.title !== undefined) updateData.title = body.title;
+  if (body.title !== undefined) {
+    if (typeof body.title !== "string" || body.title.trim().length < 3) throw new BadRequestError("Chapter title must be at least 3 characters");
+    if (body.title.trim().length > TEXT_LIMITS.chapterTitle) throw new BadRequestError(`Chapter title must be at most ${TEXT_LIMITS.chapterTitle} characters`);
+    updateData.title = body.title;
+  }
   if (body.chapterNumber !== undefined) updateData.chapterNumber = body.chapterNumber;
-  if (body.description !== undefined) updateData.description = body.description;
-  if (body.learningObjectives !== undefined) updateData.learningObjectives = body.learningObjectives;
+  if (body.description !== undefined) {
+    if (String(body.description).length > TEXT_LIMITS.chapterDescription) throw new BadRequestError(`Description must be at most ${TEXT_LIMITS.chapterDescription} characters`);
+    updateData.description = body.description;
+  }
+  if (body.learningObjectives !== undefined) {
+    if (String(body.learningObjectives).length > TEXT_LIMITS.chapterObjectives) throw new BadRequestError(`Learning objectives must be at most ${TEXT_LIMITS.chapterObjectives} characters`);
+    updateData.learningObjectives = body.learningObjectives;
+  }
 
   if (thumbnailFile) {
     const result = await saveFile(c.env.BUCKET, thumbnailFile, "chapters/thumbnails");

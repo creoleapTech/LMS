@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImagePlus, Loader2, X, Book, BookOpen, IndianRupee, CalendarDays, Tag } from "lucide-react";
 import { compressImage } from "@/lib/imageUtils";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 type Course = {
   id: string;
@@ -27,12 +28,12 @@ type Course = {
 };
 
 const courseSchema = z.object({
-  code: z.string().min(3, "Code must be at least 3 characters").max(10, "Code too long").toUpperCase(),
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
+  code: z.string().trim().min(3, "Code must be at least 3 characters").max(TEXT_LIMITS.courseCode, "Code too long").transform((value) => value.toUpperCase()),
+  name: z.string().trim().min(3, "Name must be at least 3 characters").max(TEXT_LIMITS.courseName, "Name too long"),
+  description: z.string().trim().max(TEXT_LIMITS.courseDescription, "Description too long").optional().or(z.literal("")),
   thumbnail: z.string().optional(),
   level: z.enum(["Beginner", "Intermediate", "Advanced"]),
-  duration: z.string().min(2, "Duration is required").max(100, "Duration too long"),
+  duration: z.string().trim().min(2, "Duration is required").max(TEXT_LIMITS.courseDuration, "Duration too long"),
   fees: z.coerce.number().min(0, "Fees cannot be negative"),
   status: z.enum(["Active", "Inactive", "Archived"]),
   startDate: z.string(),
@@ -138,12 +139,12 @@ export function CourseFormDialog({ open, onOpenChange, course, onSave }: Props) 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Course Code <span className="text-destructive">*</span></Label>
-                <Input {...register("code")} placeholder="e.g. MATH101" className="uppercase" />
+                <Input {...register("code")} maxLength={TEXT_LIMITS.courseCode} placeholder="e.g. MATH101" className="uppercase" />
                 {errors.code && <p className="text-xs text-destructive">{errors.code.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>Course Name <span className="text-destructive">*</span></Label>
-                <Input {...register("name")} placeholder="e.g. Mathematics Grade 10" />
+                <Input {...register("name")} maxLength={TEXT_LIMITS.courseName} placeholder="e.g. Mathematics Grade 10" />
                 {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
               </div>
 
@@ -152,7 +153,7 @@ export function CourseFormDialog({ open, onOpenChange, course, onSave }: Props) 
                   <Tag className="h-3.5 w-3.5 text-muted-foreground" />
                   <Label className="text-sm font-medium">Description</Label>
                 </div>
-                <Textarea {...register("description")} placeholder="Brief description of the course..." rows={3} className="resize-none" />
+                <Textarea {...register("description")} maxLength={TEXT_LIMITS.courseDescription} placeholder="Brief description of the course..." rows={3} className="resize-none" />
               </div>
 
               <div className="space-y-1.5">
@@ -188,7 +189,7 @@ export function CourseFormDialog({ open, onOpenChange, course, onSave }: Props) 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label>Duration <span className="text-destructive">*</span></Label>
-                <Input {...register("duration")} placeholder="e.g. 6 Months" />
+                <Input {...register("duration")} maxLength={TEXT_LIMITS.courseDuration} placeholder="e.g. 6 Months" />
               </div>
 
               <div className="space-y-1.5">

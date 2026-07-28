@@ -17,11 +17,12 @@ import { _axios } from "@/lib/axios";
 import { toast } from "sonner";
 import { Config } from "@/lib/config";
 import { compressImage } from "@/lib/imageUtils";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 const schema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
-  tags: z.string().max(500, "Tags too long").optional().or(z.literal("")),
+  name: z.string().trim().min(3, "Name must be at least 3 characters").max(TEXT_LIMITS.curriculumName, "Name too long"),
+  description: z.string().trim().max(TEXT_LIMITS.curriculumDescription, "Description too long").optional().or(z.literal("")),
+  tags: z.string().trim().max(TEXT_LIMITS.curriculumTags, "Tags too long").optional().or(z.literal("")),
   level: z.array(z.string()).min(1, "Please select at least one level"),
   grades: z.array(z.number()).min(1, "Please select at least one grade"),
   isPublished: z.boolean(),
@@ -229,7 +230,7 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
                 <Label className="text-sm font-medium">Curriculum Name <span className="text-destructive">*</span></Label>
                 <div className="relative">
                   <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input {...register("name")} className="pl-9" placeholder="AI Integrated Robotics" />
+                  <Input {...register("name")} maxLength={TEXT_LIMITS.curriculumName} className="pl-9" placeholder="AI Integrated Robotics" />
                 </div>
                 {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
               </div>
@@ -249,14 +250,14 @@ export function CurriculumFormDialog({ open, onOpenChange, curriculum, onSuccess
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   <Layers3 className="h-3.5 w-3.5 text-muted-foreground" /> Description
                 </Label>
-                <Textarea {...register("description")} rows={3} placeholder="Brief description of this curriculum..." className="resize-none" />
+                <Textarea {...register("description")} maxLength={TEXT_LIMITS.curriculumDescription} rows={3} placeholder="Brief description of this curriculum..." className="resize-none" />
               </div>
 
               <div className="md:col-span-2 space-y-1.5">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   <Tag className="h-3.5 w-3.5 text-muted-foreground" /> Tags
                 </Label>
-                <Input {...register("tags")} placeholder="AI, Robotics, STEM..." />
+                <Input {...register("tags")} maxLength={TEXT_LIMITS.curriculumTags} placeholder="AI, Robotics, STEM..." />
                 <p className="text-xs text-muted-foreground">Separate tags with commas</p>
               </div>
             </div>

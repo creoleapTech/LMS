@@ -18,6 +18,7 @@ import { nowISO } from "../../lib/utils";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { adminAuth } from "../../middleware/admin-auth";
+import { TEXT_LIMITS } from "../../lib/validation/text";
 
 const app = new Hono<{
   Bindings: Bindings;
@@ -55,8 +56,8 @@ async function recalcQuizPoints(db: ReturnType<typeof getDb>, quizId: string) {
 // ─── Zod Schemas ───────────────────────────────────────────────
 
 const createQuizSchema = z.object({
-  title: z.string().min(1, "Title is required").max(200),
-  description: z.string().max(2000).optional(),
+  title: z.string().trim().min(1, "Title is required").max(TEXT_LIMITS.quizTitle),
+  description: z.string().trim().max(TEXT_LIMITS.quizDescription).optional(),
   institutionId: z.string().optional(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
@@ -68,15 +69,15 @@ const createQuizSchema = z.object({
 });
 
 const createQuestionSchema = z.object({
-  questionText: z.string().min(1, "Question text is required").max(2000, "Question too long"),
+  questionText: z.string().trim().min(1, "Question text is required").max(TEXT_LIMITS.quizQuestion, "Question too long"),
   answerType: z.enum(["multiple_choice", "true_false"]).default("multiple_choice"),
-  correctAnswer: z.string().min(1, "Correct answer is required").max(500, "Answer too long"),
-  explanation: z.string().max(2000, "Explanation too long").optional().or(z.literal("")),
+  correctAnswer: z.string().trim().min(1, "Correct answer is required").max(TEXT_LIMITS.quizAnswer, "Answer too long"),
+  explanation: z.string().trim().max(TEXT_LIMITS.quizExplanation, "Explanation too long").optional().or(z.literal("")),
   points: z.number().int().min(0).max(100).default(1),
   options: z
     .array(
       z.object({
-        text: z.string().min(1),
+        text: z.string().trim().min(1).max(TEXT_LIMITS.optionText, "Option too long"),
         mediaUrl: z.string().optional().nullable(),
         mediaType: z.enum(["image", "video"]).optional().nullable(),
       }),

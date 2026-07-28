@@ -9,6 +9,7 @@ import { examinations, examinationColumns, examinationCells } from "../../schema
 import { students, classes } from "../../schema/admin";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
+import { TEXT_LIMITS } from "../../lib/validation/text";
 
 const examinationController = new Hono<{
   Bindings: Bindings;
@@ -126,6 +127,9 @@ examinationController.post("/", async (c) => {
 
   // Case-insensitive duplicate check within the same institution
   const trimmedName = body.name.trim();
+  if (trimmedName.length > TEXT_LIMITS.examinationName) {
+    throw new BadRequestError(`name must be at most ${TEXT_LIMITS.examinationName} characters`);
+  }
   const [existing] = await db
     .select({ id: examinations.id })
     .from(examinations)
@@ -303,6 +307,9 @@ examinationController.patch("/:id", async (c) => {
     }
     // Case-insensitive duplicate check (exclude the current exam)
     const trimmedName = body.name.trim();
+    if (trimmedName.length > TEXT_LIMITS.examinationName) {
+      throw new BadRequestError(`name must be at most ${TEXT_LIMITS.examinationName} characters`);
+    }
     const [duplicate] = await db
       .select({ id: examinations.id })
       .from(examinations)

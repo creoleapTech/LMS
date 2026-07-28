@@ -31,6 +31,7 @@ import {
   type ColumnConfigFormValues,
   type ColumnType,
 } from "../types";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -177,6 +178,7 @@ export function ColumnConfigSheet({
             <Input
               id="column-name"
               placeholder="e.g. Math Score"
+              maxLength={TEXT_LIMITS.examinationColumnName}
               {...register("name", {
                 validate: (value) => {
                   const nameLower = value.trim().toLowerCase();
@@ -266,6 +268,7 @@ export function ColumnConfigSheet({
                 id="column-formula"
                 placeholder="e.g. Math + Science / 2"
                 rows={3}
+                maxLength={TEXT_LIMITS.examinationFormula}
                 {...register("formula")}
               />
 

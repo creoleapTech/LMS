@@ -187,6 +187,7 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
                   onChange={(e) => updatePeriod(idx, "label", e.target.value)}
                   placeholder="Label"
                   className="max-w-[120px] h-8 text-sm rounded-lg"
+                  maxLength={50}
                 />
 
                 {/* Start time */}

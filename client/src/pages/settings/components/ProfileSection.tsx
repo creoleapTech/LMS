@@ -42,6 +42,7 @@ export function ProfileSection() {
   });
 
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState("");
   const [salutation, setSalutation] = useState<string>("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [mobileError, setMobileError] = useState("");
@@ -55,6 +56,7 @@ export function ProfileSection() {
       setMobileNumber(profile.mobileNumber || "");
       setProfileImagePreview(resolveProfileImageSrc(profile.profileImage));
       setProfileImageFile(null);
+      setNameError("");
       setMobileError("");
     }
   }, [profile]);
@@ -138,10 +140,17 @@ export function ProfileSection() {
 
   // Change password
   const [currentPassword, setCurrentPassword] = useState("");
+  const [currentPasswordError, setCurrentPasswordError] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [newPasswordError, setNewPasswordError] = useState("");
 
   const passwordMutation = useMutation({
     mutationFn: async () => {
+      setCurrentPasswordError("");
+      setNewPasswordError("");
+      if (!currentPassword) { setCurrentPasswordError("Current password is required"); throw new Error("Validation failed"); }
+      if (!newPassword || newPassword.length < 6) { setNewPasswordError("New password must be at least 6 characters"); throw new Error("Validation failed"); }
+      if (newPassword.length > 128) { setNewPasswordError("Password too long (max 128)"); throw new Error("Validation failed"); }
       const { data: res } = await _axios.patch("/admin/settings/change-password", {
         currentPassword,
         newPassword,
@@ -217,7 +226,11 @@ export function ProfileSection() {
 
             <div className="space-y-2">
               <Label>Full Name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
+              <Input value={name} onChange={(e) => {
+                  setName(e.target.value);
+                  setNameError("");
+                }} />
+              {nameError && <p className="text-xs text-destructive">{nameError}</p>}
             </div>
 
             <div className="space-y-2">
@@ -269,16 +282,18 @@ export function ProfileSection() {
               <Input
                 type="password"
                 value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
+                onChange={(e) => { setCurrentPassword(e.target.value); setCurrentPasswordError(""); }}
               />
+              {currentPasswordError && <p className="text-xs text-destructive">{currentPasswordError}</p>}
             </div>
             <div className="space-y-2">
               <Label>New Password</Label>
               <Input
                 type="password"
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={(e) => { setNewPassword(e.target.value); setNewPasswordError(""); }}
               />
+              {newPasswordError && <p className="text-xs text-destructive">{newPasswordError}</p>}
             </div>
           </div>
 

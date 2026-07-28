@@ -33,11 +33,16 @@ export function InstitutionProfileSection() {
   });
 
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState("");
   const [type, setType] = useState<string>("school");
   const [address, setAddress] = useState("");
+  const [addressError, setAddressError] = useState("");
   const [inchargePerson, setInchargePerson] = useState("");
+  const [inchargeError, setInchargeError] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
+  const [mobileError, setMobileError] = useState("");
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [officePhone, setOfficePhone] = useState("");
 
   useEffect(() => {
@@ -49,11 +54,32 @@ export function InstitutionProfileSection() {
       setMobileNumber(institution.contactDetails?.mobileNumber || "");
       setEmail(institution.contactDetails?.email || "");
       setOfficePhone(institution.contactDetails?.officePhone || "");
+      setNameError("");
+      setAddressError("");
+      setInchargeError("");
+      setMobileError("");
+      setEmailError("");
     }
   }, [institution]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      setNameError("");
+      setAddressError("");
+      setInchargeError("");
+      setMobileError("");
+      setEmailError("");
+      let valid = true;
+      if (!name.trim()) { setNameError("Name is required"); valid = false; }
+      else if (name.length > 200) { setNameError("Name too long (max 200)"); valid = false; }
+      if (!address.trim()) { setAddressError("Address is required"); valid = false; }
+      else if (address.length > 500) { setAddressError("Address too long (max 500)"); valid = false; }
+      if (!inchargePerson.trim()) { setInchargeError("Name is required"); valid = false; }
+      else if (inchargePerson.length > 100) { setInchargeError("Name too long (max 100)"); valid = false; }
+      if (mobileNumber.length > 20) { setMobileError("Mobile number too long"); valid = false; }
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setEmailError("Invalid email"); valid = false; }
+      else if (email.length > 255) { setEmailError("Email too long"); valid = false; }
+      if (!valid) throw new Error("Validation failed");
       const { data: res } = await _axios.patch(`/admin/settings/institution-profile${qsParam}`, {
         name,
         type,
@@ -96,7 +122,8 @@ export function InstitutionProfileSection() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label>Institution Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Input value={name} onChange={(e) => { setName(e.target.value); setNameError(""); }} />
+              {nameError && <p className="text-xs text-destructive">{nameError}</p>}
           </div>
 
           <div className="space-y-2">
@@ -114,23 +141,26 @@ export function InstitutionProfileSection() {
 
           <div className="space-y-2">
             <Label>In-Charge Person</Label>
-            <Input value={inchargePerson} onChange={(e) => setInchargePerson(e.target.value)} />
+            <Input value={inchargePerson} onChange={(e) => { setInchargePerson(e.target.value); setInchargeError(""); }} />
+              {inchargeError && <p className="text-xs text-destructive">{inchargeError}</p>}
           </div>
 
           <div className="space-y-2">
             <Label>Contact Number</Label>
             <div className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-muted-foreground" />
-              <Input value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} />
+              <Input value={mobileNumber} onChange={(e) => { setMobileNumber(e.target.value); setMobileError(""); }} />
             </div>
+            {mobileError && <p className="text-xs text-destructive">{mobileError}</p>}
           </div>
 
           <div className="space-y-2">
             <Label>Email</Label>
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-muted-foreground" />
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setEmailError(""); }} />
             </div>
+            {emailError && <p className="text-xs text-destructive">{emailError}</p>}
           </div>
 
           <div className="space-y-2">
@@ -142,8 +172,9 @@ export function InstitutionProfileSection() {
             <Label>Address</Label>
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground mt-2" />
-              <Textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={3} />
+              <Textarea value={address} onChange={(e) => { setAddress(e.target.value); setAddressError(""); }} rows={3} />
             </div>
+            {addressError && <p className="text-xs text-destructive">{addressError}</p>}
           </div>
         </div>
 

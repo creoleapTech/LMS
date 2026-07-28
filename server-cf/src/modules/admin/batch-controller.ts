@@ -9,13 +9,14 @@ import { batchStudents } from "../../schema/junction";
 import { nowISO } from "../../lib/utils";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { adminAuth } from "../../middleware/admin-auth";
+import { TEXT_LIMITS } from "../../lib/validation/text";
 
 const batchController = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 batchController.use("*", adminAuth);
 
 const batchSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().trim().min(1, "Name is required").max(TEXT_LIMITS.batchName, "Name too long"),
   courseId: z.string().min(1, "Course is required"),
   instructorId: z.string().optional(),
   startDate: z.string().optional(),

@@ -20,6 +20,7 @@ import {
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { saveFile, deleteFile } from "../../lib/file";
+import { PHONE_PATTERN, TEXT_LIMITS } from "../../lib/validation/text";
 
 const staffController = new Hono<{
   Bindings: Bindings;
@@ -104,15 +105,15 @@ async function getStaffRelations(
 }
 
 const staffCreateSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().trim().min(1, "Name is required").max(TEXT_LIMITS.personName, "Name too long"),
   salutation: z.enum(["Mr", "Mrs", "Ms", "Dr"]).optional().nullable(),
-  email: z.string().email("Invalid email").max(255, "Email too long"),
-  mobileNumber: z.string().optional().nullable().or(z.literal("")),
+  email: z.string().trim().email("Invalid email").max(TEXT_LIMITS.email, "Email too long"),
+  mobileNumber: z.string().trim().max(TEXT_LIMITS.phone, "Mobile number too long").regex(PHONE_PATTERN, "Invalid mobile number format").optional().nullable().or(z.literal("")),
   type: z.enum(["teacher", "admin"]).optional(),
   joiningDate: z.string().optional().nullable(),
   institutionId: z.string().min(1, "Institution is required"),
-  password: z.string().min(8, "Password must be at least 8 characters").max(128).optional().nullable().or(z.literal("")),
-  subjects: z.array(z.string()).optional().nullable(),
+  password: z.string().min(8, "Password must be at least 8 characters").max(TEXT_LIMITS.password).optional().nullable().or(z.literal("")),
+  subjects: z.array(z.string().trim().min(1).max(TEXT_LIMITS.personName, "Subject too long")).max(20, "Too many subjects").optional().nullable(),
   assignedClasses: z.array(z.string()).optional().nullable(),
   profileImage: z.string().optional(),
 });

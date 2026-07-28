@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
@@ -20,6 +21,7 @@ import {
 import { gradeBooks } from "../../schema/books";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
+import { TEXT_LIMITS } from "../../lib/validation/text";
 
 const classController = new Hono<{
   Bindings: Bindings;
@@ -29,9 +31,23 @@ const classController = new Hono<{
 // Apply auth to all routes
 classController.use("*", adminAuth);
 
+const classCreateSchema = z.object({
+  grade: z.string().trim().min(1, "Grade is required").max(TEXT_LIMITS.classGrade, "Grade too long"),
+  section: z.string().trim().min(1, "Section is required").max(TEXT_LIMITS.classSection, "Section too long"),
+  year: z.string().trim().max(TEXT_LIMITS.classYear, "Year too long").regex(/^\d{4}(-\d{4})?$/, "Enter a valid year (e.g. 2024 or 2024-2025)").optional().or(z.literal("")),
+  institutionId: z.string().min(1, "Institution is required"),
+  departmentId: z.string().optional(),
+  capacity: z.coerce.number().int().positive().optional(),
+  isActive: z.union([z.literal(1), z.literal(0)]).optional(),
+});
+
 // ─── CREATE Class ──────────────────────────────────
 classController.post("/", async (c) => {
   const body = await c.req.json();
+  const parsed = classCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new BadRequestError(parsed.error.errors.map((e) => e.message).join(", "));
+  }
   const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
 
@@ -40,7 +56,7 @@ classController.post("/", async (c) => {
     .select()
     .from(institutions)
     .where(
-      and(eq(institutions.id, body.institutionId), eq(institutions.isDeleted, 0))
+      and(eq(institutions.id, parsed.data.institutionId), eq(institutions.isDeleted, 0))
     )
     .limit(1);
 
@@ -52,12 +68,12 @@ classController.post("/", async (c) => {
     throw new ForbiddenError("Access denied");
   }
 
-  if (inst.type === "college" && !body.departmentId) {
+  if (inst.type === "college" && !parsed.data.departmentId) {
     throw new BadRequestError("departmentId is required for colleges");
   }
 
   // Validate grade against enabled curriculum grades
-  if (body.grade) {
+  if (parsed.data.grade) {
     // Get curriculum access entries for this institution
     const accessRows = await db
       .select({ id: institutionCurriculumAccess.id })
@@ -105,9 +121,9 @@ classController.post("/", async (c) => {
         }
 
         const uniqueGrades = [...new Set(allowedGrades)];
-        if (uniqueGrades.length > 0 && !uniqueGrades.includes(body.grade)) {
+        if (uniqueGrades.length > 0 && !uniqueGrades.includes(parsed.data.grade)) {
           throw new BadRequestError(
-            `Grade "${body.grade}" is not enabled for this institution`
+            `Grade "${parsed.data.grade}" is not enabled for this institution`
           );
         }
       }
@@ -118,15 +134,15 @@ classController.post("/", async (c) => {
   const now = nowISO();
 
   // Check for duplicate section (case-insensitive) within same institution + grade
-  const normalizedSection = body.section.trim().toUpperCase();
+  const normalizedSection = parsed.data.section.trim().toUpperCase();
 
   const existingSections = await db
     .select({ section: classes.section })
     .from(classes)
     .where(
       and(
-        eq(classes.institutionId, body.institutionId),
-        eq(classes.grade, body.grade || ""),
+        eq(classes.institutionId, parsed.data.institutionId),
+        eq(classes.grade, parsed.data.grade || ""),
         eq(classes.isDeleted, 0)
       )
     );
@@ -137,7 +153,7 @@ classController.post("/", async (c) => {
 
   if (sectionExists) {
     throw new BadRequestError(
-      `Class already exists: Grade ${body.grade || "N/A"} Section "${body.section}" is already created for this institution`
+      `Class already exists: Grade ${parsed.data.grade || "N/A"} Section "${parsed.data.section}" is already created for this institution`
     );
   }
 
@@ -145,11 +161,12 @@ classController.post("/", async (c) => {
     .insert(classes)
     .values({
       id: classId,
-      grade: body.grade,
-      section: body.section,
-      year: body.year,
-      institutionId: body.institutionId,
-      departmentId: body.departmentId,
+      grade: parsed.data.grade,
+      section: parsed.data.section,
+      year: parsed.data.year,
+      institutionId: parsed.data.institutionId,
+      departmentId: parsed.data.departmentId,
+      capacity: parsed.data.capacity ?? null,
       isActive: 1,
       isDeleted: 0,
       createdAt: now,
@@ -334,12 +351,17 @@ classController.patch("/:id", async (c) => {
     throw new ForbiddenError("Access denied");
   }
 
+  const parsed = classCreateSchema.partial().safeParse(body);
+  if (!parsed.success) {
+    throw new BadRequestError(parsed.error.errors.map((e) => e.message).join(", "));
+  }
+
   const updateData: Record<string, any> = { updatedAt: nowISO() };
   const allowedFields = ["grade", "section", "year", "capacity", "isActive"] as const;
 
   for (const field of allowedFields) {
-    if (body[field] !== undefined) {
-      updateData[field] = body[field];
+    if (parsed.data[field] !== undefined) {
+      updateData[field] = parsed.data[field];
     }
   }
 

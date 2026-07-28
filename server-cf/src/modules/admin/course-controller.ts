@@ -9,18 +9,19 @@ import { courses, institutions } from "../../schema/admin";
 import { nowISO } from "../../lib/utils";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { adminAuth } from "../../middleware/admin-auth";
+import { TEXT_LIMITS } from "../../lib/validation/text";
 
 const courseController = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 courseController.use("*", adminAuth);
 
 const courseSchema = z.object({
-  code: z.string().min(1, "Code is required").max(20, "Code too long"),
-  name: z.string().min(1, "Name is required"),
-  description: z.string().max(2000, "Description too long").optional().or(z.literal("")),
+  code: z.string().trim().min(1, "Code is required").max(TEXT_LIMITS.courseCode, "Code too long"),
+  name: z.string().trim().min(1, "Name is required").max(TEXT_LIMITS.courseName, "Name too long"),
+  description: z.string().trim().max(TEXT_LIMITS.courseDescription, "Description too long").optional().or(z.literal("")),
   thumbnail: z.string().optional(),
   level: z.enum(["Beginner", "Intermediate", "Advanced"]).optional(),
-  duration: z.string().max(100, "Duration too long").optional().or(z.literal("")),
+  duration: z.string().trim().max(TEXT_LIMITS.courseDuration, "Duration too long").optional().or(z.literal("")),
   fees: z.number().min(0, "Fees cannot be negative").optional(),
   status: z.enum(["Active", "Inactive", "Archived"]).optional(),
   startDate: z.string().optional(),

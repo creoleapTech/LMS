@@ -20,6 +20,7 @@ import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { saveFile, deleteFile } from "../../lib/file";
 import { hashPassword } from "../../lib/password";
+import { PHONE_PATTERN, TEXT_LIMITS, USERNAME_PATTERN } from "../../lib/validation/text";
 import * as XLSX from "xlsx";
 
 const studentController = new Hono<{
@@ -35,19 +36,19 @@ function isJsonRequest(contentType: string | undefined): boolean {
 }
 
 const studentCreateSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  rollNumber: z.string().max(20).optional().nullable().or(z.literal("")),
-  admissionNumber: z.string().max(50).optional().nullable().or(z.literal("")),
-  email: z.string().email("Invalid email").max(255).optional().nullable().or(z.literal("")),
-  username: z.string().min(3, "Username must be at least 3 characters").max(50, "Username too long").regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers and underscores").optional().nullable().or(z.literal("")),
-  password: z.string().min(8, "Password must be at least 8 characters").max(128).optional().nullable().or(z.literal("")),
-  mobileNumber: z.string().optional().nullable().or(z.literal("")),
-  parentName: z.string().optional().nullable().or(z.literal("")),
-  parentMobile: z.string().optional().nullable().or(z.literal("")),
-  parentEmail: z.string().email().max(255).optional().nullable().or(z.literal("")),
+  name: z.string().trim().min(1, "Name is required").max(TEXT_LIMITS.personName, "Name too long"),
+  rollNumber: z.string().trim().max(TEXT_LIMITS.studentRollNumber).optional().nullable().or(z.literal("")),
+  admissionNumber: z.string().trim().max(TEXT_LIMITS.studentAdmissionNumber).optional().nullable().or(z.literal("")),
+  email: z.string().trim().email("Invalid email").max(TEXT_LIMITS.email).optional().nullable().or(z.literal("")),
+  username: z.string().trim().min(3, "Username must be at least 3 characters").max(TEXT_LIMITS.username, "Username too long").regex(USERNAME_PATTERN, "Only letters, numbers and underscores").optional().nullable().or(z.literal("")),
+  password: z.string().min(8, "Password must be at least 8 characters").max(TEXT_LIMITS.password).optional().nullable().or(z.literal("")),
+  mobileNumber: z.string().trim().max(TEXT_LIMITS.phone, "Mobile number too long").regex(PHONE_PATTERN, "Invalid mobile number format").optional().nullable().or(z.literal("")),
+  parentName: z.string().trim().max(TEXT_LIMITS.personName, "Parent name too long").optional().nullable().or(z.literal("")),
+  parentMobile: z.string().trim().max(TEXT_LIMITS.phone, "Parent mobile too long").regex(PHONE_PATTERN, "Invalid parent mobile number format").optional().nullable().or(z.literal("")),
+  parentEmail: z.string().trim().email().max(TEXT_LIMITS.email).optional().nullable().or(z.literal("")),
   dateOfBirth: z.string().optional().nullable(),
   gender: z.enum(["male", "female", "other"]).optional().nullable(),
-  address: z.string().max(500).optional().nullable().or(z.literal("")),
+  address: z.string().trim().max(TEXT_LIMITS.address).optional().nullable().or(z.literal("")),
   admissionDate: z.string().optional().nullable(),
   classId: z.string().min(1, "Class is required"),
   profileImage: z.string().optional(),
@@ -769,6 +770,13 @@ studentController.patch("/:id", async (c) => {
       body.profileImage = imgInput;
     }
   }
+
+  // Validate with Zod
+  const parsed = studentCreateSchema.partial().safeParse(body);
+  if (!parsed.success) {
+    throw new BadRequestError(parsed.error.errors.map((e) => e.message).join(", "));
+  }
+  body = parsed.data as any;
 
   // If changing class, update junction table
   if (body.classId && body.classId !== student.classId) {

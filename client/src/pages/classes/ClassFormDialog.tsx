@@ -20,11 +20,12 @@ import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { useAuthStore } from "@/store/userAuthStore";
 import type { IClass, CreateClassDTO } from "@/types/class";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 
 const formSchema = z.object({
-    grade: z.string().max(20, "Grade too long").optional().or(z.literal("")),
-    section: z.string().min(1, "Section is required").max(10, "Section too long"),
-    year: z.string().regex(/^\d{4}(-\d{4})?$/, "Enter a valid year (e.g. 2024 or 2024-2025)").optional().or(z.literal("")),
+    grade: z.string().trim().max(TEXT_LIMITS.classGrade, "Grade too long").optional().or(z.literal("")),
+    section: z.string().trim().min(1, "Section is required").max(TEXT_LIMITS.classSection, "Section too long"),
+    year: z.string().trim().max(TEXT_LIMITS.classYear, "Year too long").regex(/^\d{4}(-\d{4})?$/, "Enter a valid year (e.g. 2024 or 2024-2025)").optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -169,7 +170,7 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
                         ) : (
                             <div className="relative">
                                 <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input className="pl-9" placeholder="e.g. 10, XII, 5" {...register("grade")} />
+                                <Input className="pl-9" maxLength={TEXT_LIMITS.classGrade} placeholder="e.g. 10, XII, 5" {...register("grade")} />
                             </div>
                         )}
                         {errors.grade && <p className="text-xs text-destructive">{errors.grade.message}</p>}
@@ -181,7 +182,7 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
                         </Label>
                         <div className="relative">
                             <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input id="section" className="pl-9" placeholder="e.g. A, B, Rose" {...register("section")} />
+                            <Input id="section" className="pl-9" maxLength={TEXT_LIMITS.classSection} placeholder="e.g. A, B, Rose" {...register("section")} />
                         </div>
                         {errors.section && <p className="text-xs text-destructive">{errors.section.message}</p>}
                     </div>
@@ -190,7 +191,7 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
                         <Label htmlFor="year" className="text-sm font-medium">Academic Year</Label>
                         <div className="relative">
                             <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input id="year" className="pl-9" placeholder="e.g. 2024-2025" {...register("year")} />
+                            <Input id="year" className="pl-9" maxLength={TEXT_LIMITS.classYear} placeholder="e.g. 2024-2025" {...register("year")} />
                         </div>
                         {errors.year && <p className="text-xs text-destructive">{errors.year.message}</p>}
                     </div>
