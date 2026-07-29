@@ -36,6 +36,7 @@ export const institutions = sqliteTable("institutions", {
   contactEmail: text("contact_email"),
   contactOfficePhone: text("contact_office_phone"),
   logo: text("logo"),
+  rollNumberCounter: integer("roll_number_counter").default(0),
   isActive: integer("is_active").default(1),
   isDeleted: integer("is_deleted").default(0),
   createdAt: text("created_at"),

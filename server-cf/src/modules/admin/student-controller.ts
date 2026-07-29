@@ -4,7 +4,7 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
 import { nowISO } from "../../lib/utils";
-import { eq, and, like, or, count, inArray } from "drizzle-orm";
+import { eq, and, like, or, count, inArray, sql } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import {
   students,
@@ -20,6 +20,7 @@ import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { saveFile, deleteFile } from "../../lib/file";
 import { hashPassword } from "../../lib/password";
+import { generateRollNumber, generateRollNumbers, syncRollNumberCounter } from "../../lib/roll-number";
 import { PHONE_PATTERN, TEXT_LIMITS, USERNAME_PATTERN } from "../../lib/validation/text";
 import * as XLSX from "xlsx";
 
@@ -33,6 +34,14 @@ studentController.use("*", adminAuth);
 
 function isJsonRequest(contentType: string | undefined): boolean {
   return (contentType ?? "").toLowerCase().includes("application/json");
+}
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
 }
 
 const studentCreateSchema = z.object({
@@ -130,6 +139,11 @@ studentController.post("/", async (c) => {
 
   const studentId = uuid();
   const now = nowISO();
+
+  // Auto-generate roll number if not provided
+  if (!body.rollNumber) {
+    body.rollNumber = await generateRollNumber(db, classData.institutionId) ?? undefined;
+  }
 
   // Handle password: use provided or generate random
   let plainPassword: string | null = null;
@@ -361,21 +375,25 @@ studentController.post("/bulk-upload", async (c) => {
       }
     });
 
-    // 2. Check for duplicates AGAINST DATABASE (single query)
+    // 2. Check for duplicates AGAINST DATABASE (batched IN queries)
     const studentNames = [...new Set(uniqueDataInFile.map((s) => s.name))];
 
     let existingStudents: any[] = [];
     if (studentNames.length > 0) {
-      existingStudents = await db
-        .select()
-        .from(students)
-        .where(
-          and(
-            eq(students.institutionId, institutionId),
-            inArray(students.name, studentNames),
-            eq(students.isDeleted, 0)
-          )
-        );
+      const nameChunks = chunk(studentNames, 95);
+      for (const nc of nameChunks) {
+        const matches = await db
+          .select()
+          .from(students)
+          .where(
+            and(
+              eq(students.institutionId, institutionId),
+              inArray(students.name, nc),
+              eq(students.isDeleted, 0)
+            )
+          );
+        existingStudents.push(...matches);
+      }
     }
 
     const existingKeySet = new Set(
@@ -404,6 +422,18 @@ studentController.post("/bulk-upload", async (c) => {
     // Update result data
     (result as any).data = finalUniqueData;
     result.validRows = finalUniqueData.length;
+  }
+
+  // Auto-generate roll numbers for students without one
+  const studentsWithoutRollNumber = (result.data as any[]).filter((s: any) => !s.rollNumber);
+  if (studentsWithoutRollNumber.length > 0) {
+    const rollNumbers = await generateRollNumbers(db, institutionId, studentsWithoutRollNumber.length);
+    let rnIdx = 0;
+    for (const s of (result.data as any[])) {
+      if (!s.rollNumber) {
+        s.rollNumber = rollNumbers[rnIdx++];
+      }
+    }
   }
 
   if (!result.success || result.data.length === 0) {
@@ -470,45 +500,50 @@ studentController.post("/bulk-upload", async (c) => {
     }
   }
 
-  // Bulk insert all students (single query)
-  const values = studentRecords.map((s) => ({
-    id: s.id,
-    name: s.name,
-    rollNumber: s.rollNumber,
-    admissionNumber: s.admissionNumber,
-    email: s.email,
-    username: s.username,
-    password: s.password || null,
-    mobileNumber: s.mobileNumber,
-    parentName: s.parentName,
-    parentMobile: s.parentMobile,
-    parentEmail: s.parentEmail,
-    dateOfBirth: s.dateOfBirth,
-    gender: s.gender,
-    address: s.address,
-    admissionDate: s.admissionDate,
-    classId: s.classId,
-    institutionId: s.institutionId,
-    profileImage: s.profileImage,
-    isActive: s.isActive,
-    isDeleted: s.isDeleted,
-    createdAt: s.createdAt,
-    updatedAt: s.updatedAt,
-  }));
-
-  await db.insert(students).values(values);
-
-  // Bulk insert junction entries (single query)
-  const junctionValues = studentRecords
-    .filter((s) => s.classId)
-    .map((s) => ({
-      id: uuid(),
+  // Bulk insert students in chunks (D1 limit: 100 vars/query; ~21 cols/student → 4/batch)
+  const studentChunks = chunk(studentRecords, 4);
+  for (const chunk of studentChunks) {
+    const values = chunk.map((s) => ({
+      id: s.id,
+      name: s.name,
+      rollNumber: s.rollNumber,
+      admissionNumber: s.admissionNumber,
+      email: s.email,
+      username: s.username,
+      password: s.password || null,
+      mobileNumber: s.mobileNumber,
+      parentName: s.parentName,
+      parentMobile: s.parentMobile,
+      parentEmail: s.parentEmail,
+      dateOfBirth: s.dateOfBirth,
+      gender: s.gender,
+      address: s.address,
+      admissionDate: s.admissionDate,
       classId: s.classId,
-      studentId: s.id,
+      institutionId: s.institutionId,
+      profileImage: s.profileImage,
+      isActive: s.isActive,
+      isDeleted: s.isDeleted,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
     }));
+    await db.insert(students).values(values);
+  }
 
-  if (junctionValues.length > 0) {
-    await db.insert(classStudentIds).values(junctionValues);
+  // Bulk insert junction entries in chunks
+  const junctionChunks = chunk(
+    studentRecords
+      .filter((s) => s.classId)
+      .map((s) => ({
+        id: uuid(),
+        classId: s.classId,
+        studentId: s.id,
+      })),
+    30
+  );
+
+  for (const jc of junctionChunks) {
+    await db.insert(classStudentIds).values(jc);
   }
 
   // Attach plain passwords for response
@@ -945,6 +980,55 @@ studentController.delete("/:id", async (c) => {
     { success: true, message: "Student deleted successfully" },
     200
   );
+});
+
+// ─── Backfill Roll Numbers (super_admin only) ──────
+studentController.post("/backfill-roll-numbers", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+
+  if (user.role !== "super_admin") {
+    throw new ForbiddenError("Only super admin can backfill roll numbers");
+  }
+
+  const db = getDb(c.env.DB);
+
+  const allInstitutions = await db
+    .select({ id: institutions.id, name: institutions.name })
+    .from(institutions)
+    .where(eq(institutions.isDeleted, 0));
+
+  const results: { institution: string; backfilled: number }[] = [];
+
+  for (const inst of allInstitutions) {
+    await syncRollNumberCounter(db, inst.id);
+
+    const studentsWithoutRoll = await db
+      .select({ id: students.id })
+      .from(students)
+      .where(
+        and(
+          eq(students.institutionId, inst.id),
+          eq(students.isDeleted, 0),
+          sql`${students.rollNumber} IS NULL`,
+        ),
+      );
+
+    let count = 0;
+    for (const s of studentsWithoutRoll) {
+      const rollNumber = await generateRollNumber(db, inst.id);
+      if (rollNumber) {
+        await db
+          .update(students)
+          .set({ rollNumber, updatedAt: nowISO() })
+          .where(eq(students.id, s.id));
+        count++;
+      }
+    }
+
+    results.push({ institution: inst.name, backfilled: count });
+  }
+
+  return c.json({ success: true, data: results });
 });
 
 export { studentController };

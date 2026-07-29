@@ -1,0 +1,1 @@
+ALTER TABLE `institutions` ADD `roll_number_counter` integer DEFAULT 0;
