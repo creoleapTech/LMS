@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { _axios } from "@/lib/axios";
+import { useAuthStore } from "@/store/userAuthStore";
 import { StudentFormDialog } from "./StudentFormDialog";
 import type { IStudent, CreateStudentDTO, UpdateStudentDTO } from "@/types/student";
 import type { IClass } from "@/types/class";
@@ -42,9 +43,12 @@ export function StudentTable({ institutionId }: Props) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const queryClient = useQueryClient();
+  const userRole = useAuthStore((s) => s.user?.role);
+  const canEdit = userRole === "super_admin";
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadPhase, setUploadPhase] = useState<"idle" | "uploading" | "processing">("idle");
   const [uploadErrors, setUploadErrors] = useState<any[]>([]);
   const [uploadSummary, setUploadSummary] = useState<any>(null);
   const [previewData, setPreviewData] = useState<{
@@ -200,6 +204,7 @@ export function StudentTable({ institutionId }: Props) {
     if (!bulkFile) return;
     setIsUploading(true);
     setUploadProgress(0);
+    setUploadPhase("uploading");
     try {
       const formData = new FormData();
       formData.append("file", bulkFile);
@@ -210,6 +215,9 @@ export function StudentTable({ institutionId }: Props) {
           if (progressEvent.total) {
             const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             setUploadProgress(percent);
+            if (percent >= 100) {
+              setUploadPhase("processing");
+            }
           }
         },
       });
@@ -253,6 +261,7 @@ export function StudentTable({ institutionId }: Props) {
       console.error(error?.response?.data);
     } finally {
       setIsUploading(false);
+      setUploadPhase("idle");
     }
   };
 
@@ -402,7 +411,7 @@ export function StudentTable({ institutionId }: Props) {
     });
 
   const columns = [
-    columnHelper.display({
+    ...(canEdit ? [columnHelper.display({
       id: "select",
       header: () => (
         <input
@@ -432,7 +441,7 @@ export function StudentTable({ institutionId }: Props) {
           className="h-4 w-4"
         />
       ),
-    }),
+    })] : []),
     columnHelper.accessor("name", {
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
@@ -470,7 +479,7 @@ export function StudentTable({ institutionId }: Props) {
         ) : "-";
       },
     }),
-    columnHelper.display({
+    ...(canEdit ? [columnHelper.display({
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
@@ -483,7 +492,7 @@ export function StudentTable({ institutionId }: Props) {
           </Button>
         </div>
       ),
-    }),
+    })] : []),
   ];
 
   const table = useReactTable({
@@ -520,26 +529,30 @@ export function StudentTable({ institutionId }: Props) {
     <>
       <div className="flex flex-col gap-6 p-5 sm:p-8 max-w-screen-2xl mx-auto">
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setOpenBulkUpload(true)} className="rounded-xl">
-            <Upload className="mr-2 h-4 w-4" /> Bulk Upload
-          </Button>
-          <Button variant="outline" onClick={() => setOpenRollUpdate(true)} className="rounded-xl">
-            <Upload className="mr-2 h-4 w-4" /> Update Roll Numbers
-          </Button>
-          {selectedStudentIds.size > 0 && (
-            <Button
-              variant="destructive"
-              onClick={() => bulkDeleteMutation.mutate(Array.from(selectedStudentIds))}
-              disabled={bulkDeleteMutation.isPending}
-              className="rounded-xl"
-            >
-              {bulkDeleteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-              Delete {selectedStudentIds.size} Selected
-            </Button>
+          {canEdit && (
+            <>
+              <Button variant="outline" onClick={() => setOpenBulkUpload(true)} className="rounded-xl">
+                <Upload className="mr-2 h-4 w-4" /> Bulk Upload
+              </Button>
+              <Button variant="outline" onClick={() => setOpenRollUpdate(true)} className="rounded-xl">
+                <Upload className="mr-2 h-4 w-4" /> Update Roll Numbers
+              </Button>
+              {selectedStudentIds.size > 0 && (
+                <Button
+                  variant="destructive"
+                  onClick={() => bulkDeleteMutation.mutate(Array.from(selectedStudentIds))}
+                  disabled={bulkDeleteMutation.isPending}
+                  className="rounded-xl"
+                >
+                  {bulkDeleteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                  Delete {selectedStudentIds.size} Selected
+                </Button>
+              )}
+              <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-indigo-500/30">
+                <Plus className="mr-2 h-4 w-4" /> Add Student
+              </Button>
+            </>
           )}
-          <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-indigo-500/30">
-            <Plus className="mr-2 h-4 w-4" /> Add Student
-          </Button>
         </div>
 
         {/* Filters */}
@@ -1002,15 +1015,23 @@ export function StudentTable({ institutionId }: Props) {
               <div className="space-y-2 p-3 bg-muted/50 rounded-lg border border-border">
                 <div className="flex justify-between items-center text-sm font-medium">
                   <span className="flex items-center gap-2 text-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin text-brand-color" />
-                    {uploadProgress < 100 ? "Uploading file..." : "Processing Excel data..."}
+                    {uploadPhase === "uploading" ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-brand-color" />
+                    ) : (
+                      <Loader2 className="h-4 w-4 animate-spin text-brand-color" />
+                    )}
+                    {uploadPhase === "uploading" ? "Uploading file..." : "Processing data on server..."}
                   </span>
-                  <span className="font-mono text-brand-color font-bold">{uploadProgress}%</span>
+                  {uploadPhase === "uploading" ? (
+                    <span className="font-mono text-brand-color font-bold">{uploadProgress}%</span>
+                  ) : (
+                    <Loader2 className="h-4 w-4 animate-spin text-brand-color" />
+                  )}
                 </div>
                 <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
                   <div
                     className="bg-brand-color h-2.5 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${uploadProgress}%` }}
+                    style={{ width: uploadPhase === "uploading" ? `${uploadProgress}%` : "100%" }}
                   />
                 </div>
               </div>
@@ -1066,7 +1087,7 @@ export function StudentTable({ institutionId }: Props) {
                   {isUploading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading ({uploadProgress}%)
+                      {uploadPhase === "uploading" ? `Uploading (${uploadProgress}%)` : "Processing..."}
                     </>
                   ) : (
                     "Upload"
