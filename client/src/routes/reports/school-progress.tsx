@@ -18,10 +18,15 @@ export const Route = createFileRoute('/reports/school-progress')({
 function RouteComponent() {
   const { schoolId } = Route.useSearch();
   const { user } = useAuthStore();
-  const isAdmin = user?.role === 'admin';
+  const isSchoolLocked = user?.role !== 'super_admin';
+  const userInstitutionId = typeof user?.institutionId === 'object'
+    ? (user?.institutionId as any)?._id || (user?.institutionId as any)?.id
+    : user?.institutionId;
+  const effectiveSchoolId = isSchoolLocked ? (userInstitutionId || schoolId) : schoolId;
+
   return (
     <Suspense fallback={<div className="p-8 text-center text-slate-400 font-medium">Loading school progress...</div>}>
-      <SchoolProgressPage initialSchoolId={schoolId} lockedToSchool={isAdmin} />
+      <SchoolProgressPage initialSchoolId={effectiveSchoolId} lockedToSchool={isSchoolLocked} />
     </Suspense>
   );
 }

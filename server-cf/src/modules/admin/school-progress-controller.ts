@@ -13,10 +13,27 @@ import {
   classStudentIds,
 } from "../../schema/junction";
 import { adminAuth } from "../../middleware/admin-auth";
+import { ForbiddenError } from "../../lib/errors/forbidden";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 app.use("*", adminAuth);
+
+function resolveInstitutionId(user: Record<string, any>, queryInstitutionId?: string | null): string {
+  const userInstId =
+    typeof user.institutionId === "object"
+      ? (user.institutionId as any)._id?.toString() || (user.institutionId as any).id?.toString()
+      : user.institutionId?.toString();
+
+  if (user.role === "super_admin") {
+    return queryInstitutionId || userInstId || "";
+  }
+
+  if (!userInstId) {
+    throw new ForbiddenError("User is not associated with any institution");
+  }
+  return userInstId;
+}
 
 // HELPER: Fetch curriculum gradebook-to-grade matching for an institution
 async function getInstGradeToBook(db: any, institutionId: string) {
@@ -49,13 +66,20 @@ async function getInstGradeToBook(db: any, institutionId: string) {
 
 // 1. GET /schools — Overview list of schools
 app.get("/schools", async (c) => {
+  const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
+
+  let instsWhere = eq(institutions.isDeleted, 0);
+  if (user.role !== "super_admin") {
+    const userInstId = resolveInstitutionId(user);
+    instsWhere = and(eq(institutions.isDeleted, 0), eq(institutions.id, userInstId))!;
+  }
 
   // Get active institutions
   const insts = await db
     .select({ id: institutions.id, name: institutions.name, isActive: institutions.isActive })
     .from(institutions)
-    .where(eq(institutions.isDeleted, 0));
+    .where(instsWhere);
 
   // Get count details
   const activeClasses = await db
@@ -182,8 +206,9 @@ app.get("/schools", async (c) => {
 
 // 2. GET /kpis — KPI cards statistics for single institution
 app.get("/kpis", async (c) => {
+  const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
-  const institutionId = c.req.query("institutionId");
+  const institutionId = resolveInstitutionId(user, c.req.query("institutionId"));
 
   if (!institutionId) {
     return c.json({ success: false, message: "Missing institutionId query parameter" }, 400);
@@ -311,8 +336,9 @@ app.get("/kpis", async (c) => {
 
 // 3. GET /charts — Charts data for single institution
 app.get("/charts", async (c) => {
+  const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
-  const institutionId = c.req.query("institutionId");
+  const institutionId = resolveInstitutionId(user, c.req.query("institutionId"));
 
   if (!institutionId) {
     return c.json({ success: false, message: "Missing institutionId query parameter" }, 400);
@@ -476,8 +502,9 @@ app.get("/charts", async (c) => {
 
 // 4. GET /classes — Paginated class-wise progress details
 app.get("/classes", async (c) => {
+  const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
-  const institutionId = c.req.query("institutionId");
+  const institutionId = resolveInstitutionId(user, c.req.query("institutionId"));
   const page = Math.max(1, Number(c.req.query("page") || 1));
   const limit = Math.max(1, Number(c.req.query("limit") || 10));
   const search = c.req.query("search") || "";
@@ -722,8 +749,9 @@ app.get("/classes", async (c) => {
 
 // 5. GET /teachers — Paginated teacher leaderboard
 app.get("/teachers", async (c) => {
+  const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
-  const institutionId = c.req.query("institutionId");
+  const institutionId = resolveInstitutionId(user, c.req.query("institutionId"));
   const page = Math.max(1, Number(c.req.query("page") || 1));
   const limit = Math.max(1, Number(c.req.query("limit") || 10));
   const search = c.req.query("search") || "";
@@ -885,8 +913,9 @@ app.get("/teachers", async (c) => {
 
 // 6. GET /courses — Lightweight courses filter metadata list (unique curricula)
 app.get("/courses", async (c) => {
+  const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
-  const institutionId = c.req.query("institutionId");
+  const institutionId = resolveInstitutionId(user, c.req.query("institutionId"));
 
   if (!institutionId) {
     return c.json({ success: false, message: "Missing institutionId query parameter" }, 400);
@@ -903,8 +932,9 @@ app.get("/courses", async (c) => {
 
 // 7. GET /classes-list — Lightweight class filter metadata list
 app.get("/classes-list", async (c) => {
+  const user = c.get("user") as Record<string, any>;
   const db = getDb(c.env.DB);
-  const institutionId = c.req.query("institutionId");
+  const institutionId = resolveInstitutionId(user, c.req.query("institutionId"));
 
   if (!institutionId) {
     return c.json({ success: false, message: "Missing institutionId query parameter" }, 400);

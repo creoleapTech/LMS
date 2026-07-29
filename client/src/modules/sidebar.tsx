@@ -25,7 +25,7 @@ const navItems: NavItem[] = [
   { name: 'Quizzes', path: '/quizzes', icon: <HelpCircle className="w-5 h-5" />, roles: ['super_admin', 'teacher'] },
   { name: 'Students', path: '/students', icon: <GraduationCap className="w-5 h-5" />, roles: ['admin', 'super_admin'] },
   { name: 'Reports', path: '/reports', icon: <BarChart className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
-  { name: 'School Progress', path: '/reports/school-progress', icon: <TrendingUp className="w-5 h-5" />, roles: ['super_admin', 'admin'] },
+  { name: 'School Progress', path: '/reports/school-progress', icon: <TrendingUp className="w-5 h-5" />, roles: ['super_admin', 'admin', 'teacher', 'staff'] },
   { name: 'My Drafts', path: '/my-drafts', icon: <FileEdit className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
   { name: 'LeapLab', path: '/leaplab', icon: <Package className="w-5 h-5" />, roles: ['super_admin'] },
   { name: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, roles: ['admin', 'super_admin', 'staff', 'teacher'] },
@@ -108,12 +108,12 @@ const Sidebar: React.FC = () => {
               const displayName = item.path === '/my-classes' && (user?.role === 'admin' || user?.role === 'super_admin')
                 ? 'Class Management' : item.name;
 
-              // For admin, School Progress goes directly to their school
-              const adminInstitutionId = user?.role === 'admin'
-                ? (typeof user.institutionId === 'object' ? (user.institutionId as any)?._id : user.institutionId)
+              // For non-super-admin (admin, teacher, staff), School Progress goes directly to their school
+              const schoolUserInstitutionId = user?.role !== 'super_admin'
+                ? (typeof user.institutionId === 'object' ? (user.institutionId as any)?._id || (user.institutionId as any)?.id : user.institutionId)
                 : null;
-              const linkTo = item.path === '/reports/school-progress' && adminInstitutionId
-                ? `${item.path}?schoolId=${adminInstitutionId}`
+              const linkTo = item.path === '/reports/school-progress' && schoolUserInstitutionId
+                ? `${item.path}?schoolId=${schoolUserInstitutionId}`
                 : item.path;
 
               return (
