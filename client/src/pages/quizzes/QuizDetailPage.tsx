@@ -313,10 +313,10 @@ export default function QuizDetailPage() {
                   <thead>
                     <tr className="border-b bg-slate-50">
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                        Student
+                        Roll No
                       </th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                        Roll No
+                        Student
                       </th>
                       <th className="text-center px-4 py-3 font-medium text-muted-foreground">
                         Score
@@ -343,16 +343,11 @@ export default function QuizDetailPage() {
                           : true;
                       return (
                         <tr key={m.id} className="border-b last:border-b-0 hover:bg-slate-50">
+                          <td className="px-4 py-3 text-muted-foreground font-mono">
+                            {m.studentUsername || m.studentRollNumber || "-"}
+                          </td>
                           <td className="px-4 py-3">
                             <div className="font-medium">{m.studentName}</div>
-                            {m.studentUsername && (
-                              <div className="text-xs text-muted-foreground">
-                                {m.studentUsername}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {m.studentRollNumber || "-"}
                           </td>
                           <td className="px-4 py-3 text-center font-medium">
                             {m.score}/{m.maxScore}

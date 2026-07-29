@@ -905,19 +905,19 @@ studentController.get("/bulk-update-roll-numbers/template", async (c) => {
     )
     .orderBy(classes.grade, classes.section, students.name);
 
-  const headers = ["id", "grade", "section", "name", "current_roll_number", "new_roll_number"];
+  const headers = ["current_roll_number", "name", "grade", "section", "new_roll_number", "id"];
   const rows = studentRows.map((s) => ({
-    id: s.id,
+    current_roll_number: s.rollNumber || "",
+    name: s.name || "",
     grade: s.grade || "",
     section: s.section || "",
-    name: s.name || "",
-    current_roll_number: s.rollNumber || "",
     new_roll_number: "",
+    id: s.id,
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(rows);
   worksheet["!cols"] = [
-    { wch: 40 }, { wch: 10 }, { wch: 10 }, { wch: 30 }, { wch: 20 }, { wch: 20 },
+    { wch: 20 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 20 }, { wch: 40 },
   ];
 
   // Reorder columns to match headers order
@@ -940,19 +940,19 @@ studentController.get("/bulk-update-roll-numbers/template", async (c) => {
 // ─── GET Excel Template ────────────────────────────
 studentController.get("/template", async (c) => {
   const headers = [
+    "roll number",
+    "name",
     "grade",
     "section",
-    "name",
-    "roll number",
     "gender",
   ];
 
   const sampleData = [
     {
+      "roll number": "001",
+      name: "Jane Smith",
       grade: "10",
       section: "A",
-      name: "Jane Smith",
-      "roll number": "001",
       gender: "female",
     },
   ];

@@ -204,18 +204,18 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
             <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Academic IDs <span className="font-normal normal-case text-muted-foreground">(optional)</span></p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="admissionNumber" className="text-sm font-medium">Admission Number</Label>
-                <div className="relative">
-                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="admissionNumber" placeholder="e.g. ADM-2024-001" maxLength={TEXT_LIMITS.studentAdmissionNumber} {...register("admissionNumber")} className="pl-9" />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
                 <Label htmlFor="rollNumber" className="text-sm font-medium">Roll Number</Label>
                 <div className="relative">
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input id="rollNumber" placeholder="e.g. 25" maxLength={TEXT_LIMITS.studentRollNumber} {...register("rollNumber")} className="pl-9" />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="admissionNumber" className="text-sm font-medium">Admission Number</Label>
+                <div className="relative">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="admissionNumber" placeholder="e.g. ADM-2024-001" maxLength={TEXT_LIMITS.studentAdmissionNumber} {...register("admissionNumber")} className="pl-9" />
                 </div>
               </div>
             </div>

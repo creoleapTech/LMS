@@ -442,6 +442,14 @@ export function StudentTable({ institutionId }: Props) {
         />
       ),
     })] : []),
+    columnHelper.accessor("rollNumber", {
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Roll Number <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: info => <span className="font-mono text-xs">{info.getValue() || "-"}</span>,
+    }),
     columnHelper.accessor("name", {
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
@@ -464,10 +472,6 @@ export function StudentTable({ institutionId }: Props) {
         const classData = row.getValue(columnId) as any;
         return classData?._id === filterValue;
       },
-    }),
-    columnHelper.accessor("rollNumber", {
-      header: "Roll Number",
-      cell: info => <span className="font-mono text-xs">{info.getValue() || "-"}</span>,
     }),
     columnHelper.display({
       id: "section",
@@ -732,9 +736,9 @@ export function StudentTable({ institutionId }: Props) {
                         />
                       </TableHead>
                       <TableHead>Row</TableHead>
+                      <TableHead>Roll Number</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Class</TableHead>
-                      <TableHead>Roll Number</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -764,9 +768,9 @@ export function StudentTable({ institutionId }: Props) {
                             />
                           </TableCell>
                           <TableCell className="font-mono text-xs">{row._rowNumber}</TableCell>
+                          <TableCell className="font-mono text-xs">{row.rollNumber || "-"}</TableCell>
                           <TableCell className="font-medium">{row.name}</TableCell>
                           <TableCell>{row.grade && row.section ? `${row.grade}-${row.section}` : "-"}</TableCell>
-                          <TableCell className="font-mono text-xs">{row.rollNumber || "-"}</TableCell>
                           <TableCell>
                             {reason ? (
                               <Badge variant="outline" className="text-amber-600 border-amber-300">{reason}</Badge>
@@ -858,16 +862,16 @@ export function StudentTable({ institutionId }: Props) {
                       <Table>
                         <TableHeader className="sticky top-0 bg-background z-10">
                           <TableRow>
-                            <TableHead>Name</TableHead>
                             <TableHead>Roll Number in File</TableHead>
+                            <TableHead>Name</TableHead>
                             <TableHead>Select Student</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {rollUpdatePreview.ambiguous.map((a: any, i: number) => (
                             <TableRow key={i}>
-                              <TableCell className="font-medium">{a.name}</TableCell>
                               <TableCell className="font-mono">{a.rollNumber || "-"}</TableCell>
+                              <TableCell className="font-medium">{a.name}</TableCell>
                               <TableCell>
                                 <select
                                   className="border rounded px-2 py-1 text-sm w-full"
@@ -898,9 +902,9 @@ export function StudentTable({ institutionId }: Props) {
                         <TableHeader className="sticky top-0 bg-background z-10">
                           <TableRow>
                             <TableHead className="w-10">Add</TableHead>
+                            <TableHead>Roll Number</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead>Class</TableHead>
-                            <TableHead>Roll Number</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -920,9 +924,9 @@ export function StudentTable({ institutionId }: Props) {
                                   className="h-4 w-4"
                                 />
                               </TableCell>
+                              <TableCell className="font-mono">{n.rollNumber || "-"}</TableCell>
                               <TableCell className="font-medium">{n.name}</TableCell>
                               <TableCell>{n.grade}-{n.section}</TableCell>
-                              <TableCell className="font-mono">{n.rollNumber || "-"}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -938,17 +942,17 @@ export function StudentTable({ institutionId }: Props) {
                       <Table>
                         <TableHeader className="sticky top-0 bg-background z-10">
                           <TableRow>
+                            <TableHead>New Roll Number</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead>Class</TableHead>
-                            <TableHead>New Roll Number</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {rollUpdatePreview.matched.map((m: any, i: number) => (
                             <TableRow key={i}>
+                              <TableCell className="font-mono">{m.rollNumber || "-"}</TableCell>
                               <TableCell className="font-medium">{m.name}</TableCell>
                               <TableCell>{m.grade}-{m.section}</TableCell>
-                              <TableCell className="font-mono">{m.rollNumber || "-"}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
