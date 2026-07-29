@@ -595,38 +595,38 @@ export function StudentTable({ institutionId }: Props) {
         ) : (
           <div className="neo-table-wrapper overflow-hidden">
             <div className="overflow-x-auto">
-            <Table className="min-w-[700px]">
-              <TableHeader>
-                {table.getHeaderGroups().map(headerGroup => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map(header => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.length ? (
-                  table.getRowModel().rows.map(row => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map(cell => (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
+              <Table className="min-w-[700px]">
+                <TableHeader>
+                  {table.getHeaderGroups().map(headerGroup => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map(header => (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
                       ))}
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                      No students found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length ? (
+                    table.getRowModel().rows.map(row => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map(cell => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
+                        No students found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
 
             {/* Pagination */}
@@ -750,37 +750,37 @@ export function StudentTable({ institutionId }: Props) {
                         return aDup - bDup;
                       })
                       .map((row: any) => {
-                      const isDuplicate = previewData.duplicates.inFile.includes(row._rowNumber) ||
-                        previewData.duplicates.inDatabase.includes(row._rowNumber);
-                      const reason = previewData.duplicates.inFile.includes(row._rowNumber)
-                        ? "Duplicate in file"
-                        : previewData.duplicates.inDatabase.includes(row._rowNumber)
-                          ? "Already exists in DB"
-                          : null;
-                      return (
-                        <TableRow key={row._rowNumber} className={isDuplicate ? "bg-amber-50 dark:bg-amber-950/20" : ""}>
-                          <TableCell>
-                            <input
-                              type="checkbox"
-                              checked={selectedForImport.has(row._rowNumber)}
-                              onChange={() => toggleDuplicateRow(row._rowNumber)}
-                              className="h-4 w-4"
-                            />
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">{row._rowNumber}</TableCell>
-                          <TableCell className="font-mono text-xs">{row.rollNumber || "-"}</TableCell>
-                          <TableCell className="font-medium">{row.name}</TableCell>
-                          <TableCell>{row.grade && row.section ? `${row.grade}-${row.section}` : "-"}</TableCell>
-                          <TableCell>
-                            {reason ? (
-                              <Badge variant="outline" className="text-amber-600 border-amber-300">{reason}</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-green-600 border-green-300">New</Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                        const isDuplicate = previewData.duplicates.inFile.includes(row._rowNumber) ||
+                          previewData.duplicates.inDatabase.includes(row._rowNumber);
+                        const reason = previewData.duplicates.inFile.includes(row._rowNumber)
+                          ? "Duplicate in file"
+                          : previewData.duplicates.inDatabase.includes(row._rowNumber)
+                            ? "Already exists in DB"
+                            : null;
+                        return (
+                          <TableRow key={row._rowNumber} className={isDuplicate ? "bg-amber-50 dark:bg-amber-950/20" : ""}>
+                            <TableCell>
+                              <input
+                                type="checkbox"
+                                checked={selectedForImport.has(row._rowNumber)}
+                                onChange={() => toggleDuplicateRow(row._rowNumber)}
+                                className="h-4 w-4"
+                              />
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">{row._rowNumber}</TableCell>
+                            <TableCell className="font-mono text-xs">{row.rollNumber || "-"}</TableCell>
+                            <TableCell className="font-medium">{row.name}</TableCell>
+                            <TableCell>{row.grade && row.section ? `${row.grade}-${row.section}` : "-"}</TableCell>
+                            <TableCell>
+                              {reason ? (
+                                <Badge variant="outline" className="text-amber-600 border-amber-300">{reason}</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-green-600 border-green-300">New</Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                   </TableBody>
                 </Table>
               </div>

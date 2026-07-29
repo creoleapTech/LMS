@@ -78,7 +78,7 @@ app.post("/:id/generate-student-credentials", async (c) => {
 
   const rollNumbers = await generateRollNumbers(db, institutionId, studentsWithoutCredentials.length);
   const now = nowISO();
-  const results: { id: string; name: string; rollNumber: string; plainPassword: string }[] = [];
+  const results: { id: string; name: string; rollNumber: string; username?: string; plainPassword: string }[] = [];
 
   for (let i = 0; i < studentsWithoutCredentials.length; i++) {
     const student = studentsWithoutCredentials[i];
@@ -88,11 +88,14 @@ app.post("/:id/generate-student-credentials", async (c) => {
     const plainPassword = `${pickWord(seq - 1)}@${seqStr}`;
     const hashedPassword = await hashPassword(plainPassword);
 
+    const finalRollNumber = student.rollNumber || rollNumber;
+    const finalUsername = student.username || rollNumber;
+
     await db
       .update(students)
       .set({
-        rollNumber,
-        username: rollNumber,
+        rollNumber: finalRollNumber,
+        username: finalUsername,
         password: hashedPassword,
         updatedAt: now,
       })
@@ -101,7 +104,8 @@ app.post("/:id/generate-student-credentials", async (c) => {
     results.push({
       id: student.id,
       name: student.name ?? "Unknown",
-      rollNumber,
+      rollNumber: finalRollNumber,
+      username: finalUsername,
       plainPassword,
     });
   }

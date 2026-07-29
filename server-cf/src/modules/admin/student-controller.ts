@@ -72,6 +72,22 @@ async function hasStudentAssessments(db: any, studentId: string): Promise<boolea
 
 async function importStudentRecords(db: any, rows: any[]) {
   const now = nowISO();
+
+  // Auto-generate roll numbers for any rows missing one
+  const rowsWithoutRoll = rows.filter((r) => !r.rollNumber);
+  if (rowsWithoutRoll.length > 0) {
+    const instId = rows[0]?.institutionId;
+    if (instId) {
+      const generatedRolls = await generateRollNumbers(db, instId, rowsWithoutRoll.length);
+      let gIdx = 0;
+      for (const r of rows) {
+        if (!r.rollNumber) {
+          r.rollNumber = generatedRolls[gIdx++];
+        }
+      }
+    }
+  }
+
   const studentRecords: Record<string, any>[] = rows.map((studentData: any) => ({
     id: uuid(),
     name: studentData.name,
@@ -823,7 +839,18 @@ studentController.post("/bulk-update-roll-numbers/commit", async (c) => {
     }
   }
 
-  if (addNotFound) {
+  if (addNotFound && addNotFound.length > 0) {
+    const rowsWithoutRoll = addNotFound.filter((s: any) => !s.rollNumber);
+    if (rowsWithoutRoll.length > 0) {
+      const generatedRolls = await generateRollNumbers(db, institutionId, rowsWithoutRoll.length);
+      let gIdx = 0;
+      for (const s of addNotFound) {
+        if (!s.rollNumber) {
+          s.rollNumber = generatedRolls[gIdx++];
+        }
+      }
+    }
+
     const allClasses = await db
       .select()
       .from(classes)
