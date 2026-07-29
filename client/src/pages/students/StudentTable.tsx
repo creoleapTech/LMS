@@ -448,7 +448,7 @@ export function StudentTable({ institutionId }: Props) {
           Roll Number <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: info => <span className="font-mono text-xs">{info.getValue() || "-"}</span>,
+      cell: info => <span className="font-mono text-xs">{info.getValue() || info.row.original.username || "-"}</span>,
     }),
     columnHelper.accessor("name", {
       header: ({ column }) => (

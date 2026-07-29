@@ -1100,6 +1100,8 @@ studentController.get("/", async (c) => {
 
   const enriched = studentRows.map((s) => ({
     ...s,
+    _id: s.id,
+    rollNumber: s.rollNumber || s.username || "",
     classId: (s.classId && classMap.get(s.classId)) || s.classId,
     institutionId: (s.institutionId && institutionMap.get(s.institutionId)) || s.institutionId,
   }));
