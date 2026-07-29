@@ -12,6 +12,8 @@ import {
   institutions,
 } from "../../schema/admin";
 import { classStudentIds } from "../../schema/junction";
+import { institutionQuizAttempts } from "../../schema/quiz";
+import { examinationCells } from "../../schema/examinations";
 import {
   parseExcelFile,
   generateExcelTemplate,
@@ -42,6 +44,24 @@ function chunk<T>(arr: T[], size: number): T[][] {
     chunks.push(arr.slice(i, i + size));
   }
   return chunks;
+}
+
+async function hasStudentAssessments(db: any, studentId: string): Promise<boolean> {
+  const [quiz] = await db
+    .select({ id: institutionQuizAttempts.id })
+    .from(institutionQuizAttempts)
+    .where(eq(institutionQuizAttempts.studentId, studentId))
+    .limit(1);
+
+  if (quiz) return true;
+
+  const [exam] = await db
+    .select({ id: examinationCells.id })
+    .from(examinationCells)
+    .where(eq(examinationCells.studentId, studentId))
+    .limit(1);
+
+  return !!exam;
 }
 
 async function importStudentRecords(db: any, rows: any[]) {
@@ -1168,6 +1188,13 @@ studentController.patch("/:id", async (c) => {
     throw new ForbiddenError("Access denied");
   }
 
+  const hasAssessments = await hasStudentAssessments(db, id);
+  if (hasAssessments) {
+    throw new BadRequestError(
+      "Cannot edit student: this student has existing quiz attempts or examination records."
+    );
+  }
+
   let body: Record<string, any>;
   let profileImageFile: File | null = null;
 
@@ -1298,6 +1325,13 @@ studentController.delete("/:id", async (c) => {
     throw new ForbiddenError("Access denied");
   }
 
+  const hasAssessments = await hasStudentAssessments(db, id);
+  if (hasAssessments) {
+    throw new BadRequestError(
+      "Cannot delete student: this student has existing quiz attempts or examination records."
+    );
+  }
+
   // Soft delete
   await db
     .update(students)
@@ -1318,6 +1352,73 @@ studentController.delete("/:id", async (c) => {
     { success: true, message: "Student deleted successfully" },
     200
   );
+});
+
+// ─── BULK DELETE Students ──────────────────────────
+studentController.post("/bulk-delete", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  const db = getDb(c.env.DB);
+
+  const body = await c.req.json<{ ids: string[] }>();
+  const { ids } = body;
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    throw new BadRequestError("No student IDs provided");
+  }
+
+  // Fetch all students
+  const studentsToDelete = await db
+    .select()
+    .from(students)
+    .where(and(inArray(students.id, ids), eq(students.isDeleted, 0)));
+
+  if (studentsToDelete.length === 0) {
+    throw new BadRequestError("No students found");
+  }
+
+  // Verify access
+  for (const s of studentsToDelete) {
+    if (user.role !== "super_admin" && s.institutionId !== user.institutionId) {
+      throw new ForbiddenError("Access denied to one or more students");
+    }
+  }
+
+  // Check assessments for ALL students
+  const blocked: { id: string; name: string }[] = [];
+  const allowed: string[] = [];
+
+  for (const s of studentsToDelete) {
+    const hasAssessments = await hasStudentAssessments(db, s.id);
+    if (hasAssessments) {
+      blocked.push({ id: s.id, name: s.name ?? "Unknown" });
+    } else {
+      allowed.push(s.id);
+    }
+  }
+
+  if (allowed.length > 0) {
+    const now = nowISO();
+    await db
+      .update(students)
+      .set({ isDeleted: 1, isActive: 0, updatedAt: now })
+      .where(inArray(students.id, allowed));
+
+    // Remove from class junctions
+    for (const sid of allowed) {
+      await db
+        .delete(classStudentIds)
+        .where(eq(classStudentIds.studentId, sid));
+    }
+  }
+
+  return c.json({
+    success: true,
+    message: allowed.length > 0
+      ? `Deleted ${allowed.length} student(s)`
+      : "No students were deleted",
+    data: { deleted: allowed.length, blocked: blocked.length },
+    blocked,
+  }, 200);
 });
 
 // ─── Backfill Roll Numbers (super_admin only) ──────
