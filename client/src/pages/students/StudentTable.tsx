@@ -456,6 +456,10 @@ export function StudentTable({ institutionId }: Props) {
         return classData?._id === filterValue;
       },
     }),
+    columnHelper.accessor("rollNumber", {
+      header: "Roll Number",
+      cell: info => <span className="font-mono text-xs">{info.getValue() || "-"}</span>,
+    }),
     columnHelper.display({
       id: "section",
       header: "Section",
