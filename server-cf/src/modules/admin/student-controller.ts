@@ -44,6 +44,107 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
+async function importStudentRecords(db: any, rows: any[]) {
+  const now = nowISO();
+  const studentRecords: Record<string, any>[] = rows.map((studentData: any) => ({
+    id: uuid(),
+    name: studentData.name,
+    rollNumber: studentData.rollNumber,
+    admissionNumber: studentData.admissionNumber,
+    email: studentData.email,
+    username: studentData.username || null,
+    password: undefined as string | undefined,
+    mobileNumber: studentData.mobileNumber,
+    parentName: studentData.parentName,
+    parentMobile: studentData.parentMobile,
+    parentEmail: studentData.parentEmail,
+    dateOfBirth: studentData.dateOfBirth,
+    gender: studentData.gender,
+    address: studentData.address,
+    admissionDate: studentData.admissionDate,
+    classId: studentData.classId,
+    institutionId: studentData.institutionId,
+    profileImage: undefined,
+    isActive: 1,
+    isDeleted: 0,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  // Generate passwords for students with usernames (parallel hashing)
+  const passwordMap = new Map<string, { plain: string; hashed: string }>();
+  const studentsNeedingPasswords = studentRecords.filter((s) => s.username);
+
+  await Promise.all(
+    studentsNeedingPasswords.map(async (s) => {
+      const plain =
+        Math.random().toString(36).slice(-8) +
+        Math.random().toString(36).slice(-2);
+      const hashed = await hashPassword(plain);
+      passwordMap.set(s.id, { plain, hashed });
+    })
+  );
+
+  for (const record of studentRecords) {
+    const pw = passwordMap.get(record.id);
+    if (pw) {
+      record.password = pw.hashed;
+    }
+  }
+
+  // Bulk insert students in chunks (D1 limit: 100 vars/query; ~21 cols/student → 4/batch)
+  const studentChunks = chunk(studentRecords, 4);
+  for (const chunk of studentChunks) {
+    const values = chunk.map((s) => ({
+      id: s.id,
+      name: s.name,
+      rollNumber: s.rollNumber,
+      admissionNumber: s.admissionNumber,
+      email: s.email,
+      username: s.username,
+      password: s.password || null,
+      mobileNumber: s.mobileNumber,
+      parentName: s.parentName,
+      parentMobile: s.parentMobile,
+      parentEmail: s.parentEmail,
+      dateOfBirth: s.dateOfBirth,
+      gender: s.gender,
+      address: s.address,
+      admissionDate: s.admissionDate,
+      classId: s.classId,
+      institutionId: s.institutionId,
+      profileImage: s.profileImage,
+      isActive: s.isActive,
+      isDeleted: s.isDeleted,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+    }));
+    await db.insert(students).values(values);
+  }
+
+  // Bulk insert junction entries in chunks
+  const junctionChunks = chunk(
+    studentRecords
+      .filter((s) => s.classId)
+      .map((s) => ({
+        id: uuid(),
+        classId: s.classId,
+        studentId: s.id,
+      })),
+    30
+  );
+
+  for (const jc of junctionChunks) {
+    await db.insert(classStudentIds).values(jc);
+  }
+
+  // Attach plain passwords for response
+  return studentRecords.map((s) => {
+    const pw = passwordMap.get(s.id);
+    return pw ? { ...s, password: pw.plain } : s;
+  });
+}
+
 const studentCreateSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(TEXT_LIMITS.personName, "Name too long"),
   rollNumber: z.string().trim().max(TEXT_LIMITS.studentRollNumber).optional().nullable().or(z.literal("")),
@@ -355,28 +456,24 @@ studentController.post("/bulk-upload", async (c) => {
   // ── DEDUPLICATION ────────────────────────────────
   const validData = result.data as any[];
 
+  const inFileDuplicates: any[] = [];
+  const dbDuplicates: any[] = [];
+
   if (validData.length > 0) {
     // 1. Check for duplicates WITHIN the file
-    const uniqueDataInFile: any[] = [];
-    const seenInFile = new Set<string>();
+    const seenInFile = new Map<string, number>();
 
-    validData.forEach((student) => {
+    for (const student of validData) {
       const key = `${student.name.trim().toLowerCase()}-${student.classId}`;
       if (seenInFile.has(key)) {
-        result.errors.push({
-          row: student._rowNumber,
-          errors: [
-            `Duplicate entry in this file: Student '${student.name}' appears multiple times.`,
-          ],
-        });
+        inFileDuplicates.push(student);
       } else {
-        seenInFile.add(key);
-        uniqueDataInFile.push(student);
+        seenInFile.set(key, student._rowNumber);
       }
-    });
+    }
 
     // 2. Check for duplicates AGAINST DATABASE (batched IN queries)
-    const studentNames = [...new Set(uniqueDataInFile.map((s) => s.name))];
+    const studentNames = [...new Set(validData.map((s) => s.name))];
 
     let existingStudents: any[] = [];
     if (studentNames.length > 0) {
@@ -402,41 +499,29 @@ studentController.post("/bulk-upload", async (c) => {
       )
     );
 
-    const finalUniqueData: any[] = [];
-
-    uniqueDataInFile.forEach((newStudent) => {
-      const key = `${newStudent.name.toLowerCase()}-${newStudent.classId}`;
-
+    for (const student of validData) {
+      const key = `${student.name.toLowerCase()}-${student.classId}`;
       if (existingKeySet.has(key)) {
-        result.errors.push({
-          row: newStudent._rowNumber,
-          errors: [
-            `Student '${newStudent.name}' already exists in this class.`,
-          ],
-        });
-      } else {
-        finalUniqueData.push(newStudent);
+        dbDuplicates.push(student);
       }
-    });
-
-    // Update result data
-    (result as any).data = finalUniqueData;
-    result.validRows = finalUniqueData.length;
+    }
   }
 
-  // Auto-generate roll numbers for students without one
-  const studentsWithoutRollNumber = (result.data as any[]).filter((s: any) => !s.rollNumber);
+  result.validRows = validData.length;
+
+  // Auto-generate roll numbers for all valid students without one
+  const studentsWithoutRollNumber = validData.filter((s: any) => !s.rollNumber);
   if (studentsWithoutRollNumber.length > 0) {
     const rollNumbers = await generateRollNumbers(db, institutionId, studentsWithoutRollNumber.length);
     let rnIdx = 0;
-    for (const s of (result.data as any[])) {
+    for (const s of validData) {
       if (!s.rollNumber) {
         s.rollNumber = rollNumbers[rnIdx++];
       }
     }
   }
 
-  if (!result.success || result.data.length === 0) {
+  if (!result.success || validData.length === 0) {
     return c.json(
       {
         success: false,
@@ -444,7 +529,7 @@ studentController.post("/bulk-upload", async (c) => {
         errors: result.errors,
         summary: {
           totalRows: result.totalRows,
-          validRows: result.validRows,
+          validRows: 0,
           errorRows: result.errors.length,
         },
       },
@@ -452,105 +537,31 @@ studentController.post("/bulk-upload", async (c) => {
     );
   }
 
-  // Prepare all student records
-  const now = nowISO();
-  const studentRecords: Record<string, any>[] = (result.data as any[]).map((studentData: any) => ({
-    id: uuid(),
-    name: studentData.name,
-    rollNumber: studentData.rollNumber,
-    admissionNumber: studentData.admissionNumber,
-    email: studentData.email,
-    username: studentData.username || null,
-    password: undefined as string | undefined,
-    mobileNumber: studentData.mobileNumber,
-    parentName: studentData.parentName,
-    parentMobile: studentData.parentMobile,
-    parentEmail: studentData.parentEmail,
-    dateOfBirth: studentData.dateOfBirth,
-    gender: studentData.gender,
-    address: studentData.address,
-    admissionDate: studentData.admissionDate,
-    classId: studentData.classId,
-    institutionId: studentData.institutionId,
-    profileImage: undefined,
-    isActive: 1,
-    isDeleted: 0,
-    createdAt: now,
-    updatedAt: now,
-  }));
-
-  // Generate passwords for students with usernames (parallel hashing)
-  const passwordMap = new Map<string, { plain: string; hashed: string }>();
-  const studentsNeedingPasswords = studentRecords.filter((s) => s.username);
-
-  await Promise.all(
-    studentsNeedingPasswords.map(async (s) => {
-      const plain =
-        Math.random().toString(36).slice(-8) +
-        Math.random().toString(36).slice(-2);
-      const hashed = await hashPassword(plain);
-      passwordMap.set(s.id, { plain, hashed });
-    })
-  );
-
-  for (const record of studentRecords) {
-    const pw = passwordMap.get(record.id);
-    if (pw) {
-      record.password = pw.hashed;
-    }
+  // If there are duplicates, return preview without importing
+  const hasDuplicates = inFileDuplicates.length > 0 || dbDuplicates.length > 0;
+  if (hasDuplicates) {
+    return c.json(
+      {
+        success: true,
+        preview: true,
+        rows: validData,
+        duplicates: {
+          inFile: inFileDuplicates.map((s) => s._rowNumber),
+          inDatabase: dbDuplicates.map((s) => s._rowNumber),
+        },
+        errors: result.errors,
+        summary: {
+          totalRows: result.totalRows,
+          validRows: validData.length,
+          duplicateRows: new Set([...inFileDuplicates, ...dbDuplicates].map((s) => s._rowNumber)).size,
+          errorRows: result.errors.length,
+        },
+      },
+      200
+    );
   }
 
-  // Bulk insert students in chunks (D1 limit: 100 vars/query; ~21 cols/student → 4/batch)
-  const studentChunks = chunk(studentRecords, 4);
-  for (const chunk of studentChunks) {
-    const values = chunk.map((s) => ({
-      id: s.id,
-      name: s.name,
-      rollNumber: s.rollNumber,
-      admissionNumber: s.admissionNumber,
-      email: s.email,
-      username: s.username,
-      password: s.password || null,
-      mobileNumber: s.mobileNumber,
-      parentName: s.parentName,
-      parentMobile: s.parentMobile,
-      parentEmail: s.parentEmail,
-      dateOfBirth: s.dateOfBirth,
-      gender: s.gender,
-      address: s.address,
-      admissionDate: s.admissionDate,
-      classId: s.classId,
-      institutionId: s.institutionId,
-      profileImage: s.profileImage,
-      isActive: s.isActive,
-      isDeleted: s.isDeleted,
-      createdAt: s.createdAt,
-      updatedAt: s.updatedAt,
-    }));
-    await db.insert(students).values(values);
-  }
-
-  // Bulk insert junction entries in chunks
-  const junctionChunks = chunk(
-    studentRecords
-      .filter((s) => s.classId)
-      .map((s) => ({
-        id: uuid(),
-        classId: s.classId,
-        studentId: s.id,
-      })),
-    30
-  );
-
-  for (const jc of junctionChunks) {
-    await db.insert(classStudentIds).values(jc);
-  }
-
-  // Attach plain passwords for response
-  const insertedStudents = studentRecords.map((s) => {
-    const pw = passwordMap.get(s.id);
-    return pw ? { ...s, password: pw.plain } : s;
-  });
+  const insertedStudents = await importStudentRecords(db, validData as any[]);
 
   return c.json(
     {
@@ -566,6 +577,333 @@ studentController.post("/bulk-upload", async (c) => {
     },
     201
   );
+});
+
+// ─── BULK UPLOAD Commit (confirm duplicate selections) ─
+studentController.post("/bulk-upload/commit", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  const db = getDb(c.env.DB);
+
+  const body = await c.req.json<{
+    institutionId: string;
+    selectedRowIds: number[];
+    rows: any[];
+  }>();
+
+  const { institutionId, selectedRowIds, rows } = body;
+
+  // Verify institution
+  const [inst] = await db
+    .select()
+    .from(institutions)
+    .where(
+      and(eq(institutions.id, institutionId), eq(institutions.isDeleted, 0))
+    )
+    .limit(1);
+
+  if (!inst) {
+    throw new BadRequestError("Institution not found");
+  }
+
+  if (user.role !== "super_admin" && inst.id !== user.institutionId) {
+    throw new ForbiddenError("Access denied");
+  }
+
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    throw new BadRequestError("No rows to import");
+  }
+
+  if (!selectedRowIds || !Array.isArray(selectedRowIds) || selectedRowIds.length === 0) {
+    throw new BadRequestError("No rows selected");
+  }
+
+  const selectedSet = new Set(selectedRowIds);
+  const toImport = rows.filter((r) => selectedSet.has(r._rowNumber));
+
+  if (toImport.length === 0) {
+    throw new BadRequestError("No matching rows found for the selected IDs");
+  }
+
+  const insertedStudents = await importStudentRecords(db, toImport);
+
+  return c.json(
+    {
+      success: true,
+      message: `Successfully imported ${insertedStudents.length} students`,
+      data: insertedStudents,
+    },
+    201
+  );
+});
+
+// ─── BULK UPDATE Roll Numbers ──────────────────────
+studentController.post("/bulk-update-roll-numbers", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  const db = getDb(c.env.DB);
+
+  const formData = await c.req.formData();
+  const institutionId = formData.get("institutionId") as string;
+  const file = formData.get("file") as File | null;
+
+  const [inst] = await db
+    .select()
+    .from(institutions)
+    .where(and(eq(institutions.id, institutionId), eq(institutions.isDeleted, 0)))
+    .limit(1);
+
+  if (!inst) throw new BadRequestError("Institution not found");
+  if (user.role !== "super_admin" && inst.id !== user.institutionId) throw new ForbiddenError("Access denied");
+  if (!file) throw new BadRequestError("Excel file is required");
+
+  const allClasses = await db
+    .select()
+    .from(classes)
+    .where(and(eq(classes.institutionId, institutionId), eq(classes.isDeleted, 0)));
+
+  const classMap = new Map<string, { id: string; grade: string | null; section: string }>();
+  allClasses.forEach((cls) => {
+    const key = `${cls.grade || ""}-${cls.section}`.toUpperCase();
+    classMap.set(key, { id: cls.id, grade: cls.grade, section: cls.section });
+  });
+
+  const fileBuffer = new Uint8Array(await file.arrayBuffer());
+  const workbook = XLSX.read(fileBuffer, { type: "array" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: "" }) as any[];
+
+  const matched: any[] = [];
+  const notFound: { row: number; name: string; grade: string; section: string; rollNumber: string }[] = [];
+  const ambiguous: { row: number; name: string; grade: string; section: string; rollNumber: string; matches: { id: string; name: string; rollNumber: string | null }[] }[] = [];
+
+  let rowIndex = 0;
+  for (const r of jsonRows) {
+    rowIndex++;
+    const name = (r.name || "").trim();
+    const grade = (r.grade || "").toString().trim();
+    const section = (r.section || "").toString().trim();
+    const rollNumber = (r.roll_number !== undefined ? String(r.roll_number).trim() : r.rollNumber ? String(r.rollNumber).trim() : "");
+
+    if (!name || !grade || !section) continue;
+    if (/^(GRADE|CLASS|SI\.NO|SL\.NO|STUDENT\s+NAME|ROLL\s+NUMBER)\b/i.test(name)) continue;
+
+    const classKey = `${grade}-${section}`.toUpperCase();
+    const cls = classMap.get(classKey);
+    if (!cls) {
+      notFound.push({ row: rowIndex, name, grade, section, rollNumber });
+      continue;
+    }
+
+    const existingStudents = await db
+      .select({ id: students.id, name: students.name, rollNumber: students.rollNumber })
+      .from(students)
+      .where(
+        and(
+          eq(students.institutionId, institutionId),
+          eq(students.classId, cls.id),
+          eq(students.name, name),
+          eq(students.isDeleted, 0)
+        )
+      )
+      .limit(10) as unknown as { id: string; name: string; rollNumber: string | null }[];
+
+    if (existingStudents.length === 0) {
+      notFound.push({ row: rowIndex, name, grade, section, rollNumber });
+    } else if (existingStudents.length === 1) {
+      matched.push({ studentId: existingStudents[0].id, rollNumber, row: rowIndex, name, grade, section });
+    } else {
+      ambiguous.push({ row: rowIndex, name, grade, section, rollNumber, matches: existingStudents });
+    }
+  }
+
+  if (notFound.length === 0 && ambiguous.length === 0) {
+    for (const m of matched) {
+      await db
+        .update(students)
+        .set({ rollNumber: m.rollNumber || null, updatedAt: nowISO() })
+        .where(eq(students.id, m.studentId));
+    }
+
+    await syncRollNumberCounter(db, institutionId);
+
+    return c.json({
+      success: true,
+      message: `Updated roll numbers for ${matched.length} student(s)`,
+      data: { updated: matched.length },
+    }, 200);
+  }
+
+  return c.json({
+    success: true,
+    preview: true,
+    matched,
+    notFound,
+    ambiguous,
+    summary: {
+      matched: matched.length,
+      notFound: notFound.length,
+      ambiguous: ambiguous.length,
+    },
+  }, 200);
+});
+
+// ─── BULK UPDATE Roll Numbers Confirm ──────────────
+studentController.post("/bulk-update-roll-numbers/commit", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  const db = getDb(c.env.DB);
+
+  const body = await c.req.json<{
+    institutionId: string;
+    matched: { studentId: string; rollNumber: string }[];
+    addNotFound: { name: string; grade: string; section: string; rollNumber: string }[];
+    resolveAmbiguous: { studentId: string; rollNumber: string }[];
+  }>();
+
+  const { institutionId, matched, addNotFound, resolveAmbiguous } = body;
+
+  const [inst] = await db
+    .select()
+    .from(institutions)
+    .where(and(eq(institutions.id, institutionId), eq(institutions.isDeleted, 0)))
+    .limit(1);
+
+  if (!inst) throw new BadRequestError("Institution not found");
+  if (user.role !== "super_admin" && inst.id !== user.institutionId) throw new ForbiddenError("Access denied");
+
+  let updatedCount = 0;
+  let addedCount = 0;
+
+  if (matched) {
+    for (const m of matched) {
+      await db
+        .update(students)
+        .set({ rollNumber: m.rollNumber || null, updatedAt: nowISO() })
+        .where(eq(students.id, m.studentId));
+      updatedCount++;
+    }
+  }
+
+  if (resolveAmbiguous) {
+    for (const a of resolveAmbiguous) {
+      await db
+        .update(students)
+        .set({ rollNumber: a.rollNumber || null, updatedAt: nowISO() })
+        .where(eq(students.id, a.studentId));
+      updatedCount++;
+    }
+  }
+
+  if (addNotFound) {
+    const allClasses = await db
+      .select()
+      .from(classes)
+      .where(and(eq(classes.institutionId, institutionId), eq(classes.isDeleted, 0)));
+
+    const classMap = new Map<string, string>();
+    allClasses.forEach((cls) => {
+      const key = `${cls.grade || ""}-${cls.section}`.toUpperCase();
+      classMap.set(key, cls.id);
+    });
+
+    const now = nowISO();
+    const newStudents = addNotFound.map((s) => {
+      const classKey = `${s.grade}-${s.section}`.toUpperCase();
+      const classId = classMap.get(classKey) || "";
+      return {
+        id: uuid(),
+        name: s.name,
+        rollNumber: s.rollNumber || null,
+        classId,
+        institutionId,
+        isActive: 1,
+        isDeleted: 0,
+        createdAt: now,
+        updatedAt: now,
+      };
+    });
+
+    for (const ns of newStudents) {
+      await db.insert(students).values(ns);
+      if (ns.classId) {
+        await db.insert(classStudentIds).values({ id: uuid(), classId: ns.classId, studentId: ns.id });
+      }
+      addedCount++;
+    }
+  }
+
+  await syncRollNumberCounter(db, institutionId);
+
+  return c.json({
+    success: true,
+    message: `Updated ${updatedCount} student(s), added ${addedCount} new student(s)`,
+    data: { updated: updatedCount, added: addedCount },
+  }, 200);
+});
+
+// ─── GET Roll Numbers Update Template ──────────────
+studentController.get("/bulk-update-roll-numbers/template", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  const db = getDb(c.env.DB);
+  const institutionId = c.req.query("institutionId");
+
+  if (!institutionId) throw new BadRequestError("institutionId is required");
+
+  const [inst] = await db
+    .select({ id: institutions.id, name: institutions.name })
+    .from(institutions)
+    .where(and(eq(institutions.id, institutionId), eq(institutions.isDeleted, 0)))
+    .limit(1);
+
+  if (!inst) throw new BadRequestError("Institution not found");
+
+  const studentRows = await db
+    .select({
+      id: students.id,
+      name: students.name,
+      grade: classes.grade,
+      section: classes.section,
+      rollNumber: students.rollNumber,
+      classId: students.classId,
+    })
+    .from(students)
+    .leftJoin(classes, eq(students.classId, classes.id))
+    .where(
+      and(
+        eq(students.institutionId, institutionId),
+        eq(students.isDeleted, 0),
+      )
+    )
+    .orderBy(classes.grade, classes.section, students.name);
+
+  const headers = ["id", "grade", "section", "name", "current_roll_number", "new_roll_number"];
+  const rows = studentRows.map((s) => ({
+    id: s.id,
+    grade: s.grade || "",
+    section: s.section || "",
+    name: s.name || "",
+    current_roll_number: s.rollNumber || "",
+    new_roll_number: "",
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  worksheet["!cols"] = [
+    { wch: 40 }, { wch: 10 }, { wch: 10 }, { wch: 30 }, { wch: 20 }, { wch: 20 },
+  ];
+
+  // Reorder columns to match headers order
+  XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: "A1" });
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
+
+  const buffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" }) as Uint8Array;
+
+  return new Response(buffer, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": 'attachment; filename="update_roll_numbers_template.xlsx"',
+    },
+  });
 });
 
 // ─── GET Excel Template ────────────────────────────

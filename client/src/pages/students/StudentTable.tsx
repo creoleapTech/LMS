@@ -47,6 +47,20 @@ export function StudentTable({ institutionId }: Props) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadErrors, setUploadErrors] = useState<any[]>([]);
   const [uploadSummary, setUploadSummary] = useState<any>(null);
+  const [previewData, setPreviewData] = useState<{
+    rows: any[];
+    duplicates: { inFile: number[]; inDatabase: number[] };
+    summary: any;
+  } | null>(null);
+  const [selectedForImport, setSelectedForImport] = useState<Set<number>>(new Set());
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [openRollUpdate, setOpenRollUpdate] = useState(false);
+  const [rollUpdateFile, setRollUpdateFile] = useState<File | null>(null);
+  const [rollUpdatePreview, setRollUpdatePreview] = useState<any>(null);
+  const [rollUpdateLoading, setRollUpdateLoading] = useState(false);
+  const [rollUpdateConfirming, setRollUpdateConfirming] = useState(false);
+  const [addNotFoundStudents, setAddNotFoundStudents] = useState<Set<number>>(new Set());
+  const [ambiguousSelections, setAmbiguousSelections] = useState<Record<number, string>>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
@@ -181,7 +195,20 @@ export function StudentTable({ institutionId }: Props) {
 
       const responseData = res.data;
 
-      if (responseData.errors && responseData.errors.length > 0) {
+      if (responseData.preview) {
+        setPreviewData(responseData);
+        const duplicateIds = new Set([
+          ...(responseData.duplicates?.inFile || []),
+          ...(responseData.duplicates?.inDatabase || []),
+        ]);
+        const autoSelected = responseData.rows
+          .filter((r: any) => !duplicateIds.has(r._rowNumber))
+          .map((r: any) => r._rowNumber);
+        setSelectedForImport(new Set(autoSelected));
+        setUploadSummary(responseData.summary || null);
+        setOpenBulkUpload(false);
+        toast.warning(`${responseData.summary?.duplicateRows || 0} duplicate rows found. Please review.`);
+      } else if (responseData.errors && responseData.errors.length > 0) {
         setUploadErrors(responseData.errors);
         setUploadSummary(responseData.summary || null);
         toast.warning(`Imported with issues: ${responseData.errors.length} errors found.`);
@@ -205,6 +232,127 @@ export function StudentTable({ institutionId }: Props) {
       console.error(error?.response?.data);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!previewData) return;
+    setIsConfirming(true);
+    try {
+      const selectedRowIds = Array.from(selectedForImport);
+      const res = await _axios.post("/admin/students/bulk-upload/commit", {
+        institutionId,
+        selectedRowIds,
+        rows: previewData.rows,
+      });
+
+      const responseData = res.data;
+      toast.success(`Successfully imported ${responseData.data?.length || 0} students`);
+      setPreviewData(null);
+      setOpenBulkUpload(false);
+      setBulkFile(null);
+      queryClient.invalidateQueries({ queryKey: ["students", institutionId] });
+      queryClient.invalidateQueries({ queryKey: ["classes", institutionId] });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to import students");
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const toggleDuplicateRow = (rowId: number) => {
+    setSelectedForImport((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+      return next;
+    });
+  };
+
+  const handleRollUpdateUpload = async () => {
+    if (!rollUpdateFile) return;
+    setRollUpdateLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", rollUpdateFile);
+      formData.append("institutionId", institutionId);
+      const res = await _axios.post("/admin/students/bulk-update-roll-numbers", formData);
+      const data = res.data;
+
+      if (data.preview) {
+        setRollUpdatePreview(data);
+        const notFoundIndices = data.notFound.map((_: any, i: number) => i);
+        setAddNotFoundStudents(new Set(notFoundIndices));
+        setAmbiguousSelections({});
+      } else {
+        toast.success(data.message || "Roll numbers updated");
+        setOpenRollUpdate(false);
+        setRollUpdateFile(null);
+        setRollUpdatePreview(null);
+        queryClient.invalidateQueries({ queryKey: ["students", institutionId] });
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to process roll number update");
+    } finally {
+      setRollUpdateLoading(false);
+    }
+  };
+
+  const handleRollUpdateConfirm = async () => {
+    if (!rollUpdatePreview) return;
+    setRollUpdateConfirming(true);
+    try {
+      const matched = rollUpdatePreview.matched.map((m: any) => ({
+        studentId: m.studentId,
+        rollNumber: m.rollNumber,
+      }));
+      const addNotFound = rollUpdatePreview.notFound
+        .filter((_: any, i: number) => addNotFoundStudents.has(i))
+        .map((n: any) => ({ name: n.name, grade: n.grade, section: n.section, rollNumber: n.rollNumber }));
+      const resolveAmbiguous = Object.entries(ambiguousSelections)
+        .filter(([_, studentId]) => studentId)
+        .map(([row, studentId]) => {
+          const amb = rollUpdatePreview.ambiguous.find((a: any) => a.row === Number(row));
+          return { studentId, rollNumber: amb?.rollNumber || "" };
+        });
+
+      const res = await _axios.post("/admin/students/bulk-update-roll-numbers/commit", {
+        institutionId,
+        matched,
+        addNotFound,
+        resolveAmbiguous,
+      });
+
+      toast.success(res.data.message);
+      setOpenRollUpdate(false);
+      setRollUpdateFile(null);
+      setRollUpdatePreview(null);
+      queryClient.invalidateQueries({ queryKey: ["students", institutionId] });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to confirm roll number update");
+    } finally {
+      setRollUpdateConfirming(false);
+    }
+  };
+
+  const downloadRollUpdateTemplate = async () => {
+    try {
+      const response = await _axios.get("/admin/students/bulk-update-roll-numbers/template", {
+        params: { institutionId },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "update_roll_numbers_template.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      toast.error("Failed to download template");
     }
   };
 
@@ -318,6 +466,9 @@ export function StudentTable({ institutionId }: Props) {
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => setOpenBulkUpload(true)} className="rounded-xl">
             <Upload className="mr-2 h-4 w-4" /> Bulk Upload
+          </Button>
+          <Button variant="outline" onClick={() => setOpenRollUpdate(true)} className="rounded-xl">
+            <Upload className="mr-2 h-4 w-4" /> Update Roll Numbers
           </Button>
           <Button onClick={handleCreate} className="bg-brand-color hover:bg-brand-color/90 rounded-xl shadow-lg shadow-indigo-500/30">
             <Plus className="mr-2 h-4 w-4" /> Add Student
@@ -460,8 +611,286 @@ export function StudentTable({ institutionId }: Props) {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Duplicate Resolution Dialog */}
+      <Dialog open={!!previewData} onOpenChange={(open) => { if (!open) { setPreviewData(null); setOpenBulkUpload(false); } }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Duplicate Names Found</DialogTitle>
+            <DialogDescription>
+              Some students have the same name in the same class. Select which ones to keep.
+              Duplicates will be assigned different roll numbers.
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewData && (
+            <div className="space-y-4 py-4">
+              {uploadSummary && (
+                <div className="flex gap-4 text-sm font-medium">
+                  <span className="text-muted-foreground">Total: {uploadSummary.totalRows}</span>
+                  <span className="text-green-600">Valid: {uploadSummary.validRows}</span>
+                  <span className="text-amber-600">Duplicates: {uploadSummary.duplicateRows}</span>
+                  <span className="text-red-600">Errors: {uploadSummary.errorRows}</span>
+                </div>
+              )}
+
+              <div className="border rounded-md max-h-60 overflow-y-auto bg-[var(--neo-bg)] dark:bg-slate-900 p-2">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          checked={previewData.rows.every((r) => selectedForImport.has(r._rowNumber))}
+                          onChange={() => {
+                            if (previewData.rows.every((r) => selectedForImport.has(r._rowNumber))) {
+                              setSelectedForImport(new Set());
+                            } else {
+                              setSelectedForImport(new Set(previewData.rows.map((r) => r._rowNumber)));
+                            }
+                          }}
+                          className="h-4 w-4"
+                        />
+                      </TableHead>
+                      <TableHead>Row</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Class</TableHead>
+                      <TableHead>Roll Number</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewData.rows.map((row: any) => {
+                      const isDuplicate = previewData.duplicates.inFile.includes(row._rowNumber) ||
+                        previewData.duplicates.inDatabase.includes(row._rowNumber);
+                      const reason = previewData.duplicates.inFile.includes(row._rowNumber)
+                        ? "Duplicate in file"
+                        : previewData.duplicates.inDatabase.includes(row._rowNumber)
+                          ? "Already exists in DB"
+                          : null;
+                      return (
+                        <TableRow key={row._rowNumber} className={isDuplicate ? "bg-amber-50 dark:bg-amber-950/20" : ""}>
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={selectedForImport.has(row._rowNumber)}
+                              onChange={() => toggleDuplicateRow(row._rowNumber)}
+                              className="h-4 w-4"
+                            />
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">{row._rowNumber}</TableCell>
+                          <TableCell className="font-medium">{row.name}</TableCell>
+                          <TableCell>{row.classId ? `${row.grade || ""}-${row.section || ""}` : "-"}</TableCell>
+                          <TableCell className="font-mono text-xs">{row.rollNumber || "-"}</TableCell>
+                          <TableCell>
+                            {reason ? (
+                              <Badge variant="outline" className="text-amber-600 border-amber-300">{reason}</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-green-600 border-green-300">New</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setPreviewData(null);
+              setOpenBulkUpload(false);
+              setBulkFile(null);
+              setUploadErrors([]);
+              setUploadSummary(null);
+            }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmUpload}
+              disabled={isConfirming || selectedForImport.size === 0}
+              className="bg-brand-color"
+            >
+              {isConfirming ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                `Import ${selectedForImport.size} Selected`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Update Roll Numbers Dialog */}
+      <Dialog open={openRollUpdate} onOpenChange={(open) => { if (!open) { setRollUpdateFile(null); setRollUpdatePreview(null); } setOpenRollUpdate(open); }}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Update Roll Numbers</DialogTitle>
+            <DialogDescription>
+              Upload an Excel file with updated roll numbers for existing students.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!rollUpdatePreview && (
+            <div className="space-y-4 py-4">
+              <div className="bg-muted p-4 rounded-md text-sm">
+                <p className="font-semibold mb-2">Instructions:</p>
+                <ol className="list-decimal pl-4 space-y-1">
+                  <li>Download the template which includes all current students.</li>
+                  <li>Fill in the <b>new_roll_number</b> column with the school-issued roll numbers.</li>
+                  <li>Upload the filled Excel file.</li>
+                  <li>Students not found in the database will be shown for review.</li>
+                </ol>
+                <Button variant="link" className="p-0 h-auto mt-2 text-brand-color" onClick={downloadRollUpdateTemplate}>
+                  Download Template
+                </Button>
+              </div>
+              <div className="grid w-full max-w-sm items-center gap-1.5">
+                <Label htmlFor="roll-update-file">Excel File</Label>
+                <Input id="roll-update-file" type="file" accept=".xlsx, .xls" disabled={rollUpdateLoading} onChange={(e) => setRollUpdateFile(e.target.files?.[0] || null)} />
+              </div>
+            </div>
+          )}
+
+          {rollUpdatePreview && (
+            <div className="space-y-4 py-4">
+              <div className="flex gap-4 text-sm font-medium">
+                <span className="text-green-600">Matched: {rollUpdatePreview.summary.matched}</span>
+                {rollUpdatePreview.summary.notFound > 0 && <span className="text-amber-600">Not found: {rollUpdatePreview.summary.notFound}</span>}
+                {rollUpdatePreview.summary.ambiguous > 0 && <span className="text-red-600">Ambiguous: {rollUpdatePreview.summary.ambiguous}</span>}
+              </div>
+
+              {rollUpdatePreview.matched.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold mb-2">Matched students (will be updated):</p>
+                  <div className="border rounded-md max-h-40 overflow-y-auto p-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Class</TableHead>
+                          <TableHead>New Roll Number</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rollUpdatePreview.matched.map((m: any, i: number) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium">{m.name}</TableCell>
+                            <TableCell>{m.grade}-{m.section}</TableCell>
+                            <TableCell className="font-mono">{m.rollNumber || "-"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {rollUpdatePreview.notFound.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold mb-2">Students not found in database (check to add as new):</p>
+                  <div className="border rounded-md max-h-40 overflow-y-auto p-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10">Add</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Class</TableHead>
+                          <TableHead>Roll Number</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rollUpdatePreview.notFound.map((n: any, i: number) => (
+                          <TableRow key={i}>
+                            <TableCell>
+                              <input
+                                type="checkbox"
+                                checked={addNotFoundStudents.has(i)}
+                                onChange={() => {
+                                  setAddNotFoundStudents((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(i)) next.delete(i); else next.add(i);
+                                    return next;
+                                  });
+                                }}
+                                className="h-4 w-4"
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{n.name}</TableCell>
+                            <TableCell>{n.grade}-{n.section}</TableCell>
+                            <TableCell className="font-mono">{n.rollNumber || "-"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {rollUpdatePreview.ambiguous.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold mb-2 text-red-600">Multiple students with the same name — select which one to update:</p>
+                  <div className="border rounded-md max-h-40 overflow-y-auto p-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Roll Number in File</TableHead>
+                          <TableHead>Select Student</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rollUpdatePreview.ambiguous.map((a: any, i: number) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium">{a.name}</TableCell>
+                            <TableCell className="font-mono">{a.rollNumber || "-"}</TableCell>
+                            <TableCell>
+                              <select
+                                className="border rounded px-2 py-1 text-sm w-full"
+                                value={ambiguousSelections[a.row] || ""}
+                                onChange={(e) => setAmbiguousSelections((prev) => ({ ...prev, [a.row]: e.target.value }))}
+                              >
+                                <option value="">-- Select --</option>
+                                {a.matches.map((m: any) => (
+                                  <option key={m.id} value={m.id}>
+                                    {m.name} (current roll: {m.rollNumber || "none"}, id: {m.id.slice(0, 8)}...)
+                                  </option>
+                                ))}
+                              </select>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setOpenRollUpdate(false); setRollUpdateFile(null); setRollUpdatePreview(null); }}>
+              Cancel
+            </Button>
+            {!rollUpdatePreview ? (
+              <Button onClick={handleRollUpdateUpload} disabled={!rollUpdateFile || rollUpdateLoading} className="bg-brand-color">
+                {rollUpdateLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : "Upload"}
+              </Button>
+            ) : (
+              <Button onClick={handleRollUpdateConfirm} disabled={rollUpdateConfirming} className="bg-brand-color">
+                {rollUpdateConfirming ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Confirming...</> : "Confirm Update"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Bulk Upload Dialog */}
-      <Dialog open={openBulkUpload} onOpenChange={setOpenBulkUpload}>
+      <Dialog open={openBulkUpload} onOpenChange={(open) => { if (!open) { setPreviewData(null); setUploadErrors([]); setUploadSummary(null); setBulkFile(null); } setOpenBulkUpload(open); }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{uploadErrors.length > 0 ? "Upload Report" : "Bulk Upload Students"}</DialogTitle>
