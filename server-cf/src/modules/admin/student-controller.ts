@@ -346,7 +346,7 @@ studentController.post("/bulk-upload", async (c) => {
     const uniqueDataInFile: any[] = [];
     const seenInFile = new Set<string>();
 
-    validData.forEach((student, index) => {
+    validData.forEach((student) => {
       const key = `${student.name.trim().toLowerCase()}-${student.classId}`;
       if (seenInFile.has(key)) {
         result.errors.push({
@@ -361,39 +361,35 @@ studentController.post("/bulk-upload", async (c) => {
       }
     });
 
-    // 2. Check for duplicates AGAINST DATABASE
-    const studentNames = uniqueDataInFile.map((s) => s.name);
+    // 2. Check for duplicates AGAINST DATABASE (single query)
+    const studentNames = [...new Set(uniqueDataInFile.map((s) => s.name))];
 
-    // Fetch existing students for this institution with matching names
     let existingStudents: any[] = [];
     if (studentNames.length > 0) {
-      // Query in batches to avoid overly long IN clauses
-      for (const name of [...new Set(studentNames)]) {
-        const matches = await db
-          .select()
-          .from(students)
-          .where(
-            and(
-              eq(students.institutionId, institutionId),
-              eq(students.name, name),
-              eq(students.isDeleted, 0)
-            )
-          );
-        existingStudents.push(...matches);
-      }
+      existingStudents = await db
+        .select()
+        .from(students)
+        .where(
+          and(
+            eq(students.institutionId, institutionId),
+            inArray(students.name, studentNames),
+            eq(students.isDeleted, 0)
+          )
+        );
     }
+
+    const existingKeySet = new Set(
+      existingStudents.map(
+        (s) => `${(s.name || "").toLowerCase()}-${s.classId}`
+      )
+    );
 
     const finalUniqueData: any[] = [];
 
-    uniqueDataInFile.forEach((newStudent, index) => {
-      const isDuplicate = existingStudents.some(
-        (existing) =>
-          (existing.name || "").toLowerCase() ===
-            newStudent.name.toLowerCase() &&
-          existing.classId === newStudent.classId
-      );
+    uniqueDataInFile.forEach((newStudent) => {
+      const key = `${newStudent.name.toLowerCase()}-${newStudent.classId}`;
 
-      if (isDuplicate) {
+      if (existingKeySet.has(key)) {
         result.errors.push({
           row: newStudent._rowNumber,
           errors: [
@@ -426,62 +422,100 @@ studentController.post("/bulk-upload", async (c) => {
     );
   }
 
-  // Insert valid students
+  // Prepare all student records
   const now = nowISO();
-  const insertedStudents: any[] = [];
-  const studentsByClass: Record<string, string[]> = {};
+  const studentRecords: Record<string, any>[] = (result.data as any[]).map((studentData: any) => ({
+    id: uuid(),
+    name: studentData.name,
+    rollNumber: studentData.rollNumber,
+    admissionNumber: studentData.admissionNumber,
+    email: studentData.email,
+    username: studentData.username || null,
+    password: undefined as string | undefined,
+    mobileNumber: studentData.mobileNumber,
+    parentName: studentData.parentName,
+    parentMobile: studentData.parentMobile,
+    parentEmail: studentData.parentEmail,
+    dateOfBirth: studentData.dateOfBirth,
+    gender: studentData.gender,
+    address: studentData.address,
+    admissionDate: studentData.admissionDate,
+    classId: studentData.classId,
+    institutionId: studentData.institutionId,
+    profileImage: undefined,
+    isActive: 1,
+    isDeleted: 0,
+    createdAt: now,
+    updatedAt: now,
+  }));
 
-  for (const studentData of result.data as any[]) {
-    const studentId = uuid();
+  // Generate passwords for students with usernames (parallel hashing)
+  const passwordMap = new Map<string, { plain: string; hashed: string }>();
+  const studentsNeedingPasswords = studentRecords.filter((s) => s.username);
 
-    const [created] = await db
-      .insert(students)
-      .values({
-        id: studentId,
-        name: studentData.name,
-        rollNumber: studentData.rollNumber,
-        admissionNumber: studentData.admissionNumber,
-        email: studentData.email,
-        username: studentData.username || null,
-        mobileNumber: studentData.mobileNumber,
-        parentName: studentData.parentName,
-        parentMobile: studentData.parentMobile,
-        parentEmail: studentData.parentEmail,
-        dateOfBirth: studentData.dateOfBirth,
-        gender: studentData.gender,
-        address: studentData.address,
-        admissionDate: studentData.admissionDate,
-        classId: studentData.classId,
-        institutionId: studentData.institutionId,
-        profileImage: undefined,
-        isActive: 1,
-        isDeleted: 0,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+  await Promise.all(
+    studentsNeedingPasswords.map(async (s) => {
+      const plain =
+        Math.random().toString(36).slice(-8) +
+        Math.random().toString(36).slice(-2);
+      const hashed = await hashPassword(plain);
+      passwordMap.set(s.id, { plain, hashed });
+    })
+  );
 
-    insertedStudents.push(created);
-
-    // Track for junction table
-    if (studentData.classId) {
-      if (!studentsByClass[studentData.classId]) {
-        studentsByClass[studentData.classId] = [];
-      }
-      studentsByClass[studentData.classId].push(studentId);
+  for (const record of studentRecords) {
+    const pw = passwordMap.get(record.id);
+    if (pw) {
+      record.password = pw.hashed;
     }
   }
 
-  // Update classStudentIds junction table
-  for (const [classId, studentIdList] of Object.entries(studentsByClass)) {
-    for (const sId of studentIdList) {
-      await db.insert(classStudentIds).values({
-        id: uuid(),
-        classId,
-        studentId: sId,
-      });
-    }
+  // Bulk insert all students (single query)
+  const values = studentRecords.map((s) => ({
+    id: s.id,
+    name: s.name,
+    rollNumber: s.rollNumber,
+    admissionNumber: s.admissionNumber,
+    email: s.email,
+    username: s.username,
+    password: s.password || null,
+    mobileNumber: s.mobileNumber,
+    parentName: s.parentName,
+    parentMobile: s.parentMobile,
+    parentEmail: s.parentEmail,
+    dateOfBirth: s.dateOfBirth,
+    gender: s.gender,
+    address: s.address,
+    admissionDate: s.admissionDate,
+    classId: s.classId,
+    institutionId: s.institutionId,
+    profileImage: s.profileImage,
+    isActive: s.isActive,
+    isDeleted: s.isDeleted,
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
+  }));
+
+  await db.insert(students).values(values);
+
+  // Bulk insert junction entries (single query)
+  const junctionValues = studentRecords
+    .filter((s) => s.classId)
+    .map((s) => ({
+      id: uuid(),
+      classId: s.classId,
+      studentId: s.id,
+    }));
+
+  if (junctionValues.length > 0) {
+    await db.insert(classStudentIds).values(junctionValues);
   }
+
+  // Attach plain passwords for response
+  const insertedStudents = studentRecords.map((s) => {
+    const pw = passwordMap.get(s.id);
+    return pw ? { ...s, password: pw.plain } : s;
+  });
 
   return c.json(
     {
