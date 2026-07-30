@@ -19,12 +19,13 @@ export function StudentManagementPage() {
   const user = useAuthStore((s) => s.user);
   const role = user?.role;
   const isSuperAdmin = role === "super_admin";
+  const isAdmin = role === "admin";
   const isTeacher = role === "teacher";
 
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>("");
 
-  // Teacher's own institution
-  const ownInstitutionId = isTeacher
+  // Own institution (admin, teacher, or staff)
+  const ownInstitutionId = (isAdmin || isTeacher)
     ? (typeof user?.institutionId === "object"
         ? user?.institutionId?._id
         : user?.institutionId) || ""
@@ -94,10 +95,12 @@ export function StudentManagementPage() {
               <Users className="h-4 w-4" />
               Students
             </TabsTrigger>
-            <TabsTrigger value="credentials" className="gap-1.5">
-              <KeyRound className="h-4 w-4" />
-              Credentials
-            </TabsTrigger>
+            {!isAdmin && (
+              <TabsTrigger value="credentials" className="gap-1.5">
+                <KeyRound className="h-4 w-4" />
+                Credentials
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="classes">
@@ -108,9 +111,11 @@ export function StudentManagementPage() {
             <StudentTable institutionId={effectiveInstitutionId} />
           </TabsContent>
 
-          <TabsContent value="credentials">
-            <StudentCredentialsPanel institutionId={effectiveInstitutionId} />
-          </TabsContent>
+          {!isAdmin && (
+            <TabsContent value="credentials">
+              <StudentCredentialsPanel institutionId={effectiveInstitutionId} />
+            </TabsContent>
+          )}
         </Tabs>
       )}
     </div>
