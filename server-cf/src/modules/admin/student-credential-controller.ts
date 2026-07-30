@@ -3,7 +3,8 @@ import { eq, and, sql } from "drizzle-orm";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { institutions, students } from "../../schema/admin";
-import { generateRollNumbers, institutionInitials, pickWord, padSequence, reconstructPassword } from "../../lib/roll-number";
+import { v4 as uuid } from "uuid";
+import { generateRollNumber } from "../../lib/roll-number";
 import { hashPassword } from "../../lib/password";
 import { nowISO } from "../../lib/utils";
 import { BadRequestError } from "../../lib/errors/bad-request";
@@ -49,8 +50,6 @@ app.post("/:id/generate-student-credentials", async (c) => {
     }
   }
 
-  const prefix = institutionInitials(institution.name);
-
   // Find all active students without a username (need credentials)
   const studentsWithoutCredentials = await db
     .select({
@@ -76,26 +75,18 @@ app.post("/:id/generate-student-credentials", async (c) => {
     );
   }
 
-  const rollNumbers = await generateRollNumbers(db, institutionId, studentsWithoutCredentials.length);
   const now = nowISO();
   const results: { id: string; name: string; rollNumber: string; username?: string; plainPassword: string }[] = [];
 
-  for (let i = 0; i < studentsWithoutCredentials.length; i++) {
-    const student = studentsWithoutCredentials[i];
-    const rollNumber = rollNumbers[i];
-    const seqStr = rollNumber.slice(prefix.length + 2);
-    const seq = parseInt(seqStr, 10);
-    const plainPassword = `${pickWord(seq - 1)}@${seqStr}`;
+  for (const student of studentsWithoutCredentials) {
+    const rollNumber = student.rollNumber || (await generateRollNumber(db, institutionId)) || uuid();
+    const plainPassword = Array.from({ length: 3 }, () => Math.random().toString(36).slice(2, 6)).join("-");
     const hashedPassword = await hashPassword(plainPassword);
-
-    const finalRollNumber = student.rollNumber || rollNumber;
-    const finalUsername = student.username || rollNumber;
 
     await db
       .update(students)
       .set({
-        rollNumber: finalRollNumber,
-        username: finalUsername,
+        username: rollNumber,
         password: hashedPassword,
         updatedAt: now,
       })
@@ -104,8 +95,8 @@ app.post("/:id/generate-student-credentials", async (c) => {
     results.push({
       id: student.id,
       name: student.name ?? "Unknown",
-      rollNumber: finalRollNumber,
-      username: finalUsername,
+      rollNumber,
+      username: rollNumber,
       plainPassword,
     });
   }
@@ -150,8 +141,6 @@ app.get("/:id/student-credentials", async (c) => {
     }
   }
 
-  const prefix = institutionInitials(institution.name);
-
   const studentsWithCredentials = await db
     .select({
       id: students.id,
@@ -170,13 +159,10 @@ app.get("/:id/student-credentials", async (c) => {
     )
     .orderBy(students.name);
 
-  const studentsWithPasswords = studentsWithCredentials.map((s) => {
-    const rollNumber = s.rollNumber || s.username || "";
-    return {
-      ...s,
-      plainPassword: reconstructPassword(rollNumber, prefix),
-    };
-  });
+  const studentsWithPasswords = studentsWithCredentials.map((s) => ({
+    ...s,
+    plainPassword: "********",
+  }));
 
   return c.json({
     success: true,

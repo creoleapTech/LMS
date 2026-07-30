@@ -2,13 +2,6 @@ import { eq, and, sql, desc } from "drizzle-orm";
 import type { DB } from "../db";
 import { institutions, students } from "../schema/admin";
 
-const PASSWORD_WORDS = [
-  "Learn", "Study", "Read", "Play", "Draw",
-  "Think", "Create", "Build", "Explore", "Solve",
-  "Code", "Math", "Art", "Book", "Star",
-  "Hero", "Dream", "Hope", "Grow", "Shine",
-];
-
 export function institutionInitials(name: string): string {
   const words = name
     .normalize("NFKD")
@@ -28,30 +21,6 @@ export function institutionInitials(name: string): string {
 
 export function padSequence(n: number, minLength = 3): string {
   return String(n).padStart(minLength, "0");
-}
-
-export function pickWord(index: number): string {
-  return PASSWORD_WORDS[index % PASSWORD_WORDS.length];
-}
-
-export function reconstructPassword(rollNumber: string, prefix: string): string {
-  if (!rollNumber) return "";
-
-  let digits = "";
-  if (rollNumber.startsWith(prefix)) {
-    digits = rollNumber.slice(prefix.length);
-  } else {
-    const match = rollNumber.match(/\d+$/);
-    if (match) {
-      digits = match[0];
-    }
-  }
-
-  if (digits.length <= 2) return "";
-  const seqStr = digits.slice(2);
-  const seq = parseInt(seqStr, 10);
-  if (isNaN(seq)) return "";
-  return `${pickWord(seq - 1)}@${padSequence(seq)}`;
 }
 
 export async function syncRollNumberCounter(
