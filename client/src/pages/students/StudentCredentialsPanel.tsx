@@ -66,13 +66,27 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
   const [search, setSearch] = useState("");
   const [generatedCredentials, setGeneratedCredentials] = useState<GeneratedCredential[] | null>(null);
 
-  const { data, isLoading, isError } = useQuery<StudentCredentialsResponse>({
+  const { data, isLoading, isError, error } = useQuery<StudentCredentialsResponse>({
     queryKey: ["student-credentials", institutionId],
     queryFn: async () => {
-      const { data } = await _axios.get(`/admin/institutions/${institutionId}/student-credentials`);
-      return data;
+      const url = `/admin/institutions/${institutionId}/student-credentials`;
+      console.log("[CredentialsPanel] Fetching GET", url);
+      try {
+        const res = await _axios.get(url);
+        console.log("[CredentialsPanel] Response:", res.status, res.data);
+        return res.data;
+      } catch (err: any) {
+        console.error("[CredentialsPanel] Request failed:", {
+          status: err?.response?.status,
+          data: err?.response?.data,
+          message: err?.message,
+          url,
+        });
+        throw err;
+      }
     },
     enabled: !!institutionId,
+    retry: false,
   });
 
   const credentials = data?.data?.students ?? [];

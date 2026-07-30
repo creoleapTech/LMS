@@ -114,12 +114,15 @@ app.post("/:id/generate-student-credentials", async (c) => {
 // GET /:id/student-credentials — list all students with credentials for CSV export
 app.get("/:id/student-credentials", async (c) => {
   const user = c.get("user") as Record<string, any>;
+  console.log("[student-credentials] GET handler — user:", { role: user.role, id: user.id, institutionId: user.institutionId });
 
   if (user.role !== "super_admin" && user.role !== "teacher") {
+    console.warn("[student-credentials] Forbidden — role:", user.role);
     throw new ForbiddenError("Only super admin and teachers can view student credentials");
   }
 
   const institutionId = c.req.param("id");
+  console.log("[student-credentials] institutionId param:", institutionId);
   const db = getDb(c.env.DB);
 
   const [institution] = await db
@@ -128,6 +131,7 @@ app.get("/:id/student-credentials", async (c) => {
     .where(and(eq(institutions.id, institutionId), eq(institutions.isDeleted, 0)));
 
   if (!institution) {
+    console.warn("[student-credentials] Institution not found:", institutionId);
     throw new BadRequestError("Institution not found");
   }
 
@@ -136,7 +140,9 @@ app.get("/:id/student-credentials", async (c) => {
       typeof user.institutionId === "object"
         ? (user.institutionId as any)._id?.toString()
         : user.institutionId?.toString();
+    console.log("[student-credentials] Checking institution — userInstId:", userInstId, "param:", institutionId);
     if (userInstId !== institutionId) {
+      console.warn("[student-credentials] Institution mismatch — userInstId:", userInstId, "param:", institutionId);
       throw new ForbiddenError("Access denied to this institution");
     }
   }
