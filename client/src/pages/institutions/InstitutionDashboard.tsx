@@ -36,7 +36,7 @@ export function InstitutionDashboard({ id, institution, onEdit, onTabChange }: D
                     trend={stats?.studentTrend || "No data"}
                     icon={GraduationCap}
                     gradient="from-blue-500 to-indigo-500"
-                    onClick={() => onTabChange?.("students")}
+                    onClick={() => onTabChange?.("credentials")}
                 />
                 <StatsWidget
                     title="Total Staff"

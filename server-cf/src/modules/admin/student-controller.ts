@@ -1503,13 +1503,27 @@ studentController.post("/backfill-admission-numbers", async (c) => {
 
     if (studentsWithoutAdmission.length === 0) continue;
 
+    const updates: ReturnType<ReturnType<typeof getDb>["update"]>[] = [];
     let count = 0;
+    const now = nowISO();
     for (const s of studentsWithoutAdmission) {
       count++;
-      await db
-        .update(students)
-        .set({ admissionNumber: String(count), updatedAt: nowISO() })
-        .where(eq(students.id, s.id));
+      updates.push(
+        db
+          .update(students)
+          .set({ admissionNumber: String(count), updatedAt: now })
+          .where(eq(students.id, s.id)) as any
+      );
+    }
+
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+      const chunk = updates.slice(i, i + BATCH_SIZE);
+      if (chunk.length === 1) {
+        await chunk[0];
+      } else {
+        await db.batch(chunk as any);
+      }
     }
 
     results.push({ classId: cls.id, grade: cls.grade, section: cls.section, backfilled: count });
@@ -1554,19 +1568,32 @@ studentController.post("/backfill-roll-numbers", async (c) => {
         ),
       );
 
-    let count = 0;
-    for (const s of studentsWithoutRoll) {
-      const rollNumber = await generateRollNumber(db, inst.id);
-      if (rollNumber) {
-        await db
+    if (studentsWithoutRoll.length === 0) continue;
+
+    const rollNumbers = await generateRollNumbers(db, inst.id, studentsWithoutRoll.length);
+    const updates: ReturnType<ReturnType<typeof getDb>["update"]>[] = [];
+    const now = nowISO();
+
+    for (let i = 0; i < studentsWithoutRoll.length; i++) {
+      updates.push(
+        db
           .update(students)
-          .set({ rollNumber, updatedAt: nowISO() })
-          .where(eq(students.id, s.id));
-        count++;
+          .set({ rollNumber: rollNumbers[i], updatedAt: now })
+          .where(eq(students.id, studentsWithoutRoll[i].id)) as any
+      );
+    }
+
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+      const chunk = updates.slice(i, i + BATCH_SIZE);
+      if (chunk.length === 1) {
+        await chunk[0];
+      } else {
+        await db.batch(chunk as any);
       }
     }
 
-    results.push({ institution: inst.name, backfilled: count });
+    results.push({ institution: inst.name, backfilled: studentsWithoutRoll.length });
   }
 
   return c.json({ success: true, data: results });

@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 
 const ITERATIONS = 10000;
-const BULK_ITERATIONS = 5000;
+const BULK_ITERATIONS = 500;
 const KEY_LENGTH = 256;
 const SALT_BYTES = 16;
 

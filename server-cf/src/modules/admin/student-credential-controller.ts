@@ -161,7 +161,15 @@ app.post("/:id/generate-student-credentials", async (c) => {
     updatedAt: string;
   }[] = [];
 
+  // Get existing usernames to avoid unique constraint collisions
+  const existingUsernames = await db
+    .select({ username: students.username })
+    .from(students)
+    .where(sql`${students.username} IS NOT NULL`);
+  const takenUsernames = new Set(existingUsernames.map((u) => u.username!));
+
   for (const student of studentsNeedingWork) {
+    const origStudent = allStudents.find((s) => s.id === student.id);
     const rollNumber = student.rollNumber!;
     const leaplabUsername = `${rollNumber}${suffix}`;
 
@@ -169,13 +177,21 @@ app.post("/:id/generate-student-credentials", async (c) => {
     const plainPassword = generateStudentPassword();
     const hashedPassword = await hashPasswordBulk(plainPassword);
 
-    // LMS credential: set username + password + plainPassword on the students row
+    // LMS credential: set password + plainPassword on the students row
+    // Only set username if it is not already set to rollNumber
     const studentUpdate: Record<string, any> = {
-      username: rollNumber,
       password: hashedPassword,
       plainPassword,
       updatedAt: now,
     };
+    if (origStudent?.username !== rollNumber) {
+      let targetUsername = rollNumber;
+      if (takenUsernames.has(targetUsername)) {
+        targetUsername = `${rollNumber}_${student.id.slice(0, 4)}`;
+      }
+      studentUpdate.username = targetUsername;
+      takenUsernames.add(targetUsername);
+    }
     if (student.needsRollNumber) {
       studentUpdate.rollNumber = rollNumber;
     }
@@ -218,18 +234,25 @@ app.post("/:id/generate-student-credentials", async (c) => {
     });
   }
 
-  // Batch-update students table
-  if (lmsUpdates.length === 1) {
-    await lmsUpdates[0];
-  } else if (lmsUpdates.length > 1) {
-    await db.batch(lmsUpdates as any);
+  // Batch-update students table in chunks
+  const BATCH_SIZE = 50;
+  for (let i = 0; i < lmsUpdates.length; i += BATCH_SIZE) {
+    const chunk = lmsUpdates.slice(i, i + BATCH_SIZE);
+    if (chunk.length === 1) {
+      await chunk[0];
+    } else {
+      await db.batch(chunk as any);
+    }
   }
 
-  // Batch-update existing leaplab credentials
-  if (leaplabUpdates.length === 1) {
-    await leaplabUpdates[0];
-  } else if (leaplabUpdates.length > 1) {
-    await db.batch(leaplabUpdates as any);
+  // Batch-update existing leaplab credentials in chunks
+  for (let i = 0; i < leaplabUpdates.length; i += BATCH_SIZE) {
+    const chunk = leaplabUpdates.slice(i, i + BATCH_SIZE);
+    if (chunk.length === 1) {
+      await chunk[0];
+    } else {
+      await db.batch(chunk as any);
+    }
   }
 
   // Deduplicate new inserts

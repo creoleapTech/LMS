@@ -15,7 +15,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Building2,
   Users,
-  GraduationCap,
   BookOpen,
   CheckCircle,
   XCircle,
@@ -23,16 +22,12 @@ import {
   Shapes,
   Clock,
   Settings,
-  FlaskConical,
   KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InstitutionCurriculumAccess } from "./InstitutionCurriculumAccess";
 import { PeriodConfigSection } from "../settings/components/PeriodConfigSection";
 import { InstitutionSettingsTab } from "./InstitutionSettingsTab";
-import { LeapLabCredentialsTab } from "./LeapLabCredentialsTab";
-import { StudentCredentialsSection } from "../settings/components/StudentCredentialsSection";
-import { SettingsInstitutionProvider } from "../settings/context/SettingsInstitutionContext";
 import { Config } from "@/lib/config";
 
 type Institution = {
@@ -209,8 +204,8 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
             <TabsTrigger value="classes" className="rounded-lg text-sm sm:text-base font-medium">
               <Shapes className="h-4 w-4 mr-1.5 hidden sm:block" /> Classes
             </TabsTrigger>
-            <TabsTrigger value="students" className="rounded-lg text-sm sm:text-base font-medium">
-              <GraduationCap className="h-4 w-4 mr-1.5 hidden sm:block" /> Students
+            <TabsTrigger value="credentials" className="rounded-lg text-sm sm:text-base font-medium">
+              <KeyRound className="h-4 w-4 mr-1.5 hidden sm:block" /> Credentials
             </TabsTrigger>
             <TabsTrigger value="curriculum" className="rounded-lg text-sm sm:text-base font-medium">
               <BookOpen className="h-4 w-4 mr-1.5 hidden sm:block" /> Curriculum
@@ -220,12 +215,6 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
             </TabsTrigger>
             <TabsTrigger value="settings" className="rounded-lg text-sm sm:text-base font-medium">
               <Settings className="h-4 w-4 mr-1.5 hidden sm:block" /> Settings
-            </TabsTrigger>
-            <TabsTrigger value="credentials" className="rounded-lg text-sm sm:text-base font-medium">
-              <KeyRound className="h-4 w-4 mr-1.5 hidden sm:block" /> Credentials
-            </TabsTrigger>
-            <TabsTrigger value="leaplab" className="rounded-lg text-sm sm:text-base font-medium">
-              <FlaskConical className="h-4 w-4 mr-1.5 hidden sm:block" /> LeapLab
             </TabsTrigger>
           </TabsList>
 
@@ -244,31 +233,24 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
             <StaffTable institutionId={institution.id} institutionName={institution.name} />
           </TabsContent>
 
-          {/* Students Tab */}
-          <TabsContent value="students">
-            <StudentTable institutionId={institution.id} />
-          </TabsContent>
-
           {/* Classes Tab */}
           <TabsContent value="classes">
             <ClassTable institutionId={institution.id} />
           </TabsContent>
+
+          {/* Credentials Tab */}
+          <TabsContent value="credentials">
+            <StudentTable institutionId={institution.id} />
+          </TabsContent>
+
           <TabsContent value="curriculum">
-  {institution && <InstitutionCurriculumAccess institutionId={institution.id} />}
-</TabsContent>
+            {institution && <InstitutionCurriculumAccess institutionId={institution.id} />}
+          </TabsContent>
           <TabsContent value="periods">
             <PeriodConfigSection institutionId={id} />
           </TabsContent>
           <TabsContent value="settings">
             <InstitutionSettingsTab institutionId={institution.id} />
-          </TabsContent>
-          <TabsContent value="credentials">
-            <SettingsInstitutionProvider value={{ institutionId: institution.id }}>
-              <StudentCredentialsSection />
-            </SettingsInstitutionProvider>
-          </TabsContent>
-          <TabsContent value="leaplab">
-            <LeapLabCredentialsTab institutionId={institution.id} institutionName={institution.name} />
           </TabsContent>
         </Tabs>
 
