@@ -36,30 +36,57 @@ function getAllowedOrigins(rawOrigins?: string): Set<string> {
 	return new Set([...DEFAULT_ALLOWED_ORIGINS, ...configuredOrigins]);
 }
 
-app.use(
-	"*",
-	cors({
-		origin: (origin, c) => {
-			if (!origin) {
-				return "";
-			}
+function corsHeaders(origin: string, env: any): Record<string, string> {
+	if (!origin) return {};
+	const allowedOrigins = getAllowedOrigins(env.CORS_ORIGINS);
+	const allowedOrigin =
+		isAllowedPagesDevOrigin(origin) ? origin :
+		allowedOrigins.has(origin) ? origin : "";
+	if (!allowedOrigin) return {};
+	return {
+		"Access-Control-Allow-Origin": allowedOrigin,
+		"Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+		"Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin, x-user",
+		"Access-Control-Expose-Headers": "Authorization",
+		"Access-Control-Allow-Credentials": "true",
+		"Access-Control-Max-Age": "86400",
+		"Vary": "Origin",
+	};
+}
 
-			if (isAllowedPagesDevOrigin(origin)) {
-				return origin;
-			}
+app.use("*", cors({
+	origin: (origin, c) => {
+		if (!origin) return "";
+		if (isAllowedPagesDevOrigin(origin)) return origin;
+		const allowedOrigins = getAllowedOrigins(c.env.CORS_ORIGINS);
+		return allowedOrigins.has(origin) ? origin : "";
+	},
+	allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+	allowHeaders: ["Content-Type", "Authorization", "x-admin", "x-user"],
+	exposeHeaders: ["Authorization"],
+	credentials: true,
+	maxAge: 86400,
+}));
 
-			const allowedOrigins = getAllowedOrigins(c.env.CORS_ORIGINS);
-			return allowedOrigins.has(origin) ? origin : "";
-		},
-		allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-		allowHeaders: ["Content-Type", "Authorization", "x-admin", "x-user"],
-		exposeHeaders: ["Authorization"],
-		credentials: true,
-		maxAge: 86400,
-	}),
-);
+app.options("*", async (c) => {
+	const origin = c.req.header("origin") || "";
+	const headers = corsHeaders(origin, c.env);
+	const status = 204 as any;
+	if (!headers["Access-Control-Allow-Origin"]) {
+		return c.body(null, status);
+	}
+	return c.body(null, status, headers);
+});
+
 app.use("*", logger());
-app.onError(errorHandler);
+app.onError((err, c) => {
+	const origin = c.req.header("origin") || "";
+	const ch = corsHeaders(origin, c.env);
+	for (const [k, v] of Object.entries(ch)) {
+		c.res.headers.set(k, v);
+	}
+	return errorHandler(err, c);
+});
 
 app.get("/health", (c) => c.json({ success: true, message: "Server is running" }));
 

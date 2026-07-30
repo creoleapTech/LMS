@@ -445,10 +445,18 @@ export function StudentTable({ institutionId }: Props) {
     columnHelper.accessor("rollNumber", {
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          Roll Number <ArrowUpDown className="ml-2 h-4 w-4" />
+          LMS Roll No <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: info => <span className="font-mono text-xs">{info.getValue() || info.row.original.username || "-"}</span>,
+    }),
+    columnHelper.accessor("admissionNumber", {
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          School Roll No <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: info => <span className="font-mono text-xs">{info.getValue() || "-"}</span>,
     }),
     columnHelper.accessor("name", {
       header: ({ column }) => (
