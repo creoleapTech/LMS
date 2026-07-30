@@ -18,19 +18,19 @@ export function StudentManagementPage() {
   const user = useAuthStore((s) => s.user);
   const role = user?.role;
   const isSuperAdmin = role === "super_admin";
-  const isAdmin = role === "admin";
+  const isTeacher = role === "teacher";
 
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>("");
 
-  // Admin's own institution
-  const adminInstitutionId = isAdmin
+  // Teacher's own institution
+  const ownInstitutionId = isTeacher
     ? (typeof user?.institutionId === "object"
         ? user?.institutionId?._id
         : user?.institutionId) || ""
     : "";
   const effectiveInstitutionId = isSuperAdmin
     ? selectedInstitutionId
-    : adminInstitutionId;
+    : ownInstitutionId;
 
   // Institutions list (super admin only)
   const { data: institutions = [] } = useQuery<

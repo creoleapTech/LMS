@@ -44,7 +44,7 @@ export function StudentTable({ institutionId }: Props) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const queryClient = useQueryClient();
   const userRole = useAuthStore((s) => s.user?.role);
-  const canEdit = userRole === "super_admin";
+  const canEdit = userRole === "super_admin" || userRole === "teacher";
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);

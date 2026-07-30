@@ -34,9 +34,9 @@ const studentController = new Hono<{
 // Apply auth to all routes
 studentController.use("*", adminAuth);
 
-function requireSuperAdmin(user: Record<string, any>): void {
-  if (user.role !== "super_admin") {
-    throw new ForbiddenError("Only super admin can manage students");
+function requireStudentManagementAccess(user: Record<string, any>): void {
+  if (!["super_admin", "teacher"].includes(user.role)) {
+    throw new ForbiddenError("Access denied. Only super admin and teachers can manage students");
   }
 }
 
@@ -209,7 +209,7 @@ const studentCreateSchema = z.object({
 // ─── CREATE Single Student ─────────────────────────
 studentController.post("/", async (c) => {
   const user = c.get("user") as Record<string, any>;
-  requireSuperAdmin(user);
+  requireStudentManagementAccess(user);
   const db = getDb(c.env.DB);
 
   let body: Record<string, any>;
@@ -350,7 +350,7 @@ studentController.post("/", async (c) => {
 // ─── BULK UPLOAD Students from Excel ───────────────
 studentController.post("/bulk-upload", async (c) => {
   const user = c.get("user") as Record<string, any>;
-  requireSuperAdmin(user);
+  requireStudentManagementAccess(user);
   const db = getDb(c.env.DB);
 
   const formData = await c.req.formData();
@@ -626,7 +626,7 @@ studentController.post("/bulk-upload", async (c) => {
 // ─── BULK UPLOAD Commit (confirm duplicate selections) ─
 studentController.post("/bulk-upload/commit", async (c) => {
   const user = c.get("user") as Record<string, any>;
-  requireSuperAdmin(user);
+  requireStudentManagementAccess(user);
   const db = getDb(c.env.DB);
 
   const body = await c.req.json<{
@@ -684,7 +684,7 @@ studentController.post("/bulk-upload/commit", async (c) => {
 // ─── BULK UPDATE Roll Numbers ──────────────────────
 studentController.post("/bulk-update-roll-numbers", async (c) => {
   const user = c.get("user") as Record<string, any>;
-  requireSuperAdmin(user);
+  requireStudentManagementAccess(user);
   const db = getDb(c.env.DB);
 
   const formData = await c.req.formData();
@@ -795,7 +795,7 @@ studentController.post("/bulk-update-roll-numbers", async (c) => {
 // ─── BULK UPDATE Roll Numbers Confirm ──────────────
 studentController.post("/bulk-update-roll-numbers/commit", async (c) => {
   const user = c.get("user") as Record<string, any>;
-  requireSuperAdmin(user);
+  requireStudentManagementAccess(user);
   const db = getDb(c.env.DB);
 
   const body = await c.req.json<{
@@ -1209,7 +1209,7 @@ studentController.get("/:id", async (c) => {
 studentController.patch("/:id", async (c) => {
   const { id } = c.req.param();
   const user = c.get("user") as Record<string, any>;
-  requireSuperAdmin(user);
+  requireStudentManagementAccess(user);
   const db = getDb(c.env.DB);
 
   const [student] = await db
@@ -1347,7 +1347,7 @@ studentController.patch("/:id", async (c) => {
 studentController.delete("/:id", async (c) => {
   const { id } = c.req.param();
   const user = c.get("user") as Record<string, any>;
-  requireSuperAdmin(user);
+  requireStudentManagementAccess(user);
   const db = getDb(c.env.DB);
 
   const [student] = await db
@@ -1399,7 +1399,7 @@ studentController.delete("/:id", async (c) => {
 // ─── BULK DELETE Students ──────────────────────────
 studentController.post("/bulk-delete", async (c) => {
   const user = c.get("user") as Record<string, any>;
-  requireSuperAdmin(user);
+  requireStudentManagementAccess(user);
   const db = getDb(c.env.DB);
 
   const body = await c.req.json<{ ids: string[] }>();
