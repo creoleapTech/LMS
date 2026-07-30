@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Trash2, Plus, Search, ArrowUpDown, Loader2, Upload, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, ArrowUpDown, Loader2, Upload, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Hash } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -59,6 +59,7 @@ export function StudentTable({ institutionId }: Props) {
   const [selectedForImport, setSelectedForImport] = useState<Set<number>>(new Set());
   const [isConfirming, setIsConfirming] = useState(false);
   const [openRollUpdate, setOpenRollUpdate] = useState(false);
+  const [backfillingAdmission, setBackfillingAdmission] = useState(false);
   const [rollUpdateFile, setRollUpdateFile] = useState<File | null>(null);
   const [rollUpdatePreview, setRollUpdatePreview] = useState<any>(null);
   const [rollUpdateLoading, setRollUpdateLoading] = useState(false);
@@ -549,6 +550,30 @@ export function StudentTable({ institutionId }: Props) {
               <Button variant="outline" onClick={() => setOpenRollUpdate(true)} className="rounded-xl">
                 <Upload className="mr-2 h-4 w-4" /> Update Roll Numbers
               </Button>
+              {userRole === "super_admin" && (
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (!window.confirm("Backfill admission numbers for all students missing them?")) return;
+                    setBackfillingAdmission(true);
+                    try {
+                      const params = institutionId ? `?institutionId=${institutionId}` : "";
+                      const { data } = await _axios.post(`/admin/students/backfill-admission-numbers${params}`);
+                      toast.success(data.message || "Backfill complete");
+                      queryClient.invalidateQueries({ queryKey: ["students"] });
+                    } catch (err: any) {
+                      toast.error(err?.response?.data?.message || "Failed to backfill");
+                    } finally {
+                      setBackfillingAdmission(false);
+                    }
+                  }}
+                  disabled={backfillingAdmission}
+                  className="rounded-xl"
+                >
+                  {backfillingAdmission ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Hash className="mr-2 h-4 w-4" />}
+                  Backfill Admission No
+                </Button>
+              )}
               {selectedStudentIds.size > 0 && (
                 <Button
                   variant="destructive"

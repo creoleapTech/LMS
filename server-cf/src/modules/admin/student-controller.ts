@@ -1464,6 +1464,66 @@ studentController.post("/bulk-delete", async (c) => {
   }, 200);
 });
 
+// ─── Backfill Admission Numbers (school roll no, per class/section) ─
+studentController.post("/backfill-admission-numbers", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  if (user.role !== "super_admin") {
+    throw new ForbiddenError("Only super admin can backfill admission numbers");
+  }
+
+  const db = getDb(c.env.DB);
+  const institutionId = c.req.query("institutionId") || null;
+
+  const classConditions: any[] = [eq(classes.isDeleted, 0)];
+  if (institutionId) classConditions.push(eq(classes.institutionId, institutionId));
+
+  const allClasses = await db
+    .select({ id: classes.id, grade: classes.grade, section: classes.section, institutionId: classes.institutionId })
+    .from(classes)
+    .where(and(...classConditions))
+    .orderBy(classes.institutionId, classes.grade, classes.section);
+
+  if (allClasses.length === 0) {
+    throw new BadRequestError("No classes found");
+  }
+
+  const results: { classId: string; grade: string | null; section: string; backfilled: number }[] = [];
+
+  for (const cls of allClasses) {
+    const studentsWithoutAdmission = await db
+      .select({ id: students.id, name: students.name })
+      .from(students)
+      .where(
+        and(
+          eq(students.classId, cls.id),
+          eq(students.isDeleted, 0),
+          sql`(${students.admissionNumber} IS NULL OR ${students.admissionNumber} = '')`,
+        ),
+      )
+      .orderBy(students.name);
+
+    if (studentsWithoutAdmission.length === 0) continue;
+
+    let count = 0;
+    for (const s of studentsWithoutAdmission) {
+      count++;
+      await db
+        .update(students)
+        .set({ admissionNumber: String(count), updatedAt: nowISO() })
+        .where(eq(students.id, s.id));
+    }
+
+    results.push({ classId: cls.id, grade: cls.grade, section: cls.section, backfilled: count });
+  }
+
+  const total = results.reduce((sum, r) => sum + r.backfilled, 0);
+  return c.json({
+    success: true,
+    message: `Backfilled admission numbers for ${total} student(s) across ${results.length} class(es)`,
+    data: results,
+  });
+});
+
 // ─── Backfill Roll Numbers (super_admin only) ──────
 studentController.post("/backfill-roll-numbers", async (c) => {
   const user = c.get("user") as Record<string, any>;
