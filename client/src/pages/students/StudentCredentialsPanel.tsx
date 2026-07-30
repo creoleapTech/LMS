@@ -171,7 +171,7 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
               ) : (
                 <ShieldCheck className="h-4 w-4" />
               )}
-              Generate
+              Generate Credentials
             </Button>
           </div>
         </CardHeader>

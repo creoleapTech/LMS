@@ -6,11 +6,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { InstitutionFormDialog } from "./InstitutionFormDialog";
 import { StaffTable } from "../staff/StaffTable";
-import { StudentTable } from "@/pages/students/StudentTable";
 import { ClassTable } from "@/pages/classes/ClassTable";
 import { InstitutionDashboard } from "./InstitutionDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Building2,
@@ -23,11 +23,13 @@ import {
   Clock,
   Settings,
   KeyRound,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InstitutionCurriculumAccess } from "./InstitutionCurriculumAccess";
 import { PeriodConfigSection } from "../settings/components/PeriodConfigSection";
 import { InstitutionSettingsTab } from "./InstitutionSettingsTab";
+import { StudentCredentialsPanel } from "@/pages/students/StudentCredentialsPanel";
 import { Config } from "@/lib/config";
 
 type Institution = {
@@ -89,6 +91,19 @@ function normalizeInstitution(row: ApiInstitution): Institution {
     createdAt: String(row.createdAt ?? ""),
     updatedAt: String(row.updatedAt ?? ""),
   };
+}
+
+function getInstitutionCode(name: string): string {
+  if (!name) return "INST";
+  const words = name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-zA-Z0-9]+/)
+    .filter((w) => w.length > 0 && !["and", "of", "the", "&"].includes(w.toLowerCase()));
+
+  if (words.length === 0) return "INST";
+  if (words.length === 1) return words[0].slice(0, 4).toUpperCase();
+  return words.map((w) => w.charAt(0).toUpperCase()).join("");
 }
 
 interface InstitutionDetailPageProps {
@@ -183,11 +198,28 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
                 </div>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Institution ID</p>
-              <code className="text-xs neo-inset-rounded-lg px-3 py-1.5 font-mono break-all mt-1 inline-block">
-                {institution.id}
-              </code>
+            <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Institution Code</span>
+                <Badge variant="secondary" className="font-mono font-bold tracking-wider text-xs px-2.5 py-1 bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 rounded-lg">
+                  {getInstitutionCode(institution.name)}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1.5 neo-inset-rounded-lg px-2.5 py-1">
+                <span className="text-[11px] font-mono text-muted-foreground">ID: {institution.id.slice(0, 8)}...{institution.id.slice(-4)}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
+                  title="Copy full System ID"
+                  onClick={() => {
+                    navigator.clipboard.writeText(institution.id);
+                    toast.success("Institution ID copied to clipboard");
+                  }}
+                >
+                  <Copy className="h-3 w-3 text-muted-foreground" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -240,7 +272,7 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
 
           {/* Credentials Tab */}
           <TabsContent value="credentials">
-            <StudentTable institutionId={institution.id} />
+            <StudentCredentialsPanel institutionId={institution.id} />
           </TabsContent>
 
           <TabsContent value="curriculum">
