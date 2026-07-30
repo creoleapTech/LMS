@@ -270,11 +270,14 @@ export function InstitutionCurriculumAccess({ institutionId }: Props) {
                   }}
                 >
                   <option value="">-- Select Curriculum --</option>
-                  {allCurriculums.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
+                  {allCurriculums.map((c) => {
+                    const isAssigned = curriculumAccess.some((a) => a.curriculumId.id === c.id);
+                    return (
+                      <option key={c.id} value={c.id} disabled={isAssigned}>
+                        {c.name}{isAssigned ? " (Already assigned)" : ""}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
