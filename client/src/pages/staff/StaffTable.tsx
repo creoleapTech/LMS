@@ -32,6 +32,18 @@ interface Props {
   institutionName?: string;
 }
 
+function downloadStaffCsv(name: string, email: string, password: string) {
+  const header = "Name,Email,Password\n";
+  const row = `"${name}","${email}","${password}"`;
+  const blob = new Blob([header + row], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${name.replace(/\s+/g, "_")}_credentials.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function StaffTable({ institutionId, institutionName: _institutionName }: Props) {
   const [openForm, setOpenForm] = useState(false);
   const [editingStaff, setEditingStaff] = useState<IStaff | null>(null);
@@ -90,14 +102,12 @@ export function StaffTable({ institutionId, institutionName: _institutionName }:
       toast.success("Staff added successfully");
 
       if (data?.data?.password) {
-        // Show the generated password in a persistent toast or dialog
+        const name = data.data.name || "staff";
+        const email = data.data.email || "";
+        downloadStaffCsv(name, email, data.data.password);
         toast.message("Staff Created", {
-          description: `Password: ${data.data.password} (Please copy this now)`,
-          duration: 10000,
-          action: {
-            label: "Copy",
-            onClick: () => navigator.clipboard.writeText(data.data.password),
-          },
+          description: "Credentials downloaded as CSV. Password is hidden for security.",
+          duration: 5000,
         });
       }
 
@@ -137,13 +147,10 @@ export function StaffTable({ institutionId, institutionName: _institutionName }:
     },
     onSuccess: (data: any) => {
       if (data?.newPassword) {
+        downloadStaffCsv("password_reset", "", data.newPassword);
         toast.message("Password Reset Successful", {
-          description: `New Password: ${data.newPassword} (Please copy this now)`,
-          duration: 10000,
-          action: {
-            label: "Copy",
-            onClick: () => navigator.clipboard.writeText(data.newPassword),
-          },
+          description: "New credentials downloaded as CSV. Password is hidden for security.",
+          duration: 5000,
         });
       } else {
         toast.success("Password reset successfully");

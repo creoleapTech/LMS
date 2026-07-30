@@ -33,6 +33,7 @@ type GeneratedCredential = {
   id: string;
   name: string;
   rollNumber: string;
+  leaplabUsername: string;
   plainPassword: string;
 };
 
@@ -42,14 +43,14 @@ function downloadCredentialsAsCsv(
 ) {
   const hasPasswords = credentials.some((c) => c.plainPassword);
   const header = hasPasswords
-    ? "Roll Number,Name,Password\n"
-    : "Roll Number,Name,Username\n";
+    ? "Roll Number,Name,LeapLab Username,Password\n"
+    : "Roll Number,Name,LeapLab Username\n";
   const rows = credentials
     .map((c) => {
       if (hasPasswords) {
-        return `"${c.rollNumber}","${c.name}","${c.plainPassword}"`;
+        return `"${c.rollNumber}","${c.name}","${c.leaplabUsername}","${c.plainPassword}"`;
       }
-      return `"${c.rollNumber}","${c.name}","${c.rollNumber}"`;
+      return `"${c.rollNumber}","${c.name}","${c.leaplabUsername}"`;
     })
     .join("\n");
   const blob = new Blob([header + rows], { type: "text/csv" });
@@ -260,6 +261,7 @@ export function StudentCredentialsSection() {
                   <TableRow>
                     <TableHead>Roll Number</TableHead>
                     <TableHead>Name</TableHead>
+                    <TableHead>LeapLab Username</TableHead>
                     <TableHead>Password</TableHead>
                     <TableHead className="w-16">Copy</TableHead>
                   </TableRow>
@@ -269,6 +271,7 @@ export function StudentCredentialsSection() {
                     <TableRow key={c.id}>
                       <TableCell className="font-mono text-sm">{c.rollNumber}</TableCell>
                       <TableCell className="text-sm">{c.name}</TableCell>
+                      <TableCell className="font-mono text-sm text-muted-foreground">{c.leaplabUsername}</TableCell>
                       <TableCell className="font-mono text-sm">{c.plainPassword}</TableCell>
                       <TableCell>
                         <Button
@@ -277,7 +280,7 @@ export function StudentCredentialsSection() {
                           size="icon"
                           onClick={() => {
                             navigator.clipboard.writeText(
-                              `Username: ${c.rollNumber}\nPassword: ${c.plainPassword}`
+                              `Roll Number: ${c.rollNumber}\nLeapLab Username: ${c.leaplabUsername}\nPassword: ${c.plainPassword}`
                             );
                             toast.success("Credential copied");
                           }}
@@ -299,7 +302,7 @@ export function StudentCredentialsSection() {
                 onClick={() => {
                   if (!generatedCredentials) return;
                   const text = generatedCredentials
-                    .map((c) => `${c.rollNumber}\t${c.name}\t${c.plainPassword}`)
+                    .map((c) => `${c.rollNumber}\t${c.name}\t${c.leaplabUsername}\t${c.plainPassword}`)
                     .join("\n");
                   navigator.clipboard.writeText(text);
                   toast.success("All credentials copied");

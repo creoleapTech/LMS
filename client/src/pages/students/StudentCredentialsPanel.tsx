@@ -34,6 +34,7 @@ type GeneratedCredential = {
   id: string;
   name: string;
   rollNumber: string;
+  leaplabUsername: string;
   plainPassword: string;
 };
 
@@ -216,10 +217,10 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                       <TableCell className="font-mono text-sm">{c.rollNumber ?? c.username ?? "-"}</TableCell>
                       <TableCell className="text-sm font-medium">{c.name}</TableCell>
                       <TableCell className="font-mono text-sm text-muted-foreground">
-                        {c.plainPassword === "********" ? "********" : c.plainPassword}
+                        {c.plainPassword || "********"}
                       </TableCell>
                       <TableCell>
-                        {c.plainPassword !== "********" && (
+                        {c.plainPassword ? (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -233,6 +234,8 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -266,6 +269,7 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                   <TableRow>
                     <TableHead>Roll Number</TableHead>
                     <TableHead>Name</TableHead>
+                    <TableHead>LeapLab Username</TableHead>
                     <TableHead>Password</TableHead>
                     <TableHead className="w-16">Copy</TableHead>
                   </TableRow>
@@ -275,6 +279,7 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                     <TableRow key={c.id}>
                       <TableCell className="font-mono text-sm">{c.rollNumber}</TableCell>
                       <TableCell className="text-sm font-medium">{c.name}</TableCell>
+                      <TableCell className="font-mono text-sm text-muted-foreground">{c.leaplabUsername}</TableCell>
                       <TableCell className="font-mono text-sm">{c.plainPassword}</TableCell>
                       <TableCell>
                         <Button
@@ -283,7 +288,7 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                           className="h-8 w-8 rounded-lg"
                           onClick={() => {
                             navigator.clipboard.writeText(
-                              `Username: ${c.rollNumber}\nPassword: ${c.plainPassword}`
+                              `Roll Number: ${c.rollNumber}\nLeapLab Username: ${c.leaplabUsername}\nPassword: ${c.plainPassword}`
                             );
                             toast.success("Copied");
                           }}
@@ -303,7 +308,7 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                 onClick={() => {
                   if (!generatedCredentials) return;
                   const text = generatedCredentials
-                    .map((c) => `${c.rollNumber}\t${c.name}\t${c.plainPassword}`)
+                    .map((c) => `${c.rollNumber}\t${c.name}\t${c.leaplabUsername}\t${c.plainPassword}`)
                     .join("\n");
                   navigator.clipboard.writeText(text);
                   toast.success("All credentials copied");

@@ -111,6 +111,18 @@ export function StudentTable({ institutionId }: Props) {
     setPage(1);
   }, [deferredSearch, classFilterValue]);
 
+  function downloadStudentCsv(name: string, username: string, password: string) {
+    const header = "Name,Username,Password\n";
+    const row = `"${name}","${username}","${password}"`;
+    const blob = new Blob([header + row], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name.replace(/\s+/g, "_")}_credentials.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const createMutation = useMutation({
     mutationFn: async (data: CreateStudentDTO) => {
       const { data: res } = await _axios.post<{ success: boolean; data: IStudent }>("/admin/students", {
@@ -118,10 +130,18 @@ export function StudentTable({ institutionId }: Props) {
       });
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["students", institutionId] });
       queryClient.invalidateQueries({ queryKey: ["classes", institutionId] });
       toast.success("Student added successfully");
+
+      if (data?.data?.password) {
+        const name = data.data.name || "student";
+        const username = data.data.username || "";
+        downloadStudentCsv(name, username, data.data.password);
+        toast.success("Credentials downloaded as CSV");
+      }
+
       setOpenForm(false);
     },
     onError: (error: any) => {

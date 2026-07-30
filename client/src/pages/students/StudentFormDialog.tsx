@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, GraduationCap, User, Hash, Mail, AtSign, Lock } from "lucide-react";
+import { Loader2, GraduationCap, User, Hash, Mail, AtSign, Lock, RefreshCw, Copy, Download } from "lucide-react";
 import { useEffect } from "react";
 import type { IStudent, CreateStudentDTO } from "@/types/student";
 import type { IClass } from "@/types/class";
 import { TEXT_LIMITS } from "@/lib/validation/textLimits";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(TEXT_LIMITS.personName, "Name too long"),
@@ -84,6 +85,40 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
       }
     }
   }, [student, reset, open]);
+
+  const passwordValue = watch("password");
+
+  const generatePassword = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let pass = "";
+    for (let i = 0; i < 12; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setValue("password", pass);
+  };
+
+  const copyToClipboard = () => {
+    if (passwordValue) {
+      navigator.clipboard.writeText(passwordValue);
+      toast.success("Password copied to clipboard");
+    }
+  };
+
+  const downloadAsCsv = () => {
+    if (!passwordValue) return;
+    const name = watch("name") || "student";
+    const username = watch("username") || "";
+    const header = "Name,Username,Password\n";
+    const row = `"${name}","${username}","${passwordValue}"`;
+    const blob = new Blob([header + row], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name.replace(/\s+/g, "_")}_credentials.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Credentials downloaded as CSV");
+  };
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -190,9 +225,20 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
 
               <div className="space-y-1.5">
                 <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="password" type="password" placeholder={student ? "••••••••" : "Set a password"} maxLength={TEXT_LIMITS.password} {...register("password")} className="pl-9" />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="password" type="password" placeholder={student ? "••••••••" : "Set a password"} maxLength={TEXT_LIMITS.password} {...register("password")} className="pl-9 pr-10" />
+                  </div>
+                  <Button type="button" variant="outline" size="icon" onClick={generatePassword} title="Auto-generate password" className="shrink-0">
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="outline" size="icon" onClick={copyToClipboard} title="Copy password" disabled={!passwordValue} className="shrink-0">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="outline" size="icon" onClick={downloadAsCsv} title="Download as CSV" disabled={!passwordValue} className="shrink-0">
+                    <Download className="h-4 w-4" />
+                  </Button>
                 </div>
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>

@@ -113,6 +113,7 @@ export const students = sqliteTable("students", {
   email: text("email"),
   username: text("username").unique(),
   password: text("password"),
+  plainPassword: text("plain_password"),
   mobileNumber: text("mobile_number"),
   parentName: text("parent_name"),
   parentMobile: text("parent_mobile"),

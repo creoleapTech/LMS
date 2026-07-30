@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Eye, EyeOff, Copy, RefreshCw, UserCircle, Mail, Smartphone, BookOpen, CalendarDays, ShieldCheck, KeyRound } from "lucide-react";
+import { Loader2, Eye, EyeOff, Copy, Download, RefreshCw, UserCircle, Mail, Smartphone, BookOpen, CalendarDays, ShieldCheck, KeyRound } from "lucide-react";
 import type { IStaff, CreateStaffDTO, StaffType } from "@/types/staff";
 import { toast } from "sonner";
 import { TEXT_LIMITS } from "@/lib/validation/textLimits";
@@ -82,6 +82,22 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
       navigator.clipboard.writeText(passwordValue);
       toast.success("Password copied to clipboard");
     }
+  };
+
+  const downloadAsCsv = () => {
+    if (!passwordValue) return;
+    const name = watch("name") || "staff";
+    const email = watch("email") || "";
+    const header = "Name,Email,Password\n";
+    const row = `"${name}","${email}","${passwordValue}"`;
+    const blob = new Blob([header + row], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name.replace(/\s+/g, "_")}_credentials.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Credentials downloaded as CSV");
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -221,6 +237,9 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                 </Button>
                 <Button type="button" variant="outline" size="icon" onClick={copyToClipboard} title="Copy password" disabled={!passwordValue} className="shrink-0">
                   <Copy className="h-4 w-4" />
+                </Button>
+                <Button type="button" variant="outline" size="icon" onClick={downloadAsCsv} title="Download as CSV" disabled={!passwordValue} className="shrink-0">
+                  <Download className="h-4 w-4" />
                 </Button>
               </div>
             </div>

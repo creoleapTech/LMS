@@ -21,7 +21,7 @@ import {
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { saveFile, deleteFile } from "../../lib/file";
-import { hashPassword } from "../../lib/password";
+import { hashPassword, hashPasswordBulk } from "../../lib/password";
 import { generateRollNumber, generateRollNumbers, syncRollNumberCounter } from "../../lib/roll-number";
 import { PHONE_PATTERN, TEXT_LIMITS, USERNAME_PATTERN } from "../../lib/validation/text";
 import * as XLSX from "xlsx";
@@ -73,15 +73,16 @@ async function hasStudentAssessments(db: any, studentId: string): Promise<boolea
 async function importStudentRecords(db: any, rows: any[]) {
   const now = nowISO();
 
-  // Auto-generate roll numbers for any rows missing one
-  const rowsWithoutRoll = rows.filter((r) => !r.rollNumber);
+  // Auto-generate roll numbers for any rows missing one or having just numeric values
+  const isInvalidRoll = (val: any) => !val || /^\d+$/.test(String(val).trim());
+  const rowsWithoutRoll = rows.filter((r) => isInvalidRoll(r.rollNumber));
   if (rowsWithoutRoll.length > 0) {
     const instId = rows[0]?.institutionId;
     if (instId) {
       const generatedRolls = await generateRollNumbers(db, instId, rowsWithoutRoll.length);
       let gIdx = 0;
       for (const r of rows) {
-        if (!r.rollNumber) {
+        if (isInvalidRoll(r.rollNumber)) {
           r.rollNumber = generatedRolls[gIdx++];
         }
       }
@@ -113,24 +114,23 @@ async function importStudentRecords(db: any, rows: any[]) {
     updatedAt: now,
   }));
 
-  // Generate passwords for students with usernames (parallel hashing)
+  // Hash passwords sequentially to stay within CF Workers CPU limit
   const passwordMap = new Map<string, { plain: string; hashed: string }>();
   const studentsNeedingPasswords = studentRecords.filter((s) => s.username);
 
-  await Promise.all(
-    studentsNeedingPasswords.map(async (s) => {
-      const plain =
-        Math.random().toString(36).slice(-8) +
-        Math.random().toString(36).slice(-2);
-      const hashed = await hashPassword(plain);
-      passwordMap.set(s.id, { plain, hashed });
-    })
-  );
+  for (const s of studentsNeedingPasswords) {
+    const plain =
+      Math.random().toString(36).slice(-8) +
+      Math.random().toString(36).slice(-2);
+    const hashed = await hashPasswordBulk(plain);
+    passwordMap.set(s.id, { plain, hashed });
+  }
 
   for (const record of studentRecords) {
     const pw = passwordMap.get(record.id);
     if (pw) {
       record.password = pw.hashed;
+      (record as any).plainPassword = pw.plain;
     }
   }
 
@@ -145,6 +145,7 @@ async function importStudentRecords(db: any, rows: any[]) {
       email: s.email,
       username: s.username,
       password: s.password || null,
+      plainPassword: (s as any).plainPassword ?? null,
       mobileNumber: s.mobileNumber,
       parentName: s.parentName,
       parentMobile: s.parentMobile,
@@ -313,6 +314,7 @@ studentController.post("/", async (c) => {
       email: body.email?.toLowerCase(),
       username: body.username?.toLowerCase() || null,
       password: hashedPw,
+      plainPassword,
       mobileNumber: body.mobileNumber,
       parentName: body.parentName,
       parentMobile: body.parentMobile,

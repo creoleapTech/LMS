@@ -7,7 +7,7 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { institutions } from "../../schema/admin";
 import { leaplabCredentials } from "../../schema/leaplab";
-import { hashPassword } from "../../lib/password";
+import { hashPasswordBulk } from "../../lib/password";
 import { nowISO } from "../../lib/utils";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
@@ -17,8 +17,6 @@ const app = new Hono<{
   Bindings: Bindings;
   Variables: Variables;
 }>();
-
-app.use("*", superAdminAuth);
 
 const passwordChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
 
@@ -77,7 +75,7 @@ async function ensureInstitutionExists(db: ReturnType<typeof getDb>, institution
 }
 
 // GET /:id/leaplab-credentials
-app.get("/:id/leaplab-credentials", async (c) => {
+app.get("/:id/leaplab-credentials", superAdminAuth, async (c) => {
   const user = c.get("user") as Record<string, any>;
   if (user.role !== "super_admin") {
     throw new ForbiddenError("Only super_admin can manage LeapLab credentials");
@@ -123,7 +121,7 @@ const createSchema = z
   );
 
 // POST /:id/leaplab-credentials
-app.post("/:id/leaplab-credentials", zValidator("json", createSchema), async (c) => {
+app.post("/:id/leaplab-credentials", superAdminAuth, zValidator("json", createSchema), async (c) => {
   const user = c.get("user") as Record<string, any>;
   if (user.role !== "super_admin") {
     throw new ForbiddenError("Only super_admin can manage LeapLab credentials");
@@ -201,18 +199,29 @@ app.post("/:id/leaplab-credentials", zValidator("json", createSchema), async (c)
   }
 
   const now = nowISO();
-  const insertRows = await Promise.all(
-    seeds.map(async (seed) => ({
+  // Hash passwords sequentially to stay within CF Workers CPU limit
+  const insertRows: {
+    id: string;
+    institutionId: string;
+    username: string;
+    password: string;
+    isActive: number;
+    isDeleted: number;
+    createdAt: string;
+    updatedAt: string;
+  }[] = [];
+  for (const seed of seeds) {
+    insertRows.push({
       id: seed.id,
       institutionId,
       username: seed.fullUsername,
-      password: await hashPassword(seed.plainPassword),
+      password: await hashPasswordBulk(seed.plainPassword),
       isActive: 1,
       isDeleted: 0,
       createdAt: now,
       updatedAt: now,
-    })),
-  );
+    });
+  }
 
   if (insertRows.length > 0) {
     await db.insert(leaplabCredentials).values(insertRows);
@@ -228,7 +237,7 @@ app.post("/:id/leaplab-credentials", zValidator("json", createSchema), async (c)
 });
 
 // DELETE /:id/leaplab-credentials/:credentialId
-app.delete("/:id/leaplab-credentials/:credentialId", async (c) => {
+app.delete("/:id/leaplab-credentials/:credentialId", superAdminAuth, async (c) => {
   const user = c.get("user") as Record<string, any>;
   if (user.role !== "super_admin") {
     throw new ForbiddenError("Only super_admin can manage LeapLab credentials");

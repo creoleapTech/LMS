@@ -14,11 +14,8 @@ import { superAdminAuth } from "../../middleware/super-admin-auth";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-// All routes require super-admin auth
-app.use("*", superAdminAuth);
-
 // ─── GET / — List curriculum access for an institution ───
-app.get("/:id/curriculum-access", async (c) => {
+app.get("/:id/curriculum-access", superAdminAuth, async (c) => {
   const institutionId = c.req.param("id");
   const db = getDb(c.env.DB);
 
@@ -77,7 +74,7 @@ app.get("/:id/curriculum-access", async (c) => {
 });
 
 // ─── POST / — Add or replace curriculum access ───────────
-app.post("/:id/curriculum-access", async (c) => {
+app.post("/:id/curriculum-access", superAdminAuth, async (c) => {
   const institutionId = c.req.param("id");
   const body = await c.req.json<{ curriculumId: string; gradeBookIds: string[] }>();
   const { curriculumId, gradeBookIds } = body;
@@ -176,7 +173,7 @@ app.post("/:id/curriculum-access", async (c) => {
 });
 
 // ─── DELETE /:curriculumId — Remove access for a curriculum ──
-app.delete("/:id/curriculum-access/:curriculumId", async (c) => {
+app.delete("/:id/curriculum-access/:curriculumId", superAdminAuth, async (c) => {
   const institutionId = c.req.param("id");
   const curriculumId = c.req.param("curriculumId");
   const db = getDb(c.env.DB);
@@ -215,7 +212,7 @@ app.delete("/:id/curriculum-access/:curriculumId", async (c) => {
 });
 
 // ─── PATCH /:curriculumId/toggle-book — Toggle a single gradebook ──
-app.patch("/:id/curriculum-access/:curriculumId/toggle-book", async (c) => {
+app.patch("/:id/curriculum-access/:curriculumId/toggle-book", superAdminAuth, async (c) => {
   const institutionId = c.req.param("id");
   const curriculumId = c.req.param("curriculumId");
   const body = await c.req.json<{ gradeBookId: string }>();

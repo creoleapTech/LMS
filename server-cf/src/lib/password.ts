@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 
-const ITERATIONS = 100000;
+const ITERATIONS = 10000;
+const BULK_ITERATIONS = 5000;
 const KEY_LENGTH = 256;
 const SALT_BYTES = 16;
 
@@ -23,6 +24,19 @@ function base64Decode(str: string): Uint8Array {
 }
 
 export async function hashPassword(password: string): Promise<string> {
+  return hashPasswordWithIterations(password, ITERATIONS);
+}
+
+/**
+ * Lighter-weight hash for bulk credential generation.
+ * Passwords are machine-generated random strings with high entropy,
+ * so fewer iterations are acceptable and keeps us within CF Workers CPU limits.
+ */
+export async function hashPasswordBulk(password: string): Promise<string> {
+  return hashPasswordWithIterations(password, BULK_ITERATIONS);
+}
+
+async function hashPasswordWithIterations(password: string, iterations: number): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
@@ -32,11 +46,11 @@ export async function hashPassword(password: string): Promise<string> {
     ["deriveBits"],
   );
   const hash = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt, iterations: ITERATIONS, hash: "SHA-256" },
+    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
     keyMaterial,
     KEY_LENGTH,
   );
-  return `pbkdf2:${ITERATIONS}:${base64Encode(salt.buffer)}:${base64Encode(hash)}`;
+  return `pbkdf2:${iterations}:${base64Encode(salt.buffer)}:${base64Encode(hash)}`;
 }
 
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
