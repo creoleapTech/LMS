@@ -10,7 +10,6 @@ import { ClassTable } from "@/pages/classes/ClassTable";
 import { InstitutionDashboard } from "./InstitutionDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Building2,
@@ -23,7 +22,6 @@ import {
   Clock,
   Settings,
   KeyRound,
-  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InstitutionCurriculumAccess } from "./InstitutionCurriculumAccess";
@@ -198,28 +196,11 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Institution Code</span>
-                <Badge variant="secondary" className="font-mono font-bold tracking-wider text-xs px-2.5 py-1 bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 rounded-lg">
-                  {getInstitutionCode(institution.name)}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-1.5 neo-inset-rounded-lg px-2.5 py-1">
-                <span className="text-[11px] font-mono text-muted-foreground">ID: {institution.id.slice(0, 8)}...{institution.id.slice(-4)}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
-                  title="Copy full System ID"
-                  onClick={() => {
-                    navigator.clipboard.writeText(institution.id);
-                    toast.success("Institution ID copied to clipboard");
-                  }}
-                >
-                  <Copy className="h-3 w-3 text-muted-foreground" />
-                </Button>
-              </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Institution Code</span>
+              <Badge variant="secondary" className="font-mono font-bold tracking-wider text-xs px-3 py-1 bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 rounded-lg">
+                {getInstitutionCode(institution.name)}
+              </Badge>
             </div>
           </div>
         </div>
