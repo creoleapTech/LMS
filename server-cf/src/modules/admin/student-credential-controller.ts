@@ -7,6 +7,7 @@ import { leaplabCredentials } from "../../schema/leaplab";
 import { v4 as uuid } from "uuid";
 import { syncRollNumberCounter, generateRollNumbers } from "../../lib/roll-number";
 import { hashPasswordBulk } from "../../lib/password";
+import { generateStudentPassword } from "../../lib/generate-password";
 import { nowISO } from "../../lib/utils";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
@@ -41,10 +42,10 @@ function verifyInstitutionAccess(user: Record<string, any>, institutionId: strin
 }
 
 // POST /:id/generate-student-credentials
-// For each active student without credentials:
+// For each active student in the institution:
 //   1. Generate a roll number if missing
-//   2. Set LMS credentials: students.username = rollNumber, students.password = hashed
-//   3. Create LeapLab credential: username = rollNumber@institutionSuffix, same password
+//   2. Set LMS credentials: students.username = rollNumber, students.password = hashed, students.plainPassword = plain
+//   3. Create/update LeapLab credential: username = rollNumber@institutionSuffix, same password
 //   4. Return the plain password to the teacher (cannot be recovered later)
 app.post("/:id/generate-student-credentials", async (c) => {
   const user = c.get("user") as Record<string, any>;
@@ -77,6 +78,7 @@ app.post("/:id/generate-student-credentials", async (c) => {
       name: students.name,
       rollNumber: students.rollNumber,
       username: students.username,
+      plainPassword: students.plainPassword,
     })
     .from(students)
     .where(
@@ -92,9 +94,9 @@ app.post("/:id/generate-student-credentials", async (c) => {
     throw new BadRequestError("No active students found in this institution");
   }
 
-  // Get existing leaplab credential usernames for this institution
+  // Get existing leaplab credentials for this institution
   const existingCreds = await db
-    .select({ username: leaplabCredentials.username })
+    .select({ id: leaplabCredentials.id, username: leaplabCredentials.username })
     .from(leaplabCredentials)
     .where(
       and(
@@ -103,42 +105,27 @@ app.post("/:id/generate-student-credentials", async (c) => {
       ),
     );
 
-  const existingLeaplabSet = new Set(existingCreds.map((cr) => cr.username));
+  const existingLeaplabMap = new Map<string, string>(); // username -> id
+  for (const cr of existingCreds) {
+    existingLeaplabMap.set(cr.username, cr.id);
+  }
 
-  // A student needs credentials if they have no LMS username OR no leaplab credential
   type StudentEntry = {
     id: string;
     name: string | null;
     rollNumber: string | null;
     needsRollNumber: boolean;
-    needsLms: boolean;
-    needsLeaplab: boolean;
   };
   const studentsNeedingWork: StudentEntry[] = [];
 
   for (const student of allStudents) {
     const isInvalidRoll = !student.rollNumber || /^\d+$/.test(student.rollNumber.trim());
-    const needsRollNumber = isInvalidRoll;
-    const effectiveRoll = isInvalidRoll ? null : student.rollNumber;
-    
-    const needsLms = !student.username;
-    const leaplabUsername = effectiveRoll ? `${effectiveRoll}${suffix}` : null;
-    const needsLeaplab = !leaplabUsername || !existingLeaplabSet.has(leaplabUsername);
-
-    if (needsLms || needsLeaplab || needsRollNumber) {
-      studentsNeedingWork.push({
-        id: student.id,
-        name: student.name,
-        rollNumber: student.rollNumber,
-        needsRollNumber,
-        needsLms,
-        needsLeaplab,
-      });
-    }
-  }
-
-  if (studentsNeedingWork.length === 0) {
-    throw new BadRequestError("All active students already have credentials");
+    studentsNeedingWork.push({
+      id: student.id,
+      name: student.name,
+      rollNumber: student.rollNumber,
+      needsRollNumber: isInvalidRoll,
+    });
   }
 
   // Generate roll numbers for students that need them
@@ -162,6 +149,7 @@ app.post("/:id/generate-student-credentials", async (c) => {
   }[] = [];
 
   const lmsUpdates: ReturnType<ReturnType<typeof getDb>["update"]>[] = [];
+  const leaplabUpdates: ReturnType<ReturnType<typeof getDb>["update"]>[] = [];
   const leaplabInserts: {
     id: string;
     institutionId: string;
@@ -176,19 +164,18 @@ app.post("/:id/generate-student-credentials", async (c) => {
   for (const student of studentsNeedingWork) {
     const rollNumber = student.rollNumber!;
     const leaplabUsername = `${rollNumber}${suffix}`;
-    const plainPassword = Array.from({ length: 3 }, () =>
-      Math.random().toString(36).slice(2, 6),
-    ).join("-");
+
+    // Always generate a fresh password for every student
+    const plainPassword = generateStudentPassword();
     const hashedPassword = await hashPasswordBulk(plainPassword);
 
-    // LMS credential: set username + password on the students row
-    // Also update rollNumber if it was just generated
-    const studentUpdate: Record<string, any> = { updatedAt: now };
-    if (student.needsLms) {
-      studentUpdate.username = rollNumber;
-      studentUpdate.password = hashedPassword;
-      studentUpdate.plainPassword = plainPassword;
-    }
+    // LMS credential: set username + password + plainPassword on the students row
+    const studentUpdate: Record<string, any> = {
+      username: rollNumber,
+      password: hashedPassword,
+      plainPassword,
+      updatedAt: now,
+    };
     if (student.needsRollNumber) {
       studentUpdate.rollNumber = rollNumber;
     }
@@ -200,8 +187,16 @@ app.post("/:id/generate-student-credentials", async (c) => {
         .where(eq(students.id, student.id)) as any,
     );
 
-    // LeapLab credential
-    if (student.needsLeaplab) {
+    // LeapLab credential: update if exists, insert if new
+    const existingLeaplabId = existingLeaplabMap.get(leaplabUsername);
+    if (existingLeaplabId) {
+      leaplabUpdates.push(
+        db
+          .update(leaplabCredentials)
+          .set({ password: hashedPassword, updatedAt: now })
+          .where(eq(leaplabCredentials.id, existingLeaplabId)) as any,
+      );
+    } else {
       leaplabInserts.push({
         id: uuid(),
         institutionId,
@@ -230,7 +225,14 @@ app.post("/:id/generate-student-credentials", async (c) => {
     await db.batch(lmsUpdates as any);
   }
 
-  // Deduplicate within batch (in case of duplicate roll numbers)
+  // Batch-update existing leaplab credentials
+  if (leaplabUpdates.length === 1) {
+    await leaplabUpdates[0];
+  } else if (leaplabUpdates.length > 1) {
+    await db.batch(leaplabUpdates as any);
+  }
+
+  // Deduplicate new inserts
   const seenUsernames = new Set<string>();
   const dedupedInserts = leaplabInserts.filter((row) => {
     if (seenUsernames.has(row.username)) return false;
@@ -238,8 +240,7 @@ app.post("/:id/generate-student-credentials", async (c) => {
     return true;
   });
 
-  // Insert leaplab credentials in chunks (D1 limit: 100 vars/query; 8 cols → max 12/batch)
-  // onConflictDoNothing() handles any remaining edge cases (e.g. credentials created elsewhere)
+  // Insert new leaplab credentials in chunks
   const CHUNK_SIZE = 10;
   for (let i = 0; i < dedupedInserts.length; i += CHUNK_SIZE) {
     const chunk = dedupedInserts.slice(i, i + CHUNK_SIZE);

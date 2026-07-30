@@ -89,12 +89,16 @@ export function StudentFormDialog({ open, onOpenChange, student, institutionId, 
   const passwordValue = watch("password");
 
   const generatePassword = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let pass = "";
-    for (let i = 0; i < 12; i++) {
-      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+    const groups: string[] = [];
+    for (let g = 0; g < 2; g++) {
+      let group = "";
+      for (let i = 0; i < 4; i++) {
+        group += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      groups.push(group);
     }
-    setValue("password", pass);
+    setValue("password", groups.join("-"));
   };
 
   const copyToClipboard = () => {

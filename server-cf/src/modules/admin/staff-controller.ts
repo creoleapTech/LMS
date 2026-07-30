@@ -13,6 +13,7 @@ import {
   institutionStaffIds,
 } from "../../schema/junction";
 import { hashPassword } from "../../lib/password";
+import { generateStudentPassword } from "../../lib/generate-password";
 import {
   parseExcelFile,
   generateExcelTemplate,
@@ -184,11 +185,10 @@ staffController.post("/", async (c) => {
     if (result.ok) profileImage = result.key;
   }
 
-  // Use provided password or generate a random one
+  // Use provided password or generate an easy-to-type one
   const plainPassword =
     body.password ||
-    Math.random().toString(36).slice(-8) +
-      Math.random().toString(36).slice(-2);
+    generateStudentPassword();
 
   // Check for duplicate email
   const [existingStaff] = await db
@@ -280,9 +280,7 @@ staffController.patch("/:id/reset-password", async (c) => {
     throw new ForbiddenError("Access denied");
   }
 
-  const newPassword =
-    Math.random().toString(36).slice(-8) +
-    Math.random().toString(36).slice(-2);
+  const newPassword = generateStudentPassword();
 
   const hashedPw = await hashPassword(newPassword);
 
@@ -368,9 +366,7 @@ staffController.post("/bulk-upload", async (c) => {
           subjects,
           joiningDate: r.joiningDate || nowISO(),
           institutionId,
-          password:
-            Math.random().toString(36).slice(-8) +
-            Math.random().toString(36).slice(-2),
+          password: generateStudentPassword(),
         },
       };
     },

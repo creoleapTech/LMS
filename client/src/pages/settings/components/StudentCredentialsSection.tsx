@@ -107,10 +107,9 @@ export function StudentCredentialsSection() {
   });
 
   const generateMutation = useMutation({
-    mutationFn: async () => {
-      const { data: res } = await _axios.post(
-        `/admin/institutions/${contextInstitutionId}/generate-student-credentials`
-      );
+    mutationFn: async (force: boolean = false) => {
+      const url = `/admin/institutions/${contextInstitutionId}/generate-student-credentials${force ? "?force=true" : ""}`;
+      const { data: res } = await _axios.post(url);
       return res;
     },
     onSuccess: (data) => {
@@ -226,8 +225,8 @@ export function StudentCredentialsSection() {
             </Button>
             <Button
               onClick={() => {
-                if (window.confirm("Generate credentials for all students without credentials? This will assign roll numbers and passwords.")) {
-                  generateMutation.mutate();
+                if (window.confirm("Generate/reset credentials for students in this institution?")) {
+                  generateMutation.mutate(true);
                 }
               }}
               disabled={!contextInstitutionId || generateMutation.isPending}

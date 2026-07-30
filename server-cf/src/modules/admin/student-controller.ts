@@ -22,6 +22,7 @@ import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { saveFile, deleteFile } from "../../lib/file";
 import { hashPassword, hashPasswordBulk } from "../../lib/password";
+import { generateStudentPassword } from "../../lib/generate-password";
 import { generateRollNumber, generateRollNumbers, syncRollNumberCounter } from "../../lib/roll-number";
 import { PHONE_PATTERN, TEXT_LIMITS, USERNAME_PATTERN } from "../../lib/validation/text";
 import * as XLSX from "xlsx";
@@ -119,9 +120,7 @@ async function importStudentRecords(db: any, rows: any[]) {
   const studentsNeedingPasswords = studentRecords.filter((s) => s.username);
 
   for (const s of studentsNeedingPasswords) {
-    const plain =
-      Math.random().toString(36).slice(-8) +
-      Math.random().toString(36).slice(-2);
+    const plain = generateStudentPassword();
     const hashed = await hashPasswordBulk(plain);
     passwordMap.set(s.id, { plain, hashed });
   }
@@ -298,9 +297,7 @@ studentController.post("/", async (c) => {
     hashedPw = await hashPassword(plainPassword);
   } else if (body.username) {
     // If username provided but no password, generate one
-    plainPassword =
-      Math.random().toString(36).slice(-8) +
-      Math.random().toString(36).slice(-2);
+    plainPassword = generateStudentPassword();
     hashedPw = await hashPassword(plainPassword);
   }
 

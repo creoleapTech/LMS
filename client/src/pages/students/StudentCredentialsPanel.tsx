@@ -67,7 +67,7 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
   const [search, setSearch] = useState("");
   const [generatedCredentials, setGeneratedCredentials] = useState<GeneratedCredential[] | null>(null);
 
-  const { data, isLoading, isError, error } = useQuery<StudentCredentialsResponse>({
+  const { data, isLoading, isError } = useQuery<StudentCredentialsResponse>({
     queryKey: ["student-credentials", institutionId],
     queryFn: async () => {
       const url = `/admin/institutions/${institutionId}/student-credentials`;
@@ -105,10 +105,9 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
   }, [credentials, search]);
 
   const generateMutation = useMutation({
-    mutationFn: async () => {
-      const { data: res } = await _axios.post(
-        `/admin/institutions/${institutionId}/generate-student-credentials`
-      );
+    mutationFn: async (force: boolean = false) => {
+      const url = `/admin/institutions/${institutionId}/generate-student-credentials${force ? "?force=true" : ""}`;
+      const { data: res } = await _axios.post(url);
       return res;
     },
     onSuccess: (data) => {
@@ -160,8 +159,8 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
             <Button
               size="sm"
               onClick={() => {
-                if (window.confirm("Generate credentials for all students without them?")) {
-                  generateMutation.mutate();
+                if (window.confirm("Generate/reset credentials for students in this institution?")) {
+                  generateMutation.mutate(true);
                 }
               }}
               disabled={generateMutation.isPending}
