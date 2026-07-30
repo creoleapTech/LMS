@@ -10,6 +10,7 @@ import { nowISO } from "../../lib/utils";
 import { BadRequestError } from "../../lib/errors/bad-request";
 import { ForbiddenError } from "../../lib/errors/forbidden";
 import { superAdminAuth } from "../../middleware/super-admin-auth";
+import { adminAuth } from "../../middleware/admin-auth";
 import { PHONE_PATTERN, TEXT_LIMITS } from "../../lib/validation/text";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -66,11 +67,8 @@ function parseContactDetails(raw: unknown): Record<string, unknown> {
   return {};
 }
 
-// All routes require super-admin auth (equivalent of .use(superAdminAuthMacro).guard({ isAuth: true }))
-app.use("*", superAdminAuth);
-
 // ─── POST / — Create Institution (Super Admin Only) ───
-app.post("/", async (c) => {
+app.post("/", superAdminAuth, async (c) => {
   const user = c.get("user") as Record<string, any>;
 
   if (user.role !== "super_admin") {
@@ -163,7 +161,7 @@ app.post("/", async (c) => {
 });
 
 // ─── GET / — List Institutions ─────────────────────────
-app.get("/", async (c) => {
+app.get("/", adminAuth, async (c) => {
   const user = c.get("user") as Record<string, any>;
   const search = c.req.query("search");
   const typeFilter = c.req.query("type");
@@ -220,7 +218,7 @@ app.get("/", async (c) => {
 });
 
 // ─── GET /:id — Get Institution by ID ──────────────────
-app.get("/:id", async (c) => {
+app.get("/:id", superAdminAuth, async (c) => {
   const user = c.get("user") as Record<string, any>;
   const id = c.req.param("id");
 
@@ -253,7 +251,7 @@ app.get("/:id", async (c) => {
 });
 
 // ─── GET /:id/stats — Institution Stats ────────────────
-app.get("/:id/stats", async (c) => {
+app.get("/:id/stats", adminAuth, async (c) => {
   const user = c.get("user") as Record<string, any>;
   const id = c.req.param("id");
 
@@ -377,7 +375,7 @@ app.get("/:id/stats", async (c) => {
 });
 
 // ─── PATCH /:id — Update Institution (Super Admin Only) ─
-app.patch("/:id", async (c) => {
+app.patch("/:id", superAdminAuth, async (c) => {
   const user = c.get("user") as Record<string, any>;
   const id = c.req.param("id");
 
@@ -485,7 +483,7 @@ app.patch("/:id", async (c) => {
 });
 
 // ─── DELETE /:id — Soft Delete Institution ─────────────
-app.delete("/:id", async (c) => {
+app.delete("/:id", superAdminAuth, async (c) => {
   const user = c.get("user") as Record<string, any>;
   const id = c.req.param("id");
 
@@ -509,7 +507,7 @@ app.delete("/:id", async (c) => {
 });
 
 // ─── PATCH /:id/toggle-active — Toggle Active/Inactive ─
-app.patch("/:id/toggle-active", async (c) => {
+app.patch("/:id/toggle-active", superAdminAuth, async (c) => {
   const user = c.get("user") as Record<string, any>;
   const id = c.req.param("id");
 
