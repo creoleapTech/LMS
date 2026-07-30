@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Users, Shapes } from "lucide-react";
+import { Building2, Users, Shapes, KeyRound } from "lucide-react";
+import { StudentCredentialsPanel } from "./StudentCredentialsPanel";
 
 export function StudentManagementPage() {
   const user = useAuthStore((s) => s.user);
@@ -93,6 +94,10 @@ export function StudentManagementPage() {
               <Users className="h-4 w-4" />
               Students
             </TabsTrigger>
+            <TabsTrigger value="credentials" className="gap-1.5">
+              <KeyRound className="h-4 w-4" />
+              Credentials
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="classes">
@@ -101,6 +106,10 @@ export function StudentManagementPage() {
 
           <TabsContent value="students">
             <StudentTable institutionId={effectiveInstitutionId} />
+          </TabsContent>
+
+          <TabsContent value="credentials">
+            <StudentCredentialsPanel institutionId={effectiveInstitutionId} />
           </TabsContent>
         </Tabs>
       )}

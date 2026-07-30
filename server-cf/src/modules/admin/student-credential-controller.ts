@@ -22,8 +22,8 @@ app.use("*", adminAuth);
 app.post("/:id/generate-student-credentials", async (c) => {
   const user = c.get("user") as Record<string, any>;
 
-  if (user.role !== "admin" && user.role !== "super_admin") {
-    throw new ForbiddenError("Only admin can generate student credentials");
+  if (user.role !== "super_admin" && user.role !== "teacher") {
+    throw new ForbiddenError("Only super admin and teachers can generate student credentials");
   }
 
   const institutionId = c.req.param("id");
@@ -115,8 +115,8 @@ app.post("/:id/generate-student-credentials", async (c) => {
 app.get("/:id/student-credentials", async (c) => {
   const user = c.get("user") as Record<string, any>;
 
-  if (user.role !== "admin" && user.role !== "super_admin") {
-    throw new ForbiddenError("Only admin can view student credentials");
+  if (user.role !== "super_admin" && user.role !== "teacher") {
+    throw new ForbiddenError("Only super admin and teachers can view student credentials");
   }
 
   const institutionId = c.req.param("id");
