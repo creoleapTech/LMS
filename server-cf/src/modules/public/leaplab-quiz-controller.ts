@@ -36,7 +36,7 @@ app.get("/quizzes", async (c) => {
 
   if (!instId) throw new UnauthorizedError("No institution associated");
 
-  const now = new Date().toISOString();
+  const now = Date.now();
 
   // Get published quizzes for this institution that are within their date range
   const quizzes = await db
@@ -68,8 +68,8 @@ app.get("/quizzes", async (c) => {
   const enriched = await Promise.all(
     quizzes.map(async (quiz) => {
       // Date filtering
-      if (quiz.startDate && now < quiz.startDate) return null;
-      if (quiz.endDate && now > quiz.endDate) return null;
+      if (quiz.startDate && now < new Date(quiz.startDate).getTime()) return null;
+      if (quiz.endDate && now > new Date(quiz.endDate).getTime()) return null;
 
       const [qCount] = await db
         .select({ count: count() })
@@ -157,11 +157,11 @@ app.get("/quizzes/:id", async (c) => {
   if (!quiz) throw new BadRequestError("Quiz not found");
 
   // Check date range
-  const now = new Date().toISOString();
-  if (quiz.startDate && now < quiz.startDate) {
+  const now = Date.now();
+  if (quiz.startDate && now < new Date(quiz.startDate).getTime()) {
     throw new BadRequestError("Quiz has not started yet");
   }
-  if (quiz.endDate && now > quiz.endDate) {
+  if (quiz.endDate && now > new Date(quiz.endDate).getTime()) {
     throw new BadRequestError("Quiz has expired");
   }
 
@@ -267,11 +267,11 @@ app.post("/quizzes/:id/start", async (c) => {
   if (!quiz) throw new BadRequestError("Quiz not found");
 
   // Check date range
-  const now = new Date().toISOString();
-  if (quiz.startDate && now < quiz.startDate) {
+  const now = Date.now();
+  if (quiz.startDate && now < new Date(quiz.startDate).getTime()) {
     throw new BadRequestError("Quiz has not started yet");
   }
-  if (quiz.endDate && now > quiz.endDate) {
+  if (quiz.endDate && now > new Date(quiz.endDate).getTime()) {
     throw new BadRequestError("Quiz has expired");
   }
 

@@ -36,6 +36,12 @@ function toLocalDatetime(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function toUTC(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 export function QuizFormDialog({ open, onOpenChange, institutionId, quiz }: QuizFormDialogProps) {
   const isEdit = !!quiz;
   const createQuiz = useCreateQuiz();
@@ -92,14 +98,19 @@ export function QuizFormDialog({ open, onOpenChange, institutionId, quiz }: Quiz
   }, [open, isEdit, quiz, reset]);
 
   const onSubmit = (data: CreateQuizValues) => {
+    const payload: CreateQuizValues = {
+      ...data,
+      startDate: toUTC(data.startDate),
+      endDate: toUTC(data.endDate),
+    };
     if (isEdit && quiz) {
       updateQuiz.mutate(
-        { id: quiz.id, data },
+        { id: quiz.id, data: payload },
         { onSuccess: () => onOpenChange(false) },
       );
     } else {
-      const payload = institutionId ? { ...data, institutionId } : data;
-      createQuiz.mutate(payload, {
+      const body = institutionId ? { ...payload, institutionId } : payload;
+      createQuiz.mutate(body, {
         onSuccess: () => onOpenChange(false),
       });
     }
