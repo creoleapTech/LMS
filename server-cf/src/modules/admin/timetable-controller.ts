@@ -361,6 +361,23 @@ function resolveAdditionalClassIds(body: any, fallback: any): string | null {
   return fallback;
 }
 
+// D1 (Cloudflare) caps a query at 100 bound variables. Chunk inArray queries
+// so large ID lists never exceed the limit.
+const MAX_IN_ARRAY_CHUNK = 99;
+
+async function inArrayChunked(
+  db: any,
+  ids: string[],
+  buildQuery: (chunkIds: string[]) => any,
+): Promise<any[]> {
+  const results: any[] = [];
+  for (let i = 0; i < ids.length; i += MAX_IN_ARRAY_CHUNK) {
+    const chunk = ids.slice(i, i + MAX_IN_ARRAY_CHUNK);
+    results.push(...(await buildQuery(chunk)));
+  }
+  return results;
+}
+
 /** Batch-enrich timetable entries with class, gradeBook and topics. */
 async function batchEnrichTimetableEntries(db: any, entries: any[]) {
   const allClassIds = [
@@ -376,33 +393,39 @@ async function batchEnrichTimetableEntries(db: any, entries: any[]) {
 
   const classMap = new Map<string, any>();
   if (allClassIds.length > 0) {
-    const rows = await db
-      .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
-      .from(classes)
-      .where(inArray(classes.id, allClassIds as string[]));
+    const rows = await inArrayChunked(db, allClassIds as string[], (chunkIds) =>
+      db
+        .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
+        .from(classes)
+        .where(inArray(classes.id, chunkIds)),
+    );
     for (const r of rows) classMap.set(r.id, r);
   }
 
   const gbMap = new Map<string, any>();
   if (gbIds.length > 0) {
-    const rows = await db
-      .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade })
-      .from(gradeBooks)
-      .where(inArray(gradeBooks.id, gbIds));
+    const rows = await inArrayChunked(db, gbIds, (chunkIds) =>
+      db
+        .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade })
+        .from(gradeBooks)
+        .where(inArray(gradeBooks.id, chunkIds)),
+    );
     for (const r of rows) gbMap.set(r.id, r);
   }
 
   const topicsMap = new Map<string, { topic: string; chapterId: string | null; contentId: string | null }[]>();
   if (entryIds.length > 0) {
-    const rows = await db
-      .select({
-        timetableEntryId: timetableTopicsCovered.timetableEntryId,
-        topic: timetableTopicsCovered.topic,
-        chapterId: timetableTopicsCovered.chapterId,
-        contentId: timetableTopicsCovered.contentId,
-      })
-      .from(timetableTopicsCovered)
-      .where(inArray(timetableTopicsCovered.timetableEntryId, entryIds));
+    const rows = await inArrayChunked(db, entryIds, (chunkIds) =>
+      db
+        .select({
+          timetableEntryId: timetableTopicsCovered.timetableEntryId,
+          topic: timetableTopicsCovered.topic,
+          chapterId: timetableTopicsCovered.chapterId,
+          contentId: timetableTopicsCovered.contentId,
+        })
+        .from(timetableTopicsCovered)
+        .where(inArray(timetableTopicsCovered.timetableEntryId, chunkIds)),
+    );
     for (const r of rows) {
       const arr = topicsMap.get(r.timetableEntryId) || [];
       arr.push({ topic: r.topic, chapterId: r.chapterId, contentId: r.contentId });
@@ -416,10 +439,14 @@ async function batchEnrichTimetableEntries(db: any, entries: any[]) {
 
   const [chapterRows, contentRows] = await Promise.all([
     allChapterIds.length > 0
-      ? db.select({ id: chapters.id, title: chapters.title, chapterNumber: chapters.chapterNumber }).from(chapters).where(inArray(chapters.id, allChapterIds))
+      ? inArrayChunked(db, allChapterIds, (chunkIds) =>
+          db.select({ id: chapters.id, title: chapters.title, chapterNumber: chapters.chapterNumber }).from(chapters).where(inArray(chapters.id, chunkIds)),
+        )
       : ([] as any[]),
     allContentIds.length > 0
-      ? db.select({ id: chapterContents.id, title: chapterContents.title }).from(chapterContents).where(inArray(chapterContents.id, allContentIds))
+      ? inArrayChunked(db, allContentIds, (chunkIds) =>
+          db.select({ id: chapterContents.id, title: chapterContents.title }).from(chapterContents).where(inArray(chapterContents.id, chunkIds)),
+        )
       : ([] as any[]),
   ]);
 
@@ -1754,10 +1781,12 @@ async function buildMonthlyReportData(
 
   // Batch fetch topics covered
   const topicsRows = allEntryIds.length > 0
-    ? await db
-        .select()
-        .from(timetableTopicsCovered)
-        .where(inArray(timetableTopicsCovered.timetableEntryId, allEntryIds))
+    ? await inArrayChunked(db, allEntryIds, (chunkIds) =>
+        db
+          .select()
+          .from(timetableTopicsCovered)
+          .where(inArray(timetableTopicsCovered.timetableEntryId, chunkIds)),
+      )
     : [];
 
   const chapterIdsSet = new Set<string>();
@@ -1770,18 +1799,22 @@ async function buildMonthlyReportData(
   // Fetch chapter and content titles for structured entries
   const chapterMap = new Map<string, { title: string; chapterNumber: number | null }>();
   if (chapterIdsSet.size > 0) {
-    const chRows = await db
-      .select({ id: chapters.id, title: chapters.title, chapterNumber: chapters.chapterNumber })
-      .from(chapters)
-      .where(inArray(chapters.id, [...chapterIdsSet]));
+    const chRows = await inArrayChunked(db, [...chapterIdsSet], (chunkIds) =>
+      db
+        .select({ id: chapters.id, title: chapters.title, chapterNumber: chapters.chapterNumber })
+        .from(chapters)
+        .where(inArray(chapters.id, chunkIds)),
+    );
     for (const ch of chRows) chapterMap.set(ch.id, { title: ch.title || "", chapterNumber: ch.chapterNumber });
   }
   const contentMap = new Map<string, { title: string; chapterId: string; order: number | null }>();
   if (contentIdsSet.size > 0) {
-    const ctRows = await db
-      .select({ id: chapterContents.id, title: chapterContents.title, chapterId: chapterContents.chapterId, order: chapterContents.order })
-      .from(chapterContents)
-      .where(inArray(chapterContents.id, [...contentIdsSet]));
+    const ctRows = await inArrayChunked(db, [...contentIdsSet], (chunkIds) =>
+      db
+        .select({ id: chapterContents.id, title: chapterContents.title, chapterId: chapterContents.chapterId, order: chapterContents.order })
+        .from(chapterContents)
+        .where(inArray(chapterContents.id, chunkIds)),
+    );
     for (const ct of ctRows) contentMap.set(ct.id, { title: ct.title || "", chapterId: ct.chapterId, order: ct.order });
   }
 
@@ -1803,19 +1836,23 @@ async function buildMonthlyReportData(
 
   const classMap = new Map<string, any>();
   if (classIds.length > 0) {
-    const classRows = await db
-      .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
-      .from(classes)
-      .where(inArray(classes.id, classIds));
+    const classRows = await inArrayChunked(db, classIds, (chunkIds) =>
+      db
+        .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year })
+        .from(classes)
+        .where(inArray(classes.id, chunkIds)),
+    );
     for (const cls of classRows) classMap.set(cls.id, cls);
   }
 
   const gbMap = new Map<string, any>();
   if (gbIds.length > 0) {
-    const gbRows = await db
-      .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade })
-      .from(gradeBooks)
-      .where(inArray(gradeBooks.id, gbIds));
+    const gbRows = await inArrayChunked(db, gbIds, (chunkIds) =>
+      db
+        .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle, grade: gradeBooks.grade })
+        .from(gradeBooks)
+        .where(inArray(gradeBooks.id, chunkIds)),
+    );
     for (const gb of gbRows) gbMap.set(gb.id, gb);
   }
 
@@ -2331,39 +2368,49 @@ timetableController.get("/work-done", async (c) => {
 
   const [staffRows, classRows, instRows, gbRows, topicRows] = await Promise.all([
     staffIds.length > 0
-      ? db
-          .select({ id: staff.id, name: staff.name, email: staff.email })
-          .from(staff)
-          .where(inArray(staff.id, staffIds))
+      ? inArrayChunked(db, staffIds, (chunkIds) =>
+          db
+            .select({ id: staff.id, name: staff.name, email: staff.email })
+            .from(staff)
+            .where(inArray(staff.id, chunkIds)),
+        )
       : [],
     classIds.length > 0
-      ? db
-          .select({ id: classes.id, grade: classes.grade, section: classes.section })
-          .from(classes)
-          .where(inArray(classes.id, classIds))
+      ? inArrayChunked(db, classIds, (chunkIds) =>
+          db
+            .select({ id: classes.id, grade: classes.grade, section: classes.section })
+            .from(classes)
+            .where(inArray(classes.id, chunkIds)),
+        )
       : [],
     instIds.length > 0
-      ? db
-          .select({ id: institutions.id, name: institutions.name })
-          .from(institutions)
-          .where(inArray(institutions.id, instIds))
+      ? inArrayChunked(db, instIds, (chunkIds) =>
+          db
+            .select({ id: institutions.id, name: institutions.name })
+            .from(institutions)
+            .where(inArray(institutions.id, chunkIds)),
+        )
       : [],
     gbIds.length > 0
-      ? db
-          .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle })
-          .from(gradeBooks)
-          .where(inArray(gradeBooks.id, gbIds))
+      ? inArrayChunked(db, gbIds, (chunkIds) =>
+          db
+            .select({ id: gradeBooks.id, bookTitle: gradeBooks.bookTitle })
+            .from(gradeBooks)
+            .where(inArray(gradeBooks.id, chunkIds)),
+        )
       : [],
     entryIds.length > 0
-      ? db
-          .select({
-            entryId: timetableTopicsCovered.timetableEntryId,
-            topic: timetableTopicsCovered.topic,
-            chapterId: timetableTopicsCovered.chapterId,
-            contentId: timetableTopicsCovered.contentId,
-          })
-          .from(timetableTopicsCovered)
-          .where(inArray(timetableTopicsCovered.timetableEntryId, entryIds))
+      ? inArrayChunked(db, entryIds, (chunkIds) =>
+          db
+            .select({
+              entryId: timetableTopicsCovered.timetableEntryId,
+              topic: timetableTopicsCovered.topic,
+              chapterId: timetableTopicsCovered.chapterId,
+              contentId: timetableTopicsCovered.contentId,
+            })
+            .from(timetableTopicsCovered)
+            .where(inArray(timetableTopicsCovered.timetableEntryId, chunkIds)),
+        )
       : [],
   ]);
 
@@ -2385,10 +2432,14 @@ timetableController.get("/work-done", async (c) => {
 
   const [chapterRows, contentRows] = await Promise.all([
     allChapterIds.length > 0
-      ? db.select({ id: chapters.id, title: chapters.title, chapterNumber: chapters.chapterNumber }).from(chapters).where(inArray(chapters.id, allChapterIds))
+      ? inArrayChunked(db, allChapterIds, (chunkIds) =>
+          db.select({ id: chapters.id, title: chapters.title, chapterNumber: chapters.chapterNumber }).from(chapters).where(inArray(chapters.id, chunkIds)),
+        )
       : [],
     allContentIds.length > 0
-      ? db.select({ id: chapterContents.id, title: chapterContents.title, order: chapterContents.order }).from(chapterContents).where(inArray(chapterContents.id, allContentIds))
+      ? inArrayChunked(db, allContentIds, (chunkIds) =>
+          db.select({ id: chapterContents.id, title: chapterContents.title, order: chapterContents.order }).from(chapterContents).where(inArray(chapterContents.id, chunkIds)),
+        )
       : [],
   ]);
 

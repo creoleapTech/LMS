@@ -1327,6 +1327,7 @@ function BodyItemEditor({
   if (item.kind === "content" && item.content) {
     const content = item.content;
     const updateText = (text: string) => onUpdate({ kind: "content", content: { ...content, text }, keepOnSamePage: item.keepOnSamePage });
+    const updateNextPage = (nextPage: boolean) => onUpdate({ kind: "content", content, keepOnSamePage: !nextPage });
 
     return (
       <div className="flex items-start gap-2 group">
@@ -1341,6 +1342,17 @@ function BodyItemEditor({
               {content.type}
             </span>
           </div>
+          {!readOnly && (
+            <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 cursor-pointer select-none pl-5">
+              <input
+                type="checkbox"
+                checked={!item.keepOnSamePage}
+                onChange={(e) => updateNextPage(e.target.checked)}
+                className="w-3 h-3 rounded border-slate-300 text-indigo-600 focus:ring-0"
+              />
+              Next page
+            </label>
+          )}
         </div>
         <div className="flex-1 flex flex-col gap-1.5">
           {content.type === "heading" ? (
