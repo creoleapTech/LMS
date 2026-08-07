@@ -3501,7 +3501,7 @@ timetableController.get("/email-preview", async (c) => {
     const schoolLocation = inst.address || "";
     const schoolNameAndLocation = schoolName + (schoolLocation ? `, ${schoolLocation}` : "");
 
-    const subject = `Monthly AI Integrated STEM Robotics Lesson Completion Report – ${monthName} ${year} | ${schoolName}`;
+    const subject = `Creoleap AI Integrated STEM Robotics Monthly Report ${monthName} ${year} - REG`;
     const body = `Respected Sir/Ma’am,
 
 Greetings from Creoleap Technologies Pvt. Ltd.
@@ -3527,11 +3527,38 @@ Creoleap Technologies Pvt. Ltd.
 
     const attachmentName = `CTPL_AI&Stem_Robotics_${monthName}${year}_monthly_report.pdf`;
 
+    const defaultCc = ["cto@creoleap.com", "ceo@creoleap.com"];
+    const [trainer] = await db
+      .select({ email: staff.email })
+      .from(staff)
+      .where(eq(staff.id, submission.staffId))
+      .limit(1);
+    const instStaff = await db
+      .select({ email: staff.email })
+      .from(staff)
+      .where(
+        and(
+          eq(staff.institutionId, submission.institutionId),
+          eq(staff.isDeleted, 0),
+          eq(staff.isActive, 1)
+        )
+      );
+    const trainerEmails = new Set<string>();
+    if (trainer?.email) trainerEmails.add(trainer.email);
+    for (const s of instStaff) {
+      if (s.email) trainerEmails.add(s.email);
+    }
+    for (const email of trainerEmails) {
+      if (email && !defaultCc.includes(email)) {
+        defaultCc.push(email);
+      }
+    }
+
     return c.json({
       success: true,
       data: {
         to: inst.contactEmail || "",
-        cc: "cto@creoleap.com, ceo@creoleap.com",
+        cc: defaultCc.join(", "),
         subject,
         body,
         attachmentName,
@@ -3556,20 +3583,6 @@ timetableController.post("/send-report-email", async (c) => {
     const { submissionId, customSubject, customBody, customCc } = await c.req.json();
     if (!submissionId) throw new BadRequestError("submissionId is required");
 
-    let ccList: string[] = [];
-    if (customCc !== undefined) {
-      if (typeof customCc === "string") {
-        ccList = customCc
-          .split(",")
-          .map((email: string) => email.trim())
-          .filter((email: string) => email.length > 0);
-      } else if (Array.isArray(customCc)) {
-        ccList = customCc;
-      }
-    } else {
-      ccList = ["cto@creoleap.com", "ceo@creoleap.com"];
-    }
-
     const db = getDb(c.env.DB);
 
     const [submission] = await db
@@ -3585,6 +3598,46 @@ timetableController.post("/send-report-email", async (c) => {
     }
     if (!submission.principalSignedKey) {
       throw new BadRequestError("Principal signed report is required before emailing");
+    }
+
+    let ccList: string[] = [];
+    if (customCc !== undefined) {
+      if (typeof customCc === "string") {
+        ccList = customCc
+          .split(",")
+          .map((email: string) => email.trim())
+          .filter((email: string) => email.length > 0);
+      } else if (Array.isArray(customCc)) {
+        ccList = customCc;
+      }
+    } else {
+      const defaultCc = ["cto@creoleap.com", "ceo@creoleap.com"];
+      const [trainer] = await db
+        .select({ email: staff.email })
+        .from(staff)
+        .where(eq(staff.id, submission.staffId))
+        .limit(1);
+      const instStaff = await db
+        .select({ email: staff.email })
+        .from(staff)
+        .where(
+          and(
+            eq(staff.institutionId, submission.institutionId),
+            eq(staff.isDeleted, 0),
+            eq(staff.isActive, 1)
+          )
+        );
+      const trainerEmails = new Set<string>();
+      if (trainer?.email) trainerEmails.add(trainer.email);
+      for (const s of instStaff) {
+        if (s.email) trainerEmails.add(s.email);
+      }
+      for (const email of trainerEmails) {
+        if (email && !defaultCc.includes(email)) {
+          defaultCc.push(email);
+        }
+      }
+      ccList = defaultCc;
     }
 
     const [inst] = await db
@@ -3620,7 +3673,7 @@ timetableController.post("/send-report-email", async (c) => {
     const filename = `CTPL_AI&Stem_Robotics_${monthName}${year}_monthly_report.pdf`;
 
     // Email templates
-    const subject = customSubject || `Monthly AI Integrated STEM Robotics Lesson Completion Report – ${monthName} ${year} | ${schoolName}`;
+    const subject = customSubject || `Creoleap AI Integrated STEM Robotics Monthly Report ${monthName} ${year} - REG`;
     const html = customBody
       ? customBody.replace(/\r?\n/g, "<br/>")
       : `
