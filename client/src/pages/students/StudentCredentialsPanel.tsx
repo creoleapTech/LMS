@@ -27,6 +27,8 @@ type Credential = {
   name: string;
   username: string | null;
   rollNumber: string | null;
+  grade: string | null;
+  section: string | null;
   plainPassword: string;
 };
 
@@ -34,6 +36,8 @@ type GeneratedCredential = {
   id: string;
   name: string;
   rollNumber: string;
+  grade: string | null;
+  section: string | null;
   leaplabUsername: string;
   plainPassword: string;
 };
@@ -46,9 +50,14 @@ type StudentCredentialsResponse = {
   };
 };
 
-function downloadCsv(filename: string, rows: { rollNumber: string; name: string; password: string }[]) {
-  const header = "Roll Number,Name,Password\n";
-  const data = rows.map((r) => `"${r.rollNumber}","${r.name}","${r.password}"`).join("\n");
+function downloadCsv(
+  filename: string,
+  rows: { rollNumber: string; name: string; password: string; grade?: string | null; section?: string | null }[]
+) {
+  const header = "Roll Number,Name,Class,Section,Password\n";
+  const data = rows
+    .map((r) => `"${r.rollNumber}","${r.name}","${r.grade ?? ""}","${r.section ?? ""}","${r.password}"`)
+    .join("\n");
   const blob = new Blob([header + data], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -100,7 +109,9 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
       (c) =>
         c.name?.toLowerCase().includes(q) ||
         c.rollNumber?.toLowerCase().includes(q) ||
-        c.username?.toLowerCase().includes(q)
+        c.username?.toLowerCase().includes(q) ||
+        c.grade?.toLowerCase().includes(q) ||
+        c.section?.toLowerCase().includes(q)
     );
   }, [credentials, search]);
 
@@ -129,6 +140,8 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
       rollNumber: c.rollNumber ?? c.username ?? "",
       name: c.name ?? "Unknown",
       password: c.plainPassword,
+      grade: c.grade,
+      section: c.section,
     }));
     downloadCsv(`${institutionName.replace(/\s+/g, "_")}_student_credentials.csv`, rows);
     toast.success(`Downloaded ${rows.length} credential(s)`);
@@ -179,7 +192,7 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name or roll number..."
+              placeholder="Search by name, roll number, class or section..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 rounded-xl"
@@ -206,6 +219,8 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                   <TableRow>
                     <TableHead>Roll Number</TableHead>
                     <TableHead>Name</TableHead>
+                    <TableHead>Class</TableHead>
+                    <TableHead>Section</TableHead>
                     <TableHead>Password</TableHead>
                     <TableHead className="w-16">Copy</TableHead>
                   </TableRow>
@@ -215,6 +230,8 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                     <TableRow key={c.id}>
                       <TableCell className="font-mono text-sm">{c.rollNumber ?? c.username ?? "-"}</TableCell>
                       <TableCell className="text-sm font-medium">{c.name}</TableCell>
+                      <TableCell className="text-sm">{c.grade ?? "-"}</TableCell>
+                      <TableCell className="text-sm">{c.section ?? "-"}</TableCell>
                       <TableCell className="font-mono text-sm text-muted-foreground">
                         {c.plainPassword || "********"}
                       </TableCell>
@@ -226,7 +243,7 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                             className="h-8 w-8 rounded-lg"
                             onClick={() => {
                               navigator.clipboard.writeText(
-                                `Username: ${c.rollNumber ?? c.username}\nPassword: ${c.plainPassword}`
+                                `Name: ${c.name}\nClass: ${c.grade ?? "-"}${c.grade ? ` - ${c.section ?? ""}` : ""}\nUsername: ${c.rollNumber ?? c.username}\nPassword: ${c.plainPassword}`
                               );
                               toast.success("Copied");
                             }}
@@ -268,6 +285,8 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                   <TableRow>
                     <TableHead>Roll Number</TableHead>
                     <TableHead>Name</TableHead>
+                    <TableHead>Class</TableHead>
+                    <TableHead>Section</TableHead>
                     <TableHead>LeapLab Username</TableHead>
                     <TableHead>Password</TableHead>
                     <TableHead className="w-16">Copy</TableHead>
@@ -278,6 +297,8 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                     <TableRow key={c.id}>
                       <TableCell className="font-mono text-sm">{c.rollNumber}</TableCell>
                       <TableCell className="text-sm font-medium">{c.name}</TableCell>
+                      <TableCell className="text-sm">{c.grade ?? "-"}</TableCell>
+                      <TableCell className="text-sm">{c.section ?? "-"}</TableCell>
                       <TableCell className="font-mono text-sm text-muted-foreground">{c.leaplabUsername}</TableCell>
                       <TableCell className="font-mono text-sm">{c.plainPassword}</TableCell>
                       <TableCell>
@@ -287,7 +308,7 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                           className="h-8 w-8 rounded-lg"
                           onClick={() => {
                             navigator.clipboard.writeText(
-                              `Roll Number: ${c.rollNumber}\nLeapLab Username: ${c.leaplabUsername}\nPassword: ${c.plainPassword}`
+                              `Roll Number: ${c.rollNumber}\nClass: ${c.grade ?? "-"}${c.grade ? ` - ${c.section ?? ""}` : ""}\nLeapLab Username: ${c.leaplabUsername}\nPassword: ${c.plainPassword}`
                             );
                             toast.success("Copied");
                           }}
@@ -307,7 +328,7 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                 onClick={() => {
                   if (!generatedCredentials) return;
                   const text = generatedCredentials
-                    .map((c) => `${c.rollNumber}\t${c.name}\t${c.leaplabUsername}\t${c.plainPassword}`)
+                    .map((c) => `${c.rollNumber}\t${c.name}\t${c.grade ?? ""}\t${c.section ?? ""}\t${c.leaplabUsername}\t${c.plainPassword}`)
                     .join("\n");
                   navigator.clipboard.writeText(text);
                   toast.success("All credentials copied");
@@ -323,6 +344,8 @@ export function StudentCredentialsPanel({ institutionId }: Props) {
                     rollNumber: c.rollNumber,
                     name: c.name,
                     password: c.plainPassword,
+                    grade: c.grade,
+                    section: c.section,
                   }));
                   downloadCsv("student_credentials.csv", rows);
                 }}

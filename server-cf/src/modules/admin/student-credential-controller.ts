@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { eq, and, sql } from "drizzle-orm";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
-import { institutions, students } from "../../schema/admin";
+import { institutions, students, classes } from "../../schema/admin";
 import { leaplabCredentials } from "../../schema/leaplab";
 import { v4 as uuid } from "uuid";
 import { syncRollNumberCounter, generateRollNumbers } from "../../lib/roll-number";
@@ -71,7 +71,7 @@ app.post("/:id/generate-student-credentials", async (c) => {
 
   const suffix = `@${sanitizeSuffix(institution.name)}`;
 
-  // Get all active students in this institution
+  // Get all active students in this institution with class/section info
   const allStudents = await db
     .select({
       id: students.id,
@@ -79,8 +79,11 @@ app.post("/:id/generate-student-credentials", async (c) => {
       rollNumber: students.rollNumber,
       username: students.username,
       plainPassword: students.plainPassword,
+      grade: classes.grade,
+      section: classes.section,
     })
     .from(students)
+    .leftJoin(classes, eq(students.classId, classes.id))
     .where(
       and(
         eq(students.institutionId, institutionId),
@@ -114,6 +117,8 @@ app.post("/:id/generate-student-credentials", async (c) => {
     id: string;
     name: string | null;
     rollNumber: string | null;
+    grade: string | null;
+    section: string | null;
     needsRollNumber: boolean;
   };
   const studentsNeedingWork: StudentEntry[] = [];
@@ -124,6 +129,8 @@ app.post("/:id/generate-student-credentials", async (c) => {
       id: student.id,
       name: student.name,
       rollNumber: student.rollNumber,
+      grade: student.grade,
+      section: student.section,
       needsRollNumber: isInvalidRoll,
     });
   }
@@ -144,6 +151,8 @@ app.post("/:id/generate-student-credentials", async (c) => {
     id: string;
     name: string;
     rollNumber: string;
+    grade: string | null;
+    section: string | null;
     leaplabUsername: string;
     plainPassword: string;
   }[] = [];
@@ -229,6 +238,8 @@ app.post("/:id/generate-student-credentials", async (c) => {
       id: student.id,
       name: student.name ?? "Unknown",
       rollNumber,
+      grade: student.grade,
+      section: student.section,
       leaplabUsername,
       plainPassword,
     });
@@ -304,7 +315,7 @@ app.get("/:id/student-credentials", async (c) => {
 
   const suffix = `@${sanitizeSuffix(institution.name)}`;
 
-  // Get all active students with roll numbers and LMS credentials
+  // Get all active students with roll numbers, LMS credentials, and class/section info
   const allStudents = await db
     .select({
       id: students.id,
@@ -312,8 +323,11 @@ app.get("/:id/student-credentials", async (c) => {
       rollNumber: students.rollNumber,
       username: students.username,
       plainPassword: students.plainPassword,
+      grade: classes.grade,
+      section: classes.section,
     })
     .from(students)
+    .leftJoin(classes, eq(students.classId, classes.id))
     .where(
       and(
         eq(students.institutionId, institutionId),
@@ -342,6 +356,8 @@ app.get("/:id/student-credentials", async (c) => {
     name: s.name,
     rollNumber: s.rollNumber,
     username: s.username,
+    grade: s.grade,
+    section: s.section,
     leaplabUsername: s.rollNumber ? `${s.rollNumber}${suffix}` : null,
     hasLeaplab: s.rollNumber ? credUsernameSet.has(`${s.rollNumber}${suffix}`) : false,
     plainPassword: s.plainPassword ?? "********",
