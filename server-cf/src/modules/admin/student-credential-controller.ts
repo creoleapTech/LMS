@@ -91,7 +91,7 @@ app.post("/:id/generate-student-credentials", async (c) => {
         eq(students.isActive, 1),
       ),
     )
-    .orderBy(students.name);
+    .orderBy(classes.grade, classes.section, students.name);
 
   if (allStudents.length === 0) {
     throw new BadRequestError("No active students found in this institution");
@@ -336,7 +336,7 @@ app.get("/:id/student-credentials", async (c) => {
         sql`${students.username} IS NOT NULL`,
       ),
     )
-    .orderBy(students.name);
+    .orderBy(classes.grade, classes.section, students.name);
 
   // Get existing leaplab credentials for this institution
   const existingCreds = await db
