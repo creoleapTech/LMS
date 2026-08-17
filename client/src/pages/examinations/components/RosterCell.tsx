@@ -76,7 +76,7 @@ export function RosterCell({
   // -------------------------------------------------------------------------
   if (isFormula || isReadOnly) {
     const tdClass = [
-      "px-2 py-1 border border-border/40 min-w-[100px] max-w-[200px]",
+      "px-2 py-1 border-b border-r border-border/40 min-w-[100px] max-w-[200px]",
       isFormula ? "bg-muted/30" : "text-muted-foreground",
     ].join(" ");
 
@@ -129,7 +129,7 @@ export function RosterCell({
       .join(" ");
 
     return (
-      <td className="px-2 py-1 border border-border/40 min-w-[100px] max-w-[200px]">
+      <td className="px-2 py-1 border-b border-r border-border/40 min-w-[100px] max-w-[200px]">
         <input
           type="text"
           inputMode="decimal"
@@ -153,7 +153,7 @@ export function RosterCell({
   // 3. Text column
   // -------------------------------------------------------------------------
   return (
-    <td className="px-2 py-1 border border-border/40 min-w-[100px] max-w-[200px]">
+    <td className="px-2 py-1 border-b border-r border-border/40 min-w-[100px] max-w-[200px]">
       <input
         type="text"
         value={value}

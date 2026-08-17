@@ -47,35 +47,26 @@ export function StudentRosterGrid({
 
   const useLargeRosterOptimization = examination.students.length > 100;
 
-  // ---------------------------------------------------------------------------
-  // Sticky default column header styles
-  // ---------------------------------------------------------------------------
-  const defaultThClass =
-    "sticky z-10 bg-[var(--neo-bg)] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider border border-border/40 whitespace-nowrap";
-
-  const defaultTdClass =
-    "sticky z-10 bg-[var(--neo-bg)] px-3 py-2 text-sm border border-border/40 whitespace-nowrap";
-
   return (
-    <div className="overflow-auto max-h-[calc(100vh-16rem)] rounded-xl">
-      <table className="border-collapse text-sm w-full">
+    <div className="overflow-auto max-h-[calc(100vh-16rem)] rounded-xl border border-border/40">
+      <table className="border-separate border-spacing-0 text-sm w-full">
         {/* ------------------------------------------------------------------ */}
         {/* THEAD                                                               */}
         {/* ------------------------------------------------------------------ */}
-        <thead className="sticky top-0 z-20 bg-[var(--neo-bg)]">
+        <thead>
           <tr>
             {/* Default: Student Name */}
-            <th className={`${defaultThClass} left-0`}>
+            <th className="sticky top-0 left-0 z-30 w-[220px] min-w-[220px] max-w-[220px] bg-[var(--neo-bg)] px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider border-b border-r border-border/50 whitespace-nowrap">
               Student Name
             </th>
 
             {/* Default: Class */}
-            <th className={`${defaultThClass} left-[150px]`}>
+            <th className="sticky top-0 left-[220px] z-30 w-[80px] min-w-[80px] max-w-[80px] bg-[var(--neo-bg)] px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wider border-b border-r border-border/50 whitespace-nowrap">
               Class
             </th>
 
             {/* Default: Section */}
-            <th className={`${defaultThClass} left-[250px]`}>
+            <th className="sticky top-0 left-[300px] z-30 w-[80px] min-w-[80px] max-w-[80px] bg-[var(--neo-bg)] px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wider border-b border-r-2 border-border/70 shadow-[3px_0_6px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap">
               Section
             </th>
 
@@ -83,7 +74,7 @@ export function StudentRosterGrid({
             {sortedColumns.map((column, index) => (
               <th
                 key={column.id}
-                className="bg-[var(--neo-bg)] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider border border-border/40 whitespace-nowrap min-w-[120px]"
+                className="sticky top-0 z-10 bg-[var(--neo-bg)] px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider border-b border-r border-border/40 whitespace-nowrap min-w-[120px]"
               >
                 <div className="flex items-center gap-1">
                   <span>{column.name}</span>
@@ -104,7 +95,7 @@ export function StudentRosterGrid({
 
             {/* Add Column button */}
             {!isReadOnly && (
-              <th className="px-3 py-2 border border-border/40">
+              <th className="sticky top-0 z-10 bg-[var(--neo-bg)] px-3 py-2.5 border-b border-border/40">
                 <button
                   onClick={onAddColumn}
                   className="text-xs text-indigo-600 hover:text-indigo-800 font-medium whitespace-nowrap"
@@ -124,7 +115,7 @@ export function StudentRosterGrid({
             <tr>
               <td
                 colSpan={totalColumns}
-                className="px-3 py-8 text-center text-sm text-muted-foreground"
+                className="px-3 py-8 text-center text-sm text-muted-foreground border-b border-border/40"
               >
                 Select classes above to populate the student roster
               </td>
@@ -140,19 +131,22 @@ export function StudentRosterGrid({
                   : undefined;
 
               return (
-                <tr key={student.studentId} style={rowStyle}>
+                <tr key={student.studentId} style={rowStyle} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                   {/* Student Name */}
-                  <td className={`${defaultTdClass} left-0`}>
+                  <td
+                    className="sticky left-0 z-20 w-[220px] min-w-[220px] max-w-[220px] bg-[var(--neo-bg)] px-3 py-2 text-sm font-medium border-b border-r border-border/40 truncate"
+                    title={student.name}
+                  >
                     {student.name}
                   </td>
 
                   {/* Class */}
-                  <td className={`${defaultTdClass} left-[150px]`}>
+                  <td className="sticky left-[220px] z-20 w-[80px] min-w-[80px] max-w-[80px] bg-[var(--neo-bg)] px-2 py-2 text-sm text-center border-b border-r border-border/40">
                     {student.grade}
                   </td>
 
                   {/* Section */}
-                  <td className={`${defaultTdClass} left-[250px]`}>
+                  <td className="sticky left-[300px] z-20 w-[80px] min-w-[80px] max-w-[80px] bg-[var(--neo-bg)] px-2 py-2 text-sm text-center border-b border-r-2 border-border/70 shadow-[3px_0_6px_-2px_rgba(0,0,0,0.1)]">
                     {student.section}
                   </td>
 
