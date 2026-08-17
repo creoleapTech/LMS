@@ -275,6 +275,39 @@ function serializeAdditionalClassIds(ids: string[] | undefined | null): string |
 }
 
 /**
+ * Dedupe one-off entries by periodNumber, preferring the completed instance.
+ * Duplicate one-offs (e.g. legacy rows or template copies) can otherwise
+ * shadow a completed mark with a scheduled copy in the day view.
+ */
+function dedupeOneOffsByPeriod(entries: any[]): any[] {
+  const byPeriod = new Map<number, any>();
+  for (const e of entries) {
+    const pn = e.periodNumber ?? 0;
+    const existing = byPeriod.get(pn);
+    if (!existing) {
+      byPeriod.set(pn, e);
+      continue;
+    }
+    const existingRank = existing.status === "completed" ? 2 : existing.status === "cancelled" ? 0 : 1;
+    const newRank = e.status === "completed" ? 2 : e.status === "cancelled" ? 0 : 1;
+    if (newRank > existingRank) {
+      byPeriod.set(pn, e);
+    } else if (newRank === existingRank && newRank === 2) {
+      // Both completed: keep the most recently completed
+      const a = existing.completedAt ? new Date(existing.completedAt).getTime() : 0;
+      const b = e.completedAt ? new Date(e.completedAt).getTime() : 0;
+      if (b > a) byPeriod.set(pn, e);
+    } else if (newRank === existingRank) {
+      // Same status: keep the latest updated
+      const a = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+      const b = e.updatedAt ? new Date(e.updatedAt).getTime() : 0;
+      if (b > a) byPeriod.set(pn, e);
+    }
+  }
+  return [...byPeriod.values()];
+}
+
+/**
  * Freeze past dates for a recurring entry before modifying or deleting the template.
  * Creates one-off copies for past dates (from createdAt to today) that don't already
  * have an independent entry, so those dates retain the current state after the template changes.
@@ -302,16 +335,18 @@ async function freezeRecurringPastDates(db: any, entry: any, beforeDateKey: stri
 
   if (dateKeys.length === 0) return;
 
-  // Fetch existing one-off entries for this staff + period
+  // Fetch existing one-off entries for this staff + period.
+  // IMPORTANT: cancelled one-offs (isDeleted=1, status='cancelled') are created
+  // when a trainer removes a specific day from a recurring template. They must
+  // count as "existing" so a previously-deleted day is never re-created here.
   const existingOneOffs = await db
-    .select({ specificDate: timetableEntries.specificDate })
+    .select({ specificDate: timetableEntries.specificDate, status: timetableEntries.status, isDeleted: timetableEntries.isDeleted })
     .from(timetableEntries)
     .where(
       and(
         eq(timetableEntries.staffId, entry.staffId),
         eq(timetableEntries.periodNumber, entry.periodNumber),
         eq(timetableEntries.isRecurring, 0),
-        eq(timetableEntries.isDeleted, 0),
       ),
     );
 
@@ -325,23 +360,28 @@ async function freezeRecurringPastDates(db: any, entry: any, beforeDateKey: stri
   if (missingDateKeys.length === 0) return;
 
   const now = nowISO();
-  const rows = missingDateKeys.map((dk) => ({
-    id: uuid(),
-    institutionId: entry.institutionId,
-    staffId: entry.staffId,
-    classId: entry.classId,
-    additionalClassId: entry.additionalClassId,
-    gradeBookId: entry.gradeBookId,
-    periodNumber: entry.periodNumber,
-    dayOfWeek: entry.dayOfWeek,
-    isRecurring: 0,
-    specificDate: dateKeyToISOString(dk),
-    notes: entry.notes,
-    status: entry.status === "completed" ? "completed" : "scheduled",
-    isDeleted: 0,
-    createdAt: now,
-    updatedAt: now,
-  }));
+  const rows = missingDateKeys.map((dk) => {
+    const wasCompletedOnThisDate =
+      entry.status === "completed" && entry.completedAt && isSameDateKey(entry.completedAt, dk);
+    return {
+      id: uuid(),
+      institutionId: entry.institutionId,
+      staffId: entry.staffId,
+      classId: entry.classId,
+      additionalClassId: entry.additionalClassId,
+      gradeBookId: entry.gradeBookId,
+      periodNumber: entry.periodNumber,
+      dayOfWeek: entry.dayOfWeek,
+      isRecurring: 0,
+      specificDate: dateKeyToISOString(dk),
+      notes: entry.notes,
+      status: wasCompletedOnThisDate ? "completed" : "scheduled",
+      completedAt: wasCompletedOnThisDate ? entry.completedAt : null,
+      isDeleted: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
 
   // Batch insert in chunks of 50 to avoid exceeding parameters limit
   const CHUNK = 50;
@@ -534,7 +574,7 @@ function buildMonthSummary(
     const overriddenPeriods = new Set(oneOffForDate.map((e: any) => e.periodNumber));
     const merged = [
       ...recurringForDay.filter((e: any) => !overriddenPeriods.has(e.periodNumber) && !cancelledPeriods.has(e.periodNumber)),
-      ...oneOffForDate,
+      ...dedupeOneOffsByPeriod(oneOffForDate),
     ];
 
     if (merged.length > 0) {
@@ -708,9 +748,10 @@ timetableController.get("/my-day", async (c) => {
 
   // Merge: one-off overrides recurring for same periodNumber; cancelled periods excluded
   const overriddenPeriods = new Set(oneOffEntries.map((e) => e.periodNumber));
+  const dedupedOneOffs = dedupeOneOffsByPeriod(oneOffEntries);
   const allEntries = [
     ...recurringEntries.filter((e) => !overriddenPeriods.has(e.periodNumber) && !cancelledPeriods.has(e.periodNumber)),
-    ...oneOffEntries,
+    ...dedupedOneOffs,
   ].sort((a, b) => (a.periodNumber ?? 0) - (b.periodNumber ?? 0));
 
   const enriched = await batchEnrichTimetableEntries(db, allEntries);
@@ -965,6 +1006,9 @@ timetableController.patch("/:id", async (c) => {
       .limit(1);
 
     const targetId = existingOneOff?.id || uuid();
+    // Preserve an existing completed one-off — never downgrade a done mark to
+    // "scheduled" when the recurring template is edited for a specific date.
+    const keepCompleted = existingOneOff?.status === "completed";
     const oneOffValues: Record<string, any> = {
       institutionId: entry.institutionId,
       staffId: entry.staffId,
@@ -976,7 +1020,8 @@ timetableController.patch("/:id", async (c) => {
       isRecurring: 0,
       specificDate: targetSpecificDate,
       notes: body.notes !== undefined ? body.notes : entry.notes,
-      status: entry.status,
+      status: keepCompleted ? "completed" : entry.status,
+      completedAt: keepCompleted ? existingOneOff.completedAt : (entry.status === "completed" ? entry.completedAt : null),
       updatedAt: now,
     };
 
@@ -1711,9 +1756,10 @@ timetableController.get("/staff-day", async (c) => {
   const cancelledPeriods = new Set(cancelledEntries.map((e) => e.periodNumber));
 
   const overriddenPeriods = new Set(oneOffEntries.map((e) => e.periodNumber));
+  const dedupedOneOffs = dedupeOneOffsByPeriod(oneOffEntries);
   const allEntries = [
     ...recurringEntries.filter((e) => !overriddenPeriods.has(e.periodNumber) && !cancelledPeriods.has(e.periodNumber)),
-    ...oneOffEntries,
+    ...dedupedOneOffs,
   ].sort((a, b) => (a.periodNumber ?? 0) - (b.periodNumber ?? 0));
 
   const enriched = await batchEnrichTimetableEntries(db, allEntries);
