@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as fc from "fast-check";
-import { examinationSchema, columnConfigSchema, formatClassLabel } from "../types";
+import { examinationSchema, columnConfigSchema, formatClassLabel, isAbsentValue } from "../types";
 
 // Feature: examination-feature, Property 4: Column config schema rejects invalid formulas
 describe("Property 4: Column config schema rejects invalid formulas", () => {
@@ -55,5 +55,26 @@ describe("Property 9: Class label format", () => {
       }),
       { numRuns: 100 }
     );
+  });
+});
+
+describe("isAbsentValue utility", () => {
+  it("recognizes various casing and absent notations as absent", () => {
+    expect(isAbsentValue("ab")).toBe(true);
+    expect(isAbsentValue("AB")).toBe(true);
+    expect(isAbsentValue("Ab")).toBe(true);
+    expect(isAbsentValue("abs")).toBe(true);
+    expect(isAbsentValue("ABS")).toBe(true);
+    expect(isAbsentValue("absent")).toBe(true);
+    expect(isAbsentValue("ABSENT")).toBe(true);
+    expect(isAbsentValue("a")).toBe(true);
+    expect(isAbsentValue("A")).toBe(true);
+  });
+
+  it("does not treat numbers or regular text as absent", () => {
+    expect(isAbsentValue("100")).toBe(false);
+    expect(isAbsentValue("0")).toBe(false);
+    expect(isAbsentValue("xyz")).toBe(false);
+    expect(isAbsentValue("")).toBe(false);
   });
 });

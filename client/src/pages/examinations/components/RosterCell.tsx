@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { ColumnType } from "../types";
+import { type ColumnType, isAbsentValue } from "../types";
 
 interface RosterCellProps {
   value: string;
@@ -17,8 +17,8 @@ interface RosterCellProps {
  * A single cell in the student roster grid.
  *
  * Handles three rendering modes:
- * 1. Formula / read-only  → plain <td> with optional error icon
- * 2. Number column        → <input type="text" inputMode="decimal"> with blur validation
+ * 1. Formula / read-only  → plain <td> with optional error icon / absent badge
+ * 2. Number column        → <input type="text"> with validation (numbers or 'AB')
  * 3. Text column          → <input type="text"> with onChange passthrough
  *
  * Keyboard navigation (Enter / ArrowDown / ArrowUp) moves focus between cells
@@ -75,6 +75,7 @@ export function RosterCell({
   // 1. Formula or read-only cell
   // -------------------------------------------------------------------------
   if (isFormula || isReadOnly) {
+    const isAbsent = isAbsentValue(value);
     const tdClass = [
       "px-2 py-1 border-b border-r border-border/40 min-w-[100px] max-w-[200px]",
       isFormula ? "bg-muted/30" : "text-muted-foreground",
@@ -82,7 +83,13 @@ export function RosterCell({
 
     return (
       <td className={tdClass} aria-label={ariaLabel}>
-        <span>{value}</span>
+        {isAbsent ? (
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400">
+            AB
+          </span>
+        ) : (
+          <span>{value}</span>
+        )}
         {isFormula && error && (
           <span
             className="ml-1 text-red-500 cursor-help"
@@ -101,10 +108,14 @@ export function RosterCell({
   // 2. Number column
   // -------------------------------------------------------------------------
   if (columnType === "number") {
+    const isAbsent = isAbsentValue(value);
+
     function validateNumber(val: string): string | null {
       if (val === "") return null;
-      const num = Number(val);
-      if (isNaN(num) || !isFinite(num)) return "Must be a number";
+      const trimmed = val.trim();
+      if (isAbsentValue(trimmed)) return null;
+      const num = Number(trimmed);
+      if (isNaN(num) || !isFinite(num)) return "Must be a number or 'AB'";
       if (maxMarks !== undefined && maxMarks > 0 && num > maxMarks)
         return `Max marks is ${maxMarks}`;
       return null;
@@ -117,12 +128,17 @@ export function RosterCell({
     }
 
     function handleNumberBlur() {
+      const trimmed = value.trim();
+      if (isAbsentValue(trimmed)) {
+        onChange?.("AB");
+      }
       setLocalError(validateNumber(value));
       onBlur?.();
     }
 
     const inputClass = [
       "w-full bg-transparent outline-none text-sm px-1 py-0.5",
+      isAbsent ? "font-bold text-rose-600 dark:text-rose-400 uppercase" : "",
       localError ? "border border-red-500 rounded" : "",
     ]
       .filter(Boolean)
@@ -132,9 +148,8 @@ export function RosterCell({
       <td className="px-2 py-1 border-b border-r border-border/40 min-w-[100px] max-w-[200px]">
         <input
           type="text"
-          inputMode="decimal"
           value={value}
-          max={maxMarks}
+          placeholder="0"
           className={inputClass}
           aria-label={ariaLabel}
           data-cell-input="true"

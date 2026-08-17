@@ -128,6 +128,17 @@ export const columnConfigSchema = z
 // Pure utility functions
 // ---------------------------------------------------------------------------
 
+export const ABSENT_CODES = ["AB", "ABS", "ABSENT", "A"] as const;
+
+/**
+ * Checks if a string value represents an absent student (e.g. "AB", "Absent", "A").
+ */
+export function isAbsentValue(val: string): boolean {
+  if (!val) return false;
+  const trimmed = val.trim().toUpperCase();
+  return (ABSENT_CODES as readonly string[]).includes(trimmed);
+}
+
 /**
  * Returns a formatted class label, e.g. "Class 6 - A".
  */

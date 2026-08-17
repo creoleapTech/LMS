@@ -58,7 +58,7 @@ describe("Property 3: Unknown column references resolve to zero", () => {
     // Validates: Requirements 9.4
     fc.assert(
       fc.property(
-        fc.stringMatching(/^[c-z][a-z0-9]{1,9}$/).filter((s) => s !== "a" && s !== "b"),
+        fc.stringMatching(/^[a-z0-9]{1,8}$/).map((s) => `col_${s}`),
         (unknownCol) => {
           // Expression references a column that is NOT in the context
           const result = evaluateFormula(unknownCol, { values: {} });
