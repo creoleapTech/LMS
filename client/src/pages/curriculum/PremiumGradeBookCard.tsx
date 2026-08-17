@@ -45,7 +45,7 @@ export function PremiumGradeBookCard({
     return (
         /* Use a plain div — no Card wrapper so there's zero internal padding/border gap */
         <div
-            className="group relative w-full max-w-[220px] overflow-hidden rounded-2xl shadow-md border border-slate-200/60 dark:border-slate-700/60 cursor-pointer hover:shadow-xl transition-all duration-300 bg-slate-100 dark:bg-slate-900 flex flex-col"
+            className="group relative w-full overflow-hidden rounded-2xl shadow-md border border-slate-200/60 dark:border-slate-700/60 cursor-pointer hover:shadow-xl transition-all duration-300 bg-slate-100 dark:bg-slate-900 flex flex-col"
             onClick={onView}
             role="button"
             aria-label={`Open ${gradeBook.bookTitle}`}

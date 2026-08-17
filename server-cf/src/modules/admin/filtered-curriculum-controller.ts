@@ -25,11 +25,11 @@ app.use("*", adminAuth);
 // GET filtered curriculums based on user role and institution
 app.get("/", async (c) => {
   const user = c.get("user") as any;
-  const userRole = user.role;
-  const institutionId = user.institutionId;
+  const userRole = user?.role;
+  const institutionId = user?.institutionId;
 
   const allowedRoles = ["teacher", "admin", "staff", "super_admin"];
-  if (!allowedRoles.includes(userRole)) {
+  if (!userRole || !allowedRoles.includes(userRole)) {
     throw new ForbiddenError("Access denied");
   }
 
@@ -47,38 +47,68 @@ app.get("/", async (c) => {
       })
       .from(curricula);
 
-    const curriculumsWithBooks = await Promise.all(
-      allCurricula.map(async (curriculum) => {
-        const [levels, grades, gradeBookRows] = await Promise.all([
-          db
-            .select({ level: curriculumLevels.level })
-            .from(curriculumLevels)
-            .where(eq(curriculumLevels.curriculumId, curriculum.id)),
-          db
-            .select({ grade: curriculumGrades.grade })
-            .from(curriculumGrades)
-            .where(eq(curriculumGrades.curriculumId, curriculum.id)),
-          db
-            .select({
-              id: gradeBooks.id,
-              grade: gradeBooks.grade,
-              bookTitle: gradeBooks.bookTitle,
-              subtitle: gradeBooks.subtitle,
-              coverImage: gradeBooks.coverImage,
-              isPublished: gradeBooks.isPublished,
-            })
-            .from(gradeBooks)
-            .where(eq(gradeBooks.curriculumId, curriculum.id)),
-        ]);
+    if (allCurricula.length === 0) {
+      return c.json({
+        success: true,
+        data: [],
+        role: userRole,
+      }, 200);
+    }
 
-        return {
-          ...curriculum,
-          level: levels.map((l) => l.level),
-          grades: grades.map((g) => g.grade),
-          gradeBooks: gradeBookRows,
-        };
-      }),
-    );
+    const [allLevels, allGrades, allGradeBooks] = await Promise.all([
+      db
+        .select({ curriculumId: curriculumLevels.curriculumId, level: curriculumLevels.level })
+        .from(curriculumLevels),
+      db
+        .select({ curriculumId: curriculumGrades.curriculumId, grade: curriculumGrades.grade })
+        .from(curriculumGrades),
+      db
+        .select({
+          id: gradeBooks.id,
+          curriculumId: gradeBooks.curriculumId,
+          grade: gradeBooks.grade,
+          bookTitle: gradeBooks.bookTitle,
+          subtitle: gradeBooks.subtitle,
+          coverImage: gradeBooks.coverImage,
+          isPublished: gradeBooks.isPublished,
+        })
+        .from(gradeBooks),
+    ]);
+
+    const levelsMap = new Map<string, string[]>();
+    for (const l of allLevels) {
+      const list = levelsMap.get(l.curriculumId) || [];
+      list.push(l.level);
+      levelsMap.set(l.curriculumId, list);
+    }
+
+    const gradesMap = new Map<string, number[]>();
+    for (const g of allGrades) {
+      const list = gradesMap.get(g.curriculumId) || [];
+      list.push(g.grade);
+      gradesMap.set(g.curriculumId, list);
+    }
+
+    const gradeBooksMap = new Map<string, any[]>();
+    for (const gb of allGradeBooks) {
+      const list = gradeBooksMap.get(gb.curriculumId) || [];
+      list.push({
+        id: gb.id,
+        grade: gb.grade,
+        bookTitle: gb.bookTitle,
+        subtitle: gb.subtitle,
+        coverImage: gb.coverImage,
+        isPublished: gb.isPublished,
+      });
+      gradeBooksMap.set(gb.curriculumId, list);
+    }
+
+    const curriculumsWithBooks = allCurricula.map((curriculum) => ({
+      ...curriculum,
+      level: levelsMap.get(curriculum.id) || [],
+      grades: gradesMap.get(curriculum.id) || [],
+      gradeBooks: gradeBooksMap.get(curriculum.id) || [],
+    }));
 
     return c.json({
       success: true,
@@ -109,67 +139,97 @@ app.get("/", async (c) => {
       .from(institutionCurriculumAccess)
       .where(eq(institutionCurriculumAccess.institutionId, institutionId));
 
-    const accessibleCurriculums = await Promise.all(
-      accessEntries.map(async (access) => {
-        // Fetch the curriculum
-        const [curriculum] = await db
-          .select({
-            id: curricula.id,
-            name: curricula.name,
-            isPublished: curricula.isPublished,
-            thumbnail: curricula.thumbnail,
-            banner: curricula.banner,
-          })
-          .from(curricula)
-          .where(eq(curricula.id, access.curriculumId))
-          .limit(1);
+    if (accessEntries.length === 0) {
+      return c.json({
+        success: true,
+        data: [],
+        role: userRole,
+        institutionId,
+      }, 200);
+    }
 
-        if (!curriculum) return null;
+    const curriculumIds = accessEntries.map((a) => a.curriculumId);
+    const accessIds = accessEntries.map((a) => a.id);
 
-        const [levels, grades] = await Promise.all([
-          db
-            .select({ level: curriculumLevels.level })
-            .from(curriculumLevels)
-            .where(eq(curriculumLevels.curriculumId, curriculum.id)),
-          db
-            .select({ grade: curriculumGrades.grade })
-            .from(curriculumGrades)
-            .where(eq(curriculumGrades.curriculumId, curriculum.id)),
-        ]);
+    const [curriculaRows, levelsRows, gradesRows, accessibleGbRows] = await Promise.all([
+      db
+        .select({
+          id: curricula.id,
+          name: curricula.name,
+          isPublished: curricula.isPublished,
+          thumbnail: curricula.thumbnail,
+          banner: curricula.banner,
+        })
+        .from(curricula)
+        .where(inArray(curricula.id, curriculumIds)),
+      db
+        .select({ curriculumId: curriculumLevels.curriculumId, level: curriculumLevels.level })
+        .from(curriculumLevels)
+        .where(inArray(curriculumLevels.curriculumId, curriculumIds)),
+      db
+        .select({ curriculumId: curriculumGrades.curriculumId, grade: curriculumGrades.grade })
+        .from(curriculumGrades)
+        .where(inArray(curriculumGrades.curriculumId, curriculumIds)),
+      db
+        .select({
+          accessId: institutionAccessibleGradebooks.accessId,
+          gradeBookId: institutionAccessibleGradebooks.gradeBookId,
+        })
+        .from(institutionAccessibleGradebooks)
+        .where(inArray(institutionAccessibleGradebooks.accessId, accessIds)),
+    ]);
 
-        // Get only the grade books this institution has access to
-        const accessibleGradeBookIds = await db
-          .select({ gradeBookId: institutionAccessibleGradebooks.gradeBookId })
-          .from(institutionAccessibleGradebooks)
-          .where(eq(institutionAccessibleGradebooks.accessId, access.id));
+    const gbIds = accessibleGbRows.map((r) => r.gradeBookId);
+    let gradeBooksList: any[] = [];
+    if (gbIds.length > 0) {
+      gradeBooksList = await db
+        .select({
+          id: gradeBooks.id,
+          curriculumId: gradeBooks.curriculumId,
+          grade: gradeBooks.grade,
+          bookTitle: gradeBooks.bookTitle,
+          subtitle: gradeBooks.subtitle,
+          coverImage: gradeBooks.coverImage,
+          isPublished: gradeBooks.isPublished,
+        })
+        .from(gradeBooks)
+        .where(inArray(gradeBooks.id, gbIds));
+    }
 
-        const gbIds = accessibleGradeBookIds.map((r) => r.gradeBookId);
+    const levelsMap = new Map<string, string[]>();
+    for (const l of levelsRows) {
+      const list = levelsMap.get(l.curriculumId) || [];
+      list.push(l.level);
+      levelsMap.set(l.curriculumId, list);
+    }
 
-        let gradeBookRows: any[] = [];
-        if (gbIds.length > 0) {
-          gradeBookRows = await db
-            .select({
-              id: gradeBooks.id,
-              grade: gradeBooks.grade,
-              bookTitle: gradeBooks.bookTitle,
-              subtitle: gradeBooks.subtitle,
-              coverImage: gradeBooks.coverImage,
-              isPublished: gradeBooks.isPublished,
-            })
-            .from(gradeBooks)
-            .where(inArray(gradeBooks.id, gbIds));
-        }
+    const gradesMap = new Map<string, number[]>();
+    for (const g of gradesRows) {
+      const list = gradesMap.get(g.curriculumId) || [];
+      list.push(g.grade);
+      gradesMap.set(g.curriculumId, list);
+    }
 
-        return {
-          ...curriculum,
-          level: levels.map((l) => l.level),
-          grades: grades.map((g) => g.grade),
-          gradeBooks: gradeBookRows,
-        };
-      }),
-    );
+    const gradeBooksMap = new Map<string, any[]>();
+    for (const gb of gradeBooksList) {
+      const list = gradeBooksMap.get(gb.curriculumId) || [];
+      list.push({
+        id: gb.id,
+        grade: gb.grade,
+        bookTitle: gb.bookTitle,
+        subtitle: gb.subtitle,
+        coverImage: gb.coverImage,
+        isPublished: gb.isPublished,
+      });
+      gradeBooksMap.set(gb.curriculumId, list);
+    }
 
-    const validCurriculums = accessibleCurriculums.filter((c) => c !== null);
+    const validCurriculums = curriculaRows.map((curriculum) => ({
+      ...curriculum,
+      level: levelsMap.get(curriculum.id) || [],
+      grades: gradesMap.get(curriculum.id) || [],
+      gradeBooks: gradeBooksMap.get(curriculum.id) || [],
+    }));
 
     return c.json({
       success: true,
