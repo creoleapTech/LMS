@@ -25,7 +25,13 @@ import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 const formSchema = z.object({
     grade: z.string().trim().max(TEXT_LIMITS.classGrade, "Grade too long").optional().or(z.literal("")),
     section: z.string().trim().min(1, "Section is required").max(TEXT_LIMITS.classSection, "Section too long"),
-    year: z.string().trim().max(TEXT_LIMITS.classYear, "Year too long").regex(/^\d{4}(-\d{4})?$/, "Enter a valid year (e.g. 2024 or 2024-2025)").optional().or(z.literal("")),
+    year: z
+        .string()
+        .trim()
+        .max(9, "Year format should be YYYY or YYYY-YYYY")
+        .regex(/^\d{4}(-\d{4})?$/, "Enter a valid numeric year (e.g. 2026 or 2025-2026)")
+        .optional()
+        .or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -191,9 +197,22 @@ export function ClassFormDialog({ open, onOpenChange, cls, institutionId, onSave
                         <Label htmlFor="year" className="text-sm font-medium">Academic Year</Label>
                         <div className="relative">
                             <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input id="year" className="pl-9" maxLength={TEXT_LIMITS.classYear} placeholder="e.g. 2024-2025" {...register("year")} />
+                            <Input
+                                id="year"
+                                className="pl-9"
+                                maxLength={9}
+                                inputMode="numeric"
+                                placeholder="e.g. 2026 or 2025-2026"
+                                {...register("year", {
+                                    onChange: (e) => {
+                                        const clean = e.target.value.replace(/[^\d-]/g, "");
+                                        e.target.value = clean;
+                                    },
+                                })}
+                            />
                         </div>
                         {errors.year && <p className="text-xs text-destructive">{errors.year.message}</p>}
+                        <p className="text-[10px] text-muted-foreground">Numeric year only (e.g. 2026 or 2025-2026)</p>
                     </div>
 
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2 border-t border-white/20">

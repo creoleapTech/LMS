@@ -246,10 +246,12 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
       {/* Editor area */}
       <EditorContent
         editor={editor}
-        className="prose prose-sm max-w-none w-full p-4 min-h-[320px] focus-within:outline-none
+        className="prose prose-sm max-w-none w-full p-4 min-h-[320px] focus-within:outline-none break-words [overflow-wrap:anywhere] overflow-x-auto
           [&_.ProseMirror]:outline-none
           [&_.ProseMirror]:min-h-[300px]
           [&_.ProseMirror]:w-full
+          [&_.ProseMirror]:break-words
+          [&_.ProseMirror]:[overflow-wrap:anywhere]
           [&_.ProseMirror_img]:max-w-full
           [&_.ProseMirror_img]:rounded-lg
           [&_.ProseMirror_img]:my-2

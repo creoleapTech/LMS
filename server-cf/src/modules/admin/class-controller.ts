@@ -34,10 +34,9 @@ classController.use("*", adminAuth);
 const classCreateSchema = z.object({
   grade: z.string().trim().min(1, "Grade is required").max(TEXT_LIMITS.classGrade, "Grade too long"),
   section: z.string().trim().min(1, "Section is required").max(TEXT_LIMITS.classSection, "Section too long"),
-  year: z.string().trim().max(TEXT_LIMITS.classYear, "Year too long").regex(/^\d{4}(-\d{4})?$/, "Enter a valid year (e.g. 2024 or 2024-2025)").optional().or(z.literal("")),
+  year: z.string().trim().max(9, "Year format should be YYYY or YYYY-YYYY").regex(/^\d{4}(-\d{4})?$/, "Enter a valid numeric year (e.g. 2026 or 2025-2026)").optional().or(z.literal("")),
   institutionId: z.string().min(1, "Institution is required"),
   departmentId: z.string().optional(),
-  capacity: z.coerce.number().int().positive().optional(),
   isActive: z.union([z.literal(1), z.literal(0)]).optional(),
 });
 
@@ -166,7 +165,6 @@ classController.post("/", async (c) => {
       year: parsed.data.year,
       institutionId: parsed.data.institutionId,
       departmentId: parsed.data.departmentId,
-      capacity: parsed.data.capacity ?? null,
       isActive: 1,
       isDeleted: 0,
       createdAt: now,
@@ -357,7 +355,7 @@ classController.patch("/:id", async (c) => {
   }
 
   const updateData: Record<string, any> = { updatedAt: nowISO() };
-  const allowedFields = ["grade", "section", "year", "capacity", "isActive"] as const;
+  const allowedFields = ["grade", "section", "year", "isActive"] as const;
 
   for (const field of allowedFields) {
     if (parsed.data[field] !== undefined) {

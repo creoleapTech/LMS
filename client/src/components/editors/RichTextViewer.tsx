@@ -39,7 +39,7 @@ export function RichTextViewer({ content, className = "" }: RichTextViewerProps)
 
   return (
     <div
-      className={`prose prose-sm max-w-none dark:prose-invert ${className}`}
+      className={`prose prose-sm max-w-full dark:prose-invert break-words [overflow-wrap:anywhere] [word-break:break-word] overflow-x-auto ${className}`}
       dangerouslySetInnerHTML={{ __html: highlighted }}
     />
   );

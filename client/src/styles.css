@@ -176,6 +176,22 @@ html {
     background: var(--bg-brand-color);
   }
 
+  .prose {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .prose pre {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  .prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
   .prose pre code.hljs {
     @apply rounded-lg;
   }

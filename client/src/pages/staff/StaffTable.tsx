@@ -218,6 +218,14 @@ export function StaffTable({ institutionId, institutionName: _institutionName }:
           Name <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
+      cell: info => (
+        <div
+          className="max-w-[240px] sm:max-w-[300px] font-semibold whitespace-normal break-words [overflow-wrap:anywhere] leading-snug py-1"
+          title={info.getValue()}
+        >
+          {info.getValue()}
+        </div>
+      ),
     }),
     columnHelper.accessor("email", { header: "Email" }),
     columnHelper.accessor("mobileNumber", { header: "Mobile" }),

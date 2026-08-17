@@ -469,7 +469,11 @@ export function StudentTable({ institutionId }: Props) {
           LMS Roll No <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: info => <span className="font-mono text-xs">{info.getValue() || info.row.original.username || "-"}</span>,
+      cell: info => (
+        <span className="font-mono text-xs max-w-[130px] truncate block" title={info.getValue() || info.row.original.username || ""}>
+          {info.getValue() || info.row.original.username || "-"}
+        </span>
+      ),
     }),
     columnHelper.accessor("admissionNumber", {
       header: ({ column }) => (
@@ -477,7 +481,11 @@ export function StudentTable({ institutionId }: Props) {
           School Roll No <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: info => <span className="font-mono text-xs">{info.getValue() || "-"}</span>,
+      cell: info => (
+        <span className="font-mono text-xs max-w-[130px] truncate block" title={info.getValue() || ""}>
+          {info.getValue() || "-"}
+        </span>
+      ),
     }),
     columnHelper.accessor("name", {
       header: ({ column }) => (
@@ -485,7 +493,14 @@ export function StudentTable({ institutionId }: Props) {
           Name <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: info => <span className="font-semibold">{info.getValue()}</span>,
+      cell: info => (
+        <div
+          className="max-w-[240px] sm:max-w-[320px] font-semibold whitespace-normal break-words [overflow-wrap:anywhere] leading-snug py-1"
+          title={info.getValue()}
+        >
+          {info.getValue()}
+        </div>
+      ),
     }),
     columnHelper.accessor("classId", {
       id: "classId",
@@ -514,13 +529,13 @@ export function StudentTable({ institutionId }: Props) {
     }),
     ...(canEdit ? [columnHelper.display({
       id: "actions",
-      header: "Actions",
+      header: () => <div className="text-right pr-2">Actions</div>,
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(row.original)}>
+        <div className="flex items-center justify-end gap-1 shrink-0">
+          <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => handleEdit(row.original)} title="Edit Student">
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setDeletingId(row.original._id)}>
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-red-50 dark:hover:bg-red-950/50" onClick={() => setDeletingId(row.original._id)} title="Delete Student">
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>

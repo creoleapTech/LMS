@@ -854,10 +854,10 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
 
             {/* Rich Text */}
             {viewingContent.type === "text" && viewingContent.textContent && (
-              <div className="space-y-4">
+              <div className="space-y-4 max-w-full overflow-hidden">
                 <RichTextViewer
                   content={viewingContent.textContent}
-                  className="border rounded-lg p-6"
+                  className="border rounded-lg p-6 bg-white dark:bg-slate-900 shadow-sm max-w-full overflow-x-auto break-words [overflow-wrap:anywhere]"
                 />
                 <p className="text-sm text-muted-foreground">
                   Rich text / notes content

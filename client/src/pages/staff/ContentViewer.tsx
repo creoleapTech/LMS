@@ -328,7 +328,7 @@ export function ContentViewer({
         {content.type === "text" && content.textContent && (
           <div className="max-w-4xl mx-auto">
             <ContentProtectionWrapper watermarkText={watermarkText}>
-              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-8 lg:p-12">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-8 lg:p-12 overflow-hidden break-words">
                 <RichTextViewer content={content.textContent} />
               </div>
             </ContentProtectionWrapper>
