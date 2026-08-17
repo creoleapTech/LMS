@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/command";
 import { CalendarDays, BookOpen, Repeat, Loader2, GraduationCap, ChevronsUpDown, Calendar, RefreshCw } from "lucide-react";
 import { useTimetableMutations } from "../hooks/useTimetableMutations";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 import type {
   ITimetableEntry,
   IClassOption,
@@ -226,8 +227,9 @@ export function ScheduleEntryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-2xl p-0">
-        <div className="sticky top-0 z-10 bg-white border-b px-6 pt-6 pb-4 rounded-t-2xl">
+      <DialogContent className="max-w-lg rounded-2xl p-0 max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Pinned Header */}
+        <div className="shrink-0 bg-white border-b px-6 pt-6 pb-4 rounded-t-2xl">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl text-white">
               <CalendarDays className="h-5 w-5" />
@@ -243,7 +245,8 @@ export function ScheduleEntryDialog({
           </div>
         </div>
 
-        <div className="px-6 pb-6 pt-4 space-y-4">
+        {/* Scrollable Body */}
+        <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
           {/* Edit scope toggle (recurring entries only) */}
           {isEdit && !!entry?.isRecurring && (
             <div className="flex rounded-xl border border-slate-200 p-0.5 bg-slate-100">
@@ -404,17 +407,23 @@ export function ScheduleEntryDialog({
             </div>
           )}
 
-          {/* Notes */}
+          {/* Notes with limit */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Notes
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Notes
+              </Label>
+              <span className={`text-[10px] ${notes.length >= TEXT_LIMITS.timetableNotes ? "text-red-500 font-bold" : "text-slate-400"}`}>
+                {notes.length}/{TEXT_LIMITS.timetableNotes}
+              </span>
+            </div>
             <Textarea
               value={notes}
+              maxLength={TEXT_LIMITS.timetableNotes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Any notes for this period..."
-              className="rounded-xl resize-none"
-              rows={2}
+              className="rounded-xl resize-none max-h-28 overflow-y-auto"
+              rows={3}
             />
           </div>
 
@@ -438,31 +447,31 @@ export function ScheduleEntryDialog({
               />
             </div>
           )}
+        </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="rounded-xl"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={!classId || isPending}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700"
-            >
-              {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : isEdit ? (
-                "Update"
-              ) : (
-                "Add Schedule"
-              )}
-            </Button>
-          </div>
+        {/* Pinned Footer Actions */}
+        <div className="shrink-0 bg-slate-50 border-t px-6 py-3.5 flex justify-end gap-3 rounded-b-2xl">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="rounded-xl"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!classId || isPending}
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700"
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isEdit ? (
+              "Update"
+            ) : (
+              "Add Schedule"
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

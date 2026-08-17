@@ -39,6 +39,7 @@ export const TEXT_LIMITS = {
   chapterDescription: 2000,
   chapterObjectives: 2000,
   batchName: 200,
+  timetableNotes: 500,
 } as const;
 
 export const PHONE_PATTERN = /^[\d\s\-+()]+$/;

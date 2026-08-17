@@ -22,6 +22,7 @@ import { useTimetableMutations } from "../hooks/useTimetableMutations";
 import { useClassSessions } from "../hooks/useClassSessions";
 import { useAuthStore } from "@/store/userAuthStore";
 import { _axios } from "@/lib/axios";
+import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 import type { ITimetableEntry, IPeriodSlot, ChapterTopicItem, IClassSession } from "@/types/timetable";
 
 interface WorkDoneDialogProps {
@@ -522,14 +523,20 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period, sessio
 
           {/* Notes */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Additional Notes / Remarks
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Additional Notes / Remarks
+              </Label>
+              <span className={`text-[10px] ${notes.length >= TEXT_LIMITS.timetableNotes ? "text-red-500 font-bold" : "text-slate-400"}`}>
+                {notes.length}/{TEXT_LIMITS.timetableNotes}
+              </span>
+            </div>
             <Textarea
               value={notes}
+              maxLength={TEXT_LIMITS.timetableNotes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="How did the class go?"
-              className="rounded-xl resize-none"
+              className="rounded-xl resize-none max-h-28 overflow-y-auto"
               rows={3}
             />
           </div>
