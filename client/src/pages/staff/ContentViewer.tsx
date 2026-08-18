@@ -237,20 +237,26 @@ export function ContentViewer({
               <Button
                 onClick={() => onMarkComplete(content._id)}
                 disabled={isCompletingLoading}
-                variant={isCompleted ? "secondary" : "default"}
+                variant="ghost"
                 size="sm"
-                className={`gap-2 ${
+                className={`gap-2 backdrop-blur-sm shadow-none transition-all ${
                   isCompleted
-                    ? "bg-green-500/30 text-white hover:bg-green-500/40 border border-green-400/40"
-                    : "bg-white/25 text-white hover:bg-white/35 border border-white/30"
+                    ? "bg-emerald-500/25 text-emerald-100 hover:bg-emerald-500/35 border border-emerald-400/40"
+                    : "bg-white/20 text-white hover:bg-white/30 border border-white/25"
                 }`}
               >
                 {isCompletingLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin text-white" />
                 ) : (
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2
+                    className={`h-4 w-4 ${
+                      isCompleted ? "text-emerald-300" : "text-white/80"
+                    }`}
+                  />
                 )}
-                {isCompleted ? "Completed" : "Mark as Complete"}
+                <span className={isCompleted ? "font-semibold text-emerald-100" : ""}>
+                  {isCompleted ? "Completed" : "Mark as Complete"}
+                </span>
               </Button>
             )}
           </div>
