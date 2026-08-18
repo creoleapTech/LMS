@@ -2,7 +2,7 @@ import Sidebar from '@/modules/sidebar';
 import { GlobalHeader } from '@/components/GlobalHeader';
 import { Outlet, createRootRouteWithContext, redirect, useLocation } from '@tanstack/react-router';
 import { Toaster } from 'sonner';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/userAuthStore';
 import type { QueryClient } from '@tanstack/react-query';
 
@@ -39,7 +39,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   beforeLoad: ({ location }) => {
     const token = getStoredToken();
     if (!token && location.pathname !== '/') {
-      throw redirect({ to: '/' });
+      throw redirect({ to: '/', replace: true });
     }
   },
   errorComponent: ({ error }) => {
@@ -86,39 +86,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootComponent() {
   const { pathname } = useLocation();
-  const showSidebar = pathname !== '/';
+  const token = getStoredToken();
+  const isLoginPage = pathname === '/';
+  const showSidebar = !isLoginPage && !!token;
   const scrollRef = useRef<HTMLDivElement>(null);
-  const prevPathRef = useRef<string>(pathname);
   const hydrated = useAuthStore((s) => s.hydrated);
-
-  // Show loader while Zustand rehydrates to prevent flash of login screen
-  const [showLoader, setShowLoader] = useState(false);
-
-  useEffect(() => {
-    const prev = prevPathRef.current;
-    const isLoginTransition = prev === '/' && pathname.startsWith('/dashboard');
-    const isLogoutTransition = prev !== '/' && pathname === '/';
-
-    if (isLoginTransition || isLogoutTransition) {
-      setShowLoader(true);
-      // Keep loader visible briefly so it's actually seen
-      const id = setTimeout(() => setShowLoader(false), 800);
-      return () => clearTimeout(id);
-    }
-
-    prevPathRef.current = pathname;
-  }, [pathname]);
-
-  // Update prevPath after loader logic runs
-  useEffect(() => {
-    prevPathRef.current = pathname;
-  }, [pathname]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
   }, [pathname]);
 
-  if (!hydrated || showLoader) {
+  if (!hydrated) {
     return <AppLoader />;
   }
 

@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Eye, EyeOff, Zap, ChevronRight, Fingerprint } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { _axios } from '@/lib/axios';
@@ -29,6 +29,19 @@ interface LoginRequest {
   password: string;
 }
 
+function getStoredAuth(): { token: string | null; role: string } {
+  try {
+    const stored = localStorage.getItem('auth-storage');
+    const state = stored ? JSON.parse(stored)?.state : null;
+    const token = state?.user?.token || localStorage.getItem('token');
+    const role = state?.user?.role || '';
+    return { token: token || null, role };
+  } catch {
+    const token = localStorage.getItem('token');
+    return { token, role: '' };
+  }
+}
+
 function getRedirectPath(role: string): string {
   switch (role) {
     case 'instructor':
@@ -45,7 +58,17 @@ function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
-  const { setUser } = useAuthStore();
+  const { user, setUser } = useAuthStore();
+
+  const auth = getStoredAuth();
+  const isAlreadyLoggedIn = !!auth.token || !!user;
+
+  useEffect(() => {
+    if (isAlreadyLoggedIn) {
+      const dest = getRedirectPath(user?.role || auth.role);
+      navigate({ to: dest, replace: true });
+    }
+  }, [isAlreadyLoggedIn, user?.role, auth.role, navigate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +97,7 @@ function LoginPage() {
           lastLogin: new Date(data.data.lastLogin),
         });
         const dest = getRedirectPath(data.data.role);
-        navigate({ to: dest });
+        navigate({ to: dest, replace: true });
       } else {
         toast.error('Login failed. Please verify your credentials.');
       }
@@ -85,6 +108,10 @@ function LoginPage() {
       toast.error(errorMessage);
     },
   });
+
+  if (isAlreadyLoggedIn) {
+    return null;
+  }
 
   return (
     <div
@@ -264,18 +291,10 @@ function LoginPage() {
 
 export const Route = createFileRoute('/')({
   beforeLoad: () => {
-    try {
-      const stored = localStorage.getItem('auth-storage');
-      const state = stored ? JSON.parse(stored)?.state : null;
-      const token = state?.user?.token || localStorage.getItem('token');
-      const role = state?.user?.role;
-      if (token) {
-        const dest = getRedirectPath(role || '');
-        throw redirect({ to: dest });
-      }
-    } catch (e) {
-      if (e instanceof Error) return;
-      throw e;
+    const auth = getStoredAuth();
+    if (auth.token) {
+      const dest = getRedirectPath(auth.role);
+      throw redirect({ to: dest, replace: true });
     }
   },
   component: LoginPage,

@@ -11,17 +11,7 @@ const SuperAdminDashboard = lazyWithRetry(() => import('../../pages/dashboard/Su
 const AdminDashboard = lazyWithRetry(() => import('../../pages/dashboard/AdminDashboard').then(m => ({ default: m.AdminDashboard })), 'AdminDashboard');
 const TeacherDashboard = lazyWithRetry(() => import('../../pages/dashboard/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })), 'TeacherDashboard');
 
-// Prefetch function — same query as useDashboardStats with no filters
-async function prefetchDashboard(queryClient: any) {
-  await queryClient.prefetchQuery({
-    queryKey: ['dashboard-stats', undefined],
-    queryFn: async () => {
-      const { data } = await _axios.get('/admin/dashboard/stats');
-      return data as { success: boolean; role: string; data: any };
-    },
-    staleTime: 60_000,
-  });
-}
+
 
 function Dashboard() {
   const { user } = useAuthStore();
@@ -108,6 +98,5 @@ function Dashboard() {
 }
 
 export const Route = createFileRoute('/dashboard/')({
-  loader: ({ context: { queryClient } }) => prefetchDashboard(queryClient),
   component: Dashboard,
 });
