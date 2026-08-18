@@ -42,6 +42,45 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       throw redirect({ to: '/' });
     }
   },
+  errorComponent: ({ error }) => {
+    const isChunkError =
+      error?.message?.includes('Failed to fetch dynamically imported module') ||
+      error?.message?.includes('Failed to load module script') ||
+      error?.message?.includes('Expected a JavaScript-or-Wasm module script');
+
+    if (isChunkError) {
+      const key = 'root_chunk_error_reload';
+      const last = sessionStorage.getItem(key);
+      const now = Date.now();
+      if (!last || now - parseInt(last, 10) > 10000) {
+        sessionStorage.setItem(key, String(now));
+        window.location.reload();
+        return (
+          <div className="flex h-screen items-center justify-center bg-background text-slate-500 font-medium">
+            Updating application to latest version...
+          </div>
+        );
+      }
+    }
+
+    return (
+      <div className="flex flex-col h-screen items-center justify-center p-6 text-center space-y-4 bg-background">
+        <h2 className="text-xl font-bold text-slate-800">Something went wrong</h2>
+        <p className="text-slate-500 text-sm max-w-md">
+          {error?.message || 'An unexpected error occurred.'}
+        </p>
+        <button
+          onClick={() => {
+            sessionStorage.clear();
+            window.location.reload();
+          }}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition"
+        >
+          Reload Page
+        </button>
+      </div>
+    );
+  },
   component: RootComponent,
 });
 

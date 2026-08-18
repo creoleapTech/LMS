@@ -166,7 +166,7 @@ export function SectionHeader({ icon: Icon, title, subtitle, accent = 'text-indi
 export function DashCard({ children, className = '', onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
   const Tag = onClick ? 'button' : 'div';
   return (
-    <Tag className={`neo-card neo-card-hover p-6 ${className} ${onClick ? 'cursor-pointer text-left w-full' : ''}`} onClick={onClick}>
+    <Tag className={`neo-card neo-card-hover p-6 min-w-0 ${className} ${onClick ? 'cursor-pointer text-left w-full' : ''}`} onClick={onClick}>
       {children}
     </Tag>
   );

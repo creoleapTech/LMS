@@ -9,6 +9,36 @@ import { routeTree } from './routeTree.gen'
 import './styles.css'
 import reportWebVitals from './reportWebVitals.ts'
 
+// Handle stale chunk errors after deployment (Vite dynamic import preload errors)
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  const key = 'vite_preload_error_reload';
+  const lastReload = sessionStorage.getItem(key);
+  const now = Date.now();
+  if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+    sessionStorage.setItem(key, String(now));
+    window.location.reload();
+  }
+});
+
+// Catch uncaught module import MIME / chunk errors globally
+window.addEventListener('error', (event) => {
+  const msg = event?.message || '';
+  if (
+    msg.includes('Failed to fetch dynamically imported module') ||
+    msg.includes('Failed to load module script') ||
+    msg.includes('Expected a JavaScript-or-Wasm module script')
+  ) {
+    const key = 'chunk_error_reload';
+    const lastReload = sessionStorage.getItem(key);
+    const now = Date.now();
+    if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+      sessionStorage.setItem(key, String(now));
+      window.location.reload();
+    }
+  }
+});
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

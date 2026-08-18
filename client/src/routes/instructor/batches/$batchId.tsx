@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Suspense, lazy } from 'react'
+import { Suspense } from 'react'
+import { lazyWithRetry } from '@/lib/lazyWithRetry'
 
-const InstructorBatchDetail = lazy(() => import('@/pages/instructor/InstructorBatchDetail'))
+const InstructorBatchDetail = lazyWithRetry(() => import('@/pages/instructor/InstructorBatchDetail'), 'InstructorBatchDetail')
 
 export const Route = createFileRoute('/instructor/batches/$batchId')({
   component: RouteComponent,

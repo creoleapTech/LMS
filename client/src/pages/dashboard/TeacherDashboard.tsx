@@ -54,9 +54,9 @@ export function TeacherDashboard({ data }: { data: any }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <DashCard onClick={() => navigate({ to: '/my-classes' })}>
           <SectionHeader icon={Activity} title="Teaching Activity" subtitle="Sessions per month over last 6 months" accent="text-rose-600 bg-rose-50" />
-          <div className="h-[300px] mt-3">
+          <div className="h-[300px] w-full min-w-0 mt-3">
             {data.sessionsByMonth?.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" minHeight={0}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={data.sessionsByMonth} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
                   <defs>
                     {data.sessionsByMonth.map((_: any, i: number) => (
@@ -85,9 +85,9 @@ export function TeacherDashboard({ data }: { data: any }) {
 
         <DashCard onClick={() => navigate({ to: '/curriculum' })}>
           <SectionHeader icon={Target} title="Class-wise Progress" subtitle="Your teaching progress per class" accent="text-violet-600 bg-violet-50" />
-          <div className="h-[300px] mt-3">
+          <div className="h-[300px] w-full min-w-0 mt-3">
             {data.progressByClass?.length > 1 ? (
-              <ResponsiveContainer width="100%" height="100%" minHeight={0}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie
                     data={data.progressByClass}
@@ -267,8 +267,8 @@ export function TeacherDashboard({ data }: { data: any }) {
           <DashCard onClick={() => navigate({ to: '/curriculum' })}>
             <SectionHeader icon={BookOpen} title="Grade Book Progress" subtitle="Your teaching progress per book" />
             {data.progressByGradeBook?.length > 0 && (
-              <div className="h-[180px] mt-3">
-                <ResponsiveContainer width="100%" height="100%" minHeight={0}>
+              <div className="h-[180px] w-full min-w-0 mt-3">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <BarChart data={data.progressByGradeBook} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
                     <defs>
                       {data.progressByGradeBook.map((_: any, i: number) => (

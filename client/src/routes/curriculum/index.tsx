@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Suspense, lazy } from 'react'
+import { Suspense } from 'react'
 import { useAuthStore } from '@/store/userAuthStore'
+import { lazyWithRetry } from '@/lib/lazyWithRetry'
 
-const CurriculumManagementPage = lazy(() => import('@/pages/curriculum/CurriculamManagement'))
-const StaffCurriculumViewer = lazy(() => import('@/pages/staff/StaffCurriculumViewer'))
+const CurriculumManagementPage = lazyWithRetry(() => import('@/pages/curriculum/CurriculamManagement'), 'CurriculumManagementPage')
+const StaffCurriculumViewer = lazyWithRetry(() => import('@/pages/staff/StaffCurriculumViewer'), 'StaffCurriculumViewer')
 
 interface CurriculumSearch {
   gradeBookId?: string

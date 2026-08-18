@@ -80,7 +80,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
             title="Enrollment Trend"
             subtitle="New students over the last 6 months"
           />
-          <div className="h-[280px] mt-4">
+          <div className="h-[280px] w-full min-w-0 mt-4">
             {data.enrollmentTrend?.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <AreaChart data={data.enrollmentTrend} margin={{ left: -20, bottom: 0 }}>
@@ -111,7 +111,7 @@ export function SuperAdminDashboard({ data }: { data: any }) {
             subtitle="Distribution of content items"
             accent="text-violet-600 bg-violet-50"
           />
-          <div className="h-[280px] mt-4 flex items-center justify-center">
+          <div className="h-[280px] w-full min-w-0 mt-4 flex items-center justify-center">
             {contentPieData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <PieChart>

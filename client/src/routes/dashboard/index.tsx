@@ -1,14 +1,15 @@
-import { useState, Suspense, lazy } from 'react';
+import { useState, Suspense } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuthStore } from '../../store/userAuthStore';
 import { useDashboardStats } from '../../pages/dashboard/useDashboardStats';
 import { DashboardSkeleton } from '../../pages/dashboard/components/DashboardComponents';
 import { DashboardHeader } from '../../pages/dashboard/components/DashboardHeader';
 import { _axios } from '../../lib/axios';
+import { lazyWithRetry } from '../../lib/lazyWithRetry';
 
-const SuperAdminDashboard = lazy(() => import('../../pages/dashboard/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
-const AdminDashboard = lazy(() => import('../../pages/dashboard/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
-const TeacherDashboard = lazy(() => import('../../pages/dashboard/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })));
+const SuperAdminDashboard = lazyWithRetry(() => import('../../pages/dashboard/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })), 'SuperAdminDashboard');
+const AdminDashboard = lazyWithRetry(() => import('../../pages/dashboard/AdminDashboard').then(m => ({ default: m.AdminDashboard })), 'AdminDashboard');
+const TeacherDashboard = lazyWithRetry(() => import('../../pages/dashboard/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })), 'TeacherDashboard');
 
 // Prefetch function — same query as useDashboardStats with no filters
 async function prefetchDashboard(queryClient: any) {

@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { Suspense, lazy } from 'react';
+import { Suspense } from 'react';
 import { useAuthStore } from '@/store/userAuthStore';
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
 
-const SchoolProgressPage = lazy(() => import('@/pages/reports/SchoolProgressPage'));
+const SchoolProgressPage = lazyWithRetry(() => import('@/pages/reports/SchoolProgressPage'), 'SchoolProgressPage');
 
 interface SchoolProgressSearch {
   schoolId?: string;

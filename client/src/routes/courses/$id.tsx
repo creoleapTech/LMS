@@ -1,8 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Suspense, lazy } from 'react'
+import { Suspense } from 'react'
+import { lazyWithRetry } from '@/lib/lazyWithRetry'
 
-const CourseManagementPage = lazy(() =>
-  import('@/pages/course/CourseManagementPage').then((m) => ({ default: m.CourseManagementPage }))
+const CourseManagementPage = lazyWithRetry(() =>
+  import('@/pages/course/CourseManagementPage').then((m) => ({ default: m.CourseManagementPage })),
+  'CourseManagementPage'
 )
 
 export const Route = createFileRoute('/courses/$id')({

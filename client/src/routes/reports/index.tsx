@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Suspense, lazy } from 'react'
+import { Suspense } from 'react'
+import { lazyWithRetry } from '@/lib/lazyWithRetry'
 
-const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage'))
+const ReportsPage = lazyWithRetry(() => import('@/pages/reports/ReportsPage'), 'ReportsPage')
 
 interface ReportsSearch {
   draftId?: string

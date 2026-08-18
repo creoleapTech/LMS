@@ -106,7 +106,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
       {/* Row 1: Classwise Progress */}
       <DashCard onClick={() => navigate({ to: '/my-classes' })}>
         <SectionHeader icon={BarChart3} title="Class-wise Progress" subtitle="Average curriculum completion per class" accent="text-indigo-600 bg-indigo-50" />
-        <div className="h-[300px] mt-3">
+        <div className="h-[300px] w-full min-w-0 mt-3">
           {data.classwiseProgress?.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%" minHeight={0}>
               <BarChart data={data.classwiseProgress} layout="vertical" margin={{ left: 10, right: 50, top: 10, bottom: 0 }}>
@@ -136,7 +136,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <DashCard className="lg:col-span-2" onClick={() => navigate({ to: '/students' })}>
           <SectionHeader icon={TrendingUp} title="Student Growth & Teaching Sessions" subtitle="Enrollment and session trends" />
-          <div className="h-[320px] mt-3">
+          <div className="h-[320px] w-full min-w-0 mt-3">
             {(data.studentGrowth?.length > 0 || data.sessionsByMonth?.length > 0) ? (
               <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <ComposedChart data={mergeMonthData(data.studentGrowth, data.sessionsByMonth)} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
@@ -233,7 +233,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <DashCard onClick={() => navigate({ to: '/my-classes' })}>
           <SectionHeader icon={Activity} title="Class Engagement" subtitle="Students & sessions per class" accent="text-cyan-600 bg-cyan-50" />
-          <div className="h-[300px] mt-3">
+          <div className="h-[300px] w-full min-w-0 mt-3">
             {data.classSizeDistribution?.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <BarChart data={mergeClassData(data.classSizeDistribution, data.classActivity)} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
@@ -264,7 +264,7 @@ export function AdminDashboard({ data, filters, onFiltersChange }: AdminDashboar
 
         <DashCard onClick={() => navigate({ to: '/curriculum' })}>
           <SectionHeader icon={BookOpen} title="Curriculum Progress" subtitle="Average teaching completion per book" accent="text-indigo-600 bg-indigo-50" />
-          <div className="h-[300px] mt-3">
+          <div className="h-[300px] w-full min-w-0 mt-3">
             {data.teachingProgressByBook?.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                 <BarChart data={data.teachingProgressByBook} layout="vertical" margin={{ left: 10, right: 40, top: 10, bottom: 0 }}>
