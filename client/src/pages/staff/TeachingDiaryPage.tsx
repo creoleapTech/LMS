@@ -39,9 +39,11 @@ import {
   Pencil,
   Building2,
   Users,
+  Check,
   CheckCircle2,
   WifiOff,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const HEARTBEAT_INTERVAL = 30000;
 const STALE_THRESHOLD_MINUTES = 5;
@@ -323,6 +325,8 @@ export default function TeachingDiaryPage() {
   const [selectedStaffId, setSelectedStaffId] = useState<string>("__all__");
   const [selectedClassId, setSelectedClassId] = useState<string>("__all__");
   const [editingSession, setEditingSession] = useState<DiarySession | null>(null);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  const [justRefreshed, setJustRefreshed] = useState(false);
 
   const adminInstitutionId = isAdmin
     ? (typeof user?.institutionId === "object" ? user?.institutionId?._id : user?.institutionId) || ""
@@ -376,6 +380,7 @@ export default function TeachingDiaryPage() {
     data: sessions = [],
     isLoading,
     isError,
+    isFetching,
     refetch,
   } = useQuery<DiarySession[]>({
     queryKey: ["teaching-diary", effectiveStaffId, effectiveInstitutionId, fromDateStr, toDateStr],
@@ -388,6 +393,35 @@ export default function TeachingDiaryPage() {
     },
     staleTime: 60 * 1000,
   });
+
+  const isRefreshing = isManualRefreshing || (isFetching && !isLoading);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsManualRefreshing(true);
+    setJustRefreshed(false);
+    const startTime = Date.now();
+    try {
+      await Promise.all([
+        refetch(),
+        queryClient.invalidateQueries({ queryKey: ["my-classes-list"] }),
+      ]);
+      // Keep spinner visible for at least 600ms for smooth, perceptible feedback
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 600) {
+        await new Promise((resolve) => setTimeout(resolve, 600 - elapsed));
+      }
+      setJustRefreshed(true);
+      toast.success("Teaching diary refreshed", { duration: 2000 });
+      setTimeout(() => {
+        setJustRefreshed(false);
+      }, 2000);
+    } catch {
+      toast.error("Failed to refresh teaching diary");
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  };
 
   // ── Determine if viewing own diary ──
   const isViewingOwnDiary = isTeacher || (isAdminRole && effectiveStaffId === staffId);
@@ -655,8 +689,14 @@ export default function TeachingDiaryPage() {
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
           <p className="text-red-600 text-lg">Failed to load teaching diary.</p>
-          <Button onClick={() => refetch()} variant="outline" className="mt-4 rounded-xl">
-            Retry
+          <Button
+            onClick={() => refetch()}
+            variant="outline"
+            disabled={isFetching}
+            className="mt-4 rounded-xl gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+            {isFetching ? "Retrying..." : "Retry"}
           </Button>
         </div>
       </div>
@@ -764,13 +804,34 @@ export default function TeachingDiaryPage() {
           <div className="flex-1" />
 
           <Button
-            onClick={() => refetch()}
+            onClick={handleRefresh}
             variant="ghost"
             size="sm"
-            className="gap-1.5 rounded-xl text-slate-500"
+            disabled={isRefreshing}
+            className={`gap-1.5 rounded-xl border transition-all duration-200 ${
+              justRefreshed
+                ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100/80"
+                : isRefreshing
+                ? "bg-indigo-50/70 text-indigo-700 border-indigo-200"
+                : "border-slate-200/80 text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300"
+            }`}
+            title="Refresh teaching diary"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+            {justRefreshed ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-600 animate-in zoom-in-75 duration-200" />
+                <span className="text-xs font-semibold text-emerald-700">Refreshed</span>
+              </>
+            ) : (
+              <>
+                <RefreshCw
+                  className={`h-3.5 w-3.5 transition-transform duration-300 ${
+                    isRefreshing ? "animate-spin text-indigo-600" : ""
+                  }`}
+                />
+                <span className="text-xs font-medium">{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+              </>
+            )}
           </Button>
         </div>
 

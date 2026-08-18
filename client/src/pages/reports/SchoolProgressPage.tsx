@@ -369,10 +369,19 @@ export default function SchoolProgressPage({ initialSchoolId, lockedToSchool }: 
             if (activeTab === "classes") classesQuery.refetch();
             else teachersQuery.refetch();
           }}
-          className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-medium transition-all shadow-xs"
+          disabled={kpisQuery.isFetching || chartsQuery.isFetching || (activeTab === "classes" ? classesQuery.isFetching : teachersQuery.isFetching)}
+          className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-medium transition-all shadow-xs disabled:opacity-60"
         >
-          <RefreshCw className="h-4 w-4" />
-          Refresh Stats
+          <RefreshCw
+            className={`h-4 w-4 ${
+              kpisQuery.isFetching || chartsQuery.isFetching || (activeTab === "classes" ? classesQuery.isFetching : teachersQuery.isFetching)
+                ? "animate-spin text-indigo-600"
+                : ""
+            }`}
+          />
+          {kpisQuery.isFetching || chartsQuery.isFetching || (activeTab === "classes" ? classesQuery.isFetching : teachersQuery.isFetching)
+            ? "Refreshing..."
+            : "Refresh Stats"}
         </button>
       </div>
 

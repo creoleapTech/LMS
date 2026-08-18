@@ -66,7 +66,7 @@ export function StudentRosterGrid({
             </th>
 
             {/* Default: Section */}
-            <th className="sticky top-0 left-[300px] z-30 w-[80px] min-w-[80px] max-w-[80px] bg-[var(--neo-bg)] px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wider border-b border-r-2 border-border/70 shadow-[3px_0_6px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap">
+            <th className="sticky top-0 left-[300px] z-30 w-[80px] min-w-[80px] max-w-[80px] bg-[var(--neo-bg)] px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wider border-b border-r-2 border-slate-400 dark:border-slate-500 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.16)] dark:shadow-[4px_0_8px_-2px_rgba(0,0,0,0.5)] whitespace-nowrap">
               Section
             </th>
 
@@ -146,7 +146,7 @@ export function StudentRosterGrid({
                   </td>
 
                   {/* Section */}
-                  <td className="sticky left-[300px] z-20 w-[80px] min-w-[80px] max-w-[80px] bg-[var(--neo-bg)] px-2 py-2 text-sm text-center border-b border-r-2 border-border/70 shadow-[3px_0_6px_-2px_rgba(0,0,0,0.1)]">
+                  <td className="sticky left-[300px] z-20 w-[80px] min-w-[80px] max-w-[80px] bg-[var(--neo-bg)] px-2 py-2 text-sm text-center border-b border-r-2 border-slate-400 dark:border-slate-500 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.16)] dark:shadow-[4px_0_8px_-2px_rgba(0,0,0,0.5)]">
                     {student.section}
                   </td>
 
