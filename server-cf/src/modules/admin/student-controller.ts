@@ -4,16 +4,33 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
 import { nowISO } from "../../lib/utils";
-import { eq, and, like, or, count, inArray, sql } from "drizzle-orm";
+import { eq, and, like, or, count, inArray, sql, desc } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import {
   students,
   classes,
   institutions,
 } from "../../schema/admin";
-import { classStudentIds } from "../../schema/junction";
-import { institutionQuizAttempts } from "../../schema/quiz";
-import { examinationCells } from "../../schema/examinations";
+import {
+  classStudentIds,
+  teachingProgressContents,
+  studentCompletedContents,
+  studentQuizScores,
+  institutionCurriculumAccess,
+  institutionAccessibleGradebooks,
+} from "../../schema/junction";
+import {
+  institutionQuizzes,
+  institutionQuizAttempts,
+} from "../../schema/quiz";
+import {
+  examinations,
+  examinationColumns,
+  examinationCells,
+} from "../../schema/examinations";
+import { teachingProgress } from "../../schema/staff";
+import { gradeBooks, chapters, chapterContents, curricula } from "../../schema/books";
+import { studentProgress } from "../../schema/students";
 import {
   parseExcelFile,
   generateExcelTemplate,
@@ -1135,6 +1152,377 @@ studentController.get("/", async (c) => {
   const pages = Math.ceil(total / limit);
 
   return c.json({ success: true, data: enriched, pagination: { total, page, limit, pages } }, 200);
+});
+
+// ─── GET Student Full Profile (beautiful charts data) ─
+// All authenticated users can view if same institution or super_admin
+studentController.get("/:id/profile", async (c) => {
+  const { id } = c.req.param();
+  const user = c.get("user") as Record<string, any>;
+  const db = getDb(c.env.DB);
+
+  const [student] = await db
+    .select()
+    .from(students)
+    .where(and(eq(students.id, id), eq(students.isDeleted, 0)))
+    .limit(1);
+
+  if (!student) {
+    throw new BadRequestError("Student not found");
+  }
+
+  // Resolve user institutionId (handle object form)
+  const userInstId =
+    typeof user.institutionId === "object"
+      ? (user.institutionId as any)?._id?.toString() || (user.institutionId as any)?.id?.toString()
+      : user.institutionId?.toString();
+
+  if (user.role !== "super_admin" && student.institutionId !== userInstId) {
+    throw new ForbiddenError("Access denied");
+  }
+
+  // Class + Institution
+  let classInfo: any = null;
+  if (student.classId) {
+    const [cls] = await db
+      .select({ id: classes.id, grade: classes.grade, section: classes.section, year: classes.year, institutionId: classes.institutionId })
+      .from(classes)
+      .where(eq(classes.id, student.classId))
+      .limit(1);
+    classInfo = cls || null;
+  }
+  let institution: any = null;
+  if (student.institutionId) {
+    const [inst] = await db
+      .select({ id: institutions.id, name: institutions.name, type: institutions.type, logo: institutions.logo })
+      .from(institutions)
+      .where(eq(institutions.id, student.institutionId))
+      .limit(1);
+    institution = inst || null;
+  }
+
+  // Resolve gradeBook for this class (via curriculum access)
+  let gradeBook: any = null;
+  let gradeBookChapters: any[] = [];
+  let gradeBookContents: any[] = [];
+  if (classInfo?.grade && student.institutionId) {
+    // Find accessible gradeBooks for institution
+    const accessRows = await db
+      .select({ id: institutionCurriculumAccess.id })
+      .from(institutionCurriculumAccess)
+      .where(eq(institutionCurriculumAccess.institutionId, student.institutionId));
+    if (accessRows.length > 0) {
+      const accessIds = accessRows.map((r) => r.id);
+      const gbAccessRows = await db
+        .select({ gradeBookId: institutionAccessibleGradebooks.gradeBookId })
+        .from(institutionAccessibleGradebooks)
+        .where(inArray(institutionAccessibleGradebooks.accessId, accessIds));
+      const gbIds = gbAccessRows.map((r) => r.gradeBookId);
+      if (gbIds.length > 0) {
+        const gbRows = await db
+          .select()
+          .from(gradeBooks)
+          .where(inArray(gradeBooks.id, gbIds));
+        // Match by grade number
+        const gradeNum = Number(classInfo.grade);
+        const matched = gbRows.find((g) => Number(g.grade) === gradeNum);
+        if (matched) {
+          gradeBook = matched;
+          // Fetch chapters + contents for this gradeBook
+          gradeBookChapters = await db
+            .select()
+            .from(chapters)
+            .where(eq(chapters.gradeBookId, gradeBook.id))
+            .orderBy(chapters.order);
+          const chapterIds = gradeBookChapters.map((ch) => ch.id);
+          if (chapterIds.length > 0) {
+            // Fetch all contents for these chapters
+            const allContents: any[] = [];
+            for (let i = 0; i < chapterIds.length; i += 30) {
+              const chunkIds = chapterIds.slice(i, i + 30);
+              const chunkContents = await db
+                .select()
+                .from(chapterContents)
+                .where(inArray(chapterContents.chapterId, chunkIds))
+                .orderBy(chapterContents.order);
+              allContents.push(...chunkContents);
+            }
+            gradeBookContents = allContents;
+          } else {
+            gradeBookContents = [];
+          }
+        }
+      }
+    }
+  }
+
+  // Teaching progress for this class+gradeBook (pick latest updated)
+  let teachingProgressData: any = null;
+  let teachingContents: any[] = [];
+  if (classInfo && gradeBook) {
+    const progressRows = await db
+      .select()
+      .from(teachingProgress)
+      .where(
+        and(
+          eq(teachingProgress.classId, classInfo.id),
+          eq(teachingProgress.gradeBookId, gradeBook.id),
+          eq(teachingProgress.institutionId, student.institutionId),
+        ),
+      )
+      .orderBy(desc(teachingProgress.updatedAt))
+      .limit(5);
+    // Pick most recent or highest percentage
+    let best = progressRows[0] || null;
+    if (progressRows.length > 1) {
+      best = progressRows.reduce((a, b) => (Number(a.overallPercentage ?? 0) > Number(b.overallPercentage ?? 0) ? a : b), progressRows[0]);
+    }
+    if (best) {
+      teachingProgressData = best;
+      teachingContents = await db
+        .select()
+        .from(teachingProgressContents)
+        .where(eq(teachingProgressContents.teachingProgressId, best.id));
+    }
+  }
+
+  // Compute teaching stats
+  let teachingStats: any = null;
+  if (gradeBook) {
+    const totalContents = gradeBookContents.length;
+    const totalChapters = gradeBookChapters.length;
+    const completedSet = new Set<string>(teachingContents.filter((tc: any) => tc.isCompleted === 1).map((tc: any) => tc.contentId).filter(Boolean));
+    // Completed check per chapter: all contents of chapter completed
+    let completedChapters = 0;
+    for (const ch of gradeBookChapters) {
+      const chContents = gradeBookContents.filter((cc: any) => cc.chapterId === ch.id);
+      if (chContents.length > 0 && chContents.every((cc: any) => completedSet.has(cc.id))) {
+        completedChapters++;
+      }
+    }
+    // Position-based percentage fallback if teachingProgressData missing
+    let pct = teachingProgressData?.overallPercentage ?? 0;
+    if (!teachingProgressData && totalContents > 0 && completedSet.size > 0) {
+      // Find farthest accessed position
+      let maxPos = 0;
+      for (let i = 0; i < gradeBookContents.length; i++) {
+        // Need ordered contents: gradeBookContents already ordered via query? We have chapters ordered but contents per chapter ordered, but cross-chapter order needs chapter order. We'll build ordered list properly
+      }
+      // Use size-based fallback
+      pct = Number(((completedSet.size / totalContents) * 100).toFixed(2));
+    }
+    teachingStats = {
+      totalContents,
+      totalChapters,
+      completedContents: completedSet.size,
+      completedChapters,
+      overallPercentage: Number(pct ?? 0),
+      lastAccessedAt: teachingProgressData?.lastAccessedAt || null,
+    };
+  }
+
+  // Student progress (if any)
+  let studentProgressRows: any[] = [];
+  let studentCompleted: any[] = [];
+  let studentQuizScoreRows: any[] = [];
+  try {
+    studentProgressRows = await db
+      .select()
+      .from(studentProgress)
+      .where(eq(studentProgress.userId, student.id));
+  } catch {
+    studentProgressRows = [];
+  }
+  if (studentProgressRows.length > 0) {
+    const progressIds = studentProgressRows.map((p: any) => p.id);
+    // Fetch completed contents in batches
+    for (let i = 0; i < progressIds.length; i += 30) {
+      const chunk = progressIds.slice(i, i + 30);
+      const rows = await db
+        .select()
+        .from(studentCompletedContents)
+        .where(inArray(studentCompletedContents.progressId, chunk));
+      studentCompleted.push(...rows);
+      const qRows = await db
+        .select()
+        .from(studentQuizScores)
+        .where(inArray(studentQuizScores.progressId, chunk));
+      studentQuizScoreRows.push(...qRows);
+    }
+  } else {
+    // Alternative: try student.id as userId lowercase? Already done; fallback: none
+  }
+
+  // Average student progress percentage
+  let studentStats: any = null;
+  if (studentProgressRows.length > 0) {
+    const avgPct =
+      studentProgressRows.reduce((sum: number, r: any) => sum + Number(r.progressPercentage ?? 0), 0) /
+      studentProgressRows.length;
+    studentStats = {
+      avgPercentage: Number(avgPct.toFixed(2)),
+      totalRecords: studentProgressRows.length,
+      completedContents: studentCompleted.length,
+      quizScores: studentQuizScoreRows.length,
+    };
+  } else if (gradeBook && gradeBookContents.length > 0) {
+    // Fallback: student completed set vs total taught? Use studentCompleted length vs total
+    // If no student_progress rows, treat as 0 unless studentCompleted not empty
+    studentStats = {
+      avgPercentage: studentCompleted.length > 0 ? Number(((studentCompleted.length / gradeBookContents.length) * 100).toFixed(2)) : 0,
+      totalRecords: 0,
+      completedContents: studentCompleted.length,
+      quizScores: 0,
+      isFallback: true,
+    };
+  }
+
+  // Examinations for this student (where classId in selectedClassIds)
+  let examinationsData: any[] = [];
+  if (student.institutionId && student.classId) {
+    const allExams = await db
+      .select()
+      .from(examinations)
+      .where(and(eq(examinations.institutionId, student.institutionId), eq(examinations.isDeleted, 0)));
+    // Filter in memory by selectedClassIds JSON
+    const relevantExams = allExams.filter((ex: any) => {
+      try {
+        const ids: string[] = JSON.parse(ex.selectedClassIds || "[]");
+        return ids.includes(student.classId);
+      } catch {
+        return false;
+      }
+    });
+    for (const ex of relevantExams) {
+      const cols = await db
+        .select()
+        .from(examinationColumns)
+        .where(eq(examinationColumns.examinationId, ex.id))
+        .orderBy(examinationColumns.order);
+      const cells = await db
+        .select()
+        .from(examinationCells)
+        .where(and(eq(examinationCells.examinationId, ex.id), eq(examinationCells.studentId, student.id)));
+      // Map cells to columns
+      const cellMap = new Map<string, string>();
+      for (const cell of cells) cellMap.set(cell.columnId, cell.value);
+      const enrichedCells = cols.map((col: any) => ({
+        columnId: col.id,
+        columnName: col.name,
+        type: col.type,
+        maxMarks: col.maxMarks,
+        value: cellMap.get(col.id) ?? "",
+      }));
+      // Compute exam percentage if number columns
+      const numberCols = cols.filter((c: any) => c.type === "number");
+      let examPct: number | null = null;
+      if (numberCols.length > 0) {
+        let totalObtained = 0;
+        let totalMax = 0;
+        for (const col of numberCols) {
+          const val = Number(cellMap.get(col.id) ?? 0);
+          if (!isNaN(val)) totalObtained += val;
+          if (col.maxMarks) totalMax += Number(col.maxMarks);
+        }
+        if (totalMax > 0) examPct = Number(((totalObtained / totalMax) * 100).toFixed(2));
+      }
+      examinationsData.push({
+        id: ex.id,
+        name: ex.name,
+        createdAt: ex.createdAt,
+        columns: cols,
+        cells: enrichedCells,
+        rawCells: cells,
+        percentage: examPct,
+      });
+    }
+  }
+
+  // Quizzes: all attempts for this student
+  let quizAttemptsData: any[] = [];
+  let quizStats: any = null;
+  const attempts = await db
+    .select()
+    .from(institutionQuizAttempts)
+    .where(and(eq(institutionQuizAttempts.studentId, student.id), eq(institutionQuizAttempts.isDeleted, 0)))
+    .orderBy(desc(institutionQuizAttempts.completedAt));
+  if (attempts.length > 0) {
+    const quizIds = [...new Set(attempts.map((a: any) => a.quizId))];
+    let quizMap = new Map<string, any>();
+    if (quizIds.length > 0) {
+      // Batch fetch quizzes
+      for (let i = 0; i < quizIds.length; i += 30) {
+        const chunk = quizIds.slice(i, i + 30);
+        const qRows = await db
+          .select()
+          .from(institutionQuizzes)
+          .where(inArray(institutionQuizzes.id, chunk));
+        for (const q of qRows) quizMap.set(q.id, q);
+      }
+    }
+    quizAttemptsData = attempts.map((a: any) => {
+      const quiz: any = quizMap.get(a.quizId);
+      const pct = a.maxScore && Number(a.maxScore) > 0 ? Number(((Number(a.score ?? 0) / Number(a.maxScore)) * 100).toFixed(2)) : 0;
+      const isPassed = quiz ? Number(a.score ?? 0) >= Number(quiz.passingPoints ?? 0) : null;
+      return {
+        id: a.id,
+        quizId: a.quizId,
+        quizTitle: quiz?.title ?? "Quiz",
+        quizDescription: quiz?.description ?? null,
+        totalPoints: quiz?.totalPoints ?? a.maxScore ?? 0,
+        passingPoints: quiz?.passingPoints ?? 0,
+        score: a.score ?? 0,
+        maxScore: a.maxScore ?? 0,
+        percentage: pct,
+        isPassed,
+        attemptNumber: a.attemptNumber ?? 1,
+        startedAt: a.startedAt,
+        completedAt: a.completedAt,
+        timeTakenSeconds: a.timeTakenSeconds,
+      };
+    });
+    const avgPct = quizAttemptsData.reduce((s: number, a: any) => s + Number(a.percentage ?? 0), 0) / quizAttemptsData.length;
+    const best = Math.max(...quizAttemptsData.map((a: any) => Number(a.percentage ?? 0)));
+    quizStats = {
+      totalAttempts: quizAttemptsData.length,
+      totalQuizzes: quizIds.length,
+      avgPercentage: Number(avgPct.toFixed(2)),
+      bestPercentage: Number(best.toFixed(2)),
+      passedCount: quizAttemptsData.filter((a: any) => a.isPassed).length,
+    };
+  } else {
+    quizStats = { totalAttempts: 0, totalQuizzes: 0, avgPercentage: 0, bestPercentage: 0, passedCount: 0 };
+  }
+
+  // Overall stats for colorful header
+  const overallStats = {
+    classProgress: teachingStats?.overallPercentage ?? 0,
+    studentProgress: studentStats?.avgPercentage ?? 0,
+    avgExam: examinationsData.length > 0 ? Number((examinationsData.filter((e: any) => e.percentage !== null).reduce((s: number, e: any) => s + (e.percentage ?? 0), 0) / Math.max(1, examinationsData.filter((e: any) => e.percentage !== null).length)).toFixed(2)) : 0,
+    avgQuiz: quizStats?.avgPercentage ?? 0,
+  };
+
+  return c.json({
+    success: true,
+    data: {
+      student: { ...student, classId: classInfo || student.classId, institutionId: institution || student.institutionId },
+      class: classInfo,
+      institution,
+      gradeBook,
+      chapters: gradeBookChapters,
+      contents: gradeBookContents,
+      teachingProgress: teachingProgressData ? { ...teachingProgressData, contents: teachingContents } : null,
+      teachingStats,
+      studentProgress: studentProgressRows,
+      studentCompleted,
+      studentQuizScores: studentQuizScoreRows,
+      studentStats,
+      examinations: examinationsData,
+      quizzes: quizAttemptsData,
+      quizStats,
+      overallStats,
+    },
+  });
 });
 
 // ─── GET Single Student ────────────────────────────

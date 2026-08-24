@@ -17,13 +17,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Trash2, Plus, Search, ArrowUpDown, Loader2, Upload, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Hash } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, ArrowUpDown, Loader2, Upload, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Hash, Eye } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { _axios } from "@/lib/axios";
 import { useAuthStore } from "@/store/userAuthStore";
+import { useNavigate } from "@tanstack/react-router";
 import { StudentFormDialog } from "./StudentFormDialog";
 import type { IStudent, CreateStudentDTO, UpdateStudentDTO } from "@/types/student";
 import type { IClass } from "@/types/class";
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export function StudentTable({ institutionId }: Props) {
+  const navigate = useNavigate();
   const [openForm, setOpenForm] = useState(false);
   const [openBulkUpload, setOpenBulkUpload] = useState(false);
   const [editingStudent, setEditingStudent] = useState<IStudent | null>(null);
@@ -494,12 +496,13 @@ export function StudentTable({ institutionId }: Props) {
         </Button>
       ),
       cell: info => (
-        <div
-          className="max-w-[240px] sm:max-w-[320px] font-semibold whitespace-normal break-words [overflow-wrap:anywhere] leading-snug py-1"
-          title={info.getValue()}
+        <button
+          onClick={() => navigate({ to: "/students/$id" as any, params: { id: info.row.original._id } as any })}
+          className="max-w-[240px] sm:max-w-[320px] font-semibold whitespace-normal break-words [overflow-wrap:anywhere] leading-snug py-1 text-left hover:text-indigo-600 hover:underline underline-offset-2 transition-colors cursor-pointer"
+          title={`View ${info.getValue()} profile`}
         >
           {info.getValue()}
-        </div>
+        </button>
       ),
     }),
     columnHelper.accessor("classId", {
@@ -527,20 +530,33 @@ export function StudentTable({ institutionId }: Props) {
         ) : "-";
       },
     }),
-    ...(canEdit ? [columnHelper.display({
+    columnHelper.display({
       id: "actions",
       header: () => <div className="text-right pr-2">Actions</div>,
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1 shrink-0">
-          <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => handleEdit(row.original)} title="Edit Student">
-            <Pencil className="h-4 w-4" />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/50"
+            onClick={() => navigate({ to: "/students/$id" as any, params: { id: row.original._id } as any })}
+            title="View Profile"
+          >
+            <Eye className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-red-50 dark:hover:bg-red-950/50" onClick={() => setDeletingId(row.original._id)} title="Delete Student">
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {canEdit && (
+            <>
+              <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => handleEdit(row.original)} title="Edit Student">
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-red-50 dark:hover:bg-red-950/50" onClick={() => setDeletingId(row.original._id)} title="Delete Student">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       ),
-    })] : []),
+    }),
   ];
 
   const table = useReactTable({

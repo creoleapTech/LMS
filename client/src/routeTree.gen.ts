@@ -26,6 +26,7 @@ import { Route as ExaminationsIndexRouteImport } from './routes/examinations/ind
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as CurriculumIndexRouteImport } from './routes/curriculum/index'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
+import { Route as StudentsIdRouteImport } from './routes/students/$id'
 import { Route as StudentMyCoursesRouteImport } from './routes/student/my-courses'
 import { Route as ReportsSchoolProgressRouteImport } from './routes/reports/school-progress'
 import { Route as QuizzesIdRouteImport } from './routes/quizzes/$id'
@@ -123,6 +124,11 @@ const CoursesIndexRoute = CoursesIndexRouteImport.update({
   path: '/courses/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudentsIdRoute = StudentsIdRouteImport.update({
+  id: '/students/$id',
+  path: '/students/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudentMyCoursesRoute = StudentMyCoursesRouteImport.update({
   id: '/student/my-courses',
   path: '/student/my-courses',
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/quizzes/$id': typeof QuizzesIdRoute
   '/reports/school-progress': typeof ReportsSchoolProgressRoute
   '/student/my-courses': typeof StudentMyCoursesRoute
+  '/students/$id': typeof StudentsIdRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/quizzes/$id': typeof QuizzesIdRoute
   '/reports/school-progress': typeof ReportsSchoolProgressRoute
   '/student/my-courses': typeof StudentMyCoursesRoute
+  '/students/$id': typeof StudentsIdRoute
   '/courses': typeof CoursesIndexRoute
   '/curriculum': typeof CurriculumIndexRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/quizzes/$id': typeof QuizzesIdRoute
   '/reports/school-progress': typeof ReportsSchoolProgressRoute
   '/student/my-courses': typeof StudentMyCoursesRoute
+  '/students/$id': typeof StudentsIdRoute
   '/courses/': typeof CoursesIndexRoute
   '/curriculum/': typeof CurriculumIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id'
     | '/reports/school-progress'
     | '/student/my-courses'
+    | '/students/$id'
     | '/courses/'
     | '/curriculum/'
     | '/dashboard/'
@@ -317,6 +327,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id'
     | '/reports/school-progress'
     | '/student/my-courses'
+    | '/students/$id'
     | '/courses'
     | '/curriculum'
     | '/dashboard'
@@ -347,6 +358,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id'
     | '/reports/school-progress'
     | '/student/my-courses'
+    | '/students/$id'
     | '/courses/'
     | '/curriculum/'
     | '/dashboard/'
@@ -378,6 +390,7 @@ export interface RootRouteChildren {
   QuizzesIdRoute: typeof QuizzesIdRoute
   ReportsSchoolProgressRoute: typeof ReportsSchoolProgressRoute
   StudentMyCoursesRoute: typeof StudentMyCoursesRoute
+  StudentsIdRoute: typeof StudentsIdRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
   CurriculumIndexRoute: typeof CurriculumIndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
@@ -516,6 +529,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoursesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/students/$id': {
+      id: '/students/$id'
+      path: '/students/$id'
+      fullPath: '/students/$id'
+      preLoaderRoute: typeof StudentsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/student/my-courses': {
       id: '/student/my-courses'
       path: '/student/my-courses'
@@ -610,6 +630,7 @@ const rootRouteChildren: RootRouteChildren = {
   QuizzesIdRoute: QuizzesIdRoute,
   ReportsSchoolProgressRoute: ReportsSchoolProgressRoute,
   StudentMyCoursesRoute: StudentMyCoursesRoute,
+  StudentsIdRoute: StudentsIdRoute,
   CoursesIndexRoute: CoursesIndexRoute,
   CurriculumIndexRoute: CurriculumIndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,

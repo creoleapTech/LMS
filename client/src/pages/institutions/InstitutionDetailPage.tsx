@@ -21,13 +21,13 @@ import {
   Shapes,
   Clock,
   Settings,
-  KeyRound,
+  GraduationCap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InstitutionCurriculumAccess } from "./InstitutionCurriculumAccess";
 import { PeriodConfigSection } from "../settings/components/PeriodConfigSection";
 import { InstitutionSettingsTab } from "./InstitutionSettingsTab";
-import { StudentCredentialsPanel } from "@/pages/students/StudentCredentialsPanel";
+import { InstitutionStudentsTab } from "./InstitutionStudentsTab";
 import { Config } from "@/lib/config";
 
 type Institution = {
@@ -217,8 +217,8 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
             <TabsTrigger value="classes" className="rounded-lg text-sm sm:text-base font-medium">
               <Shapes className="h-4 w-4 mr-1.5 hidden sm:block" /> Classes
             </TabsTrigger>
-            <TabsTrigger value="credentials" className="rounded-lg text-sm sm:text-base font-medium">
-              <KeyRound className="h-4 w-4 mr-1.5 hidden sm:block" /> Credentials
+            <TabsTrigger value="students" className="rounded-lg text-sm sm:text-base font-medium">
+              <GraduationCap className="h-4 w-4 mr-1.5 hidden sm:block" /> Students
             </TabsTrigger>
             <TabsTrigger value="curriculum" className="rounded-lg text-sm sm:text-base font-medium">
               <BookOpen className="h-4 w-4 mr-1.5 hidden sm:block" /> Curriculum
@@ -251,9 +251,9 @@ export function InstitutionDetailPage({ id }: InstitutionDetailPageProps) {
             <ClassTable institutionId={institution.id} />
           </TabsContent>
 
-          {/* Credentials Tab */}
-          <TabsContent value="credentials">
-            <StudentCredentialsPanel institutionId={institution.id} />
+          {/* Students Tab - Students list + Credentials via capsule */}
+          <TabsContent value="students">
+            <InstitutionStudentsTab institutionId={institution.id} />
           </TabsContent>
 
           <TabsContent value="curriculum">
