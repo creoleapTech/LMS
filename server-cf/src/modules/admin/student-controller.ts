@@ -14,8 +14,6 @@ import {
 import {
   classStudentIds,
   teachingProgressContents,
-  studentCompletedContents,
-  studentQuizScores,
   institutionCurriculumAccess,
   institutionAccessibleGradebooks,
 } from "../../schema/junction";
@@ -29,8 +27,7 @@ import {
   examinationCells,
 } from "../../schema/examinations";
 import { teachingProgress } from "../../schema/staff";
-import { gradeBooks, chapters, chapterContents, curricula } from "../../schema/books";
-import { studentProgress } from "../../schema/students";
+import { gradeBooks, chapters, chapterContents } from "../../schema/books";
 import {
   parseExcelFile,
   generateExcelTemplate,
@@ -1286,13 +1283,12 @@ studentController.get("/:id/profile", async (c) => {
     }
   }
 
-  // Compute teaching stats
+  // Compute teaching stats (class-level teaching progress — the only progress data we reliably have)
   let teachingStats: any = null;
   if (gradeBook) {
     const totalContents = gradeBookContents.length;
     const totalChapters = gradeBookChapters.length;
     const completedSet = new Set<string>(teachingContents.filter((tc: any) => tc.isCompleted === 1).map((tc: any) => tc.contentId).filter(Boolean));
-    // Completed check per chapter: all contents of chapter completed
     let completedChapters = 0;
     for (const ch of gradeBookChapters) {
       const chContents = gradeBookContents.filter((cc: any) => cc.chapterId === ch.id);
@@ -1300,15 +1296,8 @@ studentController.get("/:id/profile", async (c) => {
         completedChapters++;
       }
     }
-    // Position-based percentage fallback if teachingProgressData missing
     let pct = teachingProgressData?.overallPercentage ?? 0;
     if (!teachingProgressData && totalContents > 0 && completedSet.size > 0) {
-      // Find farthest accessed position
-      let maxPos = 0;
-      for (let i = 0; i < gradeBookContents.length; i++) {
-        // Need ordered contents: gradeBookContents already ordered via query? We have chapters ordered but contents per chapter ordered, but cross-chapter order needs chapter order. We'll build ordered list properly
-      }
-      // Use size-based fallback
       pct = Number(((completedSet.size / totalContents) * 100).toFixed(2));
     }
     teachingStats = {
@@ -1318,62 +1307,6 @@ studentController.get("/:id/profile", async (c) => {
       completedChapters,
       overallPercentage: Number(pct ?? 0),
       lastAccessedAt: teachingProgressData?.lastAccessedAt || null,
-    };
-  }
-
-  // Student progress (if any)
-  let studentProgressRows: any[] = [];
-  let studentCompleted: any[] = [];
-  let studentQuizScoreRows: any[] = [];
-  try {
-    studentProgressRows = await db
-      .select()
-      .from(studentProgress)
-      .where(eq(studentProgress.userId, student.id));
-  } catch {
-    studentProgressRows = [];
-  }
-  if (studentProgressRows.length > 0) {
-    const progressIds = studentProgressRows.map((p: any) => p.id);
-    // Fetch completed contents in batches
-    for (let i = 0; i < progressIds.length; i += 30) {
-      const chunk = progressIds.slice(i, i + 30);
-      const rows = await db
-        .select()
-        .from(studentCompletedContents)
-        .where(inArray(studentCompletedContents.progressId, chunk));
-      studentCompleted.push(...rows);
-      const qRows = await db
-        .select()
-        .from(studentQuizScores)
-        .where(inArray(studentQuizScores.progressId, chunk));
-      studentQuizScoreRows.push(...qRows);
-    }
-  } else {
-    // Alternative: try student.id as userId lowercase? Already done; fallback: none
-  }
-
-  // Average student progress percentage
-  let studentStats: any = null;
-  if (studentProgressRows.length > 0) {
-    const avgPct =
-      studentProgressRows.reduce((sum: number, r: any) => sum + Number(r.progressPercentage ?? 0), 0) /
-      studentProgressRows.length;
-    studentStats = {
-      avgPercentage: Number(avgPct.toFixed(2)),
-      totalRecords: studentProgressRows.length,
-      completedContents: studentCompleted.length,
-      quizScores: studentQuizScoreRows.length,
-    };
-  } else if (gradeBook && gradeBookContents.length > 0) {
-    // Fallback: student completed set vs total taught? Use studentCompleted length vs total
-    // If no student_progress rows, treat as 0 unless studentCompleted not empty
-    studentStats = {
-      avgPercentage: studentCompleted.length > 0 ? Number(((studentCompleted.length / gradeBookContents.length) * 100).toFixed(2)) : 0,
-      totalRecords: 0,
-      completedContents: studentCompleted.length,
-      quizScores: 0,
-      isFallback: true,
     };
   }
 
@@ -1494,10 +1427,9 @@ studentController.get("/:id/profile", async (c) => {
     quizStats = { totalAttempts: 0, totalQuizzes: 0, avgPercentage: 0, bestPercentage: 0, passedCount: 0 };
   }
 
-  // Overall stats for colorful header
+  // Overall stats for colorful header (only data we actually have: class progress + real assessments/quizzes)
   const overallStats = {
     classProgress: teachingStats?.overallPercentage ?? 0,
-    studentProgress: studentStats?.avgPercentage ?? 0,
     avgExam: examinationsData.length > 0 ? Number((examinationsData.filter((e: any) => e.percentage !== null).reduce((s: number, e: any) => s + (e.percentage ?? 0), 0) / Math.max(1, examinationsData.filter((e: any) => e.percentage !== null).length)).toFixed(2)) : 0,
     avgQuiz: quizStats?.avgPercentage ?? 0,
   };
@@ -1513,10 +1445,6 @@ studentController.get("/:id/profile", async (c) => {
       contents: gradeBookContents,
       teachingProgress: teachingProgressData ? { ...teachingProgressData, contents: teachingContents } : null,
       teachingStats,
-      studentProgress: studentProgressRows,
-      studentCompleted,
-      studentQuizScores: studentQuizScoreRows,
-      studentStats,
       examinations: examinationsData,
       quizzes: quizAttemptsData,
       quizStats,
