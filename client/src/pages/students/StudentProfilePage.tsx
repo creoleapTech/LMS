@@ -12,7 +12,6 @@ import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft,
   GraduationCap,
-  BookOpen,
   Award,
   ClipboardList,
   Zap,
@@ -27,12 +26,8 @@ import {
   Building2,
   CheckCircle2,
   XCircle,
-  TrendingUp,
   BarChart3,
-  PieChart as PieIcon,
   Activity,
-  FileText,
-  Star,
 } from "lucide-react";
 import {
   BarChart,
@@ -54,7 +49,6 @@ interface Props {
 
 const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ec4899", "#3b82f6", "#8b5cf6", "#ef4444", "#14b8a6"];
 const GRADIENTS = {
-  blue: "from-blue-500 via-indigo-500 to-violet-600",
   emerald: "from-emerald-500 via-teal-500 to-cyan-600",
   amber: "from-amber-500 via-orange-500 to-pink-500",
   violet: "from-violet-500 via-purple-500 to-fuchsia-600",
@@ -100,26 +94,17 @@ export function StudentProfilePage({ id }: Props) {
   const student = profile.student;
   const classInfo = profile.class;
   const institution = profile.institution;
-  const gradeBook = profile.gradeBook;
-  const chapters: any[] = profile.chapters || [];
-  const contents: any[] = profile.contents || [];
-  const teachingStats = profile.teachingStats;
   const examinations: any[] = profile.examinations || [];
   const quizzes: any[] = profile.quizzes || [];
   const quizStats = profile.quizStats;
   const overallStats = profile.overallStats || {};
-  const teachingProgress = profile.teachingProgress;
 
   const classLabel = classInfo ? `${classInfo.grade ?? ""} - ${classInfo.section}` : "Unassigned";
   const studentName = student.name || "Unnamed Student";
   const roll = student.rollNumber || student.username || "-";
   const admissionNo = student.admissionNumber || "-";
 
-  // Chart data — only use data we actually have: class teaching progress + real exam/quiz results
-  const progressDonut = [
-    { name: "Class Taught", value: teachingStats?.overallPercentage ?? 0, fill: "#6366f1" },
-    { name: "Remaining", value: Math.max(0, 100 - (teachingStats?.overallPercentage ?? 0)), fill: "#e2e8f0" },
-  ];
+  // Chart data — only real per-student data: assessments + quizzes
   const assessmentChartData = examinations
     .filter((e) => e.percentage !== null)
     .slice(0, 6)
@@ -128,24 +113,6 @@ export function StudentProfilePage({ id }: Props) {
     name: q.quizTitle.slice(0, 14),
     score: q.percentage,
   }));
-  const chapterProgressData = chapters.slice(0, 8).map((ch: any) => {
-    const chContents = contents.filter((c: any) => c.chapterId === ch.id);
-    const teachingSet = new Set<string>((teachingProgress?.contents || []).filter((tc: any) => tc.isCompleted === 1 && tc.chapterId === ch.id).map((tc: any) => tc.contentId));
-    const total = chContents.length || 0;
-    const taught = chContents.filter((c: any) => teachingSet.has(c.id)).length;
-    return {
-      name: ch.title?.slice(0, 18) || `Ch ${ch.chapterNumber ?? ch.order ?? ""}`,
-      taught,
-      total,
-    };
-  });
-
-  // Overview bars: only teaching + real performance metrics
-  const overviewPie = [
-    { name: "Teaching", value: teachingStats?.overallPercentage ?? 0, fill: "#6366f1" },
-    { name: "Assessments", value: overallStats.avgExam ?? 0, fill: "#f59e0b" },
-    { name: "Quizzes", value: overallStats.avgQuiz ?? 0, fill: "#ec4899" },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/20">
@@ -261,30 +228,12 @@ export function StudentProfilePage({ id }: Props) {
                 )}
               </div>
             </div>
-            {/* Quick progress mini */}
-            <div className="hidden lg:flex flex-col gap-3 shrink-0 w-[220px]">
-              <div className="rounded-2xl bg-white dark:bg-slate-800 p-4 shadow-sm border border-slate-100 dark:border-slate-700">
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Class Coverage</p>
-                <p className="text-2xl font-black mt-1 text-indigo-600">{teachingStats?.overallPercentage ?? 0}%</p>
-                <Progress value={teachingStats?.overallPercentage ?? 0} className="mt-2 h-2" />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {teachingStats?.completedContents ?? 0}/{teachingStats?.totalContents ?? 0} items
-                </p>
-              </div>
-            </div>
+
           </div>
         </div>
 
-        {/* Stats Row — only data we have: class teaching progress (real) + assessments + quizzes */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatsCard
-            title="Class Teaching Progress"
-            value={`${teachingStats?.overallPercentage ?? 0}%`}
-            subtitle={`${teachingStats?.completedContents ?? 0}/${teachingStats?.totalContents ?? 0} contents • ${teachingStats?.completedChapters ?? 0}/${teachingStats?.totalChapters ?? 0} chapters`}
-            icon={BookOpen}
-            gradient={GRADIENTS.blue}
-            trend={teachingStats?.lastAccessedAt ? `Active ${new Date(teachingStats.lastAccessedAt).toLocaleDateString()}` : "No activity yet"}
-          />
+        {/* Stats Row — real per-student data: assessments + quizzes */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <StatsCard
             title="Assessments Avg"
             value={`${overallStats.avgExam ?? 0}%`}
@@ -309,9 +258,6 @@ export function StudentProfilePage({ id }: Props) {
             <TabsTrigger value="overview" className="rounded-lg gap-1.5">
               <Activity className="h-4 w-4" /> Overview
             </TabsTrigger>
-            <TabsTrigger value="progress" className="rounded-lg gap-1.5">
-              <TrendingUp className="h-4 w-4" /> Learning Progress
-            </TabsTrigger>
             <TabsTrigger value="assessments" className="rounded-lg gap-1.5">
               <ClipboardList className="h-4 w-4" /> Assessments
             </TabsTrigger>
@@ -322,67 +268,8 @@ export function StudentProfilePage({ id }: Props) {
 
           {/* Overview */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="lg:col-span-2 overflow-hidden">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-indigo-600" /> Progress Snapshot
-                  </CardTitle>
-                  <CardDescription>Class teaching coverage vs assessment & quiz averages — only real data</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {overviewPie.every((p) => p.value === 0) ? (
-                    <p className="text-sm text-muted-foreground py-10 text-center">No progress data yet</p>
-                  ) : (
-                    <div className="h-[240px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={overviewPie}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                          <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
-                          <Tooltip />
-                          <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                            {overviewPie.map((entry, idx) => (
-                              <Cell key={idx} fill={entry.fill} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-6">
-                <Card className="overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <PieIcon className="h-4 w-4 text-indigo-600" /> Class Coverage
-                    </CardTitle>
-                    <CardDescription>How much of the curriculum the class has been taught</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex flex-col items-center">
-                      <div className="h-[160px] w-full max-w-[200px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie data={progressDonut} dataKey="value" innerRadius={44} outerRadius={68} paddingAngle={2} stroke="none">
-                              {progressDonut.map((e, i) => (
-                                <Cell key={i} fill={e.fill} />
-                              ))}
-                            </Pie>
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <p className="text-2xl font-black text-indigo-600">{teachingStats?.overallPercentage ?? 0}%</p>
-                      <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Class Taught</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {teachingStats?.completedContents ?? 0}/{teachingStats?.totalContents ?? 0} items • {teachingStats?.completedChapters ?? 0}/{teachingStats?.totalChapters ?? 0} chapters
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -399,12 +286,6 @@ export function StudentProfilePage({ id }: Props) {
                       <span className="font-mono font-semibold">{new Date(student.updatedAt).toLocaleDateString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Chapters</span>
-                      <span className="font-semibold">
-                        {teachingStats?.completedChapters ?? 0} / {teachingStats?.totalChapters ?? 0} taught
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
                       <span className="text-muted-foreground">Exams Taken</span>
                       <span className="font-semibold">{examinations.length}</span>
                     </div>
@@ -415,6 +296,7 @@ export function StudentProfilePage({ id }: Props) {
                   </CardContent>
                 </Card>
               </div>
+              <div />
             </div>
 
             {/* Recent Assessments preview */}
@@ -476,141 +358,6 @@ export function StudentProfilePage({ id }: Props) {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          {/* Progress */}
-          <TabsContent value="progress" className="space-y-6">
-            {!gradeBook ? (
-              <Card className="p-10 text-center border-dashed">
-                <BookOpen className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-                <p className="font-semibold">No curriculum assigned to this class</p>
-                <p className="text-sm text-muted-foreground mt-1">Assign a curriculum to the class grade ({classInfo?.grade}) to track teaching progress</p>
-              </Card>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <Card className="lg:col-span-2">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5 text-indigo-600" /> Chapter-wise Progress
-                      </CardTitle>
-                      <CardDescription>Class teaching progress per chapter — only real teaching data</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {chapterProgressData.length === 0 ? (
-                        <p className="text-sm text-muted-foreground py-8 text-center">No chapters in this grade book</p>
-                      ) : (
-                        <div className="h-[280px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chapterProgressData}>
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                              <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-18} dy={10} height={60} />
-                              <YAxis tick={{ fontSize: 12 }} />
-                              <Tooltip />
-                              <Legend />
-                              <Bar dataKey="taught" name="Taught" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                              <Bar dataKey="total" name="Total" fill="#e2e8f0" radius={[6, 6, 0, 0]} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <PieIcon className="h-5 w-5 text-violet-600" /> Coverage
-                      </CardTitle>
-                      <CardDescription>Based on real teaching-progress from class sessions</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <div className="flex justify-between text-sm font-semibold mb-1">
-                          <span>Class Coverage</span>
-                          <span className="text-indigo-600">{teachingStats?.overallPercentage ?? 0}%</span>
-                        </div>
-                        <Progress value={teachingStats?.overallPercentage ?? 0} className="[&>div]:from-indigo-500 [&>div]:to-violet-600" />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {teachingStats?.completedContents ?? 0} / {teachingStats?.totalContents ?? 0} contents • {teachingStats?.completedChapters ?? 0}/{teachingStats?.totalChapters ?? 0} chapters
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 p-4 border border-indigo-100 dark:border-indigo-900">
-                        <p className="text-sm font-semibold flex items-center gap-2">
-                          <Star className="h-4 w-4 text-amber-500" /> Insight
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                          {(() => {
-                            const c = teachingStats?.overallPercentage ?? 0;
-                            if (c === 0) return "Class has not started covering the curriculum yet.";
-                            if (c >= 90) return "Class has nearly completed the curriculum — excellent coverage!";
-                            if (c >= 50) return "Class is halfway through the curriculum — steady progress.";
-                            return "Class is in early stages of curriculum coverage.";
-                          })()}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3 border text-xs">
-                        <p className="font-semibold flex items-center gap-1.5">
-                          <BookOpen className="h-3.5 w-3.5" /> Grade Book
-                        </p>
-                        <p className="text-muted-foreground mt-1">{gradeBook?.bookTitle || `Grade ${gradeBook?.grade ?? ""}`} • {chapters.length} chapters • {contents.length} contents</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Detailed chapter list */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-slate-600" /> Chapter Details
-                    </CardTitle>
-                    <CardDescription>Colorful status per content item</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {chapters.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No chapters</p>
-                    ) : (
-                      chapters.map((ch: any) => {
-                        const chContents = contents.filter((c: any) => c.chapterId === ch.id);
-                        const teachingSet = new Set<string>((teachingProgress?.contents || []).filter((tc: any) => tc.chapterId === ch.id && tc.isCompleted === 1).map((tc: any) => tc.contentId));
-                        return (
-                          <div key={ch.id} className="rounded-2xl border bg-white dark:bg-slate-900 p-4 shadow-sm">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div>
-                                <p className="font-bold">
-                                  {ch.chapterNumber ? `Ch ${ch.chapterNumber}: ` : ""}{ch.title || "Untitled Chapter"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">{chContents.length} items • Duration {ch.durationMinutes ?? 0}m</p>
-                              </div>
-                              <Badge variant="outline" className="rounded-full gap-1">
-                                <CheckCircle2 className="h-3 w-3 text-indigo-600" /> {teachingSet.size}/{chContents.length} taught
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
-                              {chContents.map((ct: any) => {
-                                const taught = teachingSet.has(ct.id);
-                                return (
-                                  <div
-                                    key={ct.id}
-                                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium ${taught ? "bg-indigo-50 border-indigo-200 text-indigo-800 dark:bg-indigo-950/30 dark:border-indigo-900 dark:text-indigo-300" : "bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700"}`}
-                                  >
-                                    {taught ? <CheckCircle2 className="h-4 w-4 shrink-0 text-indigo-600" /> : <Clock className="h-4 w-4 shrink-0 opacity-50" />}
-                                    <span className="truncate" title={ct.title}>
-                                      {ct.title || ct.type} • {ct.type}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                              {chContents.length === 0 && <p className="text-xs text-muted-foreground col-span-full">No contents in this chapter</p>}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </CardContent>
-                </Card>
-              </>
-            )}
           </TabsContent>
 
           {/* Assessments */}

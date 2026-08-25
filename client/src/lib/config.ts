@@ -16,13 +16,18 @@ function ensureApiSuffix(value: string): string {
   return normalized.endsWith("/api") ? normalized : `${normalized}/api`;
 }
 
+const DEFAULT_STAGING_API_URL = "https://lms-api-staging.creoleap.workers.dev";
+
+const STAGING_WORKER_URL =
+  (import.meta.env.VITE_STAGING_WORKER_URL as string | undefined)?.trim() ||
+  DEFAULT_STAGING_API_URL;
+
 const DEFAULT_CF_API_BASE_URL = ensureApiSuffix(
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
     "http://127.0.0.1:8788/api"
 );
 
 function resolveApiBaseUrl(): string {
-  // Runtime detection: if deployed on a Pages preview branch or staging domain, auto-route to matching staging API
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
     if (
@@ -30,7 +35,7 @@ function resolveApiBaseUrl(): string {
       hostname.includes("testlms") ||
       hostname.startsWith("staging.")
     ) {
-      return ensureApiSuffix("https://lms-api-staging.creoleap.workers.dev");
+      return ensureApiSuffix(STAGING_WORKER_URL);
     }
   }
 
