@@ -6,12 +6,6 @@ interface IConfig {
   /** PPT preview endpoint — converts PPTX to PDF server-side */
   pptPreviewUrl: string;
 }
-//pointed to cloud pages
-
-const DEFAULT_CF_API_BASE_URL = ensureApiSuffix(
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-    "http://127.0.0.1:8788/api"
-);
 
 function trimTrailingSlashes(value: string): string {
   return value.replace(/\/+$/, "");
@@ -22,24 +16,33 @@ function ensureApiSuffix(value: string): string {
   return normalized.endsWith("/api") ? normalized : `${normalized}/api`;
 }
 
+const DEFAULT_CF_API_BASE_URL = ensureApiSuffix(
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+    "http://127.0.0.1:8788/api"
+);
+
 function resolveApiBaseUrl(): string {
-	// Runtime detection: if deployed on a Pages preview branch, auto-route to matching staging API
-	if (typeof window !== "undefined") {
-		const hostname = window.location.hostname;
-		if (hostname.includes("lms-staging")) {
-			return ensureApiSuffix("https://lms-api-staging.creoleap.workers.dev");
-		}
-	}
+  // Runtime detection: if deployed on a Pages preview branch or staging domain, auto-route to matching staging API
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (
+      hostname.includes("lms-staging") ||
+      hostname.includes("testlms") ||
+      hostname.startsWith("staging.")
+    ) {
+      return ensureApiSuffix("https://lms-api-staging.creoleap.workers.dev");
+    }
+  }
 
-	const rawUrl =
-		(import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-		(import.meta.env.VITE_BACKEND_BASE_URL as string | undefined)?.trim();
+  const rawUrl =
+    (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+    (import.meta.env.VITE_BACKEND_BASE_URL as string | undefined)?.trim();
 
-	if (!rawUrl) {
-		return DEFAULT_CF_API_BASE_URL;
-	}
+  if (!rawUrl) {
+    return DEFAULT_CF_API_BASE_URL;
+  }
 
-	return ensureApiSuffix(rawUrl);
+  return ensureApiSuffix(rawUrl);
 }
 
 const BACKEND_BASE_URL = resolveApiBaseUrl();

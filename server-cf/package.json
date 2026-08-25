@@ -34,6 +34,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250410.0",
     "@types/bcryptjs": "^2.4.6",
+    "@types/bun": "^1.4.0",
     "@types/mime-types": "^2.1.4",
     "@types/uuid": "^10.0.0",
     "drizzle-kit": "^0.30.0",

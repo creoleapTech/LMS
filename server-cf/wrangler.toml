@@ -41,7 +41,7 @@ crons = ["* * * * *"]
 
 
 [vars]
-CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-weld-psi.vercel.app,https://lms.creoleap.com"
+CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-weld-psi.vercel.app,https://lms.creoleap.com,https://testlms.creoleap.com"
 
 # Secrets (set via `wrangler secret put`):
 # JWT_TEACHER_SECRET
@@ -77,4 +77,4 @@ binding = "BUCKET"
 bucket_name = "lms-uploads-staging"
 
 [env.staging.vars]
-CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-staging.vercel.app,https://lms-staging.pages.dev"
+CORS_ORIGINS = "http://localhost:3001,http://127.0.0.1:3001,https://lms-staging.vercel.app,https://lms-staging.pages.dev,https://testlms.creoleap.com"

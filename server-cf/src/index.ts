@@ -15,12 +15,25 @@ const DEFAULT_ALLOWED_ORIGINS = [
 	"http://127.0.0.1:3001",
 	"https://leaplab.creoleap.com",
 	"https://lms.creoleap.com",
+	"https://testlms.creoleap.com",
 ];
 
 function isAllowedPagesDevOrigin(origin: string): boolean {
 	try {
 		const url = new URL(origin);
 		return url.hostname.endsWith(".pages.dev");
+	} catch {
+		return false;
+	}
+}
+
+function isAllowedCreoleapOrigin(origin: string): boolean {
+	try {
+		const url = new URL(origin);
+		return (
+			(url.protocol === "https:" || url.protocol === "http:") &&
+			(url.hostname === "creoleap.com" || url.hostname.endsWith(".creoleap.com"))
+		);
 	} catch {
 		return false;
 	}
@@ -36,17 +49,21 @@ function getAllowedOrigins(rawOrigins?: string): Set<string> {
 	return new Set([...DEFAULT_ALLOWED_ORIGINS, ...configuredOrigins]);
 }
 
+function isAllowedOrigin(origin: string, rawOrigins?: string): boolean {
+	if (!origin) return false;
+	if (isAllowedPagesDevOrigin(origin)) return true;
+	if (isAllowedCreoleapOrigin(origin)) return true;
+	const allowedOrigins = getAllowedOrigins(rawOrigins);
+	return allowedOrigins.has(origin);
+}
+
 function corsHeaders(origin: string, env: any): Record<string, string> {
 	if (!origin) return {};
-	const allowedOrigins = getAllowedOrigins(env.CORS_ORIGINS);
-	const allowedOrigin =
-		isAllowedPagesDevOrigin(origin) ? origin :
-		allowedOrigins.has(origin) ? origin : "";
-	if (!allowedOrigin) return {};
+	if (!isAllowedOrigin(origin, env?.CORS_ORIGINS)) return {};
 	return {
-		"Access-Control-Allow-Origin": allowedOrigin,
+		"Access-Control-Allow-Origin": origin,
 		"Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-		"Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin, x-user",
+		"Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin, x-user, Accept, Origin, X-Requested-With",
 		"Access-Control-Expose-Headers": "Authorization",
 		"Access-Control-Allow-Credentials": "true",
 		"Access-Control-Max-Age": "86400",
@@ -57,12 +74,10 @@ function corsHeaders(origin: string, env: any): Record<string, string> {
 app.use("*", cors({
 	origin: (origin, c) => {
 		if (!origin) return "";
-		if (isAllowedPagesDevOrigin(origin)) return origin;
-		const allowedOrigins = getAllowedOrigins(c.env.CORS_ORIGINS);
-		return allowedOrigins.has(origin) ? origin : "";
+		return isAllowedOrigin(origin, c.env?.CORS_ORIGINS) ? origin : "";
 	},
 	allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-	allowHeaders: ["Content-Type", "Authorization", "x-admin", "x-user"],
+	allowHeaders: ["Content-Type", "Authorization", "x-admin", "x-user", "Accept", "Origin", "X-Requested-With"],
 	exposeHeaders: ["Authorization"],
 	credentials: true,
 	maxAge: 86400,
@@ -91,6 +106,8 @@ app.onError((err, c) => {
 app.get("/health", (c) => c.json({ success: true, message: "Server is running" }));
 
 app.route("/api", baseRouter);
+
+export { app };
 
 export default {
 	fetch: app.fetch,
