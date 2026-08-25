@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft,
   GraduationCap,
+  BookOpen,
   Award,
   ClipboardList,
   Zap,
@@ -27,7 +28,9 @@ import {
   CheckCircle2,
   XCircle,
   BarChart3,
+  PieChart as PieIcon,
   Activity,
+  FileText,
 } from "lucide-react";
 import {
   BarChart,
@@ -94,6 +97,7 @@ export function StudentProfilePage({ id }: Props) {
   const student = profile.student;
   const classInfo = profile.class;
   const institution = profile.institution;
+  const gradeBook = profile.gradeBook;
   const examinations: any[] = profile.examinations || [];
   const quizzes: any[] = profile.quizzes || [];
   const quizStats = profile.quizStats;
