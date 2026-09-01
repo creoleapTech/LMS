@@ -11,6 +11,7 @@ import {
   Minimize,
 } from "lucide-react";
 import { buildWatermarkDataUrl } from "../../lib/watermarkUtils";
+import { SmartBoardZoomContainer } from "./SmartBoardZoom";
 
 export interface PdfFlipBookHandle {
   toggleFullscreen: () => void;
@@ -366,44 +367,46 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
               <ChevronLeft className={`group-hover:-translate-x-0.5 transition-transform ${isFullscreen ? "h-7 w-7" : "h-5 w-5"}`} />
             </button>
 
-            {/* Flipbook — explicit pixel size, remounted on key change */}
-            <div
-              className={`relative shrink-0 ${isFullscreen ? "" : "neo-card p-1 sm:p-2"}`}
-              style={{ width: bookSpreadW, height: dimensions.height }}
-            >
-              <HTMLFlipBook
-                key={flipbookKey}
-                ref={flipBookRef}
-                width={dimensions.width}
-                height={dimensions.height}
-                size="fixed"
-                minWidth={80}
-                maxWidth={2400}
-                minHeight={100}
-                maxHeight={3200}
-                showCover={true}
-                mobileScrollSupport={false}
-                flippingTime={800}
-                usePortrait={usePortrait}
-                startZIndex={0}
-                autoSize={false}
-                maxShadowOpacity={0.5}
-                drawShadow={true}
-                onFlip={handleFlip}
-                className="flipbook-pages"
-                style={{}}
-                startPage={currentPage}
-                clickEventForward={false}
-                useMouseEvents={true}
-                swipeDistance={30}
-                showPageCorners={true}
-                disableFlipByClick={false}
+            {/* Flipbook — smart-board zoom: pinch/wheel/stylus pan, toolbar */}
+            <SmartBoardZoomContainer className="relative shrink-0 flex items-center justify-center">
+              <div
+                className={`relative shrink-0 ${isFullscreen ? "" : "neo-card p-1 sm:p-2"}`}
+                style={{ width: bookSpreadW, height: dimensions.height }}
               >
-                {pageImages.map((src, i) => (
-                  <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
-                ))}
-              </HTMLFlipBook>
-            </div>
+                <HTMLFlipBook
+                  key={flipbookKey}
+                  ref={flipBookRef}
+                  width={dimensions.width}
+                  height={dimensions.height}
+                  size="fixed"
+                  minWidth={80}
+                  maxWidth={2400}
+                  minHeight={100}
+                  maxHeight={3200}
+                  showCover={true}
+                  mobileScrollSupport={false}
+                  flippingTime={800}
+                  usePortrait={usePortrait}
+                  startZIndex={0}
+                  autoSize={false}
+                  maxShadowOpacity={0.5}
+                  drawShadow={true}
+                  onFlip={handleFlip}
+                  className="flipbook-pages"
+                  style={{}}
+                  startPage={currentPage}
+                  clickEventForward={false}
+                  useMouseEvents={true}
+                  swipeDistance={30}
+                  showPageCorners={true}
+                  disableFlipByClick={false}
+                >
+                  {pageImages.map((src, i) => (
+                    <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
+                  ))}
+                </HTMLFlipBook>
+              </div>
+            </SmartBoardZoomContainer>
 
             {/* Next */}
             <button

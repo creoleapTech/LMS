@@ -15,6 +15,8 @@ import {
   BarChart3,
   Pencil,
   AlertTriangle,
+  BookOpen,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -236,6 +238,18 @@ export default function QuizDetailPage() {
                           <span className="text-xs font-medium text-muted-foreground bg-slate-100 px-2 py-1 rounded">
                             {q.points} pt{q.points !== 1 ? "s" : ""}
                           </span>
+                          {q.chapterId && (
+                            <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded flex items-center gap-1">
+                              <BookOpen className="h-3 w-3" />
+                              Chapter
+                            </span>
+                          )}
+                          {q.bloomTaxonomy && (
+                            <span className="text-xs font-medium text-violet-600 bg-violet-50 px-2 py-1 rounded flex items-center gap-1">
+                              <Layers className="h-3 w-3" />
+                              {q.bloomTaxonomy}
+                            </span>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -397,7 +411,7 @@ export default function QuizDetailPage() {
       <QuizFormDialog open={editOpen} onOpenChange={setEditOpen} quiz={quiz} />
 
       {/* Add Question Dialog */}
-      <AddQuestionDialog open={addQuestionOpen} onOpenChange={setAddQuestionOpen} quizId={id} />
+      <AddQuestionDialog open={addQuestionOpen} onOpenChange={setAddQuestionOpen} quizId={id} institutionId={quiz.institutionId} />
 
       {/* Delete Question Dialog */}
       <AlertDialog open={!!deleteQuestion} onOpenChange={() => setDeleteQuestion(null)}>

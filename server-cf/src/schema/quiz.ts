@@ -51,12 +51,15 @@ export const institutionQuizQuestions = sqliteTable(
     explanation: text("explanation"),
     points: integer("points").default(1),
     order: integer("order").default(0),
+    chapterId: text("chapter_id"),
+    bloomTaxonomy: text("bloom_taxonomy"),
     isDeleted: integer("is_deleted").default(0),
     createdAt: text("created_at"),
     updatedAt: text("updated_at"),
   },
   (table) => [
     index("institution_quiz_questions_quiz_id_idx").on(table.quizId),
+    index("institution_quiz_questions_chapter_id_idx").on(table.chapterId),
   ],
 );
 

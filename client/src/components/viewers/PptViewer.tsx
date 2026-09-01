@@ -11,6 +11,7 @@ import {
 import { SlideRenderer } from "./SlideRenderer";
 import { PdfFlipBook } from "./PdfFlipBook";
 import { buildWatermarkDataUrl } from "../../lib/watermarkUtils";
+import { SmartBoardZoomContainer } from "./SmartBoardZoom";
 import {
   Loader2,
   ChevronLeft,
@@ -375,19 +376,21 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
             </button>
           </div>
 
-          {/* Slide area — fills screen */}
-          <div className="flex-1 flex items-center justify-center min-h-0 px-16 py-10">
-            <div
-              className={`relative w-full max-h-full ${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}
-              style={{ aspectRatio: `${presentation.slideWidth} / ${presentation.slideHeight}`, maxWidth: "100%", maxHeight: "100%" }}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              <SlideRenderer
-                slide={slide}
-                slideWidth={presentation.slideWidth}
-                slideHeight={presentation.slideHeight}
-              />
-            </div>
+          {/* Slide area — fills screen — zoom enabled for smart boards + stylus */}
+          <div className="flex-1 flex items-center justify-center min-h-0 px-4 md:px-16 py-4 md:py-10">
+            <SmartBoardZoomContainer className="w-full h-full flex items-center justify-center">
+              <div
+                className={`relative w-full max-h-full ${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}
+                style={{ aspectRatio: `${presentation.slideWidth} / ${presentation.slideHeight}`, maxWidth: "100%", maxHeight: "100%" }}
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <SlideRenderer
+                  slide={slide}
+                  slideWidth={presentation.slideWidth}
+                  slideHeight={presentation.slideHeight}
+                />
+              </div>
+            </SmartBoardZoomContainer>
           </div>
 
           {/* Bottom bar: prev · slide info · next */}
@@ -459,19 +462,21 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
           </button>
 
           <div className="relative overflow-visible w-full max-w-4xl">
-            <div
-              className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
-                          border border-gray-200/60 dark:border-slate-700/60"
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              <div className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
-                <SlideRenderer
-                  slide={slide}
-                  slideWidth={presentation.slideWidth}
-                  slideHeight={presentation.slideHeight}
-                />
+            <SmartBoardZoomContainer className="w-full">
+              <div
+                className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
+                            border border-gray-200/60 dark:border-slate-700/60 overflow-hidden"
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <div className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
+                  <SlideRenderer
+                    slide={slide}
+                    slideWidth={presentation.slideWidth}
+                    slideHeight={presentation.slideHeight}
+                  />
+                </div>
               </div>
-            </div>
+            </SmartBoardZoomContainer>
           </div>
 
           <button

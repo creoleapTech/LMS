@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
-import { eq, and, count, desc, sql } from "drizzle-orm";
+import { eq, and, count, desc, sql, asc } from "drizzle-orm";
 import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import {
@@ -13,6 +13,8 @@ import {
   institutionQuizAttemptAnswers,
 } from "../../schema/quiz";
 import { institutions, students } from "../../schema/admin";
+import { chapters, gradeBooks } from "../../schema/books";
+import { institutionCurriculumAccess } from "../../schema/junction";
 import { saveFile } from "../../lib/file";
 import { nowISO } from "../../lib/utils";
 import { BadRequestError } from "../../lib/errors/bad-request";
@@ -74,6 +76,8 @@ const createQuestionSchema = z.object({
   correctAnswer: z.string().trim().min(1, "Correct answer is required").max(TEXT_LIMITS.quizAnswer, "Answer too long"),
   explanation: z.string().trim().max(TEXT_LIMITS.quizExplanation, "Explanation too long").optional().or(z.literal("")),
   points: z.number().int().min(0).max(100).default(1),
+  chapterId: z.string().optional().nullable(),
+  bloomTaxonomy: z.string().optional().nullable(),
   options: z
     .array(
       z.object({
@@ -327,6 +331,56 @@ app.delete("/:id", async (c) => {
   return c.json({ success: true, message: "Quiz deleted successfully" }, 200);
 });
 
+// ─── CHAPTERS FOR QUIZ ────────────────────────────────────────
+
+// GET /chapters — list chapters available for the quiz's institution
+app.get("/chapters", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  const db = getDb(c.env.DB);
+
+  const institutionId = c.req.query("institutionId");
+  const instId = institutionId ||
+    (typeof user.institutionId === "object"
+      ? (user.institutionId as any)?._id?.toString()
+      : user.institutionId?.toString());
+
+  if (!instId) return c.json({ success: true, data: [] }, 200);
+
+  // Get curricula this institution has access to
+  const accessRows = await db
+    .select({ curriculumId: institutionCurriculumAccess.curriculumId })
+    .from(institutionCurriculumAccess)
+    .where(eq(institutionCurriculumAccess.institutionId, instId));
+
+  if (accessRows.length === 0) return c.json({ success: true, data: [] }, 200);
+
+  const curriculumIds = accessRows.map((r) => r.curriculumId);
+
+  // Get gradeBooks for these curricula
+  const gradeBookRows = await db
+    .select({ id: gradeBooks.id })
+    .from(gradeBooks)
+    .where(sql`${gradeBooks.curriculumId} IN ${curriculumIds}`);
+
+  if (gradeBookRows.length === 0) return c.json({ success: true, data: [] }, 200);
+
+  const gradeBookIds = gradeBookRows.map((r) => r.id);
+
+  // Get chapters for these gradeBooks
+  const chapterRows = await db
+    .select({
+      id: chapters.id,
+      title: chapters.title,
+      chapterNumber: chapters.chapterNumber,
+      gradeBookId: chapters.gradeBookId,
+    })
+    .from(chapters)
+    .where(sql`${chapters.gradeBookId} IN ${gradeBookIds}`)
+    .orderBy(asc(chapters.chapterNumber));
+
+  return c.json({ success: true, data: chapterRows }, 200);
+});
+
 // ─── QUESTION CRUD ─────────────────────────────────────────────
 
 // POST /:id/questions — add question to quiz
@@ -351,6 +405,8 @@ app.post("/:id/questions", async (c) => {
   let correctAnswer = "";
   let explanation = "";
   let points = 1;
+  let chapterId: string | null = null;
+  let bloomTaxonomy: string | null = null;
   let options: { text: string; mediaUrl?: string | null; mediaType?: string | null }[] = [];
   let questionMediaUrl: string | null = null;
   let questionMediaType: string | null = null;
@@ -362,6 +418,8 @@ app.post("/:id/questions", async (c) => {
     correctAnswer = (formData.get("correctAnswer") as string) || "";
     explanation = (formData.get("explanation") as string) || "";
     points = parseInt(formData.get("points") as string) || 1;
+    chapterId = (formData.get("chapterId") as string) || null;
+    bloomTaxonomy = (formData.get("bloomTaxonomy") as string) || null;
 
     // Question image
     const qMedia = formData.get("questionMedia");
@@ -401,6 +459,8 @@ app.post("/:id/questions", async (c) => {
     correctAnswer = body.correctAnswer || "";
     explanation = body.explanation || "";
     points = body.points ?? 1;
+    chapterId = body.chapterId || null;
+    bloomTaxonomy = body.bloomTaxonomy || null;
     options = body.options || [];
   }
 
@@ -432,6 +492,8 @@ app.post("/:id/questions", async (c) => {
     explanation: explanation?.trim() || null,
     points,
     order: nextOrder,
+    chapterId,
+    bloomTaxonomy,
     isDeleted: 0,
     createdAt: now,
     updatedAt: now,
@@ -506,6 +568,8 @@ app.patch("/:quizId/questions/:questionId", async (c) => {
     if (formData.get("correctAnswer")) updateData.correctAnswer = (formData.get("correctAnswer") as string).trim();
     if (formData.get("explanation") !== undefined) updateData.explanation = (formData.get("explanation") as string) || null;
     if (formData.get("points")) updateData.points = parseInt(formData.get("points") as string);
+    if (formData.get("chapterId") !== undefined) updateData.chapterId = (formData.get("chapterId") as string) || null;
+    if (formData.get("bloomTaxonomy") !== undefined) updateData.bloomTaxonomy = (formData.get("bloomTaxonomy") as string) || null;
 
     const qMedia = formData.get("questionMedia");
     if (qMedia && qMedia instanceof File && qMedia.size > 0) {
@@ -564,6 +628,8 @@ app.patch("/:quizId/questions/:questionId", async (c) => {
     if (body.correctAnswer !== undefined) updateData.correctAnswer = body.correctAnswer.trim();
     if (body.explanation !== undefined) updateData.explanation = body.explanation || null;
     if (body.points !== undefined) updateData.points = body.points;
+    if (body.chapterId !== undefined) updateData.chapterId = body.chapterId || null;
+    if (body.bloomTaxonomy !== undefined) updateData.bloomTaxonomy = body.bloomTaxonomy || null;
 
     // Replace options if provided
     if (body.options && Array.isArray(body.options)) {

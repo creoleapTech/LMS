@@ -41,6 +41,8 @@ export interface QuizQuestion {
   explanation: string | null;
   points: number;
   order: number;
+  chapterId: string | null;
+  bloomTaxonomy: string | null;
   options: QuizQuestionOption[];
 }
 

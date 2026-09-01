@@ -25,17 +25,27 @@ import {
 } from "@/components/ui/select";
 
 import { _axios } from "@/lib/axios";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { createQuestionSchema, type CreateQuestionValues } from "../types";
 import { TEXT_LIMITS } from "@/lib/validation/textLimits";
+
+const BLOOM_TAXONOMY_OPTIONS = [
+  "Remember",
+  "Understand",
+  "Apply",
+  "Analyze",
+  "Evaluate",
+  "Create",
+];
 
 interface AddQuestionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quizId: string;
+  institutionId?: string;
 }
 
-export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDialogProps) {
+export function AddQuestionDialog({ open, onOpenChange, quizId, institutionId }: AddQuestionDialogProps) {
   const queryClient = useQueryClient();
   const [options, setOptions] = useState<{ text: string }[]>([
     { text: "" },
@@ -44,6 +54,22 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
   const [questionImage, setQuestionImage] = useState<File | null>(null);
   const [optionImages, setOptionImages] = useState<(File | null)[]>([null, null]);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedChapterId, setSelectedChapterId] = useState<string>("");
+  const [selectedBloom, setSelectedBloom] = useState<string>("");
+
+  // Fetch chapters for this institution
+  const { data: chaptersData } = useQuery<any[]>({
+    queryKey: ["quiz-chapters", institutionId],
+    queryFn: async () => {
+      const res = await _axios.get(`/admin/quizzes/chapters`, {
+        params: institutionId ? { institutionId } : {},
+      });
+      return res.data.data;
+    },
+    enabled: open,
+  });
+
+  const chapters = chaptersData || [];
 
   const {
     register,
@@ -77,6 +103,8 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
       setOptions([{ text: "" }, { text: "" }]);
       setQuestionImage(null);
       setOptionImages([null, null]);
+      setSelectedChapterId("");
+      setSelectedBloom("");
     }
   }, [open, reset]);
 
@@ -120,6 +148,8 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
       if (data.explanation) formData.append("explanation", data.explanation);
       formData.append("points", String(data.points));
       formData.append("options", JSON.stringify(filteredOptions));
+      if (selectedChapterId) formData.append("chapterId", selectedChapterId);
+      if (selectedBloom) formData.append("bloomTaxonomy", selectedBloom);
 
       if (questionImage) {
         formData.append("questionMedia", questionImage);
@@ -235,6 +265,48 @@ export function AddQuestionDialog({ open, onOpenChange, quizId }: AddQuestionDia
                 max={100}
                 {...register("points", { valueAsNumber: true })}
               />
+            </div>
+          </div>
+
+          {/* Chapter + Bloom's Taxonomy */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Chapter (optional)</Label>
+              <Select
+                value={selectedChapterId || "__none__"}
+                onValueChange={(val) => setSelectedChapterId(val === "__none__" ? "" : val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select chapter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {chapters.map((ch: any) => (
+                    <SelectItem key={ch.id} value={ch.id}>
+                      {ch.chapterNumber ? `${ch.chapterNumber}. ` : ""}{ch.title || "Untitled"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Bloom's Taxonomy (optional)</Label>
+              <Select
+                value={selectedBloom || "__none__"}
+                onValueChange={(val) => setSelectedBloom(val === "__none__" ? "" : val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {BLOOM_TAXONOMY_OPTIONS.map((level) => (
+                    <SelectItem key={level} value={level}>
+                      {level}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

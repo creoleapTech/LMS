@@ -29,6 +29,7 @@ import { courseController } from "./course-controller";
 import { batchController } from "./batch-controller";
 import { quizController } from "./quiz-controller";
 import { schoolProgressController } from "./school-progress-controller";
+import { trainingLogController } from "./training-log-controller";
 
 // ─── LeapLab version management ────────────────────
 import { leaplabAdminController } from "../leaplab/leaplab-controller";
@@ -92,6 +93,9 @@ adminBaseRouter.route("/quizzes", quizController);
 
 // School Progress
 adminBaseRouter.route("/school-progress", schoolProgressController);
+
+// Training logs — [training] prefix for wrangler tail filtering
+adminBaseRouter.route("/training-log", trainingLogController);
 
 // LeapLab version management
 adminBaseRouter.route("/leaplab/versions", leaplabAdminController);

@@ -257,6 +257,26 @@ async function getWorkingDays(db: any, institutionId: string): Promise<number[]>
   return rows.length > 0 ? rows.map((r: any) => r.day) : [1, 2, 3, 4, 5];
 }
 
+/** Fetch valid teaching period numbers for an institution (excludes breaks). Returns null if no config exists (no filtering). */
+async function getValidTeachingPeriodNumbers(db: any, institutionId: string): Promise<Set<number> | null> {
+  const [pc] = await db
+    .select({ id: periodConfigs.id })
+    .from(periodConfigs)
+    .where(and(eq(periodConfigs.institutionId, institutionId), eq(periodConfigs.isDeleted, 0)))
+    .limit(1);
+
+  if (!pc) return null;
+
+  const rows = await db
+    .select({ periodNumber: periodConfigPeriods.periodNumber, isBreak: periodConfigPeriods.isBreak })
+    .from(periodConfigPeriods)
+    .where(eq(periodConfigPeriods.periodConfigId, pc.id));
+
+  const teachingNumbers = rows.filter((r: any) => !r.isBreak).map((r: any) => r.periodNumber);
+  if (teachingNumbers.length === 0) return null;
+  return new Set(teachingNumbers);
+}
+
 /** Parse additional_class_id which may be a JSON array or a legacy single ID. */
 function parseAdditionalClassIds(val: any): string[] {
   if (!val) return [];
@@ -1776,10 +1796,13 @@ async function buildMonthlyReportData(
   year: number,
   month: number,
 ): Promise<ReportParams> {
-  const workingDays = await getWorkingDays(db, institutionId);
+  const [workingDays, validPeriodNumbers] = await Promise.all([
+    getWorkingDays(db, institutionId),
+    getValidTeachingPeriodNumbers(db, institutionId),
+  ]);
 
   // Fetch all needed data in parallel
-  const [staffRow, institutionRow, recurringEntries, oneOffEntries] = await Promise.all([
+  const [staffRow, institutionRow, recurringEntriesRaw, oneOffEntriesRaw] = await Promise.all([
     db
       .select({ id: staff.id, name: staff.name, salutation: staff.salutation })
       .from(staff)
@@ -1821,6 +1844,14 @@ async function buildMonthlyReportData(
         ),
       ),
   ]);
+
+  // Filter out entries whose periodNumber is not in the institution's teaching periods (e.g. stale 10/11 after config change).
+  const recurringEntries = validPeriodNumbers
+    ? recurringEntriesRaw.filter((e: any) => validPeriodNumbers.has(e.periodNumber))
+    : recurringEntriesRaw;
+  const oneOffEntries = validPeriodNumbers
+    ? oneOffEntriesRaw.filter((e: any) => validPeriodNumbers.has(e.periodNumber))
+    : oneOffEntriesRaw;
 
   // Get all entry IDs for topics lookup
   const allEntryIds = [...recurringEntries, ...oneOffEntries].map((e: any) => e.id);
@@ -1936,16 +1967,27 @@ async function buildMonthlyReportData(
     const overriddenPeriods = new Set(activeOneOff.map((e: any) => e.periodNumber));
 
     // If duplicate active one-off instances exist for the same period (legacy data),
-    // keep only the most recently completed one.
+    // keep only the best instance per period: prefer completed over scheduled, then latest completedAt / updatedAt.
     const oneOffByPeriod = new Map<number, any>();
     for (const e of activeOneOff) {
       const pn = e.periodNumber ?? 0;
       const existing = oneOffByPeriod.get(pn);
-      if (
-        !existing ||
-        (e.completedAt && existing.completedAt && new Date(e.completedAt) > new Date(existing.completedAt))
-      ) {
+      if (!existing) {
         oneOffByPeriod.set(pn, e);
+        continue;
+      }
+      const existingRank = existing.status === "completed" ? 2 : existing.status === "cancelled" ? 0 : 1;
+      const newRank = e.status === "completed" ? 2 : e.status === "cancelled" ? 0 : 1;
+      if (newRank > existingRank) {
+        oneOffByPeriod.set(pn, e);
+      } else if (newRank === existingRank && newRank === 2) {
+        const a = existing.completedAt ? new Date(existing.completedAt).getTime() : 0;
+        const b = e.completedAt ? new Date(e.completedAt).getTime() : 0;
+        if (b > a) oneOffByPeriod.set(pn, e);
+      } else if (newRank === existingRank) {
+        const a = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+        const b = e.updatedAt ? new Date(e.updatedAt).getTime() : 0;
+        if (b > a) oneOffByPeriod.set(pn, e);
       }
     }
     const dedupedOneOff = [...oneOffByPeriod.values()];
