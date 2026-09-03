@@ -164,6 +164,7 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
           (e.currentTarget as HTMLElement).dataset.penEraser = "1";
         }
         e.preventDefault();
+        e.stopPropagation();
         (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
         isDrawing.current = true;
         const p = getPoint(e.nativeEvent as PointerEvent, canvas);
@@ -213,6 +214,7 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
         if (useEraser) updateCursor(hoverPt.x, hoverPt.y, true);
 
         if (!enabled || !isDrawing.current) return;
+        e.stopPropagation();
 
         // coalesced events give us every intermediate hardware point → no gaps even on fast strokes
         const events: PointerEvent[] = rawNative.getCoalescedEvents ? rawNative.getCoalescedEvents() : [rawNative as unknown as PointerEvent];

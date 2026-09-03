@@ -504,11 +504,11 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                   )}
                 </div>
               ) : (
-                <SmartBoardZoomContainer className="relative shrink-0 flex items-center justify-center" disabled={false} sideFloating>
-                  <div
-                    className="relative shrink-0"
-                    style={{ width: bookSpreadW, height: dimensions.height }}
-                  >
+                <div
+                  className="relative shrink-0"
+                  style={{ width: bookSpreadW, height: dimensions.height }}
+                >
+                  <SmartBoardZoomContainer className="absolute inset-0 w-full h-full flex items-center justify-center" disabled={false} sideFloating>
                     <HTMLFlipBook
                       key={flipbookKey}
                       ref={flipBookRef}
@@ -541,18 +541,18 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                         <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
                       ))}
                     </HTMLFlipBook>
-                    {enableAnnotation && isAnnotating && (
-                      <AnnotationCanvas
-                        pageKey={currentPage}
-                        enabled={isAnnotating}
-                        color={annoColor}
-                        strokeWidth={annoWidth}
-                        eraser={isEraser}
-                        ref={annoRef}
-                      />
-                    )}
-                  </div>
-                </SmartBoardZoomContainer>
+                  </SmartBoardZoomContainer>
+                  {enableAnnotation && isAnnotating && (
+                    <AnnotationCanvas
+                      pageKey={currentPage}
+                      enabled={isAnnotating}
+                      color={annoColor}
+                      strokeWidth={annoWidth}
+                      eraser={isEraser}
+                      ref={annoRef}
+                    />
+                  )}
+                </div>
               )
             ) : (
               /* Normal mode — plain flipbook, no overlay bookmarks */
@@ -610,14 +610,17 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
             </button>
           </div>
 
-          {/* Annotation toolbar — left bookmark, fullscreen only, click to toggle */}
+          {/* Annotation toolbar — left bookmark, fullscreen only, click to toggle, goes directly to toolbox */}
           {enableAnnotation && isFullscreen && (
             <div className="absolute left-0 top-1/2 -translate-y-1/2 z-30 hidden sm:flex items-center">
               <div className={`flex items-center transition-transform duration-200 ease-out ${annoBarOpen ? "translate-x-0" : "translate-x-[calc(-100%+18px)]"}`}>
                 <div className="shrink-0 shadow-lg rounded-2xl">
                   <AnnotationToolbar
-                    enabled={isAnnotating}
-                    onToggle={setIsAnnotating}
+                    enabled={true}
+                    onToggle={(v) => {
+                      setIsAnnotating(v);
+                      if (!v) setAnnoBarOpen(false);
+                    }}
                     color={annoColor}
                     onColorChange={setAnnoColor}
                     strokeWidth={annoWidth}
@@ -625,10 +628,15 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                     eraser={isEraser}
                     onEraserChange={setIsEraser}
                     onClear={handleClearAnno}
+                    onClose={() => setAnnoBarOpen(false)}
                   />
                 </div>
                 <button
-                  onClick={() => setAnnoBarOpen((o) => !o)}
+                  onClick={() => {
+                    const next = !annoBarOpen;
+                    setAnnoBarOpen(next);
+                    if (next) setIsAnnotating(true);
+                  }}
                   aria-label={annoBarOpen ? "Hide drawing tools" : "Show drawing tools"}
                   className="w-[18px] h-14 rounded-r-lg bg-white dark:bg-slate-900 border border-l-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -ml-px shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >

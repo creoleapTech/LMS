@@ -396,63 +396,55 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
             </button>
           </div>
 
-          {/* Slide area — true fullscreen, slide fills viewport with no black bars */}
+          {/* Slide area — true fullscreen, slide fills viewport with no black bars.
+              Canvas is OUTSIDE zoom so drawing stays at screen coords while zooming (no offset) */}
           <div className="flex-1 relative flex items-center justify-center min-h-0 p-0 overflow-hidden">
-            {enableZoom === false ? (
-              <div
-                className={`relative w-full h-full max-w-full max-h-full ${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}
-                style={{ aspectRatio: `${presentation.slideWidth} / ${presentation.slideHeight}`, maxWidth: "100%", maxHeight: "100%" }}
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                <SlideRenderer
-                  slide={slide}
-                  slideWidth={presentation.slideWidth}
-                  slideHeight={presentation.slideHeight}
-                />
-                {enableAnnotation && isAnnotating && (
-                  <AnnotationCanvas
-                    pageKey={currentSlide}
-                    enabled={isAnnotating}
-                    color={annoColor}
-                    strokeWidth={annoWidth}
-                    eraser={isEraser}
-                    ref={annoRef}
-                  />
-                )}
-              </div>
-            ) : (
-              <SmartBoardZoomContainer className="w-full h-full flex items-center justify-center" disabled={false} sideFloating>
-                <div
-                  className={`relative w-full h-full max-w-full max-h-full ${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}
-                  style={{ aspectRatio: `${presentation.slideWidth} / ${presentation.slideHeight}`, maxWidth: "100%", maxHeight: "100%" }}
-                  onContextMenu={(e) => e.preventDefault()}
-                >
+            <div
+              className="relative w-full h-full max-w-full max-h-full"
+              style={{ aspectRatio: `${presentation.slideWidth} / ${presentation.slideHeight}`, maxWidth: "100%", maxHeight: "100%" }}
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              {enableZoom === false ? (
+                <div className={`absolute inset-0 ${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
                   <SlideRenderer
                     slide={slide}
                     slideWidth={presentation.slideWidth}
                     slideHeight={presentation.slideHeight}
                   />
-                  {enableAnnotation && isAnnotating && (
-                    <AnnotationCanvas
-                      pageKey={currentSlide}
-                      enabled={isAnnotating}
-                      color={annoColor}
-                      strokeWidth={annoWidth}
-                      eraser={isEraser}
-                      ref={annoRef}
-                    />
-                  )}
                 </div>
-              </SmartBoardZoomContainer>
-            )}
-            {/* Annotation toolbar — left side bookmark, retractable (trainer only) — click to toggle, fullscreen only */}
+              ) : (
+                <SmartBoardZoomContainer className="absolute inset-0 w-full h-full flex items-center justify-center" disabled={false} sideFloating>
+                  <div className={`w-full h-full ${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
+                    <SlideRenderer
+                      slide={slide}
+                      slideWidth={presentation.slideWidth}
+                      slideHeight={presentation.slideHeight}
+                    />
+                  </div>
+                </SmartBoardZoomContainer>
+              )}
+              {enableAnnotation && isAnnotating && (
+                <AnnotationCanvas
+                  pageKey={currentSlide}
+                  enabled={isAnnotating}
+                  color={annoColor}
+                  strokeWidth={annoWidth}
+                  eraser={isEraser}
+                  ref={annoRef}
+                />
+              )}
+            </div>
+            {/* Annotation toolbar — left side bookmark, retractable (trainer only) — click to toggle, goes directly to toolbox */}
             {enableAnnotation && (
               <div className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex items-center">
                 <div className={`flex items-center transition-transform duration-200 ease-out ${annoBarOpen ? "translate-x-0" : "translate-x-[calc(-100%+18px)]"}`}>
                   <div className="shrink-0">
                     <AnnotationToolbar
-                      enabled={isAnnotating}
-                      onToggle={setIsAnnotating}
+                      enabled={true}
+                      onToggle={(v) => {
+                        setIsAnnotating(v);
+                        if (!v) setAnnoBarOpen(false);
+                      }}
                       color={annoColor}
                       onColorChange={setAnnoColor}
                       strokeWidth={annoWidth}
@@ -460,10 +452,15 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
                       eraser={isEraser}
                       onEraserChange={setIsEraser}
                       onClear={handleClearAnno}
+                      onClose={() => setAnnoBarOpen(false)}
                     />
                   </div>
                   <button
-                    onClick={() => setAnnoBarOpen((o) => !o)}
+                    onClick={() => {
+                      const next = !annoBarOpen;
+                      setAnnoBarOpen(next);
+                      if (next) setIsAnnotating(true);
+                    }}
                     aria-label={annoBarOpen ? "Hide drawing tools" : "Show drawing tools"}
                     className="w-[18px] h-14 rounded-r-lg bg-white dark:bg-slate-900 border border-l-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -ml-px shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                   >
