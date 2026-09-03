@@ -76,6 +76,10 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
     const annoRef = useRef<AnnotationCanvasHandle>(null);
     const handleClearAnno = useCallback(() => annoRef.current?.clear(), []);
 
+    /* ─── Bookmark open states — click to toggle (fullscreen only) ─── */
+    const [annoBarOpen, setAnnoBarOpen] = useState(false);
+    const [bottomBarOpen, setBottomBarOpen] = useState(false);
+
     /* ─── Expose handle ─── */
     const toggleFullscreen = useCallback(() => {
       if (!document.fullscreenElement) {
@@ -281,7 +285,7 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
         const fs = !!document.fullscreenElement;
         setIsFullscreen(fs);
         // Annotation UI lives in fullscreen only — reset when exiting
-        if (!fs) { setIsAnnotating(false); setIsEraser(false); }
+        if (!fs) { setIsAnnotating(false); setIsEraser(false); setAnnoBarOpen(false); setBottomBarOpen(false); }
         onFullscreenChange?.(fs);
       };
       document.addEventListener("fullscreenchange", onChange);
@@ -441,10 +445,10 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
                 </div>
               </SmartBoardZoomContainer>
             )}
-            {/* Annotation toolbar — left side bookmark, retractable (trainer only) */}
+            {/* Annotation toolbar — left side bookmark, retractable (trainer only) — click to toggle, fullscreen only */}
             {enableAnnotation && (
               <div className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex items-center">
-                <div className="flex items-center translate-x-[calc(-100%+18px)] hover:translate-x-0 focus-within:translate-x-0 transition-transform duration-200 ease-out">
+                <div className={`flex items-center transition-transform duration-200 ease-out ${annoBarOpen ? "translate-x-0" : "translate-x-[calc(-100%+18px)]"}`}>
                   <div className="shrink-0">
                     <AnnotationToolbar
                       enabled={isAnnotating}
@@ -458,21 +462,29 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
                       onClear={handleClearAnno}
                     />
                   </div>
-                  <div className="w-[18px] h-14 rounded-r-lg bg-white dark:bg-slate-900 border border-l-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -ml-px shrink-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <button
+                    onClick={() => setAnnoBarOpen((o) => !o)}
+                    aria-label={annoBarOpen ? "Hide drawing tools" : "Show drawing tools"}
+                    className="w-[18px] h-14 rounded-r-lg bg-white dark:bg-slate-900 border border-l-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -ml-px shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  >
                     <div className="w-1 h-5 rounded-full bg-amber-400" />
                     <span className="text-[7px] font-bold tracking-widest text-slate-400 [writing-mode:vertical-lr]">DRAW</span>
-                  </div>
+                  </button>
                 </div>
               </div>
             )}
           </div>
-          {/* Thumbnail strip + bottom bar — overlay, retractable bookmark from bottom */}
+          {/* Thumbnail strip + bottom bar — overlay, click to toggle (fullscreen only) */}
           <div className="absolute bottom-0 left-0 right-0 z-30 flex justify-center pointer-events-none">
-            <div className="group w-full max-w-full pointer-events-auto translate-y-[calc(100%-14px)] hover:translate-y-0 focus-within:translate-y-0 transition-transform duration-200 ease-out flex flex-col items-center">
-              {/* handle peek */}
-              <div className="h-[14px] w-20 rounded-t-lg bg-white dark:bg-slate-900 border border-b-0 border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center -mb-px cursor-pointer shrink-0">
+            <div className={`w-full max-w-full pointer-events-auto transition-transform duration-200 ease-out flex flex-col items-center ${bottomBarOpen ? "translate-y-0" : "translate-y-[calc(100%-14px)]"}`}>
+              {/* handle — click to toggle */}
+              <button
+                onClick={() => setBottomBarOpen((o) => !o)}
+                aria-label={bottomBarOpen ? "Hide slides" : "Show slides"}
+                className="h-[14px] w-20 rounded-t-lg bg-white dark:bg-slate-900 border border-b-0 border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center -mb-px cursor-pointer shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
                 <div className="w-6 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-              </div>
+              </button>
               <div className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-700 shadow-xl">
                 {totalSlides > 1 && (
                   <div className="w-full max-w-full px-2 sm:px-4 py-2 overflow-x-auto">
@@ -570,81 +582,20 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
           </button>
 
           <div className="relative overflow-visible w-full max-w-4xl">
-            {enableZoom === false ? (
-              <div
-                className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
-                            border border-gray-200/60 dark:border-slate-700/60 overflow-hidden"
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                <div className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
-                  <SlideRenderer
-                    slide={slide}
-                    slideWidth={presentation.slideWidth}
-                    slideHeight={presentation.slideHeight}
-                  />
-                </div>
-                {enableAnnotation && isAnnotating && (
-                  <AnnotationCanvas
-                    pageKey={currentSlide}
-                    enabled={isAnnotating}
-                    color={annoColor}
-                    strokeWidth={annoWidth}
-                    eraser={isEraser}
-                    ref={annoRef}
-                  />
-                )}
+            {/* Normal mode — plain slide, no zoom & no annotation UI (fullscreen only) */}
+            <div
+              className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
+                          border border-gray-200/60 dark:border-slate-700/60 overflow-hidden"
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              <div className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
+                <SlideRenderer
+                  slide={slide}
+                  slideWidth={presentation.slideWidth}
+                  slideHeight={presentation.slideHeight}
+                />
               </div>
-            ) : (
-              <SmartBoardZoomContainer className="relative w-full" disabled={false} sideFloating>
-                <div
-                  className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
-                              border border-gray-200/60 dark:border-slate-700/60 overflow-hidden w-full"
-                  onContextMenu={(e) => e.preventDefault()}
-                >
-                  <div className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
-                    <SlideRenderer
-                      slide={slide}
-                      slideWidth={presentation.slideWidth}
-                      slideHeight={presentation.slideHeight}
-                    />
-                  </div>
-                  {enableAnnotation && isAnnotating && (
-                    <AnnotationCanvas
-                      pageKey={currentSlide}
-                      enabled={isAnnotating}
-                      color={annoColor}
-                      strokeWidth={annoWidth}
-                      eraser={isEraser}
-                      ref={annoRef}
-                    />
-                  )}
-                </div>
-              </SmartBoardZoomContainer>
-            )}
-            {/* Annotation bookmark — left side, retractable */}
-            {enableAnnotation && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 z-30 hidden sm:flex items-center">
-                <div className="flex items-center translate-x-[calc(-100%+18px)] hover:translate-x-0 focus-within:translate-x-0 transition-transform duration-200 ease-out">
-                  <div className="shrink-0 shadow-lg rounded-2xl">
-                    <AnnotationToolbar
-                      enabled={isAnnotating}
-                      onToggle={setIsAnnotating}
-                      color={annoColor}
-                      onColorChange={setAnnoColor}
-                      strokeWidth={annoWidth}
-                      onWidthChange={setAnnoWidth}
-                      eraser={isEraser}
-                      onEraserChange={setIsEraser}
-                      onClear={handleClearAnno}
-                    />
-                  </div>
-                  <div className="w-[18px] h-14 rounded-r-lg bg-white dark:bg-slate-900 border border-l-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -ml-px shrink-0 cursor-pointer">
-                    <div className="w-1 h-5 rounded-full bg-amber-400" />
-                    <span className="text-[7px] font-bold tracking-widest text-slate-400 [writing-mode:vertical-lr]">DRAW</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
 
           <button

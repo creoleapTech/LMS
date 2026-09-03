@@ -45,6 +45,7 @@ export function SmartBoardZoomContainer({
 }) {
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoomBarOpen, setZoomBarOpen] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
 
   // pointer tracking for pinch/pan
@@ -316,14 +317,18 @@ export function SmartBoardZoomContainer({
               </button>
             )}
           </div>
-          {/* Toolbar — floating on right side, vertical, retractable bookmark */}
+          {/* Toolbar — floating on right side, vertical, retractable bookmark — click to toggle */}
           <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20 flex items-center">
-            <div className="flex items-center translate-x-[calc(100%-18px)] hover:translate-x-0 focus-within:translate-x-0 transition-transform duration-200 ease-out">
-              {/* handle peek */}
-              <div className="w-[18px] h-14 rounded-l-lg bg-white dark:bg-slate-900 border border-r-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -mr-px cursor-pointer shrink-0">
+            <div className={`flex items-center transition-transform duration-200 ease-out ${zoomBarOpen ? "translate-x-0" : "translate-x-[calc(100%-18px)]"}`}>
+              {/* handle — click to toggle */}
+              <button
+                onClick={() => setZoomBarOpen((o) => !o)}
+                aria-label={zoomBarOpen ? "Hide zoom controls" : "Show zoom controls"}
+                className="w-[18px] h-14 rounded-l-lg bg-white dark:bg-slate-900 border border-r-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -mr-px shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
                 <div className="w-1 h-5 rounded-full bg-amber-400" />
                 <ZoomIn className="w-2.5 h-2.5 text-slate-400" />
-              </div>
+              </button>
               <div className="flex flex-col items-center gap-1.5 p-1.5 rounded-l-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur shadow-xl border border-slate-200 dark:border-slate-700">
                 <button
                   onClick={zoomIn}

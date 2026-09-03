@@ -93,6 +93,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
     const [isEraser, setIsEraser] = useState(false);
     const annoRef = useRef<AnnotationCanvasHandle>(null);
     const handleClearAnno = useCallback(() => annoRef.current?.clear(), []);
+    const [annoBarOpen, setAnnoBarOpen] = useState(false);
 
     /* ─── Expose handle ─── */
     const toggleFullscreen = useCallback(() => {
@@ -174,7 +175,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
         const fs = !!document.fullscreenElement;
         setIsFullscreen(fs);
         // Annotation UI lives in fullscreen only — reset when exiting
-        if (!fs) { setIsAnnotating(false); setIsEraser(false); }
+        if (!fs) { setIsAnnotating(false); setIsEraser(false); setAnnoBarOpen(false); }
         onFullscreenChange?.(fs);
 
         // After the transition the DOM needs a frame to settle before we
@@ -554,107 +555,43 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                 </SmartBoardZoomContainer>
               )
             ) : (
-              /* Normal mode — now with zoom + annotate always available, overlay bookmarks */
-              <div className="relative shrink-0 flex items-center justify-center">
-                {enableZoom === false ? (
-                  <div
-                    className="relative shrink-0 neo-card p-1 sm:p-2"
-                    style={{ width: bookSpreadW, height: dimensions.height }}
-                  >
-                    <HTMLFlipBook
-                      key={flipbookKey}
-                      ref={flipBookRef}
-                      width={dimensions.width}
-                      height={dimensions.height}
-                      size="fixed"
-                      minWidth={80}
-                      maxWidth={2400}
-                      minHeight={100}
-                      maxHeight={3200}
-                      showCover={true}
-                      mobileScrollSupport={false}
-                      flippingTime={800}
-                      usePortrait={usePortrait}
-                      startZIndex={0}
-                      autoSize={false}
-                      maxShadowOpacity={0.5}
-                      drawShadow={true}
-                      onFlip={handleFlip}
-                      className="flipbook-pages"
-                      style={{}}
-                      startPage={currentPage}
-                      clickEventForward={false}
-                      useMouseEvents={true}
-                      swipeDistance={30}
-                      showPageCorners={true}
-                      disableFlipByClick={false}
-                    >
-                      {pageImages.map((src, i) => (
-                        <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
-                      ))}
-                    </HTMLFlipBook>
-                    {enableAnnotation && isAnnotating && (
-                      <AnnotationCanvas
-                        pageKey={currentPage}
-                        enabled={isAnnotating}
-                        color={annoColor}
-                        strokeWidth={annoWidth}
-                        eraser={isEraser}
-                        ref={annoRef}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <SmartBoardZoomContainer className="relative shrink-0 flex items-center justify-center" disabled={false} sideFloating>
-                    <div
-                      className="relative shrink-0 neo-card p-1 sm:p-2"
-                      style={{ width: bookSpreadW, height: dimensions.height }}
-                    >
-                      <HTMLFlipBook
-                        key={flipbookKey}
-                        ref={flipBookRef}
-                        width={dimensions.width}
-                        height={dimensions.height}
-                        size="fixed"
-                        minWidth={80}
-                        maxWidth={2400}
-                        minHeight={100}
-                        maxHeight={3200}
-                        showCover={true}
-                        mobileScrollSupport={false}
-                        flippingTime={800}
-                        usePortrait={usePortrait}
-                        startZIndex={0}
-                        autoSize={false}
-                        maxShadowOpacity={0.5}
-                        drawShadow={true}
-                        onFlip={handleFlip}
-                        className="flipbook-pages"
-                        style={{}}
-                        startPage={currentPage}
-                        clickEventForward={false}
-                        useMouseEvents={true}
-                        swipeDistance={30}
-                        showPageCorners={true}
-                        disableFlipByClick={false}
-                      >
-                        {pageImages.map((src, i) => (
-                          <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
-                        ))}
-                      </HTMLFlipBook>
-                      {enableAnnotation && isAnnotating && (
-                        <AnnotationCanvas
-                          pageKey={currentPage}
-                          enabled={isAnnotating}
-                          color={annoColor}
-                          strokeWidth={annoWidth}
-                          eraser={isEraser}
-                          ref={annoRef}
-                        />
-                      )}
-                    </div>
-                  </SmartBoardZoomContainer>
-                )}
+              /* Normal mode — plain flipbook, no overlay bookmarks */
+              <div
+                className="relative shrink-0 neo-card p-1 sm:p-2"
+                style={{ width: bookSpreadW, height: dimensions.height }}
+              >
+                <HTMLFlipBook
+                  key={flipbookKey}
+                  ref={flipBookRef}
+                  width={dimensions.width}
+                  height={dimensions.height}
+                  size="fixed"
+                  minWidth={80}
+                  maxWidth={2400}
+                  minHeight={100}
+                  maxHeight={3200}
+                  showCover={true}
+                  mobileScrollSupport={false}
+                  flippingTime={800}
+                  usePortrait={usePortrait}
+                  startZIndex={0}
+                  autoSize={false}
+                  maxShadowOpacity={0.5}
+                  drawShadow={true}
+                  onFlip={handleFlip}
+                  className="flipbook-pages"
+                  style={{}}
+                  startPage={currentPage}
+                  clickEventForward={false}
+                  useMouseEvents={true}
+                  swipeDistance={30}
+                  showPageCorners={true}
+                  disableFlipByClick={false}
+                >
+                  {pageImages.map((src, i) => (
+                    <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
+                  ))}
+                </HTMLFlipBook>
               </div>
             )}
 
@@ -673,10 +610,10 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
             </button>
           </div>
 
-          {/* Annotation toolbar — left bookmark, always available (trainer only), retractable */}
-          {enableAnnotation && (
+          {/* Annotation toolbar — left bookmark, fullscreen only, click to toggle */}
+          {enableAnnotation && isFullscreen && (
             <div className="absolute left-0 top-1/2 -translate-y-1/2 z-30 hidden sm:flex items-center">
-              <div className="flex items-center translate-x-[calc(-100%+18px)] hover:translate-x-0 focus-within:translate-x-0 transition-transform duration-200 ease-out">
+              <div className={`flex items-center transition-transform duration-200 ease-out ${annoBarOpen ? "translate-x-0" : "translate-x-[calc(-100%+18px)]"}`}>
                 <div className="shrink-0 shadow-lg rounded-2xl">
                   <AnnotationToolbar
                     enabled={isAnnotating}
@@ -690,10 +627,14 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                     onClear={handleClearAnno}
                   />
                 </div>
-                <div className="w-[18px] h-14 rounded-r-lg bg-white dark:bg-slate-900 border border-l-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -ml-px shrink-0 cursor-pointer">
+                <button
+                  onClick={() => setAnnoBarOpen((o) => !o)}
+                  aria-label={annoBarOpen ? "Hide drawing tools" : "Show drawing tools"}
+                  className="w-[18px] h-14 rounded-r-lg bg-white dark:bg-slate-900 border border-l-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -ml-px shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
                   <div className="w-1 h-5 rounded-full bg-amber-400" />
                   <span className="text-[7px] font-bold tracking-widest text-slate-400 [writing-mode:vertical-lr]">DRAW</span>
-                </div>
+                </button>
               </div>
             </div>
           )}
