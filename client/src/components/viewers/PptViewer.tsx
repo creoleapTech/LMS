@@ -390,9 +390,10 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
             </button>
           </div>
 
-          {/* Slide area — true fullscreen, no padding, slide fills viewport */}
+          {/* Slide area — true fullscreen, no padding, slide fills viewport.
+              No zoom in fullscreen per latest spec (enableZoom===false → no SmartBoardZoom) */}
           <div className="flex-1 relative flex items-center justify-center min-h-0 p-0 overflow-hidden">
-            <SmartBoardZoomContainer className="w-full h-full flex items-center justify-center" disabled={isAnnotating && !!enableAnnotation} sideFloating>
+            {enableZoom === false ? (
               <div
                 className={`relative w-full h-full max-w-full max-h-full ${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}
                 style={{ aspectRatio: `${presentation.slideWidth} / ${presentation.slideHeight}`, maxWidth: "100%", maxHeight: "100%" }}
@@ -414,8 +415,32 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
                   />
                 )}
               </div>
-            </SmartBoardZoomContainer>
-            {/* Annotation toolbar — floating left side in fullscreen */}
+            ) : (
+              <SmartBoardZoomContainer className="w-full h-full flex items-center justify-center" disabled={isAnnotating && !!enableAnnotation} sideFloating>
+                <div
+                  className={`relative w-full h-full max-w-full max-h-full ${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}
+                  style={{ aspectRatio: `${presentation.slideWidth} / ${presentation.slideHeight}`, maxWidth: "100%", maxHeight: "100%" }}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  <SlideRenderer
+                    slide={slide}
+                    slideWidth={presentation.slideWidth}
+                    slideHeight={presentation.slideHeight}
+                  />
+                  {enableAnnotation && isAnnotating && (
+                    <AnnotationCanvas
+                      pageKey={currentSlide}
+                      enabled={isAnnotating}
+                      color={annoColor}
+                      strokeWidth={annoWidth}
+                      eraser={isEraser}
+                      ref={annoRef}
+                    />
+                  )}
+                </div>
+              </SmartBoardZoomContainer>
+            )}
+            {/* Annotation toolbar — floating left side in fullscreen (trainer only) */}
             {enableAnnotation && (
               <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-20 hidden sm:flex">
                 <AnnotationToolbar

@@ -236,12 +236,8 @@ export function SmartBoardZoomContainer({
 
   // outerClass merges caller-provided className. Viewport is the zoomable area;
   // hint + toolbar are rendered *below* the viewport so they never cover the slide / logo.
-  // For fullscreen (h-full) the outer is flex-col with viewport flex-1 to fill height.
-  const isFullHeight = !!className?.includes("h-full");
-  const outerClass = [isFullHeight ? "flex flex-col" : "", "relative", className].filter(Boolean).join(" ");
-  const viewportClass = isFullHeight
-    ? "relative overflow-hidden w-full flex-1 min-h-0 flex items-center justify-center"
-    : "relative overflow-hidden w-full h-full flex items-center justify-center";
+  const outerClass = ["relative", className].filter(Boolean).join(" ");
+  const viewportClass = "relative overflow-hidden w-full h-full flex items-center justify-center";
 
   return (
     <div

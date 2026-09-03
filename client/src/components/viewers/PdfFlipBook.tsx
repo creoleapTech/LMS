@@ -450,9 +450,8 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
             </button>
 
             {/* Flipbook — smart-board zoom: pinch/wheel/stylus pan, toolbar
-                In preview (enableZoom===false) and not fullscreen, render without zoom for clean preview.
-                In fullscreen, always use zoom with sideFloating so slide is truly full-screen. */}
-            {enableZoom === false && !isFullscreen ? (
+                When enableZoom===false (preview), render without zoom for clean preview — also in fullscreen per latest spec (no zoom in fullscreen). */}
+            {enableZoom === false ? (
               <div
                 className={`relative shrink-0 ${isFullscreen ? "" : "neo-card p-1 sm:p-2"}`}
                 style={{ width: bookSpreadW, height: dimensions.height }}

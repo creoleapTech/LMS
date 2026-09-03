@@ -831,10 +831,15 @@ export function ChapterContentManager({ chapterId, chapterNumber }: Props) {
               </div>
             )}
 
-            {/* PPT */}
+            {/* PPT — preview: no zoom in normal, fullscreen also no zoom per latest spec, but annotation for trainer */}
             {viewingContent.type === "ppt" && viewingContent.fileUrl && (
               <div className="w-full max-w-5xl mx-auto">
-                <PptViewer storageKey={viewingContent.fileUrl} title={viewingContent.title} />
+                <PptViewer
+                  storageKey={viewingContent.fileUrl}
+                  title={viewingContent.title}
+                  enableZoom={false}
+                  enableAnnotation={isSuperAdmin || (user?.role !== "student" && !!user?.role)}
+                />
               </div>
             )}
 
