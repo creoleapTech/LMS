@@ -114,6 +114,17 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
         if (!enabled) return;
         const canvas = canvasRef.current;
         if (!canvas) return;
+        // Auto-switch to eraser when stylus eraser tip / barrel eraser is used
+        const isPenEraser =
+          (e as unknown as PointerEvent & { pointerType?: string; button?: number }).pointerType === "pen" &&
+          ((e as unknown as PointerEvent & { button?: number }).button === 5 ||
+            ((e as unknown as PointerEvent & { buttons?: number }).buttons & 32) === 32);
+        // If stylus eraser is detected, we still draw in eraser mode (temporary)
+        // The actual eraser prop controls persistent mode; pen eraser just forces eraser for this stroke
+        if (isPenEraser) {
+          // For this stroke, treat as eraser even if prop is false — set a flag on the event target
+          (e.currentTarget as HTMLElement).dataset.penEraser = "1";
+        }
         e.preventDefault();
         (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
         isDrawing.current = true;
@@ -135,10 +146,16 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
           lastPos.current = cur;
           return;
         }
+        // Stylus pressure support: pen with pressure 0..1, mouse/touch defaults to 0.5
+        const pressure = (e as unknown as PointerEvent & { pressure?: number }).pressure;
+        const isPen = (e as unknown as PointerEvent & { pointerType?: string }).pointerType === "pen";
+        const pressureFactor = isPen && typeof pressure === "number" && pressure > 0 ? 0.5 + pressure * 0.9 : 1;
+        const isPenEraserActive = (e.currentTarget as HTMLElement).dataset.penEraser === "1";
+        const useEraser = eraser || isPenEraserActive;
         ctx.save();
-        ctx.globalCompositeOperation = eraser ? "destination-out" : "source-over";
-        ctx.strokeStyle = eraser ? "rgba(0,0,0,1)" : color;
-        ctx.lineWidth = eraser ? strokeWidth * 2 : strokeWidth;
+        ctx.globalCompositeOperation = useEraser ? "destination-out" : "source-over";
+        ctx.strokeStyle = useEraser ? "rgba(0,0,0,1)" : color;
+        ctx.lineWidth = (useEraser ? strokeWidth * 2 : strokeWidth) * pressureFactor;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
         ctx.beginPath();
@@ -167,11 +184,13 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
           // If barely moved, draw a dot
           const dist = Math.hypot(cur.x - prev.x, cur.y - prev.y);
           if (dist < 1) {
+            const isPenEraserActive = (e.currentTarget as HTMLElement).dataset.penEraser === "1";
+            const useEraser = eraser || isPenEraserActive;
             ctx.save();
-            ctx.globalCompositeOperation = eraser ? "destination-out" : "source-over";
-            ctx.fillStyle = eraser ? "rgba(0,0,0,1)" : color;
+            ctx.globalCompositeOperation = useEraser ? "destination-out" : "source-over";
+            ctx.fillStyle = useEraser ? "rgba(0,0,0,1)" : color;
             ctx.beginPath();
-            ctx.arc(cur.x, cur.y, (eraser ? strokeWidth * 2 : strokeWidth) / 2, 0, Math.PI * 2);
+            ctx.arc(cur.x, cur.y, (useEraser ? strokeWidth * 2 : strokeWidth) / 2, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
           }
@@ -180,6 +199,10 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
         lastPos.current = null;
         try {
           (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+        } catch {}
+        // Clear pen eraser flag
+        try {
+          delete (e.currentTarget as HTMLElement).dataset.penEraser;
         } catch {}
         onDrawEnd?.();
       },
