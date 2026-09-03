@@ -370,12 +370,12 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
     const totalSlides = presentation.slides.length;
     const slide       = presentation.slides[currentSlide];
 
-    /* ─── Fullscreen layout ─── */
+    /* ─── Fullscreen layout — edge-to-edge, no black bars, overlay slide selector ─── */
     if (isFullscreen) {
       return (
         <div
           ref={viewerRef}
-          className="select-none ppt-viewer fixed inset-0 z-50 flex flex-col bg-black"
+          className="select-none ppt-viewer fixed inset-0 z-50 flex flex-col bg-[#f8fafc] dark:bg-slate-900"
         >
           <style>{`@media print { .ppt-viewer { display: none !important; } }`}</style>
           {WatermarkOverlay}
@@ -385,15 +385,14 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
             <button
               onClick={toggleFullscreen}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium
-                         bg-white/15 hover:bg-white/25 text-white shadow-lg transition-all"
+                         bg-slate-900/80 hover:bg-black text-white shadow-lg transition-all border border-white/10 backdrop-blur"
             >
               <Minimize className="h-4 w-4" />
               <span className="hidden sm:inline">Exit</span>
             </button>
           </div>
 
-          {/* Slide area — true fullscreen, no padding, slide fills viewport.
-              No zoom in fullscreen per latest spec (enableZoom===false → no SmartBoardZoom) */}
+          {/* Slide area — true fullscreen, slide fills viewport with no black bars */}
           <div className="flex-1 relative flex items-center justify-center min-h-0 p-0 overflow-hidden">
             {enableZoom === false ? (
               <div
@@ -418,7 +417,7 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
                 )}
               </div>
             ) : (
-              <SmartBoardZoomContainer className="w-full h-full flex items-center justify-center" disabled={isAnnotating && !!enableAnnotation} sideFloating>
+              <SmartBoardZoomContainer className="w-full h-full flex items-center justify-center" disabled={false} sideFloating>
                 <div
                   className={`relative w-full h-full max-w-full max-h-full ${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}
                   style={{ aspectRatio: `${presentation.slideWidth} / ${presentation.slideHeight}`, maxWidth: "100%", maxHeight: "100%" }}
@@ -442,86 +441,96 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
                 </div>
               </SmartBoardZoomContainer>
             )}
-            {/* Annotation toolbar — floating left side in fullscreen (trainer only) */}
+            {/* Annotation toolbar — left side bookmark, retractable (trainer only) */}
             {enableAnnotation && (
-              <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-20 hidden sm:flex">
-                <AnnotationToolbar
-                  enabled={isAnnotating}
-                  onToggle={setIsAnnotating}
-                  color={annoColor}
-                  onColorChange={setAnnoColor}
-                  strokeWidth={annoWidth}
-                  onWidthChange={setAnnoWidth}
-                  eraser={isEraser}
-                  onEraserChange={setIsEraser}
-                  onClear={handleClearAnno}
-                />
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex items-center">
+                <div className="flex items-center translate-x-[calc(-100%+18px)] hover:translate-x-0 focus-within:translate-x-0 transition-transform duration-200 ease-out">
+                  <div className="shrink-0">
+                    <AnnotationToolbar
+                      enabled={isAnnotating}
+                      onToggle={setIsAnnotating}
+                      color={annoColor}
+                      onColorChange={setAnnoColor}
+                      strokeWidth={annoWidth}
+                      onWidthChange={setAnnoWidth}
+                      eraser={isEraser}
+                      onEraserChange={setIsEraser}
+                      onClear={handleClearAnno}
+                    />
+                  </div>
+                  <div className="w-[18px] h-14 rounded-r-lg bg-white dark:bg-slate-900 border border-l-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -ml-px shrink-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800">
+                    <div className="w-1 h-5 rounded-full bg-amber-400" />
+                    <span className="text-[7px] font-bold tracking-widest text-slate-400 [writing-mode:vertical-lr]">DRAW</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-          {/* Thumbnail strip in fullscreen — horizontal navigation */}
-          {totalSlides > 1 && (
-            <div className="shrink-0 w-full max-w-full px-2 sm:px-4 py-2 bg-black/40 backdrop-blur border-t border-white/10 overflow-x-auto">
-              <div className="flex gap-2 justify-center min-w-max mx-auto">
-                {presentation.slides.map((s, i) => (
+          {/* Thumbnail strip + bottom bar — overlay, retractable bookmark from bottom */}
+          <div className="absolute bottom-0 left-0 right-0 z-30 flex justify-center pointer-events-none">
+            <div className="group w-full max-w-full pointer-events-auto translate-y-[calc(100%-14px)] hover:translate-y-0 focus-within:translate-y-0 transition-transform duration-200 ease-out flex flex-col items-center">
+              {/* handle peek */}
+              <div className="h-[14px] w-20 rounded-t-lg bg-white dark:bg-slate-900 border border-b-0 border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center -mb-px cursor-pointer shrink-0">
+                <div className="w-6 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+              </div>
+              <div className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-700 shadow-xl">
+                {totalSlides > 1 && (
+                  <div className="w-full max-w-full px-2 sm:px-4 py-2 overflow-x-auto">
+                    <div className="flex gap-2 justify-center min-w-max mx-auto">
+                      {presentation.slides.map((s, i) => (
+                        <button
+                          key={i}
+                          onClick={() => !isFlipping && loadedSlideIndexes.has(i) && setCurrentSlide(i)}
+                          aria-label={`Go to slide ${i + 1}`}
+                          className={`shrink-0 w-20 sm:w-24 rounded border-2 transition-all overflow-hidden ${
+                            i === currentSlide
+                              ? "border-indigo-500 shadow-md scale-105"
+                              : "border-transparent opacity-70 hover:opacity-100 hover:border-slate-300"
+                          }`}
+                        >
+                          {loadedSlideIndexes.has(i) && renderedThumbnailIndexes.has(i) ? (
+                            <SlideRenderer
+                              slide={s}
+                              slideWidth={presentation.slideWidth}
+                              slideHeight={presentation.slideHeight}
+                            />
+                          ) : (
+                            <div
+                              style={{ width: "100%", aspectRatio: `${presentation.slideWidth / presentation.slideHeight}` }}
+                              className="bg-slate-100 dark:bg-slate-800"
+                            />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center justify-center gap-4 py-2 border-t border-slate-100 dark:border-slate-800">
                   <button
-                    key={i}
-                    onClick={() => !isFlipping && loadedSlideIndexes.has(i) && setCurrentSlide(i)}
-                    aria-label={`Go to slide ${i + 1}`}
-                    className={`shrink-0 w-20 sm:w-24 rounded border-2 transition-all overflow-hidden ${
-                      i === currentSlide
-                        ? "border-white shadow-lg scale-105"
-                        : "border-transparent opacity-60 hover:opacity-90 hover:border-white/50"
-                    }`}
+                    onClick={goToPrev}
+                    disabled={currentSlide <= 0 || isFlipping}
+                    className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center disabled:opacity-30 transition-colors"
+                    aria-label="Previous slide"
                   >
-                    {loadedSlideIndexes.has(i) && renderedThumbnailIndexes.has(i) ? (
-                      <SlideRenderer
-                        slide={s}
-                        slideWidth={presentation.slideWidth}
-                        slideHeight={presentation.slideHeight}
-                      />
-                    ) : (
-                      <div
-                        style={{ width: "100%", aspectRatio: `${presentation.slideWidth / presentation.slideHeight}` }}
-                        className="bg-white/10"
-                      />
-                    )}
+                    <ChevronLeft className="h-4 w-4" />
                   </button>
-                ))}
+                  <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <Presentation className="h-3.5 w-3.5 text-slate-500" />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 tabular-nums">
+                      {currentSlide + 1} / {totalSlides}
+                    </span>
+                  </div>
+                  <button
+                    onClick={goToNext}
+                    disabled={currentSlide >= totalSlides - 1 || !loadedSlideIndexes.has(currentSlide + 1) || isFlipping}
+                    className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center disabled:opacity-30 transition-colors"
+                    aria-label="Next slide"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
-          )}
-
-          {/* Bottom bar: prev · slide info · next */}
-          <div className="shrink-0 flex items-center justify-center gap-6 pb-6">
-            <button
-              onClick={goToPrev}
-              disabled={currentSlide <= 0 || isFlipping}
-              className="group flex items-center justify-center w-12 h-12 rounded-full
-                         bg-white/15 hover:bg-white/25 text-white transition-all
-                         disabled:opacity-20 disabled:cursor-not-allowed"
-              aria-label="Previous slide"
-            >
-              <ChevronLeft className="h-6 w-6 group-hover:-translate-x-0.5 transition-transform" />
-            </button>
-
-            <div className="flex items-center gap-2 px-5 py-2 rounded-full bg-white/10 border border-white/20">
-              <Presentation className="h-4 w-4 text-white/70" />
-              <span className="text-sm font-medium text-white/80 tracking-wide">
-                {currentSlide + 1} / {totalSlides}
-              </span>
-            </div>
-
-            <button
-              onClick={goToNext}
-              disabled={currentSlide >= totalSlides - 1 || !loadedSlideIndexes.has(currentSlide + 1) || isFlipping}
-              className="group flex items-center justify-center w-12 h-12 rounded-full
-                         bg-white/15 hover:bg-white/25 text-white transition-all
-                         disabled:opacity-20 disabled:cursor-not-allowed"
-              aria-label="Next slide"
-            >
-              <ChevronRight className="h-6 w-6 group-hover:translate-x-0.5 transition-transform" />
-            </button>
           </div>
 
           <style>{`
@@ -534,9 +543,9 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
       );
     }
 
-    /* ─── Normal layout ─── */
+    /* ─── Normal layout — zoom + annotate always available, retractable bookmarks ─── */
     return (
-      <div ref={viewerRef} className="flex flex-col items-center gap-0 select-none ppt-viewer">
+      <div ref={viewerRef} className="flex flex-col items-center gap-0 select-none ppt-viewer w-full">
         <style>{`
           @media print { .ppt-viewer { display: none !important; visibility: hidden !important; } }
           @keyframes slideNext { 0% { opacity:.6; transform:translateX(20px); } 100% { opacity:1; transform:translateX(0); } }
@@ -545,7 +554,7 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
           .animate-slide-prev { animation: slidePrev .15s ease-out; }
         `}</style>
 
-        {/* Slide + side arrows */}
+        {/* Slide + side arrows — relative container for overlay bookmark toolbars */}
         <div className="relative flex items-center gap-0 w-full justify-center">
           <button
             onClick={goToPrev}
@@ -561,20 +570,81 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
           </button>
 
           <div className="relative overflow-visible w-full max-w-4xl">
-            {/* Normal mode — plain slide, NO zoom & NO annotation UI (fullscreen only per spec) */}
-            <div
-              className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
-                          border border-gray-200/60 dark:border-slate-700/60 overflow-hidden"
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              <div className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
-                <SlideRenderer
-                  slide={slide}
-                  slideWidth={presentation.slideWidth}
-                  slideHeight={presentation.slideHeight}
-                />
+            {enableZoom === false ? (
+              <div
+                className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
+                            border border-gray-200/60 dark:border-slate-700/60 overflow-hidden"
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <div className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
+                  <SlideRenderer
+                    slide={slide}
+                    slideWidth={presentation.slideWidth}
+                    slideHeight={presentation.slideHeight}
+                  />
+                </div>
+                {enableAnnotation && isAnnotating && (
+                  <AnnotationCanvas
+                    pageKey={currentSlide}
+                    enabled={isAnnotating}
+                    color={annoColor}
+                    strokeWidth={annoWidth}
+                    eraser={isEraser}
+                    ref={annoRef}
+                  />
+                )}
               </div>
-            </div>
+            ) : (
+              <SmartBoardZoomContainer className="relative w-full" disabled={false} sideFloating>
+                <div
+                  className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
+                              border border-gray-200/60 dark:border-slate-700/60 overflow-hidden w-full"
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  <div className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
+                    <SlideRenderer
+                      slide={slide}
+                      slideWidth={presentation.slideWidth}
+                      slideHeight={presentation.slideHeight}
+                    />
+                  </div>
+                  {enableAnnotation && isAnnotating && (
+                    <AnnotationCanvas
+                      pageKey={currentSlide}
+                      enabled={isAnnotating}
+                      color={annoColor}
+                      strokeWidth={annoWidth}
+                      eraser={isEraser}
+                      ref={annoRef}
+                    />
+                  )}
+                </div>
+              </SmartBoardZoomContainer>
+            )}
+            {/* Annotation bookmark — left side, retractable */}
+            {enableAnnotation && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 z-30 hidden sm:flex items-center">
+                <div className="flex items-center translate-x-[calc(-100%+18px)] hover:translate-x-0 focus-within:translate-x-0 transition-transform duration-200 ease-out">
+                  <div className="shrink-0 shadow-lg rounded-2xl">
+                    <AnnotationToolbar
+                      enabled={isAnnotating}
+                      onToggle={setIsAnnotating}
+                      color={annoColor}
+                      onColorChange={setAnnoColor}
+                      strokeWidth={annoWidth}
+                      onWidthChange={setAnnoWidth}
+                      eraser={isEraser}
+                      onEraserChange={setIsEraser}
+                      onClear={handleClearAnno}
+                    />
+                  </div>
+                  <div className="w-[18px] h-14 rounded-r-lg bg-white dark:bg-slate-900 border border-l-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -ml-px shrink-0 cursor-pointer">
+                    <div className="w-1 h-5 rounded-full bg-amber-400" />
+                    <span className="text-[7px] font-bold tracking-widest text-slate-400 [writing-mode:vertical-lr]">DRAW</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <button
@@ -591,43 +661,56 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
           </button>
         </div>
 
-        {/* Slide info */}
-        <div className="flex items-center justify-center gap-3 mt-4 px-6 py-2.5 rounded-full
+        {/* Slide info — compact pill */}
+        <div className="flex items-center justify-center gap-3 mt-3 px-5 py-1.5 rounded-full
                         bg-indigo-900/5 dark:bg-indigo-100/5 border border-indigo-200/40 dark:border-slate-600/40">
-          <Presentation className="h-4 w-4 text-indigo-800/60 dark:text-indigo-200/60" />
-          <span className="text-sm font-medium text-indigo-900/70 dark:text-indigo-100/70 tracking-wide">
+          <Presentation className="h-3.5 w-3.5 text-indigo-800/60 dark:text-indigo-200/60" />
+          <span className="text-xs font-bold text-indigo-900/70 dark:text-indigo-100/70 tracking-wide tabular-nums">
             Slide {currentSlide + 1} of {totalSlides}
           </span>
         </div>
 
-        {/* Thumbnail strip */}
+        {/* Thumbnail strip — collapsible, not overlay in normal mode */}
         {totalSlides > 1 && (
-          <div className="flex gap-2 mt-4 overflow-x-auto max-w-full px-4 pb-2">
-            {presentation.slides.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => !isFlipping && loadedSlideIndexes.has(i) && setCurrentSlide(i)}
-                aria-label={`Go to slide ${i + 1}`}
-                className={`shrink-0 w-24 rounded border-2 transition-all overflow-hidden
-                  ${i === currentSlide
-                    ? "border-indigo-500 shadow-md scale-105"
-                    : "border-transparent opacity-60 hover:opacity-90 hover:border-gray-300"
-                  }`}
-              >
-                {loadedSlideIndexes.has(i) && renderedThumbnailIndexes.has(i) ? (
-                  <SlideRenderer
-                    slide={s}
-                    slideWidth={presentation.slideWidth}
-                    slideHeight={presentation.slideHeight}
-                  />
-                ) : (
-                  <div
-                    style={{ width: "100%", aspectRatio: `${presentation.slideWidth / presentation.slideHeight}` }}
-                    className="bg-slate-100 dark:bg-slate-800"
-                  />
-                )}
-              </button>
-            ))}
+          <div className="group mt-3 flex flex-col items-center w-full max-w-full">
+            <button
+              onClick={(e) => {
+                const el = e.currentTarget.nextElementSibling as HTMLElement | null;
+                if (el) el.classList.toggle("hidden");
+                e.currentTarget.querySelector("svg")?.classList.toggle("rotate-180");
+              }}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors"
+            >
+              <ChevronLeft className="w-3 h-3 rotate-90" />
+              Slides
+            </button>
+            <div className="flex gap-2 mt-2 overflow-x-auto max-w-full px-4 pb-2 justify-center">
+              {presentation.slides.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => !isFlipping && loadedSlideIndexes.has(i) && setCurrentSlide(i)}
+                  aria-label={`Go to slide ${i + 1}`}
+                  className={`shrink-0 w-20 sm:w-24 rounded border-2 transition-all overflow-hidden
+                    ${i === currentSlide
+                      ? "border-indigo-500 shadow-md scale-105"
+                      : "border-transparent opacity-60 hover:opacity-90 hover:border-gray-300"
+                    }`}
+                >
+                  {loadedSlideIndexes.has(i) && renderedThumbnailIndexes.has(i) ? (
+                    <SlideRenderer
+                      slide={s}
+                      slideWidth={presentation.slideWidth}
+                      slideHeight={presentation.slideHeight}
+                    />
+                  ) : (
+                    <div
+                      style={{ width: "100%", aspectRatio: `${presentation.slideWidth / presentation.slideHeight}` }}
+                      className="bg-slate-100 dark:bg-slate-800 animate-pulse"
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

@@ -316,36 +316,45 @@ export function SmartBoardZoomContainer({
               </button>
             )}
           </div>
-          {/* Toolbar — floating on right side, vertical */}
-          <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 p-1.5 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur shadow-xl border border-slate-200 dark:border-slate-700">
-            <button
-              onClick={zoomIn}
-              aria-label="Zoom in"
-              className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
-              title="Zoom in (+)"
-            >
-              <ZoomIn className="w-5 h-5" />
-            </button>
-            <span className="min-w-[3rem] text-center text-xs font-bold tabular-nums py-1">
-              {Math.round(scale * 100)}%
-            </span>
-            <button
-              onClick={zoomOut}
-              aria-label="Zoom out"
-              className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
-              title="Zoom out (-)"
-            >
-              <ZoomOut className="w-5 h-5" />
-            </button>
-            <div className="w-6 h-px bg-slate-200 dark:bg-slate-700 my-1" />
-            <button
-              onClick={reset}
-              aria-label="Reset zoom"
-              className="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 transition-colors"
-              title="Reset (0) / double-tap"
-            >
-              <Maximize2 className="w-5 h-5" />
-            </button>
+          {/* Toolbar — floating on right side, vertical, retractable bookmark */}
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20 flex items-center">
+            <div className="flex items-center translate-x-[calc(100%-18px)] hover:translate-x-0 focus-within:translate-x-0 transition-transform duration-200 ease-out">
+              {/* handle peek */}
+              <div className="w-[18px] h-14 rounded-l-lg bg-white dark:bg-slate-900 border border-r-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -mr-px cursor-pointer shrink-0">
+                <div className="w-1 h-5 rounded-full bg-amber-400" />
+                <ZoomIn className="w-2.5 h-2.5 text-slate-400" />
+              </div>
+              <div className="flex flex-col items-center gap-1.5 p-1.5 rounded-l-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur shadow-xl border border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={zoomIn}
+                  aria-label="Zoom in"
+                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
+                  title="Zoom in (+)"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+                <span className="min-w-[2.75rem] text-center text-[11px] font-bold tabular-nums py-0.5 bg-slate-50 dark:bg-slate-800 rounded-md">
+                  {Math.round(scale * 100)}%
+                </span>
+                <button
+                  onClick={zoomOut}
+                  aria-label="Zoom out"
+                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
+                  title="Zoom out (-)"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <div className="w-5 h-px bg-slate-200 dark:bg-slate-700 my-0.5" />
+                <button
+                  onClick={reset}
+                  aria-label="Reset zoom"
+                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 transition-colors"
+                  title="Reset (0) / double-tap"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
         </>
       ) : (

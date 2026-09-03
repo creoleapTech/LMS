@@ -503,7 +503,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                   )}
                 </div>
               ) : (
-                <SmartBoardZoomContainer className="relative shrink-0 flex items-center justify-center" disabled={isAnnotating && !!enableAnnotation} sideFloating>
+                <SmartBoardZoomContainer className="relative shrink-0 flex items-center justify-center" disabled={false} sideFloating>
                   <div
                     className="relative shrink-0"
                     style={{ width: bookSpreadW, height: dimensions.height }}
@@ -554,43 +554,107 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                 </SmartBoardZoomContainer>
               )
             ) : (
-              /* Normal mode — plain flipbook, no zoom / annotation UI */
-              <div
-                className="relative shrink-0 neo-card p-1 sm:p-2"
-                style={{ width: bookSpreadW, height: dimensions.height }}
-              >
-                <HTMLFlipBook
-                  key={flipbookKey}
-                  ref={flipBookRef}
-                  width={dimensions.width}
-                  height={dimensions.height}
-                  size="fixed"
-                  minWidth={80}
-                  maxWidth={2400}
-                  minHeight={100}
-                  maxHeight={3200}
-                  showCover={true}
-                  mobileScrollSupport={false}
-                  flippingTime={800}
-                  usePortrait={usePortrait}
-                  startZIndex={0}
-                  autoSize={false}
-                  maxShadowOpacity={0.5}
-                  drawShadow={true}
-                  onFlip={handleFlip}
-                  className="flipbook-pages"
-                  style={{}}
-                  startPage={currentPage}
-                  clickEventForward={false}
-                  useMouseEvents={true}
-                  swipeDistance={30}
-                  showPageCorners={true}
-                  disableFlipByClick={false}
-                >
-                  {pageImages.map((src, i) => (
-                    <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
-                  ))}
-                </HTMLFlipBook>
+              /* Normal mode — now with zoom + annotate always available, overlay bookmarks */
+              <div className="relative shrink-0 flex items-center justify-center">
+                {enableZoom === false ? (
+                  <div
+                    className="relative shrink-0 neo-card p-1 sm:p-2"
+                    style={{ width: bookSpreadW, height: dimensions.height }}
+                  >
+                    <HTMLFlipBook
+                      key={flipbookKey}
+                      ref={flipBookRef}
+                      width={dimensions.width}
+                      height={dimensions.height}
+                      size="fixed"
+                      minWidth={80}
+                      maxWidth={2400}
+                      minHeight={100}
+                      maxHeight={3200}
+                      showCover={true}
+                      mobileScrollSupport={false}
+                      flippingTime={800}
+                      usePortrait={usePortrait}
+                      startZIndex={0}
+                      autoSize={false}
+                      maxShadowOpacity={0.5}
+                      drawShadow={true}
+                      onFlip={handleFlip}
+                      className="flipbook-pages"
+                      style={{}}
+                      startPage={currentPage}
+                      clickEventForward={false}
+                      useMouseEvents={true}
+                      swipeDistance={30}
+                      showPageCorners={true}
+                      disableFlipByClick={false}
+                    >
+                      {pageImages.map((src, i) => (
+                        <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
+                      ))}
+                    </HTMLFlipBook>
+                    {enableAnnotation && isAnnotating && (
+                      <AnnotationCanvas
+                        pageKey={currentPage}
+                        enabled={isAnnotating}
+                        color={annoColor}
+                        strokeWidth={annoWidth}
+                        eraser={isEraser}
+                        ref={annoRef}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <SmartBoardZoomContainer className="relative shrink-0 flex items-center justify-center" disabled={false} sideFloating>
+                    <div
+                      className="relative shrink-0 neo-card p-1 sm:p-2"
+                      style={{ width: bookSpreadW, height: dimensions.height }}
+                    >
+                      <HTMLFlipBook
+                        key={flipbookKey}
+                        ref={flipBookRef}
+                        width={dimensions.width}
+                        height={dimensions.height}
+                        size="fixed"
+                        minWidth={80}
+                        maxWidth={2400}
+                        minHeight={100}
+                        maxHeight={3200}
+                        showCover={true}
+                        mobileScrollSupport={false}
+                        flippingTime={800}
+                        usePortrait={usePortrait}
+                        startZIndex={0}
+                        autoSize={false}
+                        maxShadowOpacity={0.5}
+                        drawShadow={true}
+                        onFlip={handleFlip}
+                        className="flipbook-pages"
+                        style={{}}
+                        startPage={currentPage}
+                        clickEventForward={false}
+                        useMouseEvents={true}
+                        swipeDistance={30}
+                        showPageCorners={true}
+                        disableFlipByClick={false}
+                      >
+                        {pageImages.map((src, i) => (
+                          <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
+                        ))}
+                      </HTMLFlipBook>
+                      {enableAnnotation && isAnnotating && (
+                        <AnnotationCanvas
+                          pageKey={currentPage}
+                          enabled={isAnnotating}
+                          color={annoColor}
+                          strokeWidth={annoWidth}
+                          eraser={isEraser}
+                          ref={annoRef}
+                        />
+                      )}
+                    </div>
+                  </SmartBoardZoomContainer>
+                )}
               </div>
             )}
 
@@ -609,30 +673,38 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
             </button>
           </div>
 
-          {/* Annotation toolbar — fullscreen only, floating left side (trainer only, cleared on page change) */}
-          {enableAnnotation && isFullscreen && (
-            <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-20 hidden sm:flex">
-              <AnnotationToolbar
-                enabled={isAnnotating}
-                onToggle={setIsAnnotating}
-                color={annoColor}
-                onColorChange={setAnnoColor}
-                strokeWidth={annoWidth}
-                onWidthChange={setAnnoWidth}
-                eraser={isEraser}
-                onEraserChange={setIsEraser}
-                onClear={handleClearAnno}
-              />
+          {/* Annotation toolbar — left bookmark, always available (trainer only), retractable */}
+          {enableAnnotation && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 z-30 hidden sm:flex items-center">
+              <div className="flex items-center translate-x-[calc(-100%+18px)] hover:translate-x-0 focus-within:translate-x-0 transition-transform duration-200 ease-out">
+                <div className="shrink-0 shadow-lg rounded-2xl">
+                  <AnnotationToolbar
+                    enabled={isAnnotating}
+                    onToggle={setIsAnnotating}
+                    color={annoColor}
+                    onColorChange={setAnnoColor}
+                    strokeWidth={annoWidth}
+                    onWidthChange={setAnnoWidth}
+                    eraser={isEraser}
+                    onEraserChange={setIsEraser}
+                    onClear={handleClearAnno}
+                  />
+                </div>
+                <div className="w-[18px] h-14 rounded-r-lg bg-white dark:bg-slate-900 border border-l-0 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center gap-0.5 -ml-px shrink-0 cursor-pointer">
+                  <div className="w-1 h-5 rounded-full bg-amber-400" />
+                  <span className="text-[7px] font-bold tracking-widest text-slate-400 [writing-mode:vertical-lr]">DRAW</span>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Page info */}
+          {/* Page info — overlay pill at bottom center */}
           <div
-            className={`flex items-center justify-center gap-3 mt-3 px-6 py-2 rounded-full shrink-0
-                       ${isFullscreen ? "bg-white/10 border border-white/20" : "neo-inset-sm"}`}
+            className={`absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur shadow-md border
+                       ${isFullscreen ? "bg-white/15 border-white/20 text-white" : "bg-white/90 dark:bg-slate-900/90 border-slate-200/60 text-slate-700 dark:text-slate-200"}`}
           >
-            <BookOpen className={`h-4 w-4 ${isFullscreen ? "text-white/70" : "text-indigo-500/60"}`} />
-            <span className={`text-sm font-semibold tracking-wide ${isFullscreen ? "text-white/80" : "text-slate-600"}`}>
+            <BookOpen className={`h-3.5 w-3.5 ${isFullscreen ? "text-white/70" : "text-indigo-500/60"}`} />
+            <span className="text-xs font-bold tracking-wide tabular-nums">
               Page {currentPage + 1} of {totalPages}
             </span>
           </div>
