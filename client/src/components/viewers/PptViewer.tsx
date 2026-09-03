@@ -280,6 +280,8 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
       const onChange = () => {
         const fs = !!document.fullscreenElement;
         setIsFullscreen(fs);
+        // Annotation UI lives in fullscreen only — reset when exiting
+        if (!fs) { setIsAnnotating(false); setIsEraser(false); }
         onFullscreenChange?.(fs);
       };
       document.addEventListener("fullscreenchange", onChange);
@@ -559,57 +561,20 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
           </button>
 
           <div className="relative overflow-visible w-full max-w-4xl">
-            {enableZoom === false ? (
-              <div
-                className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
-                            border border-gray-200/60 dark:border-slate-700/60 overflow-hidden"
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                <div className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
-                  <SlideRenderer
-                    slide={slide}
-                    slideWidth={presentation.slideWidth}
-                    slideHeight={presentation.slideHeight}
-                  />
-                </div>
-                {enableAnnotation && isAnnotating && (
-                  <AnnotationCanvas
-                    pageKey={currentSlide}
-                    enabled={isAnnotating}
-                    color={annoColor}
-                    strokeWidth={annoWidth}
-                    eraser={isEraser}
-                    ref={annoRef}
-                  />
-                )}
+            {/* Normal mode — plain slide, NO zoom & NO annotation UI (fullscreen only per spec) */}
+            <div
+              className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
+                          border border-gray-200/60 dark:border-slate-700/60 overflow-hidden"
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              <div className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
+                <SlideRenderer
+                  slide={slide}
+                  slideWidth={presentation.slideWidth}
+                  slideHeight={presentation.slideHeight}
+                />
               </div>
-            ) : (
-              <SmartBoardZoomContainer className="w-full" disabled={isAnnotating && !!enableAnnotation}>
-                <div
-                  className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
-                              border border-gray-200/60 dark:border-slate-700/60 overflow-hidden"
-                  onContextMenu={(e) => e.preventDefault()}
-                >
-                  <div className={`${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}>
-                    <SlideRenderer
-                      slide={slide}
-                      slideWidth={presentation.slideWidth}
-                      slideHeight={presentation.slideHeight}
-                    />
-                  </div>
-                  {enableAnnotation && isAnnotating && (
-                    <AnnotationCanvas
-                      pageKey={currentSlide}
-                      enabled={isAnnotating}
-                      color={annoColor}
-                      strokeWidth={annoWidth}
-                      eraser={isEraser}
-                      ref={annoRef}
-                    />
-                  )}
-                </div>
-              </SmartBoardZoomContainer>
-            )}
+            </div>
           </div>
 
           <button
@@ -625,23 +590,6 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
             <ChevronRight className="h-6 w-6 md:h-7 md:w-7 group-hover:translate-x-0.5 transition-transform" />
           </button>
         </div>
-
-        {/* Annotation toolbar — trainer only, cleared on slide change via pageKey */}
-        {enableAnnotation && (
-          <div className="mt-3 w-full flex justify-center px-4">
-            <AnnotationToolbar
-              enabled={isAnnotating}
-              onToggle={setIsAnnotating}
-              color={annoColor}
-              onColorChange={setAnnoColor}
-              strokeWidth={annoWidth}
-              onWidthChange={setAnnoWidth}
-              eraser={isEraser}
-              onEraserChange={setIsEraser}
-              onClear={handleClearAnno}
-            />
-          </div>
-        )}
 
         {/* Slide info */}
         <div className="flex items-center justify-center gap-3 mt-4 px-6 py-2.5 rounded-full

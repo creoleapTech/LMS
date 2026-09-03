@@ -234,10 +234,16 @@ export function SmartBoardZoomContainer({
 
   if (disabled) return <>{children}</>;
 
-  // outerClass merges caller-provided className. Viewport is the zoomable area;
-  // hint + toolbar are rendered *below* the viewport so they never cover the slide / logo.
+  // outerClass merges caller-provided className. With sideFloating, controls are
+  // absolutely positioned so outer keeps the caller's layout (w-full h-full) and the
+  // viewport fills it. Without sideFloating, controls flow below the viewport, so the
+  // viewport must size from its content (NO h-full — h-full inside an auto-height
+  // parent collapses to 0 and hides the slide).
+  const isFullHeight = !!className?.includes("h-full");
   const outerClass = ["relative", className].filter(Boolean).join(" ");
-  const viewportClass = "relative overflow-hidden w-full h-full flex items-center justify-center";
+  const viewportClass = isFullHeight
+    ? "relative overflow-hidden w-full h-full flex items-center justify-center"
+    : "relative overflow-hidden w-full flex items-center justify-center";
 
   return (
     <div
@@ -270,7 +276,7 @@ export function SmartBoardZoomContainer({
         }}
       >
         <div
-          className="w-full h-full flex items-center justify-center will-change-transform"
+          className={`${isFullHeight ? "w-full h-full" : "w-full"} flex items-center justify-center will-change-transform`}
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             transformOrigin: "center center",

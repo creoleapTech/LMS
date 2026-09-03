@@ -173,6 +173,8 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
       const handler = () => {
         const fs = !!document.fullscreenElement;
         setIsFullscreen(fs);
+        // Annotation UI lives in fullscreen only — reset when exiting
+        if (!fs) { setIsAnnotating(false); setIsEraser(false); }
         onFullscreenChange?.(fs);
 
         // After the transition the DOM needs a frame to settle before we
@@ -449,60 +451,12 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
               <ChevronLeft className={`group-hover:-translate-x-0.5 transition-transform ${isFullscreen ? "h-7 w-7" : "h-5 w-5"}`} />
             </button>
 
-            {/* Flipbook — smart-board zoom: pinch/wheel/stylus pan, toolbar
-                When enableZoom===false (preview), render without zoom for clean preview — also in fullscreen per latest spec (no zoom in fullscreen). */}
-            {enableZoom === false ? (
-              <div
-                className={`relative shrink-0 ${isFullscreen ? "" : "neo-card p-1 sm:p-2"}`}
-                style={{ width: bookSpreadW, height: dimensions.height }}
-              >
-                <HTMLFlipBook
-                  key={flipbookKey}
-                  ref={flipBookRef}
-                  width={dimensions.width}
-                  height={dimensions.height}
-                  size="fixed"
-                  minWidth={80}
-                  maxWidth={2400}
-                  minHeight={100}
-                  maxHeight={3200}
-                  showCover={true}
-                  mobileScrollSupport={false}
-                  flippingTime={800}
-                  usePortrait={usePortrait}
-                  startZIndex={0}
-                  autoSize={false}
-                  maxShadowOpacity={0.5}
-                  drawShadow={true}
-                  onFlip={handleFlip}
-                  className="flipbook-pages"
-                  style={{}}
-                  startPage={currentPage}
-                  clickEventForward={false}
-                  useMouseEvents={true}
-                  swipeDistance={30}
-                  showPageCorners={true}
-                  disableFlipByClick={false}
-                >
-                  {pageImages.map((src, i) => (
-                    <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
-                  ))}
-                </HTMLFlipBook>
-                {enableAnnotation && isAnnotating && (
-                  <AnnotationCanvas
-                    pageKey={currentPage}
-                    enabled={isAnnotating}
-                    color={annoColor}
-                    strokeWidth={annoWidth}
-                    eraser={isEraser}
-                    ref={annoRef}
-                  />
-                )}
-              </div>
-            ) : (
-              <SmartBoardZoomContainer className="relative shrink-0 flex items-center justify-center" disabled={isAnnotating && !!enableAnnotation} sideFloating={isFullscreen}>
+            {/* Flipbook — zoom (SmartBoardZoom, side-floating) and annotation are
+                FULLSCREEN-ONLY per spec. Normal mode renders the plain flipbook. */}
+            {isFullscreen ? (
+              enableZoom === false ? (
                 <div
-                  className={`relative shrink-0 ${isFullscreen ? "" : "neo-card p-1 sm:p-2"}`}
+                  className="relative shrink-0"
                   style={{ width: bookSpreadW, height: dimensions.height }}
                 >
                   <HTMLFlipBook
@@ -548,7 +502,96 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                     />
                   )}
                 </div>
-              </SmartBoardZoomContainer>
+              ) : (
+                <SmartBoardZoomContainer className="relative shrink-0 flex items-center justify-center" disabled={isAnnotating && !!enableAnnotation} sideFloating>
+                  <div
+                    className="relative shrink-0"
+                    style={{ width: bookSpreadW, height: dimensions.height }}
+                  >
+                    <HTMLFlipBook
+                      key={flipbookKey}
+                      ref={flipBookRef}
+                      width={dimensions.width}
+                      height={dimensions.height}
+                      size="fixed"
+                      minWidth={80}
+                      maxWidth={2400}
+                      minHeight={100}
+                      maxHeight={3200}
+                      showCover={true}
+                      mobileScrollSupport={false}
+                      flippingTime={800}
+                      usePortrait={usePortrait}
+                      startZIndex={0}
+                      autoSize={false}
+                      maxShadowOpacity={0.5}
+                      drawShadow={true}
+                      onFlip={handleFlip}
+                      className="flipbook-pages"
+                      style={{}}
+                      startPage={currentPage}
+                      clickEventForward={false}
+                      useMouseEvents={true}
+                      swipeDistance={30}
+                      showPageCorners={true}
+                      disableFlipByClick={false}
+                    >
+                      {pageImages.map((src, i) => (
+                        <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
+                      ))}
+                    </HTMLFlipBook>
+                    {enableAnnotation && isAnnotating && (
+                      <AnnotationCanvas
+                        pageKey={currentPage}
+                        enabled={isAnnotating}
+                        color={annoColor}
+                        strokeWidth={annoWidth}
+                        eraser={isEraser}
+                        ref={annoRef}
+                      />
+                    )}
+                  </div>
+                </SmartBoardZoomContainer>
+              )
+            ) : (
+              /* Normal mode — plain flipbook, no zoom / annotation UI */
+              <div
+                className="relative shrink-0 neo-card p-1 sm:p-2"
+                style={{ width: bookSpreadW, height: dimensions.height }}
+              >
+                <HTMLFlipBook
+                  key={flipbookKey}
+                  ref={flipBookRef}
+                  width={dimensions.width}
+                  height={dimensions.height}
+                  size="fixed"
+                  minWidth={80}
+                  maxWidth={2400}
+                  minHeight={100}
+                  maxHeight={3200}
+                  showCover={true}
+                  mobileScrollSupport={false}
+                  flippingTime={800}
+                  usePortrait={usePortrait}
+                  startZIndex={0}
+                  autoSize={false}
+                  maxShadowOpacity={0.5}
+                  drawShadow={true}
+                  onFlip={handleFlip}
+                  className="flipbook-pages"
+                  style={{}}
+                  startPage={currentPage}
+                  clickEventForward={false}
+                  useMouseEvents={true}
+                  swipeDistance={30}
+                  showPageCorners={true}
+                  disableFlipByClick={false}
+                >
+                  {pageImages.map((src, i) => (
+                    <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
+                  ))}
+                </HTMLFlipBook>
+              </div>
             )}
 
             {/* Next */}
@@ -566,9 +609,9 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
             </button>
           </div>
 
-          {/* Annotation toolbar — trainer only, cleared on page change */}
-          {enableAnnotation && (
-            <div className={isFullscreen ? "absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-20 hidden sm:flex" : "mt-3 w-full flex justify-center px-2"}>
+          {/* Annotation toolbar — fullscreen only, floating left side (trainer only, cleared on page change) */}
+          {enableAnnotation && isFullscreen && (
+            <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-20 hidden sm:flex">
               <AnnotationToolbar
                 enabled={isAnnotating}
                 onToggle={setIsAnnotating}
