@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ZoomIn, ZoomOut, Maximize2, Move } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, Move, X, Info } from "lucide-react";
 
 const MIN_ZOOM = 0.6;
 const MAX_ZOOM = 4;
@@ -23,6 +23,11 @@ function dist(a: { x: number; y: number }, b: { x: number; y: number }) {
  * - Large touch targets (≥44px) for interactive whiteboards
  * - touch-action:none prevents browser zoom/scroll interference on boards
  *
+ * UX fix (2025-09): Hint and toolbar are now rendered **outside** the slide
+ * viewport (below the slide) so they never cover the CREOLEAP logo or slide
+ * content when zoomed. Hint auto-hides after 4s / first interaction and can be
+ * reopened via a small help button. Toolbar is compact on narrow/split screens.
+ *
  * Logs to console as [zoom] and beacons to /api/admin/training-log as kind=zoom for tail:
  *   wrangler tail | grep "\[zoom\]"
  */
@@ -37,13 +42,44 @@ export function SmartBoardZoomContainer({
 }) {
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   // pointer tracking for pinch/pan
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchStart = useRef<{ dist: number; scale: number } | null>(null);
   const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const lastTap = useRef<number>(0);
+
+  // Hint visibility — outside the slide so it never covers content.
+  // Auto-hides after 4s and after first zoom interaction; persisted per browser.
+  const [hintVisible, setHintVisible] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return localStorage.getItem("sbz-hint-dismissed") !== "1";
+    } catch {
+      return true;
+    }
+  });
+
+  const dismissHint = useCallback(() => {
+    setHintVisible(false);
+    try {
+      localStorage.setItem("sbz-hint-dismissed", "1");
+    } catch {}
+  }, []);
+
+  const showHintAgain = useCallback(() => {
+    setHintVisible(true);
+    try {
+      localStorage.removeItem("sbz-hint-dismissed");
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!hintVisible) return;
+    const t = setTimeout(() => setHintVisible(false), 4000);
+    return () => clearTimeout(t);
+  }, [hintVisible]);
 
   const logZoom = useCallback((action: string, extra?: Record<string, unknown>) => {
     const payload = { kind: "zoom", action, scale, pan, ts: new Date().toISOString(), ...extra };
@@ -67,16 +103,20 @@ export function SmartBoardZoomContainer({
     if (center) {
       // keep pinch center stable (basic)
     }
+    // First interaction dismisses the hint (user has understood)
+    if (clamped !== 1) setHintVisible(false);
     return clamped;
   }, []);
 
   const zoomIn = useCallback(() => {
     const n = setScaleClamped(scale + ZOOM_STEP);
     logZoom("zoom_in", { nextScale: n });
+    setHintVisible(false);
   }, [scale, setScaleClamped, logZoom]);
   const zoomOut = useCallback(() => {
     const n = setScaleClamped(scale - ZOOM_STEP);
     logZoom("zoom_out", { nextScale: n });
+    setHintVisible(false);
   }, [scale, setScaleClamped, logZoom]);
   const reset = useCallback(() => {
     setScale(1);
@@ -96,6 +136,7 @@ export function SmartBoardZoomContainer({
       setScale(next);
       if (next === 1) setPan({ x: 0, y: 0 });
       logZoom("wheel", { deltaY: e.deltaY, nextScale: next });
+      if (next !== 1) setHintVisible(false);
     }
   }, [disabled, scale, logZoom]);
 
@@ -112,6 +153,7 @@ export function SmartBoardZoomContainer({
       pinchStart.current = { dist: dist(pts[0], pts[1]), scale };
       panStart.current = null;
       logZoom("pinch_start", { dist: pinchStart.current.dist });
+      setHintVisible(false);
     } else if (pointers.current.size === 1 && scale > 1) {
       // single-pointer pan when zoomed — works for finger, mouse drag, or stylus pen
       panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
@@ -127,6 +169,7 @@ export function SmartBoardZoomContainer({
         if (next === 1) setPan({ x: 0, y: 0 });
         logZoom("double_tap", { nextScale: next, pointerType: e.pointerType });
         lastTap.current = 0;
+        setHintVisible(false);
       } else {
         lastTap.current = now;
       }
@@ -188,33 +231,49 @@ export function SmartBoardZoomContainer({
 
   if (disabled) return <>{children}</>;
 
-  // When not zoomed, pan is 0; when zoomed, translate via pan
+  // outerClass merges caller-provided className (e.g. "w-full", "w-full h-full flex items-center justify-center")
+  // with our flex-col layout when the container is full-height (fullscreen). The viewport
+  // (overflow-hidden) holds the transformed child; hint + toolbar are rendered *below*
+  // the viewport so they never cover the slide / logo.
+  const isFullHeight = !!className?.includes("h-full");
+  const outerClass = [isFullHeight ? "flex flex-col" : "flex flex-col", "relative", className].filter(Boolean).join(" ");
+  // Use flex-1 only when outer has a defined height (fullscreen), otherwise let viewport size naturally
+  const viewportClass = isFullHeight
+    ? "relative overflow-hidden w-full flex-1 min-h-0 flex items-center justify-center"
+    : "relative overflow-hidden w-full flex items-center justify-center";
+
   return (
     <div
-      ref={containerRef}
-      className={className}
-      onWheel={onWheel}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      onDoubleClick={() => {
-        // fallback for mouse double-click if pointer double-tap missed
-        const next = scale > 1.5 ? 1 : 2;
-        setScale(next);
-        if (next === 1) setPan({ x: 0, y: 0 });
-        logZoom("double_click", { nextScale: next });
-      }}
+      className={outerClass}
       style={{
-        touchAction: "none", // critical for smart boards — prevents browser handling of pinch
-        WebkitUserSelect: "none",
-        userSelect: "none",
+        // outer should not intercept toolbar clicks; viewport handles zoom gestures
       }}
     >
       {/* Zoom viewport — overflow hidden, content is transformed */}
-      <div className="relative overflow-hidden w-full h-full">
+      <div
+        ref={viewportRef}
+        className={viewportClass}
+        onWheel={onWheel}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onDoubleClick={() => {
+          // fallback for mouse double-click if pointer double-tap missed
+          const next = scale > 1.5 ? 1 : 2;
+          setScale(next);
+          if (next === 1) setPan({ x: 0, y: 0 });
+          logZoom("double_click", { nextScale: next });
+          setHintVisible(false);
+        }}
+        style={{
+          touchAction: "none", // critical for smart boards — prevents browser handling of pinch
+          WebkitUserSelect: "none",
+          userSelect: "none",
+        }}
+      >
         <div
-          className="w-full h-full will-change-transform"
+          className="w-full h-full flex items-center justify-center will-change-transform"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             transformOrigin: "center center",
@@ -225,52 +284,73 @@ export function SmartBoardZoomContainer({
         </div>
       </div>
 
-      {/* Floating toolbar — large targets for stylus/finger on board */}
-      <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 p-1.5 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur shadow-lg border border-slate-200 dark:border-slate-700">
-        <button
-          onClick={zoomOut}
-          aria-label="Zoom out"
-          className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
-          title="Zoom out (-)"
-        >
-          <ZoomOut className="w-5 h-5" />
-        </button>
-        <span className="min-w-[3.5rem] text-center text-sm font-bold tabular-nums">
-          {Math.round(scale * 100)}%
-        </span>
-        <button
-          onClick={zoomIn}
-          aria-label="Zoom in"
-          className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
-          title="Zoom in (+)"
-        >
-          <ZoomIn className="w-5 h-5" />
-        </button>
-        <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
-        <button
-          onClick={reset}
-          aria-label="Reset zoom"
-          className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 transition-colors"
-          title="Reset (0) / double-tap"
-        >
-          <Maximize2 className="w-5 h-5" />
-        </button>
-        {scale > 1 && (
-          <span className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground ml-1">
-            <Move className="w-3 h-3" /> drag to pan
-          </span>
+      {/* Controls bar — rendered outside the viewport so it never covers slide content.
+          On narrow/split screens this sits below the slide and is compact. */}
+      <div className="shrink-0 flex flex-col items-center gap-1.5 mt-2 w-full max-w-full">
+        {/* Hint — auto-hides after 4s or first interaction; can be reopened */}
+        {hintVisible ? (
+          <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-white/90 dark:bg-slate-800/90 px-2.5 sm:px-3 py-1 rounded-full shadow-sm border border-slate-200 dark:border-slate-700 backdrop-blur max-w-[min(100%,28rem)]">
+            <span className="hidden sm:inline">Pinch to zoom</span>
+            <span className="sm:hidden">Pinch zoom</span>
+            <span className="opacity-30">•</span>
+            <span>Drag to pan</span>
+            <span className="opacity-30">•</span>
+            <span>Double-tap to reset</span>
+            <span className="opacity-30 hidden lg:inline">•</span>
+            <span className="hidden lg:inline">Stylus supported</span>
+            <button
+              onClick={dismissHint}
+              aria-label="Dismiss zoom help"
+              className="ml-1 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={showHintAgain}
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-white/70 dark:bg-slate-800/70 px-2.5 py-1 rounded-full border border-dashed border-slate-300 dark:border-slate-600 hover:border-slate-400 transition-colors"
+          >
+            <Info className="w-3 h-3" /> Zoom help
+          </button>
         )}
-      </div>
 
-      {/* Hint for smart board */}
-      <div className="absolute top-3 left-3 z-20 hidden md:flex items-center gap-2 text-[11px] font-medium text-slate-500 bg-white/80 dark:bg-slate-900/70 px-2.5 py-1 rounded-full backdrop-blur">
-        <span>Pinch to zoom</span>
-        <span className="opacity-30">•</span>
-        <span>Drag to pan</span>
-        <span className="opacity-30">•</span>
-        <span>Double-tap to reset</span>
-        <span className="opacity-30">•</span>
-        <span className="hidden lg:inline">Stylus supported</span>
+        {/* Toolbar — compact on narrow/split screens, does not overlay slide */}
+        <div className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur shadow-lg border border-slate-200 dark:border-slate-700">
+          <button
+            onClick={zoomOut}
+            aria-label="Zoom out"
+            className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
+            title="Zoom out (-)"
+          >
+            <ZoomOut className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+          <span className="min-w-[2.5rem] sm:min-w-[3.5rem] text-center text-xs sm:text-sm font-bold tabular-nums">
+            {Math.round(scale * 100)}%
+          </span>
+          <button
+            onClick={zoomIn}
+            aria-label="Zoom in"
+            className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
+            title="Zoom in (+)"
+          >
+            <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+          <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block" />
+          <button
+            onClick={reset}
+            aria-label="Reset zoom"
+            className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 transition-colors"
+            title="Reset (0) / double-tap"
+          >
+            <Maximize2 className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+          {scale > 1 && (
+            <span className="hidden lg:flex items-center gap-1 text-xs text-muted-foreground ml-1">
+              <Move className="w-3 h-3" /> drag to pan
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
