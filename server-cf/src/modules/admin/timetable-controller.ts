@@ -2017,16 +2017,18 @@ async function buildMonthlyReportData(
       // Collect chapter and content names from structured entries for this entry
       const entryTopicRows = entry.__omitTopicsCovered ? [] : topicsRows.filter((r: any) => r.timetableEntryId === entry.id);
       const entryTopics = entryTopicRows.map((r: any) => r.topic);
-      const chapterLabels = new Set<string>();
+      const parentTitleSet = new Set<string>();
       const subtopicLabels: string[] = [];
       for (const tr of entryTopicRows) {
         if (tr.chapterId) {
           const ch = chapterMap.get(tr.chapterId);
-          if (ch) chapterLabels.add(`Chapter ${ch.chapterNumber ?? ""}: ${ch.title}`);
+          if (ch && ch.title) parentTitleSet.add(ch.title);
         }
         if (tr.contentId) {
           const ct = contentMap.get(tr.contentId);
           const ch = ct ? chapterMap.get(ct.chapterId) : null;
+          // Ensure parent is collected even when only contentId is selected (2.1 implies parent 2)
+          if (ch && ch.title) parentTitleSet.add(ch.title);
           const chNum = ch?.chapterNumber;
           if (ct) {
             const subtopicNum = `${chNum != null ? chNum + "." : ""}${ct.order != null ? ct.order : ""}`;
@@ -2048,10 +2050,14 @@ async function buildMonthlyReportData(
         .filter((r: any) => r.contentId)
         .map((r: any) => r.topic);
 
-      // Chapter Name = chapter(s) selected by the teacher in work done
+      // Chapter Name = "Book - Parent Chapter" (parent = chapters.title)
+      // e.g. Book "AI and STEM Robotics", selected 2.1,2.2 under parent "Introduction to Sensors"
+      //      => "AI and STEM Robotics - Introduction to Sensors"
+      // Topics (subtopics) remain child chapterContents: "2.1 - ..., 2.2 - ..."
       // For legacy/free-text-only entries, fall back to the grade-book (subject) title
       const chapterName = hasStructuredTopics
-        ? [...chapterLabels].join(", ") || rawChapterTopics.join(", ")
+        ? [...parentTitleSet].map((t) => (bookTitle ? `${bookTitle} - ${t}` : t)).join(", ") ||
+          rawChapterTopics.map((t) => (bookTitle ? `${bookTitle} - ${t}` : t)).join(", ")
         : bookTitle;
 
       // Topic Name = subtopic(s) selected by the teacher under the chapters
