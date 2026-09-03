@@ -317,9 +317,12 @@ export function SmartBoardZoomContainer({
               </button>
             )}
           </div>
-          {/* Toolbar — floating on right side, vertical, retractable bookmark — click to toggle */}
+          {/* Toolbar — floating on right side, vertical, retractable bookmark — click to toggle, collapsed by default */}
           <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20 flex items-center">
-            <div className={`flex items-center transition-transform duration-200 ease-out ${zoomBarOpen ? "translate-x-0" : "translate-x-[calc(100%-18px)]"}`}>
+            <div
+              className="flex items-center transition-transform duration-200 ease-out"
+              style={{ transform: zoomBarOpen ? "translateX(0)" : "translateX(calc(100% - 18px))" }}
+            >
               {/* handle — click to toggle */}
               <button
                 onClick={() => setZoomBarOpen((o) => !o)}

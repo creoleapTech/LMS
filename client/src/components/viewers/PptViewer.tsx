@@ -437,7 +437,10 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
             {/* Annotation toolbar — left side bookmark, retractable (trainer only) — click to toggle, goes directly to toolbox — does NOT clear on retract */}
             {enableAnnotation && (
               <div className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex items-center">
-                <div className={`flex items-center transition-transform duration-200 ease-out ${annoBarOpen ? "translate-x-0" : "translate-x-[calc(-100%+18px)]"}`}>
+                <div
+                  className="flex items-center transition-transform duration-200 ease-out"
+                  style={{ transform: annoBarOpen ? "translateX(0)" : "translateX(calc(-100% + 18px))" }}
+                >
                   <div className="shrink-0">
                     <AnnotationToolbar
                       enabled={true}
@@ -473,7 +476,10 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
           </div>
           {/* Thumbnail strip + bottom bar — overlay, click to toggle (fullscreen only) */}
           <div className="absolute bottom-0 left-0 right-0 z-30 flex justify-center pointer-events-none">
-            <div className={`w-full max-w-full pointer-events-auto transition-transform duration-200 ease-out flex flex-col items-center ${bottomBarOpen ? "translate-y-0" : "translate-y-[calc(100%-14px)]"}`}>
+            <div
+              className="w-full max-w-full pointer-events-auto transition-transform duration-200 ease-out flex flex-col items-center"
+              style={{ transform: bottomBarOpen ? "translateY(0)" : "translateY(calc(100% - 14px))" }}
+            >
               {/* handle — click to toggle */}
               <button
                 onClick={() => setBottomBarOpen((o) => !o)}
