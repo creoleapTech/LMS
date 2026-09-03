@@ -1,5 +1,5 @@
-import { PenTool, Eraser, Trash2, Palette, Minus, Plus, X, Pencil, Highlighter } from "lucide-react";
-import { useState } from "react";
+import { PenTool, Eraser, Trash2, Palette, Minus, Plus, X, Pencil, Check } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 
 const COLORS = ["#ff1a1a", "#0f172a", "#2563eb", "#16a34a", "#eab308", "#ffffff"];
 const WIDTHS = [2, 4, 6, 10];
@@ -33,74 +33,89 @@ export function AnnotationToolbar({
   compact,
 }: AnnotationToolbarProps) {
   const [showPalette, setShowPalette] = useState(false);
+  const paletteRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showPalette) return;
+    const onDown = (e: MouseEvent) => {
+      if (paletteRef.current && !paletteRef.current.contains(e.target as Node)) setShowPalette(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [showPalette]);
 
   if (!enabled) {
     return (
       <button
         onClick={() => onToggle(true)}
-        className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-semibold shadow-md border border-amber-600 transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#f59e0b] hover:bg-[#d97706] text-white text-[13px] font-bold shadow-[0_2px_10px_rgba(245,158,11,0.35)] border border-[#d97706] transition-all active:scale-[0.98]"
         title="Enable annotation"
       >
-        <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        <Pencil className="w-3.5 h-3.5" />
         Annotate
       </button>
     );
   }
 
-  // vertical toolbar — floating left side, hidden on mobile by parent (hidden sm:flex)
   return (
     <div
-      className={`flex flex-col items-stretch gap-3 p-2.5 rounded-[22px] bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/70 dark:border-slate-700/60 shadow-[0_18px_45px_rgba(0,0,0,0.18),0_4px_14px_rgba(0,0,0,0.10)] w-[76px] sm:w-[82px] max-h-[min(88vh,560px)] overflow-y-auto overflow-x-hidden scrollbar-thin
-        ${compact ? "scale-[0.92] sm:scale-100 origin-top" : ""}`}
-      style={{ scrollbarWidth: "thin" }}
+      className={`relative flex flex-col items-stretch rounded-[18px] bg-white border border-slate-200 shadow-[0_8px_32px_rgba(0,0,0,0.14),0_1px_3px_rgba(0,0,0,0.08)] overflow-visible
+        ${compact ? "scale-[0.92] origin-top" : ""}`}
+      style={{ width: 72 }}
     >
-      {/* header / annotate label */}
-      <div className="flex items-center justify-center gap-1.5 pt-1">
-        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-          <Highlighter className="w-3 h-3" />
-          <span className="text-[9px] font-extrabold tracking-[0.14em] uppercase leading-none">Draw</span>
+      {/* subtle inner highlight */}
+      <div className="pointer-events-none absolute inset-0 rounded-[18px] ring-1 ring-white/60" />
+
+      {/* Header — DRAW pill */}
+      <div className="flex items-center justify-center pt-2.5 pb-2">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#fff7ed] border border-[#fed7aa] text-[#c2410c]">
+          <Pencil className="w-3 h-3" />
+          <span className="text-[11px] font-extrabold tracking-[0.08em] leading-none">DRAW</span>
         </span>
       </div>
 
-      {/* Pen / Eraser — vertical segmented control */}
-      <div className="flex flex-col gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/40">
-        <button
-          onClick={() => onEraserChange(false)}
-          className={`relative w-full h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-semibold transition-all ${
-            !eraser
-              ? "bg-white dark:bg-slate-700 shadow-[0_2px_10px_rgba(0,0,0,0.09)] text-indigo-600 dark:text-indigo-300 ring-1 ring-indigo-200/60 dark:ring-slate-600"
-              : "text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-700/40"
-          }`}
-          title="Pen"
-          aria-label="Pen"
-          aria-pressed={!eraser}
-        >
-          <PenTool className="w-[18px] h-[18px]" />
-          <span className="leading-none tracking-wide">Pen</span>
-        </button>
-        <button
-          onClick={() => onEraserChange(true)}
-          className={`relative w-full h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-semibold transition-all ${
-            eraser
-              ? "bg-white dark:bg-slate-700 shadow-[0_2px_10px_rgba(0,0,0,0.09)] text-indigo-600 dark:text-indigo-300 ring-1 ring-indigo-200/60 dark:ring-slate-600"
-              : "text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-700/40"
-          }`}
-          title="Eraser — noticeably larger"
-          aria-label="Eraser"
-          aria-pressed={eraser}
-        >
-          <Eraser className="w-[18px] h-[18px]" />
-          <span className="leading-none tracking-wide">Erase</span>
-          {eraser && <span className="absolute -right-1 -top-1 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-white dark:ring-slate-800 animate-pulse" />}
-        </button>
+      {/* Pen / Eraser */}
+      <div className="px-2 pb-2.5">
+        <div className="flex flex-col gap-1 p-1 rounded-[14px] bg-[#f8fafc] border border-slate-200/70">
+          <button
+            onClick={() => onEraserChange(false)}
+            className={`flex flex-col items-center justify-center gap-1 rounded-[11px] h-[52px] w-full text-[11px] font-bold leading-none tracking-wide transition-all ${
+              !eraser
+                ? "bg-[#111827] text-white shadow-[0_2px_8px_rgba(17,24,39,0.22)]"
+                : "text-slate-500 hover:text-slate-700 hover:bg-white"
+            }`}
+            title="Pen"
+            aria-pressed={!eraser}
+          >
+            <PenTool className={`w-[18px] h-[18px] ${!eraser ? "text-white" : "text-slate-500"}`} strokeWidth={2.1} />
+            Pen
+          </button>
+          <button
+            onClick={() => onEraserChange(true)}
+            className={`flex flex-col items-center justify-center gap-1 rounded-[11px] h-[52px] w-full text-[11px] font-bold leading-none tracking-wide transition-all ${
+              eraser
+                ? "bg-[#111827] text-white shadow-[0_2px_8px_rgba(17,24,39,0.22)]"
+                : "text-slate-500 hover:text-slate-700 hover:bg-white"
+            }`}
+            title="Eraser — noticeably larger"
+            aria-pressed={eraser}
+          >
+            <Eraser className={`w-[18px] h-[18px] ${eraser ? "text-white" : "text-slate-500"}`} strokeWidth={2.1} />
+            Erase
+          </button>
+        </div>
       </div>
 
-      {/* Colors — vertical grid */}
-      <div className="flex flex-col items-center gap-2 px-1">
-        <span className="text-[9px] font-bold tracking-[0.16em] uppercase text-slate-400 dark:text-slate-500">Colour</span>
-        <div className="grid grid-cols-2 gap-2">
+      <div className="h-px bg-slate-100 mx-3" />
+
+      {/* Colours */}
+      <div className="px-2.5 pt-3 pb-2.5 flex flex-col items-center gap-2.5">
+        <span className="text-[10px] font-extrabold tracking-[0.14em] text-slate-400">COLOUR</span>
+
+        <div className="grid grid-cols-2 gap-[9px]">
           {COLORS.map((c) => {
-            const active = color === c && !eraser;
+            const isActive = color.toLowerCase() === c.toLowerCase() && !eraser;
+            const isWhite = c === "#ffffff";
             return (
               <button
                 key={c}
@@ -108,147 +123,182 @@ export function AnnotationToolbar({
                   onColorChange(c);
                   onEraserChange(false);
                 }}
-                className={`relative w-[28px] h-[28px] rounded-full border-[2.5px] flex items-center justify-center transition-all duration-150 ${
-                  active
-                    ? "border-indigo-600 dark:border-indigo-400 scale-[1.08] shadow-[0_2px_10px_rgba(79,70,229,0.35)] ring-2 ring-indigo-200 dark:ring-indigo-900"
-                    : "border-white dark:border-slate-600 shadow-sm hover:scale-105 hover:shadow-md"
-                }`}
-                style={{ backgroundColor: c }}
-                title={c}
+                className="relative w-[26px] h-[26px] rounded-full flex items-center justify-center transition-all duration-150 hover:scale-[1.06] active:scale-[0.96]"
                 aria-label={`Color ${c}`}
+                title={c}
               >
-                {active && <span className="absolute inset-0 rounded-full ring-1 ring-white/70 pointer-events-none" />}
-                {c === "#ffffff" && (
-                  <span className="w-3 h-3 rounded-full border border-slate-300 bg-white shadow-inner" />
+                {/* outer ring for active */}
+                <span
+                  className={`absolute inset-0 rounded-full transition-all ${
+                    isActive ? "ring-2 ring-[#111827] ring-offset-2 ring-offset-white" : "ring-1 ring-black/5"
+                  }`}
+                />
+                <span
+                  className={`absolute inset-[2px] rounded-full border-2 transition-all ${
+                    isWhite
+                      ? isActive
+                        ? "border-slate-900 bg-white shadow-inner"
+                        : "border-slate-300 bg-white shadow-sm"
+                      : isActive
+                        ? "border-white shadow-[0_1px_6px_rgba(0,0,0,0.18)]"
+                        : "border-white shadow-[0_1px_4px_rgba(0,0,0,0.14)]"
+                  }`}
+                  style={{ backgroundColor: isWhite ? "#ffffff" : c }}
+                />
+                {isActive && (
+                  <Check
+                    className={`relative w-3.5 h-3.5 drop-shadow-sm ${
+                      isWhite || c === "#eab308" ? "text-slate-900" : "text-white"
+                    }`}
+                    strokeWidth={3.2}
+                  />
                 )}
               </button>
             );
           })}
         </div>
-        <button
-          onClick={() => setShowPalette((v) => !v)}
-          className={`w-full h-7 rounded-full border border-dashed flex items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
-            showPalette
-              ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-300"
-              : "border-slate-300 dark:border-slate-600 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-slate-800"
-          }`}
-          title="More colours"
-        >
-          <Palette className="w-3 h-3" />
-          {showPalette ? "Less" : "More"}
-        </button>
 
-        {showPalette && (
-          <div className="w-full flex flex-col gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/40 animate-in fade-in slide-in-from-top-1">
-            <label className="flex items-center gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-400">
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => {
-                  onColorChange(e.target.value);
-                  onEraserChange(false);
-                }}
-                className="w-8 h-8 rounded-lg cursor-pointer p-0 border-2 border-white dark:border-slate-700 shadow-sm shrink-0"
-                title="Custom colour"
-              />
-              Custom
-            </label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {COLORS.map((c) => (
-                <button
-                  key={c + "-2"}
-                  onClick={() => {
-                    onColorChange(c);
-                    onEraserChange(false);
-                  }}
-                  className="w-7 h-7 rounded-full border-2 border-white dark:border-slate-700 shadow hover:scale-105 transition-transform"
-                  style={{ backgroundColor: c }}
-                  title={c}
-                />
-              ))}
+        {/* More — popover trigger */}
+        <div className="relative w-full flex justify-center" ref={paletteRef}>
+          <button
+            onClick={() => setShowPalette((v) => !v)}
+            className={`inline-flex items-center justify-center gap-1 w-full h-[26px] rounded-full border text-[11px] font-bold transition-colors ${
+              showPalette
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-slate-50 hover:bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300"
+            }`}
+            title="More colours"
+          >
+            <Palette className="w-3 h-3" />
+            More
+          </button>
+
+          {showPalette && (
+            <div className="absolute left-[74px] top-1/2 -translate-y-1/2 ml-2 z-50 w-[148px] p-3 rounded-2xl bg-white border border-slate-200 shadow-[0_12px_32px_rgba(0,0,0,0.16)] flex flex-col gap-3 animate-in fade-in zoom-in-95">
+              <div className="flex items-center gap-2.5">
+                <div className="relative w-9 h-9 rounded-xl overflow-hidden border-2 border-slate-200 shadow-sm shrink-0">
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={(e) => {
+                      onColorChange(e.target.value);
+                      onEraserChange(false);
+                    }}
+                    className="absolute -inset-2 w-[150%] h-[150%] p-0 border-0 cursor-pointer"
+                    title="Custom colour"
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-bold text-slate-900 leading-none">Custom</span>
+                  <span className="text-[10px] font-mono text-slate-500 leading-none mt-1">{color}</span>
+                </div>
+              </div>
+              <div className="h-px bg-slate-100" />
+              <div className="grid grid-cols-4 gap-2">
+                {["#ff1a1a", "#f97316", "#eab308", "#16a34a", "#06b6d4", "#2563eb", "#7c3aed", "#ec4899", "#0f172a", "#64748b", "#a16207", "#ffffff"].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => {
+                      onColorChange(c);
+                      onEraserChange(false);
+                      setShowPalette(false);
+                    }}
+                    className={`w-7 h-7 rounded-full border-2 shadow-sm hover:scale-110 transition-transform ${color.toLowerCase() === c.toLowerCase() ? "border-slate-900 scale-110" : "border-white"}`}
+                    style={{ backgroundColor: c, boxShadow: c === "#ffffff" ? "inset 0 0 0 1px #cbd5e1" : undefined }}
+                    aria-label={c}
+                  />
+                ))}
+              </div>
+              {/* arrow */}
+              <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-white border-l border-b border-slate-200 rotate-45" />
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* divider */}
-      <div className="h-px w-full bg-slate-200/70 dark:bg-slate-700/50" />
+      <div className="h-px bg-slate-100 mx-3" />
 
-      {/* Stroke width — vertical control with preview */}
-      <div className="flex flex-col items-center gap-2 p-2 rounded-2xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/40 dark:border-slate-700/30">
-        <span className="text-[9px] font-bold tracking-[0.14em] uppercase text-slate-500 dark:text-slate-400">
-          {eraser ? "Eraser" : "Size"}
-        </span>
+      {/* Size */}
+      <div className="px-2.5 pt-3 pb-3 flex flex-col items-center gap-2.5">
+        <span className="text-[10px] font-extrabold tracking-[0.14em] text-slate-400">{eraser ? "ERASER" : "SIZE"}</span>
 
-        {/* live preview dot */}
-        <div className="w-full flex items-center justify-center h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700/50 shadow-inner">
-          <span
-            className="rounded-full transition-all duration-150 shrink-0"
+        {/* preview well */}
+        <div className="w-full h-[42px] rounded-[13px] bg-[#f8fafc] border border-slate-200 flex items-center justify-center relative overflow-hidden">
+          {/* faint grid */}
+          <div
+            className="absolute inset-0 opacity-[0.04]"
             style={{
-              width: Math.min(28, Math.max(4, eraser ? Math.max(18, Math.min(28, strokeWidth * 1.35 + 10)) : strokeWidth * 1.7 + 4)),
-              height: Math.min(28, Math.max(4, eraser ? Math.max(18, Math.min(28, strokeWidth * 1.35 + 10)) : strokeWidth * 1.7 + 4)),
-              backgroundColor: eraser ? "rgba(15,23,42,0.12)" : color,
-              border: eraser ? "1.5px solid rgba(15,23,42,0.28)" : `1.5px solid ${color === "#ffffff" ? "rgba(148,163,184,0.5)" : "transparent"}`,
-              boxShadow: eraser ? "inset 0 0 0 1px rgba(255,255,255,0.9)" : "none",
+              backgroundImage: "radial-gradient(circle at 1px 1px, #0f172a 1px, transparent 0)",
+              backgroundSize: "10px 10px",
             }}
           />
+          <span
+            className="relative rounded-full transition-all duration-200 shadow-sm"
+            style={{
+              width: eraser ? Math.max(22, Math.min(30, Math.max(34, strokeWidth * 6) * 0.52)) : Math.min(30, Math.max(5, strokeWidth * 1.45 + 5)),
+              height: eraser ? Math.max(22, Math.min(30, Math.max(34, strokeWidth * 6) * 0.52)) : Math.min(30, Math.max(5, strokeWidth * 1.45 + 5)),
+              backgroundColor: eraser ? "#e2e8f0" : color,
+              border: eraser ? "1.5px dashed #94a3b8" : color.toLowerCase() === "#ffffff" ? "1.5px solid #cbd5e1" : "1.5px solid rgba(255,255,255,0.0)",
+              boxShadow: eraser ? "inset 0 1px 2px rgba(255,255,255,0.9)" : "0 1px 3px rgba(0,0,0,0.14)",
+            }}
+          />
+          {eraser && (
+            <span className="absolute bottom-1 text-[9px] font-bold tracking-wide text-slate-500 bg-white/90 px-1.5 py-0.5 rounded-full border border-slate-200 leading-none">
+              {Math.max(34, strokeWidth * 6)}px
+            </span>
+          )}
         </div>
 
-        <div className="flex flex-col items-center gap-1 w-full">
-          <button
-            onClick={() => onWidthChange(Math.min(20, WIDTHS[WIDTHS.indexOf(strokeWidth) + 1] ?? strokeWidth + 1))}
-            className="w-full h-8 flex items-center justify-center rounded-xl bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 shadow-sm hover:shadow transition-all text-slate-700 dark:text-slate-200 hover:text-indigo-600"
-            aria-label="Thicker"
-            title="Thicker"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-extrabold tabular-nums text-slate-700 dark:text-slate-200 min-h-[18px] flex items-center">
-            {strokeWidth}
-            <span className="ml-0.5 text-[10px] font-semibold text-slate-400">px</span>
-          </span>
+        {/* - value + row */}
+        <div className="flex items-center gap-1.5 w-full justify-between">
           <button
             onClick={() => onWidthChange(Math.max(1, WIDTHS[WIDTHS.indexOf(strokeWidth) - 1] ?? strokeWidth - 1))}
-            className="w-full h-8 flex items-center justify-center rounded-xl bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 shadow-sm hover:shadow transition-all text-slate-700 dark:text-slate-200 hover:text-indigo-600"
+            className="w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 hover:border-slate-300 hover:shadow transition-all active:scale-95 text-slate-700 shrink-0"
             aria-label="Thinner"
             title="Thinner"
           >
-            <Minus className="w-4 h-4" />
+            <Minus className="w-3.5 h-3.5" strokeWidth={2.4} />
+          </button>
+
+          <span className="flex-1 flex items-center justify-center gap-0.5 text-[12px] font-extrabold tabular-nums text-slate-800">
+            {strokeWidth}
+            <span className="text-[10px] font-bold text-slate-400 -mt-px">px</span>
+          </span>
+
+          <button
+            onClick={() => onWidthChange(Math.min(20, WIDTHS[WIDTHS.indexOf(strokeWidth) + 1] ?? strokeWidth + 1))}
+            className="w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 hover:border-slate-300 hover:shadow transition-all active:scale-95 text-slate-700 shrink-0"
+            aria-label="Thicker"
+            title="Thicker"
+          >
+            <Plus className="w-3.5 h-3.5" strokeWidth={2.4} />
           </button>
         </div>
-
-        {eraser && (
-          <span className="text-[10px] leading-tight text-center font-medium text-slate-500 dark:text-slate-400 px-1">
-            ~{Math.max(34, strokeWidth * 6)}px
-          </span>
-        )}
       </div>
 
-      {/* Actions — vertical stack at bottom */}
-      <div className="flex flex-col gap-2 mt-auto">
+      <div className="h-px bg-slate-100 mx-3" />
+
+      {/* Bottom actions — compact icon + label, not clipped */}
+      <div className="px-2 pt-2.5 pb-2.5 flex flex-col gap-1.5">
         <button
           onClick={onClear}
-          className="w-full h-10 flex flex-col items-center justify-center gap-0.5 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/30 text-red-600 dark:text-red-300 border border-red-200/80 dark:border-red-900/40 shadow-sm hover:shadow transition-all"
+          className="w-full h-[36px] rounded-[12px] bg-[#fff1f2] hover:bg-[#ffe4e6] border border-[#fecdd3] text-[#e11d48] flex items-center justify-center gap-1.5 text-[12px] font-bold transition-colors active:scale-[0.98]"
           title="Clear all annotations on this page"
-          aria-label="Clear"
         >
-          <Trash2 className="w-4 h-4" />
-          <span className="text-[10px] font-bold leading-none tracking-wide">Clear</span>
+          <Trash2 className="w-3.5 h-3.5" strokeWidth={2.2} />
+          Clear
         </button>
-
-        <div className="h-px w-full bg-slate-200/60 dark:bg-slate-700/40" />
 
         <button
           onClick={() => {
             onToggle(false);
             onClose?.();
           }}
-          className="w-full h-10 flex flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-900 hover:bg-black text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 shadow-[0_4px_14px_rgba(0,0,0,0.18)] transition-all"
+          className="w-full h-[36px] rounded-[12px] bg-[#0f172a] hover:bg-black text-white flex items-center justify-center gap-1.5 text-[12px] font-bold shadow-[0_2px_10px_rgba(15,23,42,0.18)] transition-colors active:scale-[0.98]"
           title="Exit annotation"
-          aria-label="Exit"
         >
-          <X className="w-4 h-4" />
-          <span className="text-[10px] font-bold leading-none tracking-wide">Exit</span>
+          <X className="w-3.5 h-3.5" strokeWidth={2.4} />
+          Exit
         </button>
       </div>
     </div>
