@@ -12,6 +12,8 @@ import { SlideRenderer } from "./SlideRenderer";
 import { PdfFlipBook } from "./PdfFlipBook";
 import { buildWatermarkDataUrl } from "../../lib/watermarkUtils";
 import { SmartBoardZoomContainer } from "./SmartBoardZoom";
+import { AnnotationCanvas, type AnnotationCanvasHandle } from "./AnnotationCanvas";
+import { AnnotationToolbar } from "./AnnotationToolbar";
 import {
   Loader2,
   ChevronLeft,
@@ -33,11 +35,13 @@ interface PptViewerProps {
   onFullscreenChange?: (fs: boolean) => void;
   initialPage?: number;
   watermarkText?: string;
+  /** When true, trainer annotation UI is shown */
+  enableAnnotation?: boolean;
 }
 
 export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
   function LegacyPptViewer(
-    { storageKey, title: _title, onPageChange, onFullscreenChange, initialPage, watermarkText },
+    { storageKey, title: _title, onPageChange, onFullscreenChange, initialPage, watermarkText, enableAnnotation },
     ref,
   ) {
     const [presentation, setPresentation]   = useState<PresentationData | null>(null);
@@ -61,6 +65,14 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
       () => (watermarkText ? buildWatermarkDataUrl(watermarkText) : null),
       [watermarkText],
     );
+
+    /* ─── Annotation (trainer only) — cleared on page change via pageKey ─── */
+    const [isAnnotating, setIsAnnotating] = useState(false);
+    const [annoColor, setAnnoColor] = useState("#ff1a1a");
+    const [annoWidth, setAnnoWidth] = useState(3);
+    const [isEraser, setIsEraser] = useState(false);
+    const annoRef = useRef<AnnotationCanvasHandle>(null);
+    const handleClearAnno = useCallback(() => annoRef.current?.clear(), []);
 
     /* ─── Expose handle ─── */
     const toggleFullscreen = useCallback(() => {
@@ -377,20 +389,47 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
           </div>
 
           {/* Slide area — fills screen — zoom enabled for smart boards + stylus */}
-          <div className="flex-1 flex items-center justify-center min-h-0 px-4 md:px-16 py-4 md:py-10">
-            <SmartBoardZoomContainer className="w-full h-full flex items-center justify-center">
-              <div
-                className={`relative w-full max-h-full ${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}
-                style={{ aspectRatio: `${presentation.slideWidth} / ${presentation.slideHeight}`, maxWidth: "100%", maxHeight: "100%" }}
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                <SlideRenderer
-                  slide={slide}
-                  slideWidth={presentation.slideWidth}
-                  slideHeight={presentation.slideHeight}
+          <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 md:px-16 py-4 md:py-6 gap-3 overflow-hidden">
+            <div className="flex-1 flex items-center justify-center min-h-0 w-full">
+              <SmartBoardZoomContainer className="w-full h-full flex items-center justify-center" disabled={isAnnotating && !!enableAnnotation}>
+                <div
+                  className={`relative w-full max-h-full ${isFlipping && flipDirection === "right" ? "animate-slide-next" : ""} ${isFlipping && flipDirection === "left" ? "animate-slide-prev" : ""}`}
+                  style={{ aspectRatio: `${presentation.slideWidth} / ${presentation.slideHeight}`, maxWidth: "100%", maxHeight: "100%" }}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  <SlideRenderer
+                    slide={slide}
+                    slideWidth={presentation.slideWidth}
+                    slideHeight={presentation.slideHeight}
+                  />
+                  {enableAnnotation && isAnnotating && (
+                    <AnnotationCanvas
+                      pageKey={currentSlide}
+                      enabled={isAnnotating}
+                      color={annoColor}
+                      strokeWidth={annoWidth}
+                      eraser={isEraser}
+                      ref={annoRef}
+                    />
+                  )}
+                </div>
+              </SmartBoardZoomContainer>
+            </div>
+            {enableAnnotation && (
+              <div className="shrink-0">
+                <AnnotationToolbar
+                  enabled={isAnnotating}
+                  onToggle={setIsAnnotating}
+                  color={annoColor}
+                  onColorChange={setAnnoColor}
+                  strokeWidth={annoWidth}
+                  onWidthChange={setAnnoWidth}
+                  eraser={isEraser}
+                  onEraserChange={setIsEraser}
+                  onClear={handleClearAnno}
                 />
               </div>
-            </SmartBoardZoomContainer>
+            )}
           </div>
 
           {/* Bottom bar: prev · slide info · next */}
@@ -462,7 +501,7 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
           </button>
 
           <div className="relative overflow-visible w-full max-w-4xl">
-            <SmartBoardZoomContainer className="w-full">
+            <SmartBoardZoomContainer className="w-full" disabled={isAnnotating && !!enableAnnotation}>
               <div
                 className="relative bg-white dark:bg-slate-900 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.12)]
                             border border-gray-200/60 dark:border-slate-700/60 overflow-hidden"
@@ -475,6 +514,16 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
                     slideHeight={presentation.slideHeight}
                   />
                 </div>
+                {enableAnnotation && isAnnotating && (
+                  <AnnotationCanvas
+                    pageKey={currentSlide}
+                    enabled={isAnnotating}
+                    color={annoColor}
+                    strokeWidth={annoWidth}
+                    eraser={isEraser}
+                    ref={annoRef}
+                  />
+                )}
               </div>
             </SmartBoardZoomContainer>
           </div>
@@ -492,6 +541,23 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
             <ChevronRight className="h-6 w-6 md:h-7 md:w-7 group-hover:translate-x-0.5 transition-transform" />
           </button>
         </div>
+
+        {/* Annotation toolbar — trainer only, cleared on slide change via pageKey */}
+        {enableAnnotation && (
+          <div className="mt-3 w-full flex justify-center px-4">
+            <AnnotationToolbar
+              enabled={isAnnotating}
+              onToggle={setIsAnnotating}
+              color={annoColor}
+              onColorChange={setAnnoColor}
+              strokeWidth={annoWidth}
+              onWidthChange={setAnnoWidth}
+              eraser={isEraser}
+              onEraserChange={setIsEraser}
+              onClear={handleClearAnno}
+            />
+          </div>
+        )}
 
         {/* Slide info */}
         <div className="flex items-center justify-center gap-3 mt-4 px-6 py-2.5 rounded-full
@@ -541,7 +607,7 @@ LegacyPptViewer.displayName = "LegacyPptViewer";
 
 export const PptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
   function PptViewer(
-    { storageKey, title, onPageChange, onFullscreenChange, initialPage, watermarkText },
+    { storageKey, title, onPageChange, onFullscreenChange, initialPage, watermarkText, enableAnnotation },
     ref,
   ) {
     const [useLegacyRenderer, setUseLegacyRenderer] = useState(true);
@@ -557,6 +623,7 @@ export const PptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
           onPageChange={onPageChange}
           onFullscreenChange={onFullscreenChange}
           watermarkText={watermarkText}
+          enableAnnotation={enableAnnotation}
         />
       );
     }
@@ -570,6 +637,7 @@ export const PptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
         onFullscreenChange={onFullscreenChange}
         onLoadError={() => setUseLegacyRenderer(true)}
         watermarkText={watermarkText}
+        enableAnnotation={enableAnnotation}
       />
     );
   }

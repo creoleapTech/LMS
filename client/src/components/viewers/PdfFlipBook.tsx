@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { buildWatermarkDataUrl } from "../../lib/watermarkUtils";
 import { SmartBoardZoomContainer } from "./SmartBoardZoom";
+import { AnnotationCanvas, type AnnotationCanvasHandle } from "./AnnotationCanvas";
+import { AnnotationToolbar } from "./AnnotationToolbar";
 // Ensure Uint8Array.toHex / toBase64 & other modern APIs exist before pdfjs loads
 import "../../lib/polyfills";
 
@@ -27,6 +29,7 @@ interface PdfFlipBookProps {
   onFullscreenChange?: (fs: boolean) => void;
   onLoadError?: (error: unknown) => void;
   watermarkText?: string;
+  enableAnnotation?: boolean;
 }
 
 /* ─── Single page wrapper ─── */
@@ -55,7 +58,7 @@ Page.displayName = "Page";
 /* ─── Main Component ─── */
 export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
   function PdfFlipBook(
-    { fileUrl, initialPage, onPageChange, onFullscreenChange, onLoadError, watermarkText },
+    { fileUrl, initialPage, onPageChange, onFullscreenChange, onLoadError, watermarkText, enableAnnotation },
     ref,
   ) {
     const [pageImages, setPageImages]         = useState<string[]>([]);
@@ -81,6 +84,14 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
       () => (watermarkText ? buildWatermarkDataUrl(watermarkText) : null),
       [watermarkText],
     );
+
+    /* ─── Annotation (trainer only) — cleared on page change via pageKey ─── */
+    const [isAnnotating, setIsAnnotating] = useState(false);
+    const [annoColor, setAnnoColor] = useState("#ff1a1a");
+    const [annoWidth, setAnnoWidth] = useState(3);
+    const [isEraser, setIsEraser] = useState(false);
+    const annoRef = useRef<AnnotationCanvasHandle>(null);
+    const handleClearAnno = useCallback(() => annoRef.current?.clear(), []);
 
     /* ─── Expose handle ─── */
     const toggleFullscreen = useCallback(() => {
@@ -438,7 +449,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
             </button>
 
             {/* Flipbook — smart-board zoom: pinch/wheel/stylus pan, toolbar */}
-            <SmartBoardZoomContainer className="relative shrink-0 flex items-center justify-center">
+            <SmartBoardZoomContainer className="relative shrink-0 flex items-center justify-center" disabled={isAnnotating && !!enableAnnotation}>
               <div
                 className={`relative shrink-0 ${isFullscreen ? "" : "neo-card p-1 sm:p-2"}`}
                 style={{ width: bookSpreadW, height: dimensions.height }}
@@ -475,6 +486,16 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                     <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
                   ))}
                 </HTMLFlipBook>
+                {enableAnnotation && isAnnotating && (
+                  <AnnotationCanvas
+                    pageKey={currentPage}
+                    enabled={isAnnotating}
+                    color={annoColor}
+                    strokeWidth={annoWidth}
+                    eraser={isEraser}
+                    ref={annoRef}
+                  />
+                )}
               </div>
             </SmartBoardZoomContainer>
 
@@ -492,6 +513,23 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
               <ChevronRight className={`group-hover:translate-x-0.5 transition-transform ${isFullscreen ? "h-7 w-7" : "h-5 w-5"}`} />
             </button>
           </div>
+
+          {/* Annotation toolbar — trainer only, cleared on page change */}
+          {enableAnnotation && (
+            <div className="mt-3 w-full flex justify-center px-2">
+              <AnnotationToolbar
+                enabled={isAnnotating}
+                onToggle={setIsAnnotating}
+                color={annoColor}
+                onColorChange={setAnnoColor}
+                strokeWidth={annoWidth}
+                onWidthChange={setAnnoWidth}
+                eraser={isEraser}
+                onEraserChange={setIsEraser}
+                onClear={handleClearAnno}
+              />
+            </div>
+          )}
 
           {/* Page info */}
           <div

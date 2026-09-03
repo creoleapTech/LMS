@@ -132,6 +132,8 @@ export function ContentViewer({
 
   const { user } = useAuthStore();
   const isTeacherOrSuperAdmin = user?.role === "super_admin" || user?.role === "teacher";
+  // Annotation is trainer-only: available in teach mode to any non-student role, cleared on next page/slide via pageKey
+  const canAnnotate = !isViewMode && user?.role !== "student" && user?.role !== undefined;
 
   // Video: set initial time from progress
   useEffect(() => {
@@ -308,6 +310,7 @@ export function ContentViewer({
                 initialPage={contentProgress?.pdfPage}
                 onPageChange={handlePdfPageChange}
                 onFullscreenChange={setPdfIsFullscreen}
+                enableAnnotation={canAnnotate}
               />
             </ContentProtectionWrapper>
           </div>
@@ -325,6 +328,7 @@ export function ContentViewer({
                 initialPage={contentProgress?.pdfPage}
                 onPageChange={handlePptSlideChange}
                 onFullscreenChange={setPptIsFullscreen}
+                enableAnnotation={canAnnotate}
               />
             </ContentProtectionWrapper>
           </div>
