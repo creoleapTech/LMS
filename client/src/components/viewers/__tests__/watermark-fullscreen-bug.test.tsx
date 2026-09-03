@@ -40,6 +40,21 @@ vi.mock("pdfjs-dist", () => ({
   }),
 }));
 
+vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
+  GlobalWorkerOptions: { workerSrc: "" },
+  getDocument: () => ({
+    promise: Promise.resolve({
+      numPages: 1,
+      getPage: () =>
+        Promise.resolve({
+          getViewport: () => ({ width: 800, height: 1131 }),
+          render: () => ({ promise: Promise.resolve() }),
+          cleanup: () => {},
+        }),
+    }),
+  }),
+}));
+
 // react-pageflip renders a complex canvas-based flipbook — stub it out
 vi.mock("react-pageflip", () => ({
   default: React.forwardRef((_props: any, _ref: any) => (

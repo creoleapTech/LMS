@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { buildWatermarkDataUrl } from "../../lib/watermarkUtils";
 import { SmartBoardZoomContainer } from "./SmartBoardZoom";
+// Ensure Uint8Array.toHex / toBase64 & other modern APIs exist before pdfjs loads
+import "../../lib/polyfills";
 
 export interface PdfFlipBookHandle {
   toggleFullscreen: () => void;
@@ -131,6 +133,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
       if (isFullscreen) return;
       const el = bookAreaRef.current;
       if (!el || !totalPages) return;
+      if (typeof ResizeObserver === "undefined") return;
 
       const ro = new ResizeObserver((entries) => {
         const { width, height } = entries[0].contentRect;
@@ -143,6 +146,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
     /* ─── Window resize — fullscreen mode only ─── */
     useEffect(() => {
       if (!isFullscreen || !totalPages) return;
+      if (typeof window === "undefined") return;
       const recalc = () =>
         calcFromRect(window.innerWidth, window.innerHeight, aspectRatio, true);
       recalc();
@@ -151,7 +155,9 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
     }, [isFullscreen, totalPages, aspectRatio, calcFromRect]);
 
     /* ─── Fullscreen change ─── */
+    const flipbookKeyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
+      if (typeof document === "undefined") return;
       const handler = () => {
         const fs = !!document.fullscreenElement;
         setIsFullscreen(fs);
@@ -159,13 +165,23 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
 
         // After the transition the DOM needs a frame to settle before we
         // remount react-pageflip with the new dimensions.
-        setTimeout(() => setFlipbookKey((k) => k + 1), 120);
+        if (flipbookKeyTimeoutRef.current) clearTimeout(flipbookKeyTimeoutRef.current);
+        flipbookKeyTimeoutRef.current = setTimeout(() => setFlipbookKey((k) => k + 1), 120);
       };
       document.addEventListener("fullscreenchange", handler);
-      return () => document.removeEventListener("fullscreenchange", handler);
+      return () => {
+        document.removeEventListener("fullscreenchange", handler);
+        if (flipbookKeyTimeoutRef.current) clearTimeout(flipbookKeyTimeoutRef.current);
+      };
     }, [onFullscreenChange]);
 
-    /* ─── Load PDF ─── */
+    /* ─── Load PDF ───
+       Uses the legacy pdfjs-dist build which bundles core-js polyfills for
+       Uint8Array.toHex / toBase64, Promise.withResolvers, Set.intersection etc.
+       Without this, older Android WebViews / Chrome <129 throw
+         "Failed to load PDF: n.toHex is not a function"
+       at the fingerprint stage (pdf.worker). See src/lib/polyfills.ts.
+    ───────────────────────────────────────────────────────────────────── */
     useEffect(() => {
       let cancelled = false;
       async function loadAndRender() {
@@ -174,13 +190,67 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
           setError(null);
           setRenderProgress(0);
 
-          const pdfjsLib = await import("pdfjs-dist");
-          pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-            "pdfjs-dist/build/pdf.worker.min.mjs",
-            import.meta.url,
-          ).toString();
+          // Runtime safety-net: the static import of ../../lib/polyfills should
+          // already have patched the main thread, but this guards against
+          // test mocks / HMR edge cases where the file wasn't evaluated first.
+          if (
+            typeof Uint8Array !== "undefined" &&
+            !(Uint8Array.prototype as unknown as { toHex?: unknown }).toHex
+          ) {
+            Object.defineProperty(Uint8Array.prototype, "toHex", {
+              value: function (this: Uint8Array): string {
+                let out = "";
+                for (let i = 0; i < this.length; i++) {
+                  const hex = this[i].toString(16);
+                  out += hex.length === 1 ? "0" + hex : hex;
+                }
+                return out;
+              },
+              writable: true,
+              configurable: true,
+            });
+          }
 
-          const doc = await pdfjsLib.getDocument(fileUrl).promise;
+          // Use the legacy build which ships with core-js polyfills so the
+          // *worker* also has toHex / toBase64 even on older browsers.
+          // Falls back to the modern entry if the legacy path is not resolvable
+          // (e.g. in unit tests where only "pdfjs-dist" is mocked).
+          let pdfjsLib: any;
+          try {
+            pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+          } catch {
+            pdfjsLib = await import("pdfjs-dist");
+          }
+          try {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+              "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+              import.meta.url,
+            ).toString();
+          } catch {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+              "pdfjs-dist/build/pdf.worker.min.mjs",
+              import.meta.url,
+            ).toString();
+          }
+
+          let doc;
+          try {
+            doc = await pdfjsLib.getDocument(fileUrl).promise;
+          } catch (workerErr: unknown) {
+            const msg = String((workerErr as { message?: string })?.message ?? workerErr ?? "");
+            const isPolyfillOrWorkerErr =
+              msg.includes("toHex") ||
+              msg.includes("toBase64") ||
+              msg.includes("withResolvers") ||
+              msg.includes("intersection") ||
+              msg.includes("getOrInsertComputed");
+            if (isPolyfillOrWorkerErr) {
+              console.warn("[PdfFlipBook] Worker failed (likely missing browser API), retrying without worker:", workerErr);
+              doc = await pdfjsLib.getDocument({ url: fileUrl, disableWorker: true } as unknown as string).promise;
+            } else {
+              throw workerErr;
+            }
+          }
           if (cancelled) return;
 
           const numPages = doc.numPages;

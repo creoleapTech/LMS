@@ -52,6 +52,23 @@ vi.mock("pdfjs-dist", () => ({
   }),
 }));
 
+// PdfFlipBook now tries pdfjs-dist/legacy/build/pdf.mjs first (polyfilled worker)
+// – mock it the same way so tests don't load the real 2 MB worker in jsdom.
+vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
+  GlobalWorkerOptions: { workerSrc: "" },
+  getDocument: () => ({
+    promise: Promise.resolve({
+      numPages: 1,
+      getPage: () =>
+        Promise.resolve({
+          getViewport: () => ({ width: 800, height: 1131 }),
+          render: () => ({ promise: Promise.resolve() }),
+          cleanup: () => {},
+        }),
+    }),
+  }),
+}));
+
 vi.mock("react-pageflip", () => ({
   default: React.forwardRef((_props: any, _ref: any) => (
     <div data-testid="flipbook-stub" />
