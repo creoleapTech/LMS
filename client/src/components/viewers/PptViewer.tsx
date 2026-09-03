@@ -423,7 +423,7 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
                   </div>
                 </SmartBoardZoomContainer>
               )}
-              {enableAnnotation && isAnnotating && (
+              {enableAnnotation && (
                 <AnnotationCanvas
                   pageKey={currentSlide}
                   enabled={isAnnotating}
@@ -434,7 +434,7 @@ export const LegacyPptViewer = forwardRef<PptViewerHandle, PptViewerProps>(
                 />
               )}
             </div>
-            {/* Annotation toolbar — left side bookmark, retractable (trainer only) — click to toggle, goes directly to toolbox */}
+            {/* Annotation toolbar — left side bookmark, retractable (trainer only) — click to toggle, goes directly to toolbox — does NOT clear on retract */}
             {enableAnnotation && (
               <div className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex items-center">
                 <div className={`flex items-center transition-transform duration-200 ease-out ${annoBarOpen ? "translate-x-0" : "translate-x-[calc(-100%+18px)]"}`}>

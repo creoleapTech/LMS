@@ -492,7 +492,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                       <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
                     ))}
                   </HTMLFlipBook>
-                  {enableAnnotation && isAnnotating && (
+                  {enableAnnotation && (
                     <AnnotationCanvas
                       pageKey={currentPage}
                       enabled={isAnnotating}
@@ -542,7 +542,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                       ))}
                     </HTMLFlipBook>
                   </SmartBoardZoomContainer>
-                  {enableAnnotation && isAnnotating && (
+                  {enableAnnotation && (
                     <AnnotationCanvas
                       pageKey={currentPage}
                       enabled={isAnnotating}
