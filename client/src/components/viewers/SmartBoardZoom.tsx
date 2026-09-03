@@ -35,10 +35,13 @@ export function SmartBoardZoomContainer({
   children,
   disabled,
   className,
+  sideFloating = false,
 }: {
   children: React.ReactNode;
   disabled?: boolean;
   className?: string;
+  /** When true, hint + toolbar are floating overlays on the sides (for fullscreen) */
+  sideFloating?: boolean;
 }) {
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -231,16 +234,14 @@ export function SmartBoardZoomContainer({
 
   if (disabled) return <>{children}</>;
 
-  // outerClass merges caller-provided className (e.g. "w-full", "w-full h-full flex items-center justify-center")
-  // with our flex-col layout when the container is full-height (fullscreen). The viewport
-  // (overflow-hidden) holds the transformed child; hint + toolbar are rendered *below*
-  // the viewport so they never cover the slide / logo.
+  // outerClass merges caller-provided className. Viewport is the zoomable area;
+  // hint + toolbar are rendered *below* the viewport so they never cover the slide / logo.
+  // For fullscreen (h-full) the outer is flex-col with viewport flex-1 to fill height.
   const isFullHeight = !!className?.includes("h-full");
-  const outerClass = [isFullHeight ? "flex flex-col" : "flex flex-col", "relative", className].filter(Boolean).join(" ");
-  // Use flex-1 only when outer has a defined height (fullscreen), otherwise let viewport size naturally
+  const outerClass = [isFullHeight ? "flex flex-col" : "", "relative", className].filter(Boolean).join(" ");
   const viewportClass = isFullHeight
     ? "relative overflow-hidden w-full flex-1 min-h-0 flex items-center justify-center"
-    : "relative overflow-hidden w-full flex items-center justify-center";
+    : "relative overflow-hidden w-full h-full flex items-center justify-center";
 
   return (
     <div
@@ -284,74 +285,135 @@ export function SmartBoardZoomContainer({
         </div>
       </div>
 
-      {/* Controls bar — rendered outside the viewport so it never covers slide content.
-          On narrow/split screens this sits below the slide and is compact. */}
-      <div className="shrink-0 flex flex-col items-center gap-1.5 mt-2 w-full max-w-full">
-        {/* Hint — auto-hides after 4s or first interaction; can be reopened */}
-        {hintVisible ? (
-          <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-white/90 dark:bg-slate-800/90 px-2.5 sm:px-3 py-1 rounded-full shadow-sm border border-slate-200 dark:border-slate-700 backdrop-blur max-w-[min(100%,28rem)]">
-            <span className="hidden sm:inline">Pinch to zoom</span>
-            <span className="sm:hidden">Pinch zoom</span>
-            <span className="opacity-30">•</span>
-            <span>Drag to pan</span>
-            <span className="opacity-30">•</span>
-            <span>Double-tap to reset</span>
-            <span className="opacity-30 hidden lg:inline">•</span>
-            <span className="hidden lg:inline">Stylus supported</span>
+      {/* Controls bar */}
+      {sideFloating ? (
+        <>
+          {/* Hint — floating top center for fullscreen, auto-hides */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 pointer-events-auto">
+            {hintVisible ? (
+              <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] font-medium text-slate-700 dark:text-slate-200 bg-white/95 dark:bg-slate-800/95 px-3 py-1 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 backdrop-blur">
+                <span>Pinch to zoom</span>
+                <span className="opacity-30">•</span>
+                <span>Drag to pan</span>
+                <span className="opacity-30">•</span>
+                <span>Double-tap to reset</span>
+                <button
+                  onClick={dismissHint}
+                  aria-label="Dismiss zoom help"
+                  className="ml-1 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={showHintAgain}
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-white/80 hover:text-white bg-black/40 hover:bg-black/60 px-2.5 py-1 rounded-full border border-white/20 backdrop-blur"
+              >
+                <Info className="w-3 h-3" /> Zoom help
+              </button>
+            )}
+          </div>
+          {/* Toolbar — floating on right side, vertical */}
+          <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 p-1.5 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur shadow-xl border border-slate-200 dark:border-slate-700">
             <button
-              onClick={dismissHint}
-              aria-label="Dismiss zoom help"
-              className="ml-1 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              onClick={zoomIn}
+              aria-label="Zoom in"
+              className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
+              title="Zoom in (+)"
             >
-              <X className="w-3.5 h-3.5" />
+              <ZoomIn className="w-5 h-5" />
+            </button>
+            <span className="min-w-[3rem] text-center text-xs font-bold tabular-nums py-1">
+              {Math.round(scale * 100)}%
+            </span>
+            <button
+              onClick={zoomOut}
+              aria-label="Zoom out"
+              className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
+              title="Zoom out (-)"
+            >
+              <ZoomOut className="w-5 h-5" />
+            </button>
+            <div className="w-6 h-px bg-slate-200 dark:bg-slate-700 my-1" />
+            <button
+              onClick={reset}
+              aria-label="Reset zoom"
+              className="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 transition-colors"
+              title="Reset (0) / double-tap"
+            >
+              <Maximize2 className="w-5 h-5" />
             </button>
           </div>
-        ) : (
-          <button
-            onClick={showHintAgain}
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-white/70 dark:bg-slate-800/70 px-2.5 py-1 rounded-full border border-dashed border-slate-300 dark:border-slate-600 hover:border-slate-400 transition-colors"
-          >
-            <Info className="w-3 h-3" /> Zoom help
-          </button>
-        )}
-
-        {/* Toolbar — compact on narrow/split screens, does not overlay slide */}
-        <div className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur shadow-lg border border-slate-200 dark:border-slate-700">
-          <button
-            onClick={zoomOut}
-            aria-label="Zoom out"
-            className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
-            title="Zoom out (-)"
-          >
-            <ZoomOut className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-          <span className="min-w-[2.5rem] sm:min-w-[3.5rem] text-center text-xs sm:text-sm font-bold tabular-nums">
-            {Math.round(scale * 100)}%
-          </span>
-          <button
-            onClick={zoomIn}
-            aria-label="Zoom in"
-            className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
-            title="Zoom in (+)"
-          >
-            <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-          <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block" />
-          <button
-            onClick={reset}
-            aria-label="Reset zoom"
-            className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 transition-colors"
-            title="Reset (0) / double-tap"
-          >
-            <Maximize2 className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-          {scale > 1 && (
-            <span className="hidden lg:flex items-center gap-1 text-xs text-muted-foreground ml-1">
-              <Move className="w-3 h-3" /> drag to pan
-            </span>
+        </>
+      ) : (
+        <div className="shrink-0 flex flex-col items-center gap-1.5 mt-2 w-full max-w-full">
+          {/* Hint — auto-hides after 4s or first interaction; can be reopened */}
+          {hintVisible ? (
+            <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-white/90 dark:bg-slate-800/90 px-2.5 sm:px-3 py-1 rounded-full shadow-sm border border-slate-200 dark:border-slate-700 backdrop-blur max-w-[min(100%,28rem)]">
+              <span className="hidden sm:inline">Pinch to zoom</span>
+              <span className="sm:hidden">Pinch zoom</span>
+              <span className="opacity-30">•</span>
+              <span>Drag to pan</span>
+              <span className="opacity-30">•</span>
+              <span>Double-tap to reset</span>
+              <span className="opacity-30 hidden lg:inline">•</span>
+              <span className="hidden lg:inline">Stylus supported</span>
+              <button
+                onClick={dismissHint}
+                aria-label="Dismiss zoom help"
+                className="ml-1 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={showHintAgain}
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-white/70 dark:bg-slate-800/70 px-2.5 py-1 rounded-full border border-dashed border-slate-300 dark:border-slate-600 hover:border-slate-400 transition-colors"
+            >
+              <Info className="w-3 h-3" /> Zoom help
+            </button>
           )}
+
+          {/* Toolbar — compact on narrow/split screens, does not overlay slide */}
+          <div className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur shadow-lg border border-slate-200 dark:border-slate-700">
+            <button
+              onClick={zoomOut}
+              aria-label="Zoom out"
+              className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
+              title="Zoom out (-)"
+            >
+              <ZoomOut className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <span className="min-w-[2.5rem] sm:min-w-[3.5rem] text-center text-xs sm:text-sm font-bold tabular-nums">
+              {Math.round(scale * 100)}%
+            </span>
+            <button
+              onClick={zoomIn}
+              aria-label="Zoom in"
+              className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
+              title="Zoom in (+)"
+            >
+              <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block" />
+            <button
+              onClick={reset}
+              aria-label="Reset zoom"
+              className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 transition-colors"
+              title="Reset (0) / double-tap"
+            >
+              <Maximize2 className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            {scale > 1 && (
+              <span className="hidden lg:flex items-center gap-1 text-xs text-muted-foreground ml-1">
+                <Move className="w-3 h-3" /> drag to pan
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

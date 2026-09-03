@@ -311,6 +311,7 @@ export function ContentViewer({
                 onPageChange={handlePdfPageChange}
                 onFullscreenChange={setPdfIsFullscreen}
                 enableAnnotation={canAnnotate}
+                enableZoom={!isViewMode}
               />
             </ContentProtectionWrapper>
           </div>
@@ -329,6 +330,7 @@ export function ContentViewer({
                 onPageChange={handlePptSlideChange}
                 onFullscreenChange={setPptIsFullscreen}
                 enableAnnotation={canAnnotate}
+                enableZoom={!isViewMode}
               />
             </ContentProtectionWrapper>
           </div>
