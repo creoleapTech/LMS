@@ -18,6 +18,10 @@ import { TEXT_LIMITS } from "@/lib/validation/textLimits";
 const staffSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(TEXT_LIMITS.personName, "Name too long"),
   email: z.string().trim().email("Invalid email").max(TEXT_LIMITS.email, "Email too long"),
+  ccEmail: z.string().trim().max(TEXT_LIMITS.email, "CC email too long").optional().or(z.literal("")).refine(
+    (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+    "Invalid CC email",
+  ),
   mobileNumber: z.string().trim().max(TEXT_LIMITS.phone, "Mobile number too long").regex(/^[\d\s\-\+\(\)]+$/, "Invalid mobile number format"),
   type: z.enum(["teacher", "admin"]),
   subjects: z.string().trim().max(TEXT_LIMITS.staffSubjects, "Subjects too long").optional(),
@@ -49,6 +53,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
         reset({
           name: staff.name,
           email: staff.email,
+          ccEmail: (staff as any).ccEmail || (staff as any).cc_email || "",
           mobileNumber: staff.mobileNumber,
           type: staff.type as StaffType,
           subjects: staff.subjects?.join(", ") || "",
@@ -58,6 +63,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
         reset({
           name: "",
           email: "",
+          ccEmail: "",
           mobileNumber: "",
           type: "teacher",
           subjects: "",
@@ -107,6 +113,7 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
   const onSubmit = async (data: FormValues) => {
     const payload: any = {
       ...data,
+      ccEmail: data.ccEmail?.trim() ? data.ccEmail.trim().toLowerCase() : null,
       subjects: data.subjects ? data.subjects.split(",").map(s => s.trim()).filter(Boolean) : [],
     };
     await onSave(payload);
@@ -163,6 +170,16 @@ export function StaffFormDialog({ open, onOpenChange, staff, onSave }: Props) {
                   <Input id="staff-mobile" maxLength={TEXT_LIMITS.phone} {...register("mobileNumber")} placeholder="+91 98765 43210" className="pl-9" />
                 </div>
                 {errors.mobileNumber && <p className="text-sm text-destructive">{errors.mobileNumber.message}</p>}
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="staff-cc-email" className="text-sm font-medium">CC Email <span className="text-muted-foreground font-normal">(for report approve / reject notifications)</span></Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="staff-cc-email" type="email" maxLength={TEXT_LIMITS.email} {...register("ccEmail")} placeholder="trainer-cc@example.com" className="pl-9" />
+                </div>
+                {errors.ccEmail && <p className="text-sm text-destructive">{errors.ccEmail.message}</p>}
+                <p className="text-xs text-muted-foreground">Only this email receives report approval / rejection mails.</p>
               </div>
 
               <div className="space-y-1.5">

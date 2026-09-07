@@ -46,18 +46,24 @@ export function ProfileSection() {
   const [salutation, setSalutation] = useState<string>("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [mobileError, setMobileError] = useState("");
+  const [ccEmail, setCcEmail] = useState("");
+  const [ccEmailError, setCcEmailError] = useState("");
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState("");
+
+  const isTrainer = user?.role === "teacher" || user?.role === "staff" || user?.role === "instructor";
 
   useEffect(() => {
     if (profile) {
       setName(profile.name || "");
       setSalutation(profile.salutation || "");
       setMobileNumber(profile.mobileNumber || "");
+      setCcEmail((profile as any).ccEmail || (profile as any).cc_email || "");
       setProfileImagePreview(resolveProfileImageSrc(profile.profileImage));
       setProfileImageFile(null);
       setNameError("");
       setMobileError("");
+      setCcEmailError("");
     }
   }, [profile]);
 
@@ -97,7 +103,17 @@ export function ProfileSection() {
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-
+      if (isTrainer) {
+        const trimmed = ccEmail.trim();
+        if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+          setCcEmailError("Invalid CC email");
+          throw new Error("Validation failed");
+        }
+        if (trimmed.length > 254) {
+          setCcEmailError("CC email too long");
+          throw new Error("Validation failed");
+        }
+      }
 
       const formData = new FormData();
       formData.append("name", name);
@@ -105,6 +121,9 @@ export function ProfileSection() {
         formData.append("salutation", salutation);
       }
       formData.append("mobileNumber", mobileNumber);
+      if (isTrainer) {
+        formData.append("ccEmail", ccEmail.trim());
+      }
       if (profileImageFile) {
         formData.append("profileImage", profileImageFile);
       }
@@ -249,6 +268,23 @@ export function ProfileSection() {
               />
               {mobileError && <p className="text-xs text-destructive">{mobileError}</p>}
             </div>
+
+            {isTrainer && (
+              <div className="space-y-2 md:col-span-2">
+                <Label>CC Email (for report approve / reject notifications)</Label>
+                <Input
+                  type="email"
+                  value={ccEmail}
+                  placeholder="trainer-cc@example.com"
+                  onChange={(e) => {
+                    setCcEmail(e.target.value);
+                    setCcEmailError("");
+                  }}
+                />
+                {ccEmailError && <p className="text-xs text-destructive">{ccEmailError}</p>}
+                <p className="text-xs text-muted-foreground">Only this email receives report approval / rejection mails.</p>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end">

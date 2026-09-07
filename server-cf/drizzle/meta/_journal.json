@@ -204,6 +204,13 @@
       "when": 1787000000000,
       "tag": "0028_add_quiz_question_chapter_bloom",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1788752130396,
+      "tag": "0029_add_cc_email_to_staff",
+      "breakpoints": true
     }
   ]
 }

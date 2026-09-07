@@ -105,10 +105,29 @@ async function getStaffRelations(
   };
 }
 
+const ccEmailSchema = z
+  .string()
+  .trim()
+  .max(TEXT_LIMITS.email, "CC email too long")
+  .optional()
+  .nullable()
+  .or(z.literal(""))
+  .refine(
+    (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+    "Invalid CC email",
+  );
+
+function normalizeCcEmail(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const trimmed = v.trim().toLowerCase();
+  return trimmed ? trimmed : null;
+}
+
 const staffCreateSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(TEXT_LIMITS.personName, "Name too long"),
   salutation: z.enum(["Mr", "Mrs", "Ms", "Dr"]).optional().nullable(),
   email: z.string().trim().email("Invalid email").max(TEXT_LIMITS.email, "Email too long"),
+  ccEmail: ccEmailSchema,
   mobileNumber: z.string().trim().max(TEXT_LIMITS.phone, "Mobile number too long").regex(PHONE_PATTERN, "Invalid mobile number format").optional().nullable().or(z.literal("")),
   type: z.enum(["teacher", "admin"]).optional(),
   joiningDate: z.string().optional().nullable(),
@@ -137,6 +156,7 @@ staffController.post("/", async (c) => {
       name: formData.get("name") as string,
       salutation: formData.get("salutation") as string | null,
       email: formData.get("email") as string,
+      ccEmail: formData.get("ccEmail") as string | null,
       mobileNumber: formData.get("mobileNumber") as string | null,
       type: formData.get("type") as string | null,
       joiningDate: formData.get("joiningDate") as string | null,
@@ -213,6 +233,7 @@ staffController.post("/", async (c) => {
       name: body.name,
       salutation: body.salutation,
       email: body.email.toLowerCase(),
+      ccEmail: normalizeCcEmail((body as any).ccEmail),
       mobileNumber: body.mobileNumber,
       type: body.type || "teacher",
       joiningDate: body.joiningDate || now,
@@ -550,6 +571,7 @@ staffController.get("/", async (c) => {
       id: staff.id,
       name: staff.name,
       email: staff.email,
+      ccEmail: staff.ccEmail,
       mobileNumber: staff.mobileNumber,
       type: staff.type,
       joiningDate: staff.joiningDate,
@@ -688,7 +710,7 @@ staffController.patch("/:id", async (c) => {
   } else {
     const formData = await c.req.formData();
     body = {};
-    const fields = ["name", "salutation", "email", "mobileNumber", "type", "isActive", "password"];
+    const fields = ["name", "salutation", "email", "ccEmail", "mobileNumber", "type", "isActive", "password"];
     for (const f of fields) {
       const v = formData.get(f);
       if (v !== null) body[f] = v;
@@ -720,6 +742,21 @@ staffController.patch("/:id", async (c) => {
     if (body[field] !== undefined) {
       updateData[field] = body[field];
     }
+  }
+
+  // ccEmail: normalize empty string to null, lowercase otherwise; validate format
+  if (body.ccEmail !== undefined) {
+    const normalized = normalizeCcEmail(body.ccEmail);
+    if (body.ccEmail && normalized === null) {
+      // non-empty but whitespace only → clear
+    } else if (body.ccEmail && normalized && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      throw new BadRequestError("Invalid CC email");
+    }
+    updateData.ccEmail = normalized;
+  }
+  // Normalize primary email to lowercase when updated
+  if (typeof updateData.email === "string") {
+    updateData.email = updateData.email.toLowerCase();
   }
 
   // Handle profile image file upload

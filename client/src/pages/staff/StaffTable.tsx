@@ -228,6 +228,13 @@ export function StaffTable({ institutionId, institutionName: _institutionName }:
       ),
     }),
     columnHelper.accessor("email", { header: "Email" }),
+    columnHelper.accessor("ccEmail" as any, {
+      header: "CC Email",
+      cell: (info: any) => {
+        const v = (info.row.original as any).ccEmail || (info.row.original as any).cc_email;
+        return v || <span className="text-muted-foreground">-</span>;
+      },
+    }),
     columnHelper.accessor("mobileNumber", { header: "Mobile" }),
     columnHelper.accessor("type", {
       header: "Role",

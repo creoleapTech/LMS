@@ -50,6 +50,7 @@ async function findUserByToken(db: ReturnType<typeof getDb>, user: Record<string
     .select({
       id: staff.id,
       email: staff.email,
+      ccEmail: staff.ccEmail,
       mobileNumber: staff.mobileNumber,
       name: staff.name,
       salutation: staff.salutation,
@@ -110,6 +111,7 @@ app.patch("/profile", async (c) => {
     salutation?: string;
     mobileNumber?: string;
     profileImage?: string;
+    ccEmail?: string | null;
   } = {};
   let profileImageFile: File | null = null;
 
@@ -123,11 +125,13 @@ app.patch("/profile", async (c) => {
     const name = formData.get("name");
     const salutation = formData.get("salutation");
     const mobileNumber = formData.get("mobileNumber");
+    const ccEmail = formData.get("ccEmail");
     const profileImage = formData.get("profileImage");
 
     if (typeof name === "string") body.name = name;
     if (typeof salutation === "string") body.salutation = salutation;
     if (typeof mobileNumber === "string") body.mobileNumber = mobileNumber;
+    if (typeof ccEmail === "string") body.ccEmail = ccEmail;
 
     if (profileImage && typeof profileImage !== "string") {
       profileImageFile = profileImage as unknown as File;
@@ -145,6 +149,24 @@ app.patch("/profile", async (c) => {
   if (body.salutation !== undefined) updateData.salutation = body.salutation;
   if (body.mobileNumber !== undefined) updateData.mobileNumber = body.mobileNumber;
   if (body.profileImage !== undefined) updateData.profileImage = body.profileImage;
+  // cc_email is a trainer (staff) only field
+  if (body.ccEmail !== undefined) {
+    if (result.model !== "Staff") {
+      throw new BadRequestError("cc_email is only available for trainer profiles");
+    }
+    if (body.ccEmail === null || (typeof body.ccEmail === "string" && body.ccEmail.trim() === "")) {
+      updateData.ccEmail = null;
+    } else if (typeof body.ccEmail === "string") {
+      const normalized = body.ccEmail.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+        throw new BadRequestError("Invalid CC email");
+      }
+      if (normalized.length > 254) {
+        throw new BadRequestError("CC email too long");
+      }
+      updateData.ccEmail = normalized;
+    }
+  }
 
   if (profileImageFile) {
     if (!profileImageFile.type?.startsWith("image/")) {

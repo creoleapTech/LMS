@@ -151,6 +151,41 @@ function formatSubmittedOn(): string {
   });
 }
 
+// ─── Helpers: report status emails (cc_email only) ──
+function isValidEmail(v: unknown): v is string {
+  return typeof v === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+}
+
+async function sendSimpleEmail(
+  resendApiKey: string,
+  opts: { to: string[]; subject: string; html: string },
+): Promise<boolean> {
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Creoleap Technologies <info@creoleap.com>",
+        to: opts.to,
+        subject: opts.subject,
+        html: opts.html,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("📧 [EMAIL] Failed to send status email via Resend:", res.status, body);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("📧 [EMAIL] Failed to send status email:", err);
+    return false;
+  }
+}
+
 function formatDateString(dateStr: string | null | undefined): string {
   if (!dateStr) return "";
   try {
@@ -2843,6 +2878,37 @@ timetableController.post("/approve-report", async (c) => {
 
     if (!updated) throw new BadRequestError("Submission not found");
 
+    // Notify trainer via cc_email only (fire-and-forget, never blocks approval)
+    try {
+      const resendApiKey = c.env.RESEND_API_KEY;
+      if (resendApiKey) {
+        const [trainer] = await db
+          .select({ name: staff.name, ccEmail: staff.ccEmail })
+          .from(staff)
+          .where(eq(staff.id, updated.staffId))
+          .limit(1);
+        const ccEmail = trainer?.ccEmail?.trim();
+        if (ccEmail && isValidEmail(ccEmail)) {
+          const [inst] = await db
+            .select({ name: institutions.name })
+            .from(institutions)
+            .where(eq(institutions.id, updated.institutionId))
+            .limit(1);
+          const monthName = MONTH_NAMES[updated.month - 1] || "Report";
+          const subject = `Report Approved — ${monthName} ${updated.year}${inst?.name ? ` | ${inst.name}` : ""}`;
+          const html = `
+            <p>Dear ${trainer?.name || "Trainer"},</p>
+            <p>Your monthly report for <strong>${monthName} ${updated.year}</strong>${inst?.name ? ` at <strong>${inst.name}</strong>` : ""} has been <strong>approved</strong>.</p>
+            <p>Thank you for your submission.</p>
+            <p>Warm Regards,<br/>Learning &amp; Development Department<br/>Creoleap Technologies Pvt. Ltd.</p>
+          `;
+          await sendSimpleEmail(resendApiKey, { to: [ccEmail], subject, html });
+        }
+      }
+    } catch (emailErr) {
+      console.error("Approve report email error:", emailErr);
+    }
+
     return c.json({ success: true, data: updated });
   } catch (err: any) {
     if (err instanceof BadRequestError) throw err;
@@ -2924,6 +2990,44 @@ timetableController.post("/reject-report", async (c) => {
       .returning();
 
     if (!updated) throw new BadRequestError("Submission not found");
+
+    // Notify trainer via cc_email only (fire-and-forget, never blocks rejection)
+    try {
+      const resendApiKey = c.env.RESEND_API_KEY;
+      if (resendApiKey) {
+        const [trainer] = await db
+          .select({ name: staff.name, ccEmail: staff.ccEmail })
+          .from(staff)
+          .where(eq(staff.id, updated.staffId))
+          .limit(1);
+        const ccEmail = trainer?.ccEmail?.trim();
+        if (ccEmail && isValidEmail(ccEmail)) {
+          const [inst] = await db
+            .select({ name: institutions.name })
+            .from(institutions)
+            .where(eq(institutions.id, updated.institutionId))
+            .limit(1);
+          const monthName = MONTH_NAMES[updated.month - 1] || "Report";
+          const subject = `Report Rejected — ${monthName} ${updated.year}${inst?.name ? ` | ${inst.name}` : ""}`;
+          const safeComment = (comment || updated.adminComment || "").toString();
+          const escapedComment = safeComment
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\r?\n/g, "<br/>");
+          const html = `
+            <p>Dear ${trainer?.name || "Trainer"},</p>
+            <p>Your monthly report for <strong>${monthName} ${updated.year}</strong>${inst?.name ? ` at <strong>${inst.name}</strong>` : ""} has been <strong>rejected</strong>.</p>
+            ${escapedComment ? `<p><strong>Reviewer feedback:</strong><br/>${escapedComment}</p>` : ""}
+            <p>Please review the feedback and resubmit if needed.</p>
+            <p>Warm Regards,<br/>Learning &amp; Development Department<br/>Creoleap Technologies Pvt. Ltd.</p>
+          `;
+          await sendSimpleEmail(resendApiKey, { to: [ccEmail], subject, html });
+        }
+      }
+    } catch (emailErr) {
+      console.error("Reject report email error:", emailErr);
+    }
 
     return c.json({ success: true, data: updated });
   } catch (err: any) {
@@ -3621,14 +3725,15 @@ Creoleap Technologies Pvt. Ltd.
 
     const attachmentName = `CTPL_AI&Stem_Robotics_${monthName}${year}_monthly_report.pdf`;
 
+    // CC uses trainer cc_email values only (never the primary login email)
     const defaultCc = ["cto@creoleap.com", "ceo@creoleap.com"];
     const [trainer] = await db
-      .select({ email: staff.email })
+      .select({ ccEmail: staff.ccEmail })
       .from(staff)
       .where(eq(staff.id, submission.staffId))
       .limit(1);
     const instStaff = await db
-      .select({ email: staff.email })
+      .select({ ccEmail: staff.ccEmail })
       .from(staff)
       .where(
         and(
@@ -3638,12 +3743,12 @@ Creoleap Technologies Pvt. Ltd.
         )
       );
     const trainerEmails = new Set<string>();
-    if (trainer?.email) trainerEmails.add(trainer.email);
+    if (trainer?.ccEmail?.trim()) trainerEmails.add(trainer.ccEmail.trim());
     for (const s of instStaff) {
-      if (s.email) trainerEmails.add(s.email);
+      if (s.ccEmail?.trim()) trainerEmails.add(s.ccEmail.trim());
     }
     for (const email of trainerEmails) {
-      if (email && !defaultCc.includes(email)) {
+      if (email && isValidEmail(email) && !defaultCc.includes(email)) {
         defaultCc.push(email);
       }
     }
@@ -3705,14 +3810,15 @@ timetableController.post("/send-report-email", async (c) => {
         ccList = customCc;
       }
     } else {
+      // CC uses trainer cc_email values only (never the primary login email)
       const defaultCc = ["cto@creoleap.com", "ceo@creoleap.com"];
       const [trainer] = await db
-        .select({ email: staff.email })
+        .select({ ccEmail: staff.ccEmail })
         .from(staff)
         .where(eq(staff.id, submission.staffId))
         .limit(1);
       const instStaff = await db
-        .select({ email: staff.email })
+        .select({ ccEmail: staff.ccEmail })
         .from(staff)
         .where(
           and(
@@ -3722,12 +3828,12 @@ timetableController.post("/send-report-email", async (c) => {
           )
         );
       const trainerEmails = new Set<string>();
-      if (trainer?.email) trainerEmails.add(trainer.email);
+      if (trainer?.ccEmail?.trim()) trainerEmails.add(trainer.ccEmail.trim());
       for (const s of instStaff) {
-        if (s.email) trainerEmails.add(s.email);
+        if (s.ccEmail?.trim()) trainerEmails.add(s.ccEmail.trim());
       }
       for (const email of trainerEmails) {
-        if (email && !defaultCc.includes(email)) {
+        if (email && isValidEmail(email) && !defaultCc.includes(email)) {
           defaultCc.push(email);
         }
       }

@@ -52,6 +52,7 @@ export const staff = sqliteTable("staff", {
   name: text("name"),
   salutation: text("salutation"),
   email: text("email").notNull().unique(),
+  ccEmail: text("cc_email"),
   mobileNumber: text("mobile_number"),
   password: text("password").notNull(),
   type: text("type", { enum: ["teacher", "admin", "instructor"] }),

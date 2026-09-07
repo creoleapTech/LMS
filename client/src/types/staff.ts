@@ -7,6 +7,7 @@ export interface IStaff {
   name: string;
   salutation?: Salutation;
   email: string;
+  ccEmail?: string | null;
   mobileNumber: string;
   type: StaffType;
   subjects?: string[];
@@ -24,6 +25,7 @@ export interface CreateStaffDTO {
   name: string;
   salutation?: Salutation;
   email: string;
+  ccEmail?: string | null;
   mobileNumber: string;
   type: StaffType;
   subjects?: string[];

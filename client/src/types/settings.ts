@@ -66,6 +66,7 @@ export interface IUserProfile {
   _id: string;
   name: string;
   email: string;
+  ccEmail?: string | null;
   salutation?: "Mr" | "Mrs" | "Ms" | "Dr";
   mobileNumber: string;
   profileImage?: string;
