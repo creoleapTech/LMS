@@ -2230,8 +2230,14 @@ function SubmittedReportsView({
       await _axios.post("/admin/timetable/approve-report", { submissionId: id });
       toast.success("Report approved successfully");
       setReports((prev) => prev.map((r) => r.id === id ? { ...r, adminApproval: "verified" } : r));
-    } catch {
-      toast.error("Failed to approve report");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to approve report";
+      toast.error(msg);
+      // Stale-row safety: if it reverted to draft after our list fetch,
+      // drop it so a draft never shows as submitted to the admin.
+      if (/no longer submitted|only submitted|moved back to draft/i.test(msg)) {
+        setReports((prev) => prev.filter((r) => r.id !== id));
+      }
     } finally {
       setApprovingId(null);
     }
@@ -2260,8 +2266,12 @@ function SubmittedReportsView({
       await _axios.post("/admin/timetable/reject-report", { submissionId: report.id, comment });
       toast.success("Report rejected");
       setReports((prev) => prev.map((r) => r.id === report.id ? { ...r, adminApproval: "rejected", adminComment: comment } : r));
-    } catch {
-      toast.error("Failed to reject report");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to reject report";
+      toast.error(msg);
+      if (/no longer submitted|only submitted|moved back to draft/i.test(msg)) {
+        setReports((prev) => prev.filter((r) => r.id !== report.id));
+      }
     } finally {
       setRejectDialog(null);
     }

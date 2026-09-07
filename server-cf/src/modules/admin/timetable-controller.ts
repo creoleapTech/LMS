@@ -2865,6 +2865,22 @@ timetableController.post("/approve-report", async (c) => {
     const db = getDb(c.env.DB);
     const now = nowISO();
 
+    // Guard against TOCTOU race: trainer may move submitted->draft between
+    // superadmin's list read and approve click. Only submitted rows are approvable.
+    const [existing] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(eq(reportSubmissions.id, submissionId))
+      .limit(1);
+
+    if (!existing || existing.isDeleted) throw new BadRequestError("Submission not found");
+    if (existing.status !== "submitted") {
+      throw new BadRequestError(
+        `Only submitted reports can be approved (current status: ${existing.status}). Ask the trainer to resubmit.`
+      );
+    }
+
+    // Atomic: re-check status in WHERE so a concurrent draft-save wins instead of stranding draft+verified
     const [updated] = await db
       .update(reportSubmissions)
       .set({
@@ -2873,10 +2889,16 @@ timetableController.post("/approve-report", async (c) => {
         reviewedBy: user.id,
         updatedAt: now,
       })
-      .where(eq(reportSubmissions.id, submissionId))
+      .where(
+        and(
+          eq(reportSubmissions.id, submissionId),
+          eq(reportSubmissions.status, "submitted"),
+          eq(reportSubmissions.isDeleted, 0)
+        )
+      )
       .returning();
 
-    if (!updated) throw new BadRequestError("Submission not found");
+    if (!updated) throw new BadRequestError("Report is no longer submitted (moved back to draft). Please refresh.");
 
     // Notify trainer via cc_email only (fire-and-forget, never blocks approval)
     try {
@@ -2977,6 +2999,20 @@ timetableController.post("/reject-report", async (c) => {
     const db = getDb(c.env.DB);
     const now = nowISO();
 
+    // Same TOCTOU guard as approve: only submitted rows are rejectable.
+    const [existing] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(eq(reportSubmissions.id, submissionId))
+      .limit(1);
+
+    if (!existing || existing.isDeleted) throw new BadRequestError("Submission not found");
+    if (existing.status !== "submitted") {
+      throw new BadRequestError(
+        `Only submitted reports can be rejected (current status: ${existing.status}).`
+      );
+    }
+
     const [updated] = await db
       .update(reportSubmissions)
       .set({
@@ -2986,10 +3022,16 @@ timetableController.post("/reject-report", async (c) => {
         reviewedBy: user.id,
         updatedAt: now,
       })
-      .where(eq(reportSubmissions.id, submissionId))
+      .where(
+        and(
+          eq(reportSubmissions.id, submissionId),
+          eq(reportSubmissions.status, "submitted"),
+          eq(reportSubmissions.isDeleted, 0)
+        )
+      )
       .returning();
 
-    if (!updated) throw new BadRequestError("Submission not found");
+    if (!updated) throw new BadRequestError("Report is no longer submitted (moved back to draft). Please refresh.");
 
     // Notify trainer via cc_email only (fire-and-forget, never blocks rejection)
     try {
@@ -3049,8 +3091,11 @@ timetableController.post("/save-report-draft", async (c) => {
     }
     const staffId = user.id;
     const institutionId = resolveInstitutionId(user);
-    let body = await c.req.json<ReportParams>();
-    body = normalizeReportData(body);
+    const rawBody = await c.req.json<ReportParams & { forceRecall?: boolean }>();
+    const forceRecall = (rawBody as any)?.forceRecall === true;
+    // Strip control flag so it never persists inside stored reportData
+    delete (rawBody as any).forceRecall;
+    const body = normalizeReportData(rawBody);
     const db = getDb(c.env.DB);
 
     const year = body.year;
@@ -3080,7 +3125,22 @@ timetableController.post("/save-report-draft", async (c) => {
       if (existing.adminApproval === "verified") {
         return c.json({ success: false, message: "Cannot modify a verified report." }, 400);
       }
-      // Update existing record (whether draft or submitted — saving draft overwrites)
+      // Network-safety: never silently downgrade submitted->draft.
+      // A submit may have succeeded server-side while the client saw a network
+      // cut and now retries as "save draft". That must not hide the submission
+      // from the admin's submitted list. Explicit recall only via forceRecall.
+      if (existing.status === "submitted" && !forceRecall) {
+        return c.json(
+          {
+            success: false,
+            code: "ALREADY_SUBMITTED",
+            message: "Report is already submitted. Refresh to see submitted state. To move it back to draft, confirm recall.",
+            data: { id: existing.id, status: existing.status, adminApproval: existing.adminApproval },
+          },
+          409
+        );
+      }
+      // Explicit recall (forceRecall) or draft->draft update.
       const [updated] = await db
         .update(reportSubmissions)
         .set({

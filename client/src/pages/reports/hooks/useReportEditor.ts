@@ -251,15 +251,31 @@ export function useReportEditor() {
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Failed to submit report";
       toast.error(msg);
+      // Network-cut safety: submit may have succeeded server-side while the
+      // response never reached us. Re-read server truth so a later Save Draft
+      // doesn't silently recall submitted->draft on stale client state.
+      try {
+        const monthNum =
+          ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].indexOf(data.monthName) + 1;
+        if (data.year && monthNum) {
+          const st = await _axios.get(`/admin/timetable/report-submission?year=${data.year}&month=${monthNum}`);
+          const sub = st.data?.data;
+          if (sub?.status && sub.status !== "draft") {
+            setSubmissionStatus({ submitted: true, submittedAt: sub.submittedAt, submissionId: sub.id, hasDraft: false, adminApproval: sub.adminApproval, adminComment: sub.adminComment, principalSignedKey: sub.principalSignedKey, principalSignedAt: sub.principalSignedAt });
+          }
+        }
+      } catch {
+        // ignore refresh failure, original error toast already shown
+      }
     } finally {
       setIsSubmitting(false);
     }
   }, []);
 
-  const saveDraft = useCallback(async (data: ReportParams) => {
+  const saveDraft = useCallback(async (data: ReportParams, opts?: { forceRecall?: boolean }) => {
     setIsSavingDraft(true);
     try {
-      const res = await _axios.post("/admin/timetable/save-report-draft", data);
+      const res = await _axios.post("/admin/timetable/save-report-draft", opts?.forceRecall ? { ...data, forceRecall: true } : data);
       if (res.data?.success) {
         toast.success("Draft saved successfully");
         setSubmissionStatus((prev) => ({ ...prev, submitted: false, hasDraft: true, draftId: res.data.data?.id }));
@@ -267,6 +283,29 @@ export function useReportEditor() {
         throw new Error("Save draft failed");
       }
     } catch (err: any) {
+      // 409 = server already has this month as submitted (e.g. submit succeeded
+      // but client saw a network cut). Don't overwrite — refresh to submitted truth.
+      if (err?.response?.status === 409) {
+        toast.warning("Already submitted — showing submitted state instead of overwriting with a draft.");
+        try {
+          const monthNum =
+            ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].indexOf(data.monthName) + 1;
+          if (data.year && monthNum) {
+            const st = await _axios.get(`/admin/timetable/report-submission?year=${data.year}&month=${monthNum}`);
+            const sub = st.data?.data;
+            if (sub) {
+              if (sub.status === "draft") {
+                setSubmissionStatus({ submitted: false, hasDraft: true, draftId: sub.id });
+              } else {
+                setSubmissionStatus({ submitted: true, submittedAt: sub.submittedAt, submissionId: sub.id, hasDraft: false, adminApproval: sub.adminApproval, adminComment: sub.adminComment, principalSignedKey: sub.principalSignedKey, principalSignedAt: sub.principalSignedAt });
+              }
+              return;
+            }
+          }
+        } catch {
+          // fall through to generic message below
+        }
+      }
       const msg = err?.response?.data?.message || "Failed to save draft";
       toast.error(msg);
     } finally {
