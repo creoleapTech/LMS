@@ -64,6 +64,10 @@ export function ScheduleEntryDialog({
 }: ScheduleEntryDialogProps) {
   const isEdit = !!entry;
   const { createEntry, updateEntry } = useTimetableMutations();
+  const entryInstitutionId =
+    entry && typeof (entry as any)?.institutionId === "string"
+      ? (entry as any).institutionId
+      : (entry as any)?.institutionId?._id || null;
 
   const [classId, setClassId] = useState("");
   const [gradeBookId, setGradeBookId] = useState("");
@@ -75,10 +79,21 @@ export function ScheduleEntryDialog({
   const [editScope, setEditScope] = useState<"day" | "all">("day");
   const classDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch teacher's classes
+  // Fetch teacher's classes — for superadmin editing another teacher's
+  // timetable, list that institution's classes instead of own.
   const { data: classes } = useQuery<IClassOption[]>({
-    queryKey: ["my-classes-list"],
+    queryKey: ["my-classes-list", entryInstitutionId || "own"],
     queryFn: async () => {
+      if (entryInstitutionId) {
+        try {
+          const { data: body } = await _axios.get<any>("/admin/classes", { params: { institutionId: entryInstitutionId, limit: 100 } });
+          const list = (body as any)?.data ?? [];
+          const arr = Array.isArray(list) ? list : [];
+          if (arr.length > 0) return arr;
+        } catch {
+          // fall through to own list
+        }
+      }
       const { data: res } = await _axios.get<{
         success: boolean;
         data: IClassOption[];
@@ -126,15 +141,18 @@ export function ScheduleEntryDialog({
     return cls ? `Grade ${cls.grade}–${cls.section}${cls.year ? ` (${cls.year})` : ""}` : "Select class...";
   }, [classes, classId]);
 
-  // Fetch gradebooks when grade is selected
+  // Fetch gradebooks when grade is selected (pass institution for superadmin)
   const { data: gradeBooks } = useQuery<IGradeBookOption[]>({
-    queryKey: ["timetable-gradebooks", selectedGrade],
+    queryKey: ["timetable-gradebooks", selectedGrade, entryInstitutionId || "own"],
     queryFn: async () => {
       const { data: res } = await _axios.get<{
         success: boolean;
         data: IGradeBookOption[];
       }>("/admin/timetable/gradebooks", {
-        params: { grade: selectedGrade },
+        params: {
+          grade: selectedGrade,
+          ...(entryInstitutionId ? { institutionId: entryInstitutionId } : {}),
+        },
       });
       return res.data;
     },

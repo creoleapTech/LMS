@@ -248,8 +248,11 @@ export function DayView({
   const scheduledCount = entries.filter((e) => e.status === "scheduled").length;
   const completedCount = entries.filter((e) => e.status === "completed").length;
   const dow = date.getDay();
-  const showActions = !effectiveReadOnly || isSuperAdmin;
-  const actionColumnClass = effectiveReadOnly ? "w-[72px]" : "w-[160px]";
+  // Superadmin can edit any data (schedule, work-done, remarks/summaries),
+  // even in admin-view read-only mode and past-date freeze.
+  const canEdit = isSuperAdmin || !effectiveReadOnly;
+  const showActions = canEdit;
+  const actionColumnClass = canEdit ? "w-[160px]" : "w-[72px]";
   const stickyActionCellClass = `${actionColumnClass} sticky right-0 z-10 bg-[var(--neo-bg)] shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)]`;
 
   // Track non-break period index for color rotation
@@ -266,7 +269,7 @@ export function DayView({
             </p>
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               {DAY_NAMES[date.getDay()]}, {MONTH_NAMES[date.getMonth()]} {date.getDate()}
-              {isPastDate && (
+              {isPastDate && !isSuperAdmin && (
                 <span className="text-[10px] font-bold text-slate-400 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
                   Read-only
                 </span>
@@ -417,7 +420,7 @@ export function DayView({
                     entry={entry}
                     isCompleted={isCompleted}
                     colors={colors}
-                    readOnly={effectiveReadOnly}
+                    readOnly={!canEdit}
                     isSuperAdmin={isSuperAdmin}
                     session={matchedSession}
                     onEditClick={() =>

@@ -91,7 +91,19 @@ function sessionTimeForInput(iso: string | undefined, periodTime: string | undef
 
 export function WorkDoneDialog({ open, onOpenChange, entry, date, period, session }: WorkDoneDialogProps) {
   const user = useAuthStore((s) => s.user);
-  const staffId = user?._id;
+  const isSuperAdmin = user?.role === "super_admin";
+  const isAdminRole = user?.role === "admin" || isSuperAdmin;
+  // For superadmin/admin viewing another teacher's timetable, resolve that
+  // teacher's staff id from the entry — not the logged-in user.
+  const entryStaffId =
+    entry && typeof entry.staffId === "string"
+      ? entry.staffId
+      : (entry as any)?.staffId?._id || null;
+  const entryInstitutionId =
+    entry && typeof (entry as any)?.institutionId === "string"
+      ? (entry as any).institutionId
+      : (entry as any)?.institutionId?._id || null;
+  const staffId = entryStaffId || user?._id;
   const { completeEntry } = useTimetableMutations();
   const [topicsInput, setTopicsInput] = useState("");
   const [notes, setNotes] = useState("");
@@ -122,10 +134,20 @@ export function WorkDoneDialog({ open, onOpenChange, entry, date, period, sessio
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch teacher's classes for additional class selector
+  // Fetch teacher's classes for additional class selector.
+  // Superadmin/admin viewing another teacher: list that institution's classes
+  // so combined-class editing works for any teacher's data.
   const { data: teacherClasses = [] } = useQuery<{ _id: string; grade?: string; section?: string }[]>({
-    queryKey: ["my-classes-list"],
+    queryKey: ["my-classes-list", isAdminRole ? entryInstitutionId : "own"],
     queryFn: async () => {
+      if (isAdminRole && entryInstitutionId) {
+        const { data: body } = await _axios.get<any>(
+          "/admin/classes",
+          { params: { institutionId: entryInstitutionId, limit: 100 } }
+        );
+        const list = (body as any)?.data ?? [];
+        return Array.isArray(list) ? list : [];
+      }
       const { data: res } = await _axios.get<{ success: boolean; data: any[] }>(
         "/admin/timetable/my-classes-list"
       );

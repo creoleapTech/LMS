@@ -13,6 +13,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -31,6 +39,7 @@ import {
   Clock,
   Timer,
   Trash2,
+  Pencil,
 } from "lucide-react";
 
 function formatDate(iso: string): string {
@@ -230,6 +239,47 @@ export default function WorkDonePage() {
     if (window.confirm("Are you sure you want to delete this work-done entry? This action cannot be undone.")) {
       deleteEntry.mutate(entryId);
     }
+  };
+
+  // ── Superadmin edit: remarks/notes + topics/summary ──
+  const [editingEntry, setEditingEntry] = useState<WorkDoneEntry | null>(null);
+  const [editNotes, setEditNotes] = useState("");
+  const [editTopics, setEditTopics] = useState("");
+
+  const openEdit = (entry: WorkDoneEntry) => {
+    setEditingEntry(entry);
+    setEditNotes(entry.notes || "");
+    setEditTopics((entry.topicsCovered || []).join(", "));
+  };
+
+  const updateWorkDone = useMutation({
+    mutationFn: async ({ id, notes, topics }: { id: string; notes: string; topics: string[] }) => {
+      await _axios.patch(`/admin/timetable/work-done/${id}`, {
+        notes,
+        topicsCovered: topics,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["work-done"] });
+      toast.success("Work-done entry updated");
+      setEditingEntry(null);
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to update entry");
+    },
+  });
+
+  const handleEditSave = () => {
+    if (!editingEntry) return;
+    const topics = editTopics
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    updateWorkDone.mutate({
+      id: editingEntry.id || editingEntry._id,
+      notes: editNotes,
+      topics,
+    });
   };
 
   return (
@@ -472,15 +522,26 @@ export default function WorkDonePage() {
                     )}
                     {isSuperAdmin && (
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
-                          onClick={() => confirmDelete(entry.id || entry._id)}
-                          title="Delete entry"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-full"
+                            onClick={() => openEdit(entry)}
+                            title="Edit remarks / topics"
+                          >
+                            <Pencil size={14} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                            onClick={() => confirmDelete(entry.id || entry._id)}
+                            title="Delete entry"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
@@ -520,6 +581,65 @@ export default function WorkDonePage() {
           </>
         )}
       </div>
+
+      {/* Superadmin edit dialog — remarks + topics/summary */}
+      <Dialog open={!!editingEntry} onOpenChange={(open) => { if (!open) setEditingEntry(null); }}>
+        <DialogContent className="max-w-lg rounded-2xl">
+          <DialogTitle className="text-lg font-bold">Edit Work Done</DialogTitle>
+          <DialogDescription className="text-sm text-slate-500">
+            {editingEntry?.staff?.name ? `${editingEntry.staff.name} · ` : ""}
+            {editingEntry?.class ? `${editingEntry.class.grade}–${editingEntry.class.section} · ` : ""}
+            {editingEntry?.gradeBook?.bookTitle || ""}
+            {editingEntry ? ` · Period ${editingEntry.periodNumber}` : ""}
+          </DialogDescription>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Remarks / Notes
+              </Label>
+              <Textarea
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                placeholder="Period remarks..."
+                className="rounded-xl resize-none"
+                rows={3}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Topics / Summary (comma separated)
+              </Label>
+              <Textarea
+                value={editTopics}
+                onChange={(e) => setEditTopics(e.target.value)}
+                placeholder="e.g. Algebra basics, Linear equations"
+                className="rounded-xl resize-none"
+                rows={3}
+              />
+              <p className="text-[10px] text-slate-400">
+                Chapter-structured topics are preserved unless you save new free-text topics here.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 pt-2 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditingEntry(null)}
+                className="rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleEditSave}
+                disabled={updateWorkDone.isPending}
+                className="rounded-xl bg-emerald-600 hover:bg-emerald-700"
+              >
+                {updateWorkDone.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

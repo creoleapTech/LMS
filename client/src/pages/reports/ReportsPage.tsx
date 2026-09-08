@@ -176,7 +176,10 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
     updateField,
   } = useReportEditor();
 
-  const isApproved = submissionStatus?.adminApproval === "verified";
+  // Superadmin can edit any data — including verified reports' period
+  // remarks/summaries. Others see verified reports as read-only.
+  const isVerified = submissionStatus?.adminApproval === "verified";
+  const isApproved = isVerified && !isSuperAdmin;
 
   const handlePrevMonth = () => {
     setCurrentMonth((prev) => {
@@ -539,6 +542,12 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
             <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold">
               <ShieldCheck size={18} />
               This report has been verified and is now read-only.
+            </div>
+          )}
+          {isSuperAdmin && isVerified && (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-sm font-semibold">
+              <ShieldCheck size={18} />
+              Verified report — superadmin can still edit remarks and summaries.
             </div>
           )}
 

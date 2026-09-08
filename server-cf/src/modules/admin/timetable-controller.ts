@@ -866,15 +866,26 @@ timetableController.get("/my-classes-list", async (c) => {
 
 timetableController.get("/gradebooks", async (c) => {
   const user = c.get("user") as Record<string, any>;
-  const institutionId = resolveInstitutionId(user);
+  // Superadmin may pass institutionId explicitly since they have no own institution.
+  const queryInstitutionId = c.req.query("institutionId");
+  const institutionId = queryInstitutionId || (() => {
+    try {
+      return resolveInstitutionId(user);
+    } catch {
+      // Superadmin without institution context: fall through to global list
+      return null;
+    }
+  })();
   const grade = Number(c.req.query("grade"));
   const db = getDb(c.env.DB);
 
-  // Get institution's accessible gradebooks
-  const accessRows = await db
-    .select({ id: institutionCurriculumAccess.id })
-    .from(institutionCurriculumAccess)
-    .where(eq(institutionCurriculumAccess.institutionId, institutionId));
+  // Get institution's accessible gradebooks (skip when no institution context — superadmin global view)
+  const accessRows = institutionId
+    ? await db
+        .select({ id: institutionCurriculumAccess.id })
+        .from(institutionCurriculumAccess)
+        .where(eq(institutionCurriculumAccess.institutionId, institutionId))
+    : [];
 
   let accessibleGradeBookIds: string[] = [];
   if (accessRows.length > 0) {
@@ -1257,30 +1268,36 @@ timetableController.patch("/:id/complete", async (c) => {
     await db.update(timetableEntries).set(updates).where(eq(timetableEntries.id, id));
   }
 
-  // Insert topics covered into junction table
-  await db.delete(timetableTopicsCovered).where(eq(timetableTopicsCovered.timetableEntryId, targetId));
+  // Insert topics covered into junction table — only when topic fields are
+  // present in the payload. Otherwise a notes-only edit would wipe topics.
+  const wantsTopicUpdate =
+    (body.chapterTopics !== undefined && body.chapterTopics !== null) ||
+    (body.topicsCovered !== undefined && body.topicsCovered !== null);
+  if (wantsTopicUpdate) {
+    await db.delete(timetableTopicsCovered).where(eq(timetableTopicsCovered.timetableEntryId, targetId));
 
-  // Structured chapter/topic entries
-  if (body.chapterTopics && Array.isArray(body.chapterTopics)) {
-    for (const ct of body.chapterTopics) {
-      await db.insert(timetableTopicsCovered).values({
-        id: uuid(),
-        timetableEntryId: targetId,
-        topic: ct.contentTitle || ct.chapterTitle,
-        chapterId: ct.chapterId || null,
-        contentId: ct.contentId || null,
-      });
+    // Structured chapter/topic entries
+    if (body.chapterTopics && Array.isArray(body.chapterTopics)) {
+      for (const ct of body.chapterTopics) {
+        await db.insert(timetableTopicsCovered).values({
+          id: uuid(),
+          timetableEntryId: targetId,
+          topic: ct.contentTitle || ct.chapterTitle,
+          chapterId: ct.chapterId || null,
+          contentId: ct.contentId || null,
+        });
+      }
     }
-  }
 
-  // Free-text topics (legacy / additional)
-  if (body.topicsCovered && Array.isArray(body.topicsCovered)) {
-    for (const topic of body.topicsCovered) {
-      await db.insert(timetableTopicsCovered).values({
-        id: uuid(),
-        timetableEntryId: targetId,
-        topic,
-      });
+    // Free-text topics (legacy / additional)
+    if (body.topicsCovered && Array.isArray(body.topicsCovered)) {
+      for (const topic of body.topicsCovered) {
+        await db.insert(timetableTopicsCovered).values({
+          id: uuid(),
+          timetableEntryId: targetId,
+          topic,
+        });
+      }
     }
   }
 
@@ -2618,6 +2635,144 @@ timetableController.get("/work-done", async (c) => {
     data: {
       entries: enriched,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    },
+  });
+});
+
+// ─── PATCH /work-done/:id — super_admin/admin edit any work-done entry ───
+// Allows editing notes/remarks (period remarks) and topics/summaries for any
+// completed entry, regardless of teacher or date. Topics are only touched
+// when explicitly provided so notes-only edits never wipe summaries.
+
+timetableController.patch("/work-done/:id", async (c) => {
+  const user = c.get("user") as Record<string, any>;
+  if (user.role !== "super_admin" && user.role !== "admin") {
+    throw new BadRequestError("Only super_admin and admin can edit work-done entries");
+  }
+  const { id } = c.req.param();
+  const body = await c.req.json();
+  const db = getDb(c.env.DB);
+
+  const [entry] = await db
+    .select()
+    .from(timetableEntries)
+    .where(and(eq(timetableEntries.id, id), eq(timetableEntries.isDeleted, 0)))
+    .limit(1);
+
+  if (!entry) {
+    throw new BadRequestError("Work-done entry not found");
+  }
+
+  // Admins are scoped to their own institution; super_admin can edit anything.
+  if (user.role === "admin") {
+    const adminInstitutionId = resolveInstitutionId(user);
+    if (entry.institutionId !== adminInstitutionId) {
+      throw new BadRequestError("You can only edit entries in your institution");
+    }
+  }
+
+  const now = nowISO();
+  const updates: Record<string, any> = { updatedAt: now };
+  // notes === remarks for a period
+  if (body.notes !== undefined) updates.notes = body.notes;
+  if (body.remarks !== undefined) updates.notes = body.remarks;
+  if (body.additionalClassIds !== undefined || body.additionalClassId !== undefined) {
+    updates.additionalClassId = resolveAdditionalClassIds(body, null);
+  }
+  if (body.classId) updates.classId = body.classId;
+  if (body.gradeBookId !== undefined) updates.gradeBookId = body.gradeBookId;
+  if (Object.keys(updates).length > 1) {
+    await db.update(timetableEntries).set(updates).where(eq(timetableEntries.id, id));
+  }
+
+  const wantsTopicUpdate =
+    (body.chapterTopics !== undefined && body.chapterTopics !== null) ||
+    (body.topicsCovered !== undefined && body.topicsCovered !== null);
+  if (wantsTopicUpdate) {
+    await db.delete(timetableTopicsCovered).where(eq(timetableTopicsCovered.timetableEntryId, id));
+    if (body.chapterTopics && Array.isArray(body.chapterTopics)) {
+      for (const ct of body.chapterTopics) {
+        await db.insert(timetableTopicsCovered).values({
+          id: uuid(),
+          timetableEntryId: id,
+          topic: ct.contentTitle || ct.chapterTitle || ct.topic,
+          chapterId: ct.chapterId || null,
+          contentId: ct.contentId || null,
+        });
+      }
+    }
+    if (body.topicsCovered && Array.isArray(body.topicsCovered)) {
+      for (const topic of body.topicsCovered) {
+        const title = typeof topic === "string" ? topic : (topic as any)?.title || (topic as any)?.topic;
+        if (!title) continue;
+        await db.insert(timetableTopicsCovered).values({
+          id: uuid(),
+          timetableEntryId: id,
+          topic: title,
+        });
+      }
+    }
+  }
+
+  // Keep linked class session in sync (remarks/summary + topics).
+  if (body.notes !== undefined || body.remarks !== undefined || wantsTopicUpdate || body.durationMinutes !== undefined) {
+    const targetDateKey = entry.specificDate
+      ? toDateKey(entry.specificDate)
+      : entry.completedAt
+        ? toDateKey(entry.completedAt)
+        : null;
+    if (targetDateKey && entry.staffId && entry.classId) {
+      const dayStart = dateKeyToISOString(targetDateKey);
+      const dayEnd = dateKeyEndISOString(targetDateKey);
+      const sessions = await db
+        .select()
+        .from(classSessions)
+        .where(
+          and(
+            eq(classSessions.staffId, entry.staffId),
+            eq(classSessions.classId, entry.classId),
+            sql`${classSessions.startTime} >= ${dayStart}`,
+            sql`${classSessions.startTime} <= ${dayEnd}`,
+          ),
+        )
+        .limit(1);
+      if (sessions.length > 0) {
+        const sessionUpdates: Record<string, any> = { updatedAt: now };
+        if (body.notes !== undefined) sessionUpdates.remarks = body.notes;
+        if (body.remarks !== undefined) sessionUpdates.remarks = body.remarks;
+        if (body.durationMinutes !== undefined) sessionUpdates.durationMinutes = body.durationMinutes;
+        await db.update(classSessions).set(sessionUpdates).where(eq(classSessions.id, sessions[0].id));
+        if (wantsTopicUpdate && body.topicsCovered && Array.isArray(body.topicsCovered)) {
+          await db.delete(classSessionTopics).where(eq(classSessionTopics.sessionId, sessions[0].id));
+          for (const topic of body.topicsCovered) {
+            const title = typeof topic === "string" ? topic : (topic as any)?.title || (topic as any)?.topic;
+            if (!title) continue;
+            await db.insert(classSessionTopics).values({
+              id: uuid(),
+              sessionId: sessions[0].id,
+              topic: title,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  const [updated] = await db.select().from(timetableEntries).where(eq(timetableEntries.id, id)).limit(1);
+  const topicRows = await db
+    .select({
+      topic: timetableTopicsCovered.topic,
+      chapterId: timetableTopicsCovered.chapterId,
+      contentId: timetableTopicsCovered.contentId,
+    })
+    .from(timetableTopicsCovered)
+    .where(eq(timetableTopicsCovered.timetableEntryId, id));
+
+  return c.json({
+    success: true,
+    data: {
+      ...updated,
+      topicsCovered: topicRows.map((t: any) => t.topic),
     },
   });
 });
