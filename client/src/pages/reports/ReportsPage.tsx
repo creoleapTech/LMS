@@ -2183,6 +2183,7 @@ function SubmittedReportsView({
 
   // View state
   const [viewingSubmission, setViewingSubmission] = useState<{
+    submissionId: string;
     reportData: ReportParams;
     signatureUrl: string | null;
     staffName: string;
@@ -2206,6 +2207,11 @@ function SubmittedReportsView({
   } | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+
+  // Superadmin remarks-edit state
+  const [isEditingRemarks, setIsEditingRemarks] = useState(false);
+  const [editedReportData, setEditedReportData] = useState<ReportParams | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const currentYear = new Date().getFullYear();
   const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
@@ -2425,6 +2431,7 @@ function SubmittedReportsView({
       }
 
       setViewingSubmission({
+        submissionId: r.id,
         reportData,
         signatureUrl,
         staffName: r.staffName || "Unknown",
@@ -2432,10 +2439,56 @@ function SubmittedReportsView({
         monthName: MONTH_NAMES[(r.month || 1) - 1],
         year: r.year,
       });
+      setIsEditingRemarks(false);
+      setEditedReportData(null);
     } catch {
       toast.error("Failed to load report data");
     } finally {
       setViewLoading(false);
+    }
+  };
+
+  const handleStartEditRemarks = () => {
+    if (!viewingSubmission) return;
+    setEditedReportData(JSON.parse(JSON.stringify(viewingSubmission.reportData)));
+    setIsEditingRemarks(true);
+  };
+
+  const handleCancelEditRemarks = () => {
+    setIsEditingRemarks(false);
+    setEditedReportData(null);
+  };
+
+  const handleSaveRemarks = async () => {
+    if (!viewingSubmission || !editedReportData) return;
+    setIsSavingEdit(true);
+    try {
+      const res = await _axios.post("/admin/timetable/admin-update-report", {
+        submissionId: viewingSubmission.submissionId,
+        reportData: { rows: editedReportData.rows },
+      });
+      if (res.data?.success) {
+        toast.success("Remarks saved — report moved back to pending review");
+        setReports((prev) =>
+          prev.map((r) =>
+            r.id === viewingSubmission.submissionId
+              ? { ...r, adminApproval: "pending", adminComment: null, reviewedAt: null, reviewedBy: null, principalSignedKey: null, principalSignedAt: null, mailSentAt: null }
+              : r
+          )
+        );
+        setViewingSubmission((prev) =>
+          prev ? { ...prev, reportData: editedReportData } : prev
+        );
+        setIsEditingRemarks(false);
+        setEditedReportData(null);
+      } else {
+        toast.error(res.data?.message || "Failed to save remarks");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to save remarks");
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -2871,22 +2924,96 @@ function SubmittedReportsView({
       </div>
 
       {/* Report Preview Dialog */}
-      <Dialog open={!!viewingSubmission} onOpenChange={(open) => { if (!open) setViewingSubmission(null); }}>
+      <Dialog open={!!viewingSubmission} onOpenChange={(open) => { if (!open) { setViewingSubmission(null); setIsEditingRemarks(false); setEditedReportData(null); } }}>
         <DialogContent className="sm:max-w-[90vw] max-h-[90vh] p-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-2 flex flex-row items-center justify-between">
             <div>
               <DialogTitle className="text-lg font-bold">
                 {viewingSubmission?.staffName} — {viewingSubmission?.monthName} {viewingSubmission?.year}
               </DialogTitle>
+              {isEditingRemarks && (
+                <p className="text-xs font-semibold text-indigo-600 mt-1">
+                  Editing remarks — saving will move the report back to pending review.
+                </p>
+              )}
             </div>
-            <Button onClick={downloadPreviewPdf} size="sm" className="bg-red-600 hover:bg-red-700 text-white gap-1.5">
-              <Download size={14} />
-              Download PDF
-            </Button>
+            <div className="flex items-center gap-2 mr-6">
+              {isSuperAdmin && viewingSubmission && !isEditingRemarks && (
+                <Button onClick={handleStartEditRemarks} size="sm" variant="outline" className="gap-1.5 font-semibold">
+                  <Pencil size={14} />
+                  Edit Remarks
+                </Button>
+              )}
+              {isSuperAdmin && isEditingRemarks && (
+                <>
+                  <Button onClick={handleCancelEditRemarks} size="sm" variant="outline" disabled={isSavingEdit} className="gap-1.5 font-semibold">
+                    <X size={14} />
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveRemarks} size="sm" disabled={isSavingEdit} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 font-semibold">
+                    {isSavingEdit ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                    Save
+                  </Button>
+                </>
+              )}
+              {!isEditingRemarks && (
+                <Button onClick={downloadPreviewPdf} size="sm" className="bg-red-600 hover:bg-red-700 text-white gap-1.5">
+                  <Download size={14} />
+                  Download PDF
+                </Button>
+              )}
+            </div>
           </DialogHeader>
           <div className="overflow-auto max-h-[calc(90vh-80px)] px-6 pb-6">
-            {viewingSubmission && (
-              <ReportPreview data={viewingSubmission.reportData} signatureUrl={viewingSubmission.signatureUrl} />
+            {viewingSubmission && isEditingRemarks && editedReportData ? (
+              <div className="rounded-xl border border-slate-200 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700">
+                      <th className="px-3 py-2.5 text-left font-bold">Date</th>
+                      <th className="px-3 py-2.5 text-left font-bold">Class</th>
+                      <th className="px-3 py-2.5 text-left font-bold">Chapter</th>
+                      <th className="px-3 py-2.5 text-left font-bold">Topic</th>
+                      <th className="px-3 py-2.5 text-left font-bold">Remarks (editable)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {editedReportData.rows.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No session entries.
+                        </td>
+                      </tr>
+                    )}
+                    {editedReportData.rows.map((row, i) => (
+                      <tr key={i} className="border-t border-slate-100">
+                        <td className="px-3 py-2 text-slate-600">{row.date}</td>
+                        <td className="px-3 py-2 text-slate-600">{row.className}{row.section ? ` ${row.section}` : ""}</td>
+                        <td className="px-3 py-2 text-slate-600">{row.chapterName}</td>
+                        <td className="px-3 py-2 text-slate-600">{row.topicName}</td>
+                        <td className="px-3 py-2">
+                          <Input
+                            value={row.remarks ?? ""}
+                            onChange={(e) =>
+                              setEditedReportData((prev) =>
+                                prev
+                                  ? { ...prev, rows: prev.rows.map((r, j) => (j === i ? { ...r, remarks: e.target.value } : r)) }
+                                  : prev
+                              )
+                            }
+                            placeholder="Enter remark..."
+                            className="rounded-lg"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              viewingSubmission && (
+                <ReportPreview data={viewingSubmission.reportData} signatureUrl={viewingSubmission.signatureUrl} />
+              )
             )}
           </div>
         </DialogContent>

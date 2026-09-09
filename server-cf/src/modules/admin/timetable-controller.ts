@@ -3234,6 +3234,89 @@ timetableController.post("/reject-report", async (c) => {
   }
 });
 
+// ─── POST /admin-update-report — superadmin edits remarks on a submitted report ──
+
+timetableController.post("/admin-update-report", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    if (user.role !== "super_admin") {
+      throw new BadRequestError("Only super_admin can edit submitted reports");
+    }
+
+    const { submissionId, reportData } = await c.req.json();
+    if (!submissionId) throw new BadRequestError("submissionId is required");
+    if (!reportData || typeof reportData !== "object") {
+      throw new BadRequestError("reportData is required");
+    }
+
+    const db = getDb(c.env.DB);
+    const now = nowISO();
+
+    const [existing] = await db
+      .select()
+      .from(reportSubmissions)
+      .where(eq(reportSubmissions.id, submissionId))
+      .limit(1);
+
+    if (!existing || existing.isDeleted) throw new BadRequestError("Submission not found");
+    if (existing.status !== "submitted") {
+      throw new BadRequestError(
+        `Only submitted reports can be edited (current status: ${existing.status}).`
+      );
+    }
+
+    let stored: any = existing.reportData;
+    if (typeof stored === "string") {
+      try { stored = JSON.parse(stored); } catch { stored = {}; }
+    }
+    if (!stored || typeof stored !== "object") stored = {};
+
+    // Remarks-only edit: overlay the incoming remarks onto the stored rows,
+    // matched by index. All other fields stay exactly as submitted.
+    const incomingRows = Array.isArray(reportData.rows) ? reportData.rows : [];
+    const storedRows = Array.isArray(stored.rows) ? stored.rows : [];
+    const mergedRows = storedRows.map((row: any, i: number) => ({
+      ...row,
+      remarks: typeof incomingRows[i]?.remarks === "string" ? incomingRows[i].remarks : (row?.remarks ?? ""),
+    }));
+    stored.rows = mergedRows;
+
+    const normalized = normalizeReportData(stored);
+
+    // Atomic: re-check status in WHERE so a concurrent draft-save wins instead
+    // of stranding draft content under a superadmin edit.
+    const [updated] = await db
+      .update(reportSubmissions)
+      .set({
+        reportData: JSON.stringify(normalized),
+        adminApproval: "pending",
+        adminComment: null,
+        reviewedAt: null,
+        reviewedBy: null,
+        principalSignedKey: null,
+        principalSignedAt: null,
+        mailSentAt: null,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(reportSubmissions.id, submissionId),
+          eq(reportSubmissions.status, "submitted"),
+          eq(reportSubmissions.isDeleted, 0)
+        )
+      )
+      .returning();
+
+    if (!updated) throw new BadRequestError("Report is no longer submitted (moved back to draft). Please refresh.");
+
+    return c.json({ success: true, data: updated });
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("Admin update report error:", err);
+    return c.json({ success: false, message: "Failed to update report" }, 500);
+  }
+});
+
 // ═══ Report Draft endpoints ═══════════════════════
 
 // ─── POST /save-report-draft — save or update a draft ──
