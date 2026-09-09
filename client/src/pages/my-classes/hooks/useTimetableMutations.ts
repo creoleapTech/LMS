@@ -88,5 +88,22 @@ export function useTimetableMutations() {
     },
   });
 
-  return { createEntry, updateEntry, completeEntry, deleteEntry };
+  const uncompleteEntry = useMutation({
+    mutationFn: async (id: string) => {
+      const { data: res } = await _axios.patch<{
+        success: boolean;
+        mode: "instance-removed" | "reverted-to-scheduled";
+      }>(`/admin/timetable/${id}/uncomplete`);
+      return res;
+    },
+    onSuccess: () => {
+      invalidateAll();
+      toast.success("Work done removed — class is scheduled again");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to remove work done");
+    },
+  });
+
+  return { createEntry, updateEntry, completeEntry, deleteEntry, uncompleteEntry };
 }

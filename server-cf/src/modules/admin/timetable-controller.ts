@@ -1457,6 +1457,100 @@ timetableController.patch("/:id/complete", async (c) => {
   });
 });
 
+// ─── PATCH /:id/uncomplete — remove workdone, keep the schedule ─────────────
+// Inverse of /complete for the workdone part only: the schedule itself is
+// never deleted here (schedule removal stays exclusively in DELETE /:id).
+// - Completed copy-on-complete one-off (recurring template still live):
+//   soft-delete the one-off copy so the scheduled template shows again.
+// - Genuine one-off (or completed template): flip back to scheduled.
+// Linked classSessions are intentionally preserved as history.
+
+timetableController.patch("/:id/uncomplete", async (c) => {
+  try {
+    const user = c.get("user") as Record<string, any>;
+    const { id } = c.req.param();
+    const db = getDb(c.env.DB);
+
+    const [entry] = await db
+      .select()
+      .from(timetableEntries)
+      .where(and(eq(timetableEntries.id, id), eq(timetableEntries.isDeleted, 0)))
+      .limit(1);
+
+    if (!entry) {
+      throw new BadRequestError("Timetable entry not found");
+    }
+    if (entry.status !== "completed") {
+      throw new BadRequestError("Only completed entries can be unmarked");
+    }
+
+    // Teachers can only unmark their own entries; admin/super_admin unrestricted
+    if (user.role !== "admin" && user.role !== "super_admin") {
+      if (entry.staffId !== user.id) {
+        throw new BadRequestError("You can only update your own timetable entries");
+      }
+    }
+
+    const now = nowISO();
+
+    // Completed recurring template (abnormal — complete normally resets these):
+    // just flip it back to scheduled.
+    if (entry.isRecurring === 1) {
+      const [updated] = await db
+        .update(timetableEntries)
+        .set({ status: "scheduled", completedAt: null, updatedAt: now })
+        .where(and(eq(timetableEntries.id, id), eq(timetableEntries.isDeleted, 0)))
+        .returning();
+      return c.json({ success: true, mode: "reverted-to-scheduled", data: updated });
+    }
+
+    // One-off entry: is it a copy-on-complete instance with a live template?
+    const entryDayOfWeek = entry.dayOfWeek;
+    const [template] =
+      entry.staffId !== null &&
+      entry.staffId !== undefined &&
+      entry.periodNumber !== null &&
+      entry.periodNumber !== undefined
+        ? await db
+            .select({ id: timetableEntries.id })
+            .from(timetableEntries)
+            .where(
+              and(
+                eq(timetableEntries.staffId, entry.staffId),
+                eq(timetableEntries.periodNumber, entry.periodNumber),
+                ...(entryDayOfWeek === null || entryDayOfWeek === undefined
+                  ? []
+                  : [eq(timetableEntries.dayOfWeek, entryDayOfWeek)]),
+                eq(timetableEntries.isRecurring, 1),
+                eq(timetableEntries.isDeleted, 0),
+              ),
+            )
+            .limit(1)
+        : [];
+
+    if (template) {
+      // Remove the completed instance; the scheduled template shows again.
+      await db
+        .update(timetableEntries)
+        .set({ isDeleted: 1, updatedAt: now })
+        .where(eq(timetableEntries.id, id));
+      return c.json({ success: true, mode: "instance-removed", data: { id } });
+    }
+
+    // Genuine one-off: keep the schedule, drop the completion.
+    const [updated] = await db
+      .update(timetableEntries)
+      .set({ status: "scheduled", completedAt: null, updatedAt: now })
+      .where(and(eq(timetableEntries.id, id), eq(timetableEntries.isDeleted, 0)))
+      .returning();
+    return c.json({ success: true, mode: "reverted-to-scheduled", data: updated });
+  } catch (err: any) {
+    if (err instanceof BadRequestError) throw err;
+    console.error("Uncomplete entry error:", err);
+    return c.json({ success: false, message: "Failed to remove work done" }, 500);
+  }
+});
+
 // ─── DELETE /:id — soft delete ─────────────────────
 
 timetableController.delete("/:id", async (c) => {

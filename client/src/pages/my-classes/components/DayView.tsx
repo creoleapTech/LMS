@@ -28,6 +28,7 @@ import {
   Plus,
   Pencil,
   Check,
+  X,
   BookOpen,
   Coffee,
   CheckCircle2,
@@ -195,7 +196,12 @@ export function DayView({
 
   const [deleteScope, setDeleteScope] = useState<"day" | "future" | null>(null);
 
-  const { deleteEntry } = useTimetableMutations();
+  const [uncompleteDialog, setUncompleteDialog] = useState<{
+    open: boolean;
+    entry?: ITimetableEntry;
+  }>({ open: false });
+
+  const { deleteEntry, uncompleteEntry } = useTimetableMutations();
 
   const isRecurringEntry = !!deleteDialog.entry?.isRecurring;
 
@@ -222,6 +228,16 @@ export function DayView({
           },
         );
       }
+    }
+  };
+
+  const handleUncomplete = () => {
+    if (uncompleteDialog.entry) {
+      uncompleteEntry.mutate(uncompleteDialog.entry._id, {
+        onSuccess: () => {
+          setUncompleteDialog({ open: false });
+        },
+      });
     }
   };
 
@@ -450,6 +466,7 @@ export function DayView({
                       }
                     }}
                     onDeleteClick={() => setDeleteDialog({ open: true, entry })}
+                    onUncompleteClick={() => setUncompleteDialog({ open: true, entry })}
                   />
                 );
               })}
@@ -573,6 +590,39 @@ export function DayView({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog
+        open={uncompleteDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setUncompleteDialog({ open: false });
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove work done?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The completion record for this class will be removed and it will return to scheduled. The timetable schedule itself is kept — use the delete button to remove the schedule.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setUncompleteDialog({ open: false });
+              }}
+              className="rounded-xl"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUncomplete}
+              disabled={uncompleteEntry.isPending}
+              className="rounded-xl bg-amber-600 hover:bg-amber-700"
+            >
+              {uncompleteEntry.isPending ? "Removing..." : "Remove work done"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -637,6 +687,7 @@ function ScheduledRow({
   onCompleteClick,
   onTeachClick,
   onDeleteClick,
+  onUncompleteClick,
 }: {
   period: IPeriodSlot;
   entry: ITimetableEntry;
@@ -649,6 +700,7 @@ function ScheduledRow({
   onCompleteClick: () => void;
   onTeachClick: () => void;
   onDeleteClick: () => void;
+  onUncompleteClick: () => void;
 }) {
   const borderColor = isCompleted ? COMPLETED_BORDER : colors.border;
   const badgeColor = isCompleted ? "bg-emerald-100 text-emerald-700" : colors.badge;
@@ -771,19 +823,29 @@ function ScheduledRow({
             {!readOnly && (
               <>
                 <button
-                  onClick={onEditClick}
+                  onClick={isCompleted ? onCompleteClick : onEditClick}
                   className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-indigo-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(99,102,241,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
-                  title="Edit schedule"
+                  title={isCompleted ? "Edit work done" : "Edit schedule"}
                 >
                   <Pencil size={14} />
                 </button>
-                <button
-                  onClick={onCompleteClick}
-                  className={`inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-emerald-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(16,185,129,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer`}
-                  title={isCompleted ? "Edit work done" : "Mark done"}
-                >
-                  {isCompleted ? <CheckCircle2 size={14} /> : <Check size={14} />}
-                </button>
+                {isCompleted ? (
+                  <button
+                    onClick={onUncompleteClick}
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-amber-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(217,119,6,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
+                    title="Remove work done"
+                  >
+                    <X size={14} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={onCompleteClick}
+                    className={`inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-emerald-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(16,185,129,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer`}
+                    title="Mark done"
+                  >
+                    <Check size={14} />
+                  </button>
+                )}
                 {!isCompleted && (
                   <button
                     onClick={onTeachClick}
@@ -799,7 +861,7 @@ function ScheduledRow({
               <button
                 onClick={onDeleteClick}
                 className="inline-flex items-center justify-center w-8 h-8 rounded-xl shadow-[2px_2px_5px_var(--neo-shadow-dark),-2px_-2px_5px_var(--neo-shadow-light)] border border-white/40 bg-gradient-to-145 from-[var(--neo-bg-alt)] to-[var(--neo-bg-dark)] text-slate-500 hover:text-rose-600 hover:shadow-[3px_3px_8px_var(--neo-shadow-dark),-3px_-3px_8px_var(--neo-shadow-light),0_0_10px_rgba(225,29,72,0.2)] active:shadow-[inset_2px_2px_4px_var(--neo-shadow-dark),inset_-2px_-2px_4px_var(--neo-shadow-light)] transition-all cursor-pointer"
-                title={isCompleted ? "Delete work done entry" : "Delete schedule"}
+                title="Delete schedule"
               >
                 <Trash2 size={14} />
               </button>
