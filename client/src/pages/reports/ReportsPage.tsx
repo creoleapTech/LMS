@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/store/userAuthStore";
 
 import { useStaffList } from "@/pages/my-classes/hooks/useStaffList";
-import { useReportEditor, type BodyItem, type ReportTable, type ReportParams } from "./hooks/useReportEditor";
+import { useReportEditor, type BodyItem, type ReportTable, type ReportParams, type ReportRow } from "./hooks/useReportEditor";
 import { ReportBodyEditor } from "@/components/editors/ReportBodyEditor";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,8 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   ChevronLeft,
   ChevronRight,
+  ArrowUpToLine,
+  ArrowDownToLine,
   Download,
   Loader2,
   Plus,
@@ -2156,6 +2158,101 @@ function ReportPreview({ data, signatureUrl }: { data: ReportParams; signatureUr
 
 // ─── Submitted Reports View (admin/superadmin) ───
 
+type EditableRow = ReportRow & { _editId: string; _isNew?: boolean };
+
+type EditableReportData = Omit<ReportParams, "rows"> & { rows: EditableRow[] };
+
+const newEditableRowId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `row-${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
+
+function SortableEditRow({
+  row,
+  onFieldChange,
+  onRemove,
+  onInsertAbove,
+  onInsertBelow,
+}: {
+  row: EditableRow;
+  onFieldChange: (field: keyof ReportRow, value: string) => void;
+  onRemove: () => void;
+  onInsertAbove: () => void;
+  onInsertBelow: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row._editId });
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const cellClass = "px-3 py-2";
+  const renderCell = (field: keyof ReportRow, value: string, placeholder: string) =>
+    row._isNew ? (
+      <Input
+        value={value ?? ""}
+        onChange={(e) => onFieldChange(field, e.target.value)}
+        placeholder={placeholder}
+        className="h-8 text-xs rounded-md"
+      />
+    ) : (
+      <span className="text-slate-600">{value}</span>
+    );
+
+  return (
+    <tr ref={setNodeRef} style={style} className="border-t border-slate-100 bg-white">
+      <td className="px-2 py-2 text-center w-8">
+        <button
+          {...attributes}
+          {...listeners}
+          className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-grab active:cursor-grabbing touch-none"
+          title="Drag to reorder"
+        >
+          <GripVertical size={14} />
+        </button>
+      </td>
+      <td className={cellClass}>{renderCell("date", row.date, "Date")}</td>
+      <td className={cellClass}>{row._isNew ? renderCell("className", row.className, "Class") : <span className="text-slate-600">{row.className}{row.section ? ` ${row.section}` : ""}</span>}</td>
+      <td className={cellClass}>{renderCell("chapterName", row.chapterName, "Chapter")}</td>
+      <td className={cellClass}>{renderCell("topicName", row.topicName, "Topic")}</td>
+      <td className={`${cellClass} min-w-[180px]`}>
+        <Input
+          value={row.remarks ?? ""}
+          onChange={(e) => onFieldChange("remarks", e.target.value)}
+          placeholder="Enter remark..."
+          className="rounded-lg"
+        />
+      </td>
+      <td className="px-2 py-2 text-center whitespace-nowrap">
+        <div className="inline-flex items-center gap-0.5">
+          <button
+            onClick={onInsertAbove}
+            className="p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-colors"
+            title="Add row above"
+          >
+            <ArrowUpToLine size={14} />
+          </button>
+          <button
+            onClick={onInsertBelow}
+            className="p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-colors"
+            title="Add row below"
+          >
+            <ArrowDownToLine size={14} />
+          </button>
+          <button
+            onClick={onRemove}
+            className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
+            title="Remove row"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function SubmittedReportsView({
   institutionId,
   isSuperAdmin,
@@ -2210,8 +2307,12 @@ function SubmittedReportsView({
 
   // Superadmin remarks-edit state
   const [isEditingRemarks, setIsEditingRemarks] = useState(false);
-  const [editedReportData, setEditedReportData] = useState<ReportParams | null>(null);
+  const [editedReportData, setEditedReportData] = useState<EditableReportData | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const editSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
 
   const currentYear = new Date().getFullYear();
   const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
@@ -2450,7 +2551,11 @@ function SubmittedReportsView({
 
   const handleStartEditRemarks = () => {
     if (!viewingSubmission) return;
-    setEditedReportData(JSON.parse(JSON.stringify(viewingSubmission.reportData)));
+    const cloned = JSON.parse(JSON.stringify(viewingSubmission.reportData)) as ReportParams;
+    setEditedReportData({
+      ...cloned,
+      rows: (cloned.rows || []).map((r) => ({ ...r, _editId: newEditableRowId() })),
+    });
     setIsEditingRemarks(true);
   };
 
@@ -2459,13 +2564,72 @@ function SubmittedReportsView({
     setEditedReportData(null);
   };
 
+  const updateEditedRow = (editId: string, field: keyof ReportRow, value: string) => {
+    setEditedReportData((prev) =>
+      prev
+        ? { ...prev, rows: prev.rows.map((r) => (r._editId === editId ? { ...r, [field]: value } : r)) }
+        : prev
+    );
+  };
+
+  const removeEditedRow = (editId: string) => {
+    setEditedReportData((prev) =>
+      prev ? { ...prev, rows: prev.rows.filter((r) => r._editId !== editId) } : prev
+    );
+  };
+
+  const insertEditedRow = (editId: string | null, position: "above" | "below") => {
+    setEditedReportData((prev) => {
+      if (!prev) return prev;
+      const blank: EditableRow = {
+        date: "",
+        className: "",
+        section: "",
+        chapterName: "",
+        topicName: "",
+        remarks: "",
+        _editId: newEditableRowId(),
+        _isNew: true,
+      };
+      if (editId === null) return { ...prev, rows: [...prev.rows, blank] };
+      const idx = prev.rows.findIndex((r) => r._editId === editId);
+      if (idx === -1) return { ...prev, rows: [...prev.rows, blank] };
+      const at = position === "above" ? idx : idx + 1;
+      return { ...prev, rows: [...prev.rows.slice(0, at), blank, ...prev.rows.slice(at)] };
+    });
+  };
+
+  const handleEditRowsDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setEditedReportData((prev) => {
+      if (!prev) return prev;
+      const oldIndex = prev.rows.findIndex((r) => r._editId === active.id);
+      const newIndex = prev.rows.findIndex((r) => r._editId === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const rows = [...prev.rows];
+      const [moved] = rows.splice(oldIndex, 1);
+      rows.splice(newIndex, 0, moved);
+      return { ...prev, rows };
+    });
+  };
+
   const handleSaveRemarks = async () => {
     if (!viewingSubmission || !editedReportData) return;
     setIsSavingEdit(true);
     try {
+      // Strip edit-only markers before sending
+      const rows: ReportRow[] = editedReportData.rows.map(({ date, className, section, chapterName, topicName, remarks }) => ({
+        date: date ?? "",
+        className: className ?? "",
+        section: section ?? "",
+        chapterName: chapterName ?? "",
+        topicName: topicName ?? "",
+        remarks: remarks ?? "",
+      }));
       const res = await _axios.post("/admin/timetable/admin-update-report", {
         submissionId: viewingSubmission.submissionId,
-        reportData: { rows: editedReportData.rows },
+        reportData: { rows },
       });
       if (res.data?.success) {
         toast.success("Remarks saved — report moved back to pending review");
@@ -2967,48 +3131,48 @@ function SubmittedReportsView({
           <div className="overflow-auto max-h-[calc(90vh-80px)] px-6 pb-6">
             {viewingSubmission && isEditingRemarks && editedReportData ? (
               <div className="rounded-xl border border-slate-200 overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-100 text-slate-700">
-                      <th className="px-3 py-2.5 text-left font-bold">Date</th>
-                      <th className="px-3 py-2.5 text-left font-bold">Class</th>
-                      <th className="px-3 py-2.5 text-left font-bold">Chapter</th>
-                      <th className="px-3 py-2.5 text-left font-bold">Topic</th>
-                      <th className="px-3 py-2.5 text-left font-bold">Remarks (editable)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {editedReportData.rows.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                          No session entries.
-                        </td>
+                <DndContext sensors={editSensors} collisionDetection={closestCenter} onDragEnd={handleEditRowsDragEnd}>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-700">
+                        <th className="px-2 py-2.5 w-8"></th>
+                        <th className="px-3 py-2.5 text-left font-bold">Date</th>
+                        <th className="px-3 py-2.5 text-left font-bold">Class</th>
+                        <th className="px-3 py-2.5 text-left font-bold">Chapter</th>
+                        <th className="px-3 py-2.5 text-left font-bold">Topic</th>
+                        <th className="px-3 py-2.5 text-left font-bold">Remarks (editable)</th>
+                        <th className="px-2 py-2.5 text-center font-bold">Actions</th>
                       </tr>
-                    )}
-                    {editedReportData.rows.map((row, i) => (
-                      <tr key={i} className="border-t border-slate-100">
-                        <td className="px-3 py-2 text-slate-600">{row.date}</td>
-                        <td className="px-3 py-2 text-slate-600">{row.className}{row.section ? ` ${row.section}` : ""}</td>
-                        <td className="px-3 py-2 text-slate-600">{row.chapterName}</td>
-                        <td className="px-3 py-2 text-slate-600">{row.topicName}</td>
-                        <td className="px-3 py-2">
-                          <Input
-                            value={row.remarks ?? ""}
-                            onChange={(e) =>
-                              setEditedReportData((prev) =>
-                                prev
-                                  ? { ...prev, rows: prev.rows.map((r, j) => (j === i ? { ...r, remarks: e.target.value } : r)) }
-                                  : prev
-                              )
-                            }
-                            placeholder="Enter remark..."
-                            className="rounded-lg"
+                    </thead>
+                    <SortableContext items={editedReportData.rows.map((r) => r._editId)} strategy={verticalListSortingStrategy}>
+                      <tbody>
+                        {editedReportData.rows.length === 0 && (
+                          <tr>
+                            <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                              No session entries.
+                            </td>
+                          </tr>
+                        )}
+                        {editedReportData.rows.map((row) => (
+                          <SortableEditRow
+                            key={row._editId}
+                            row={row}
+                            onFieldChange={(field, value) => updateEditedRow(row._editId, field, value)}
+                            onRemove={() => removeEditedRow(row._editId)}
+                            onInsertAbove={() => insertEditedRow(row._editId, "above")}
+                            onInsertBelow={() => insertEditedRow(row._editId, "below")}
                           />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        ))}
+                      </tbody>
+                    </SortableContext>
+                  </table>
+                </DndContext>
+                <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
+                  <Button onClick={() => insertEditedRow(null, "below")} size="sm" variant="outline" className="gap-1.5 font-semibold">
+                    <Plus size={14} />
+                    Add Row
+                  </Button>
+                </div>
               </div>
             ) : (
               viewingSubmission && (

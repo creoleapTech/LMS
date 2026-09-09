@@ -3234,7 +3234,7 @@ timetableController.post("/reject-report", async (c) => {
   }
 });
 
-// ─── POST /admin-update-report — superadmin edits remarks on a submitted report ──
+// ─── POST /admin-update-report — superadmin edits a submitted report's rows ──
 
 timetableController.post("/admin-update-report", async (c) => {
   try {
@@ -3247,6 +3247,12 @@ timetableController.post("/admin-update-report", async (c) => {
     if (!submissionId) throw new BadRequestError("submissionId is required");
     if (!reportData || typeof reportData !== "object") {
       throw new BadRequestError("reportData is required");
+    }
+    if (!Array.isArray(reportData.rows)) {
+      throw new BadRequestError("reportData.rows must be an array");
+    }
+    if (reportData.rows.length > 1000) {
+      throw new BadRequestError("Too many rows (max 1000)");
     }
 
     const db = getDb(c.env.DB);
@@ -3271,15 +3277,18 @@ timetableController.post("/admin-update-report", async (c) => {
     }
     if (!stored || typeof stored !== "object") stored = {};
 
-    // Remarks-only edit: overlay the incoming remarks onto the stored rows,
-    // matched by index. All other fields stay exactly as submitted.
-    const incomingRows = Array.isArray(reportData.rows) ? reportData.rows : [];
-    const storedRows = Array.isArray(stored.rows) ? stored.rows : [];
-    const mergedRows = storedRows.map((row: any, i: number) => ({
-      ...row,
-      remarks: typeof incomingRows[i]?.remarks === "string" ? incomingRows[i].remarks : (row?.remarks ?? ""),
+    // Full-rows replacement (sanitized to the ReportRow shape): the superadmin
+    // may edit remarks and rearrange / add / delete rows. All other stored
+    // report fields stay exactly as submitted.
+    const clean = (v: unknown) => (typeof v === "string" ? v : v == null ? "" : String(v));
+    stored.rows = reportData.rows.map((r: any) => ({
+      date: clean(r?.date),
+      className: clean(r?.className),
+      section: clean(r?.section),
+      chapterName: clean(r?.chapterName),
+      topicName: clean(r?.topicName),
+      remarks: clean(r?.remarks),
     }));
-    stored.rows = mergedRows;
 
     const normalized = normalizeReportData(stored);
 
