@@ -666,7 +666,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                 </span>
               ) : null}
               {submissionStatus?.adminApproval === "rejected" && submissionStatus?.adminComment && (
-                <span className="text-xs text-red-600 max-w-[200px] truncate shrink-0" title={submissionStatus.adminComment}>
+                <span className="text-xs text-red-600 max-w-[320px] whitespace-normal break-words leading-snug shrink-0" title={submissionStatus.adminComment}>
                   <MessageSquare size={12} className="inline mr-1" />
                   {submissionStatus.adminComment}
                 </span>
@@ -913,7 +913,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                       ) : (
                         reportData.rows.map((row, index) => (
                           <tr key={index} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                            <td className="px-3 py-1.5">
+                            <td className="px-3 py-1.5 align-top">
                               <Input
                                 value={row.date}
                                 onChange={(e) => updateRow(index, "date", e.target.value)}
@@ -921,7 +921,7 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                                 readOnly={isApproved}
                               />
                             </td>
-                            <td className="px-3 py-1.5">
+                            <td className="px-3 py-1.5 align-top">
                               <Input
                                 value={row.section ? `${row.className}${row.section}` : row.className}
                                 onChange={(e) => {
@@ -939,30 +939,41 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                                 readOnly={isApproved}
                               />
                             </td>
-                            <td className="px-3 py-1.5">
-                              <Input
-                                value={row.chapterName}
-                                onChange={(e) => updateRow(index, "chapterName", e.target.value)}
-                                className="h-8 text-xs rounded-md"
-                                readOnly={isApproved}
-                              />
+                            <td className="px-3 py-1.5 align-top min-w-[160px] max-w-[280px]">
+                              {isApproved ? (
+                                <div className="text-xs text-slate-700 whitespace-normal break-words leading-snug py-1.5">{row.chapterName}</div>
+                              ) : (
+                                <Textarea
+                                  value={row.chapterName}
+                                  onChange={(e) => updateRow(index, "chapterName", e.target.value)}
+                                  className="min-h-[32px] w-full text-xs rounded-md resize-none overflow-hidden whitespace-pre-wrap break-words"
+                                  rows={1}
+                                />
+                              )}
                             </td>
-                            <td className="px-3 py-1.5">
-                              <Input
-                                value={row.topicName}
-                                onChange={(e) => updateRow(index, "topicName", e.target.value)}
-                                className="h-8 text-xs rounded-md"
-                                readOnly={isApproved}
-                              />
+                            <td className="px-3 py-1.5 align-top min-w-[160px] max-w-[280px]">
+                              {isApproved ? (
+                                <div className="text-xs text-slate-700 whitespace-normal break-words leading-snug py-1.5">{row.topicName}</div>
+                              ) : (
+                                <Textarea
+                                  value={row.topicName}
+                                  onChange={(e) => updateRow(index, "topicName", e.target.value)}
+                                  className="min-h-[32px] w-full text-xs rounded-md resize-none overflow-hidden whitespace-pre-wrap break-words"
+                                  rows={1}
+                                />
+                              )}
                             </td>
-                            <td className="px-3 py-1.5">
-                              <Textarea
-                                value={row.remarks}
-                                onChange={(e) => updateRow(index, "remarks", e.target.value)}
-                                className="min-h-[32px] text-xs rounded-md resize-none"
-                                rows={1}
-                                readOnly={isApproved}
-                              />
+                            <td className="px-3 py-1.5 align-top min-w-[200px]">
+                              {isApproved ? (
+                                <div className="text-xs text-slate-700 whitespace-normal break-words leading-snug py-1.5">{row.remarks}</div>
+                              ) : (
+                                <Textarea
+                                  value={row.remarks}
+                                  onChange={(e) => updateRow(index, "remarks", e.target.value)}
+                                  className="min-h-[32px] w-full text-xs rounded-md resize-none overflow-hidden whitespace-pre-wrap break-words"
+                                  rows={1}
+                                />
+                              )}
                             </td>
                             <td className={`px-3 py-1.5 text-center ${isApproved ? "hidden" : ""}`}>
                               <button
@@ -1254,12 +1265,16 @@ function BodyItemEditor({
               <GripVertical size={16} />
             </button>
           )}
-          <input
-            value={table.title}
-            onChange={(e) => updateTitle(e.target.value)}
-            readOnly={readOnly}
-            className={`bg-transparent text-white font-extrabold text-lg tracking-wide outline-none border-b border-white/30 focus:border-white/80 transition-colors flex-1 mr-3 ${readOnly ? "cursor-default" : ""}`}
-          />
+          {readOnly ? (
+            <div className="text-white font-extrabold text-lg tracking-wide flex-1 mr-3 whitespace-normal break-words leading-snug">{table.title}</div>
+          ) : (
+            <textarea
+              value={table.title}
+              onChange={(e) => updateTitle(e.target.value)}
+              rows={1}
+              className="bg-transparent text-white font-extrabold text-lg tracking-wide outline-none border-b border-white/30 focus:border-white/80 transition-colors flex-1 mr-3 resize-none overflow-hidden whitespace-pre-wrap break-words [field-sizing:content]"
+            />
+          )}
           <div className="flex items-center gap-3">
             {!readOnly && (
               <>
@@ -1311,13 +1326,17 @@ function BodyItemEditor({
                 table.rows.map((row, ri) => (
                   <tr key={ri} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                     {row.map((val, ci) => (
-                      <td key={ci} className="px-3 py-1.5">
-                        <Input
-                          value={val}
-                          onChange={(e) => updateCell(ri, ci, e.target.value)}
-                          className={`h-8 text-xs rounded-md ${ci < 2 ? "text-center" : ""}`}
-                          readOnly={readOnly}
-                        />
+                      <td key={ci} className="px-3 py-1.5 align-top min-w-[120px]">
+                        {readOnly ? (
+                          <div className={`text-xs text-slate-700 whitespace-normal break-words leading-snug py-1.5 ${ci < 2 ? "text-center" : ""}`}>{val}</div>
+                        ) : (
+                          <Textarea
+                            value={val}
+                            onChange={(e) => updateCell(ri, ci, e.target.value)}
+                            className={`min-h-[32px] w-full text-xs rounded-md resize-none overflow-hidden whitespace-pre-wrap break-words ${ci < 2 ? "text-center" : ""}`}
+                            rows={1}
+                          />
+                        )}
                       </td>
                     ))}
                     <td className={`px-3 py-1.5 text-center ${readOnly ? "hidden" : ""}`}>
@@ -1367,13 +1386,17 @@ function BodyItemEditor({
         </div>
         <div className="flex-1 flex flex-col gap-1.5">
           {content.type === "heading" ? (
-            <Input
-              value={content.text}
-              onChange={(e) => updateText(e.target.value)}
-              placeholder="Heading text..."
-              className="flex-1 rounded-lg font-bold text-base"
-              readOnly={readOnly}
-            />
+            readOnly ? (
+              <div className="font-bold text-base whitespace-normal break-words leading-snug py-1">{content.text}</div>
+            ) : (
+              <Textarea
+                value={content.text}
+                onChange={(e) => updateText(e.target.value)}
+                placeholder="Heading text..."
+                className="w-full rounded-lg font-bold text-base resize-none overflow-hidden whitespace-pre-wrap break-words min-h-[44px]"
+                rows={1}
+              />
+            )
           ) : (
             <ParagraphEditor content={content} onUpdate={updateText} readOnly={readOnly} />
           )}
@@ -2187,22 +2210,32 @@ function SortableEditRow({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const cellClass = "px-3 py-2";
+  const cellClass = "px-3 py-2 align-top";
   const renderCell = (field: keyof ReportRow, value: string, placeholder: string) =>
     row._isNew ? (
-      <Input
-        value={value ?? ""}
-        onChange={(e) => onFieldChange(field, e.target.value)}
-        placeholder={placeholder}
-        className="h-8 text-xs rounded-md"
-      />
+      field === "chapterName" || field === "topicName" ? (
+        <Textarea
+          value={value ?? ""}
+          onChange={(e) => onFieldChange(field, e.target.value)}
+          placeholder={placeholder}
+          className="min-h-[32px] w-full text-xs rounded-md resize-none overflow-hidden whitespace-pre-wrap break-words"
+          rows={1}
+        />
+      ) : (
+        <Input
+          value={value ?? ""}
+          onChange={(e) => onFieldChange(field, e.target.value)}
+          placeholder={placeholder}
+          className="h-8 text-xs rounded-md"
+        />
+      )
     ) : (
-      <span className="text-slate-600">{value}</span>
+      <span className="text-slate-600 whitespace-normal break-words leading-snug block">{value}</span>
     );
 
   return (
     <tr ref={setNodeRef} style={style} className="border-t border-slate-100 bg-white">
-      <td className="px-2 py-2 text-center w-8">
+      <td className="px-2 py-2 text-center w-8 align-top">
         <button
           {...attributes}
           {...listeners}
@@ -2213,15 +2246,16 @@ function SortableEditRow({
         </button>
       </td>
       <td className={cellClass}>{renderCell("date", row.date, "Date")}</td>
-      <td className={cellClass}>{row._isNew ? renderCell("className", row.className, "Class") : <span className="text-slate-600">{row.className}{row.section ? ` ${row.section}` : ""}</span>}</td>
-      <td className={cellClass}>{renderCell("chapterName", row.chapterName, "Chapter")}</td>
-      <td className={cellClass}>{renderCell("topicName", row.topicName, "Topic")}</td>
-      <td className={`${cellClass} min-w-[180px]`}>
-        <Input
+      <td className={cellClass}>{row._isNew ? renderCell("className", row.className, "Class") : <span className="text-slate-600 whitespace-normal break-words leading-snug block">{row.className}{row.section ? ` ${row.section}` : ""}</span>}</td>
+      <td className={`${cellClass} min-w-[160px] max-w-[280px]`}>{renderCell("chapterName", row.chapterName, "Chapter")}</td>
+      <td className={`${cellClass} min-w-[160px] max-w-[280px]`}>{renderCell("topicName", row.topicName, "Topic")}</td>
+      <td className={`${cellClass} min-w-[220px]`}>
+        <Textarea
           value={row.remarks ?? ""}
           onChange={(e) => onFieldChange("remarks", e.target.value)}
           placeholder="Enter remark..."
-          className="rounded-lg"
+          className="min-h-[32px] w-full text-xs rounded-lg resize-none overflow-hidden whitespace-pre-wrap break-words"
+          rows={1}
         />
       </td>
       <td className="px-2 py-2 text-center whitespace-nowrap">
@@ -3136,11 +3170,11 @@ function SubmittedReportsView({
                     <thead>
                       <tr className="bg-slate-100 text-slate-700">
                         <th className="px-2 py-2.5 w-8"></th>
-                        <th className="px-3 py-2.5 text-left font-bold">Date</th>
-                        <th className="px-3 py-2.5 text-left font-bold">Class</th>
-                        <th className="px-3 py-2.5 text-left font-bold">Chapter</th>
-                        <th className="px-3 py-2.5 text-left font-bold">Topic</th>
-                        <th className="px-3 py-2.5 text-left font-bold">Remarks (editable)</th>
+                        <th className="px-3 py-2.5 text-left font-bold whitespace-nowrap">Date</th>
+                        <th className="px-3 py-2.5 text-left font-bold whitespace-nowrap">Class</th>
+                        <th className="px-3 py-2.5 text-left font-bold min-w-[160px]">Chapter</th>
+                        <th className="px-3 py-2.5 text-left font-bold min-w-[160px]">Topic</th>
+                        <th className="px-3 py-2.5 text-left font-bold min-w-[220px]">Remarks (editable)</th>
                         <th className="px-2 py-2.5 text-center font-bold">Actions</th>
                       </tr>
                     </thead>
@@ -3651,7 +3685,7 @@ function MySubmissionsView({ onView }: { onView: (id: string) => void }) {
                       </span>
                     )}
                     {r.adminApproval === "rejected" && r.adminComment && (
-                      <div className="text-[10px] text-red-600 mt-1 max-w-[150px] leading-tight truncate" title={r.adminComment}>
+                      <div className="text-[10px] text-red-600 mt-1 max-w-[260px] mx-auto leading-snug whitespace-normal break-words" title={r.adminComment}>
                         {r.adminComment}
                       </div>
                     )}
