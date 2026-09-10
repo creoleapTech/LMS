@@ -2250,18 +2250,22 @@ async function buildMonthlyReportData(
       // Collect chapter and content names from structured entries for this entry
       const entryTopicRows = entry.__omitTopicsCovered ? [] : topicsRows.filter((r: any) => r.timetableEntryId === entry.id);
       const entryTopics = entryTopicRows.map((r: any) => r.topic);
-      const parentTitleSet = new Set<string>();
+      const parentChapters = new Map<string, { title: string; chapterNumber: number | null }>();
       const subtopicLabels: string[] = [];
       for (const tr of entryTopicRows) {
         if (tr.chapterId) {
           const ch = chapterMap.get(tr.chapterId);
-          if (ch && ch.title) parentTitleSet.add(ch.title);
+          if (ch && ch.title) parentChapters.set(tr.chapterId, { title: ch.title, chapterNumber: ch.chapterNumber ?? null });
         }
         if (tr.contentId) {
           const ct = contentMap.get(tr.contentId);
           const ch = ct ? chapterMap.get(ct.chapterId) : null;
           // Ensure parent is collected even when only contentId is selected (2.1 implies parent 2)
-          if (ch && ch.title) parentTitleSet.add(ch.title);
+          if (ch && ch.title) {
+            if (!parentChapters.has(ct!.chapterId)) {
+              parentChapters.set(ct!.chapterId, { title: ch.title, chapterNumber: ch.chapterNumber ?? null });
+            }
+          }
           const chNum = ch?.chapterNumber;
           if (ct) {
             const subtopicNum = `${chNum != null ? chNum + "." : ""}${ct.order != null ? ct.order : ""}`;
@@ -2283,20 +2287,31 @@ async function buildMonthlyReportData(
         .filter((r: any) => r.contentId)
         .map((r: any) => r.topic);
 
-      // Chapter Name = "Book - Parent Chapter" (parent = chapters.title)
-      // e.g. Book "AI and STEM Robotics", selected 2.1,2.2 under parent "Introduction to Sensors"
-      //      => "AI and STEM Robotics - Introduction to Sensors"
+      // Chapter column format:
+      // - AI Integrated STEM Robotics book: "Chapter <no> - <main chapter>"
+      //   e.g. "Chapter 1 - Introduction to Sensors"
+      // - Other books: "<Book>: Chapter <no> - <main chapter>"
+      //   e.g. "Embed: Chapter 1 - Introduction"
       // Topics (subtopics) remain child chapterContents: "2.1 - ..., 2.2 - ..."
       // For legacy/free-text-only entries, fall back to the grade-book (subject) title
-      // Exception: for the "AI Integrated STEM Robotics" book alone, show only the
-      // main chapter name in the Chapter column (omit the book prefix).
       const normalizedBookTitle = bookTitle.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
       const omitBookPrefix = normalizedBookTitle.includes("ai integrated stem robotics");
-      const formatChapterLabel = (t: string) =>
-        bookTitle && !omitBookPrefix ? `${bookTitle} - ${t}` : t;
+      const formatMainChapter = (title: string, num: number | null) =>
+        num != null ? `Chapter ${num} - ${title}` : title;
+      const formatChapterLabel = (title: string, num: number | null) => {
+        const main = formatMainChapter(title, num);
+        if (omitBookPrefix) return main;
+        return bookTitle ? `${bookTitle}: ${main}` : main;
+      };
+      const sortedParents = [...parentChapters.values()].sort((a, b) => {
+        if (a.chapterNumber != null && b.chapterNumber != null) return a.chapterNumber - b.chapterNumber;
+        if (a.chapterNumber != null) return -1;
+        if (b.chapterNumber != null) return 1;
+        return a.title.localeCompare(b.title);
+      });
       const chapterName = hasStructuredTopics
-        ? [...parentTitleSet].map(formatChapterLabel).join(", ") ||
-          rawChapterTopics.map(formatChapterLabel).join(", ")
+        ? sortedParents.map(({ title, chapterNumber }) => formatChapterLabel(title, chapterNumber)).join(", ") ||
+          rawChapterTopics.map((t) => formatChapterLabel(t, null)).join(", ")
         : bookTitle;
 
       // Topic Name = subtopic(s) selected by the teacher under the chapters
