@@ -2288,9 +2288,15 @@ async function buildMonthlyReportData(
       //      => "AI and STEM Robotics - Introduction to Sensors"
       // Topics (subtopics) remain child chapterContents: "2.1 - ..., 2.2 - ..."
       // For legacy/free-text-only entries, fall back to the grade-book (subject) title
+      // Exception: for the "AI Integrated STEM Robotics" book alone, show only the
+      // main chapter name in the Chapter column (omit the book prefix).
+      const normalizedBookTitle = bookTitle.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+      const omitBookPrefix = normalizedBookTitle.includes("ai integrated stem robotics");
+      const formatChapterLabel = (t: string) =>
+        bookTitle && !omitBookPrefix ? `${bookTitle} - ${t}` : t;
       const chapterName = hasStructuredTopics
-        ? [...parentTitleSet].map((t) => (bookTitle ? `${bookTitle} - ${t}` : t)).join(", ") ||
-          rawChapterTopics.map((t) => (bookTitle ? `${bookTitle} - ${t}` : t)).join(", ")
+        ? [...parentTitleSet].map(formatChapterLabel).join(", ") ||
+          rawChapterTopics.map(formatChapterLabel).join(", ")
         : bookTitle;
 
       // Topic Name = subtopic(s) selected by the teacher under the chapters
