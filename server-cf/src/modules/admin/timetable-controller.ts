@@ -926,9 +926,92 @@ timetableController.get("/gradebooks", async (c) => {
 timetableController.post("/", async (c) => {
   const body = await c.req.json();
   const user = c.get("user") as Record<string, any>;
-  const staffId = user.id;
-  const institutionId = resolveInstitutionId(user);
+  const userRole = user.role;
   const db = getDb(c.env.DB);
+
+  // Resolve target staff + institution.
+  // - super_admin: can create a schedule for ANY trainer — staffId is required
+  //   (institutionId optional; derived from the trainer when omitted). No limits.
+  // - admin: can create for any trainer in their own institution (staffId optional,
+  //   defaults to self for backwards compatibility).
+  // - teacher/staff: can only create for themselves; body staff/institution ignored.
+  let staffId: string;
+  let institutionId: string;
+
+  if (userRole === "super_admin") {
+    const requestedStaffId = body.staffId?.toString?.() || null;
+    if (!requestedStaffId) {
+      throw new BadRequestError("staffId is required to create a schedule for a trainer");
+    }
+    const [staffRow] = await db
+      .select({ id: staff.id, institutionId: staff.institutionId })
+      .from(staff)
+      .where(and(eq(staff.id, requestedStaffId), eq(staff.isDeleted, 0)))
+      .limit(1);
+    if (!staffRow) {
+      throw new BadRequestError("Trainer not found");
+    }
+    const requestedInstitutionId = body.institutionId?.toString?.() || null;
+    if (requestedInstitutionId) {
+      if (staffRow.institutionId && staffRow.institutionId !== requestedInstitutionId) {
+        throw new BadRequestError("Trainer does not belong to the given institution");
+      }
+      institutionId = requestedInstitutionId;
+    } else {
+      if (!staffRow.institutionId) {
+        throw new BadRequestError("Trainer has no institution associated");
+      }
+      institutionId = staffRow.institutionId;
+    }
+    staffId = staffRow.id;
+  } else if (userRole === "admin") {
+    const adminInstitutionId = resolveInstitutionId(user);
+    const requestedStaffId = body.staffId?.toString?.() || null;
+    if (requestedStaffId) {
+      const [staffRow] = await db
+        .select({ id: staff.id, institutionId: staff.institutionId })
+        .from(staff)
+        .where(and(eq(staff.id, requestedStaffId), eq(staff.isDeleted, 0)))
+        .limit(1);
+      if (!staffRow || staffRow.institutionId !== adminInstitutionId) {
+        throw new BadRequestError("Trainer not found in your institution");
+      }
+      staffId = staffRow.id;
+      institutionId = adminInstitutionId;
+    } else {
+      staffId = user.id;
+      institutionId = body.institutionId?.toString?.() || adminInstitutionId;
+      if (institutionId !== adminInstitutionId) {
+        throw new ForbiddenError("You can only create schedules in your institution");
+      }
+    }
+  } else {
+    staffId = user.id;
+    institutionId = resolveInstitutionId(user);
+  }
+
+  if (!body.classId) {
+    throw new BadRequestError("classId is required");
+  }
+  if (body.periodNumber === undefined || body.periodNumber === null) {
+    throw new BadRequestError("periodNumber is required");
+  }
+  if (body.dayOfWeek === undefined || body.dayOfWeek === null) {
+    throw new BadRequestError("dayOfWeek is required");
+  }
+
+  // Validate the class exists and belongs to the target institution
+  const [classRow] = await db
+    .select({ id: classes.id, institutionId: classes.institutionId })
+    .from(classes)
+    .where(eq(classes.id, body.classId))
+    .limit(1);
+  if (!classRow) {
+    throw new BadRequestError("Class not found");
+  }
+  if (classRow.institutionId && classRow.institutionId !== institutionId) {
+    throw new BadRequestError("Class does not belong to the trainer's institution");
+  }
 
   // Conflict check: teacher already has this slot
   const teacherConflictConditions = [
@@ -951,7 +1034,11 @@ timetableController.post("/", async (c) => {
     .limit(1);
 
   if (teacherConflict) {
-    throw new BadRequestError("You already have a class scheduled for this period");
+    throw new BadRequestError(
+      userRole === "super_admin" || userRole === "admin"
+        ? "This trainer already has a class scheduled for this period"
+        : "You already have a class scheduled for this period",
+    );
   }
 
   // Conflict check: class already has a teacher at this slot

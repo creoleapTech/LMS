@@ -132,10 +132,44 @@ classSessionController.post("/start", async (c) => {
   const db = getDb(c.env.DB);
 
   const { classId, courseId } = body;
-  const staffId = (user._id || user.id)?.toString();
-  const institutionId = typeof user.institutionId === "object"
+  const userRole = user.role;
+  let staffId: string | undefined = (user._id || user.id)?.toString();
+  let institutionId: string | undefined = typeof user.institutionId === "object"
     ? (user.institutionId as any)._id?.toString()
     : user.institutionId?.toString();
+
+  // super_admin can start a session on behalf of ANY trainer — no limits.
+  // admin can start on behalf of any trainer in their own institution.
+  if (userRole === "super_admin") {
+    const requestedStaffId = body.staffId?.toString?.() || null;
+    if (!requestedStaffId) {
+      throw new BadRequestError("staffId is required");
+    }
+    const [staffRow] = await db
+      .select({ id: staff.id, institutionId: staff.institutionId })
+      .from(staff)
+      .where(eq(staff.id, requestedStaffId))
+      .limit(1);
+    if (!staffRow) {
+      throw new BadRequestError("Trainer not found");
+    }
+    staffId = staffRow.id;
+    const requestedInstitutionId = body.institutionId?.toString?.() || null;
+    institutionId = requestedInstitutionId || staffRow.institutionId?.toString();
+  } else if (userRole === "admin") {
+    const requestedStaffId = body.staffId?.toString?.() || null;
+    if (requestedStaffId) {
+      const [staffRow] = await db
+        .select({ id: staff.id, institutionId: staff.institutionId })
+        .from(staff)
+        .where(eq(staff.id, requestedStaffId))
+        .limit(1);
+      if (!staffRow || staffRow.institutionId?.toString() !== institutionId) {
+        throw new BadRequestError("Trainer not found in your institution");
+      }
+      staffId = staffRow.id;
+    }
+  }
 
   if (!staffId || !institutionId) {
     throw new BadRequestError("Invalid session: missing staff or institution");

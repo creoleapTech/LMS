@@ -52,6 +52,9 @@ interface ScheduleEntryDialogProps {
   dayOfWeek: number;
   specificDate: string;
   entry?: ITimetableEntry;
+  /** Admin view: trainer + institution the schedule belongs to (used for create). */
+  staffId?: string | null;
+  institutionId?: string | null;
 }
 
 export function ScheduleEntryDialog({
@@ -61,6 +64,8 @@ export function ScheduleEntryDialog({
   dayOfWeek,
   specificDate,
   entry,
+  staffId: staffIdProp,
+  institutionId: institutionIdProp,
 }: ScheduleEntryDialogProps) {
   const isEdit = !!entry;
   const { createEntry, updateEntry } = useTimetableMutations();
@@ -68,6 +73,14 @@ export function ScheduleEntryDialog({
     entry && typeof (entry as any)?.institutionId === "string"
       ? (entry as any).institutionId
       : (entry as any)?.institutionId?._id || null;
+  // For create in admin view there is no entry — fall back to the selected
+  // trainer's institution so class/gradebook lists + the create payload are correct.
+  const targetInstitutionId = entryInstitutionId || institutionIdProp || null;
+  const entryStaffId =
+    entry && typeof (entry as any)?.staffId === "string"
+      ? (entry as any).staffId
+      : (entry as any)?.staffId?._id || null;
+  const targetStaffId = entryStaffId || staffIdProp || null;
 
   const [classId, setClassId] = useState("");
   const [gradeBookId, setGradeBookId] = useState("");
@@ -79,14 +92,14 @@ export function ScheduleEntryDialog({
   const [editScope, setEditScope] = useState<"day" | "all">("day");
   const classDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch teacher's classes — for superadmin editing another teacher's
+  // Fetch teacher's classes — for superadmin/admin viewing another teacher's
   // timetable, list that institution's classes instead of own.
   const { data: classes } = useQuery<IClassOption[]>({
-    queryKey: ["my-classes-list", entryInstitutionId || "own"],
+    queryKey: ["my-classes-list", targetInstitutionId || "own"],
     queryFn: async () => {
-      if (entryInstitutionId) {
+      if (targetInstitutionId) {
         try {
-          const { data: body } = await _axios.get<any>("/admin/classes", { params: { institutionId: entryInstitutionId, limit: 100 } });
+          const { data: body } = await _axios.get<any>("/admin/classes", { params: { institutionId: targetInstitutionId, limit: 100 } });
           const list = (body as any)?.data ?? [];
           const arr = Array.isArray(list) ? list : [];
           if (arr.length > 0) return arr;
@@ -141,9 +154,9 @@ export function ScheduleEntryDialog({
     return cls ? `Grade ${cls.grade}–${cls.section}${cls.year ? ` (${cls.year})` : ""}` : "Select class...";
   }, [classes, classId]);
 
-  // Fetch gradebooks when grade is selected (pass institution for superadmin)
+  // Fetch gradebooks when grade is selected (pass institution for superadmin/admin view)
   const { data: gradeBooks } = useQuery<IGradeBookOption[]>({
-    queryKey: ["timetable-gradebooks", selectedGrade, entryInstitutionId || "own"],
+    queryKey: ["timetable-gradebooks", selectedGrade, targetInstitutionId || "own"],
     queryFn: async () => {
       const { data: res } = await _axios.get<{
         success: boolean;
@@ -151,7 +164,7 @@ export function ScheduleEntryDialog({
       }>("/admin/timetable/gradebooks", {
         params: {
           grade: selectedGrade,
-          ...(entryInstitutionId ? { institutionId: entryInstitutionId } : {}),
+          ...(targetInstitutionId ? { institutionId: targetInstitutionId } : {}),
         },
       });
       return res.data;
@@ -235,6 +248,10 @@ export function ScheduleEntryDialog({
           isRecurring,
           specificDate: isRecurring ? undefined : specificDate,
           notes: notes || undefined,
+          // Superadmin/admin creating for a selected trainer — the server
+          // resolves ownership from these; teachers ignore them server-side.
+          ...(targetStaffId ? { staffId: targetStaffId } : {}),
+          ...(targetInstitutionId ? { institutionId: targetInstitutionId } : {}),
         },
         { onSuccess: () => onOpenChange(false) }
       );

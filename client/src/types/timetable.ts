@@ -66,6 +66,10 @@ export interface CreateTimetableEntryDTO {
   specificDate?: string;
   notes?: string;
   date?: string;
+  /** Superadmin/admin: target trainer when creating a schedule for someone else. */
+  staffId?: string;
+  /** Superadmin: target institution (derived from trainer when omitted). */
+  institutionId?: string;
 }
 
 export interface ChapterTopicItem {

@@ -389,7 +389,9 @@ export function DayView({
                 colorIdx++;
 
                 if (!entry) {
-                  return effectiveReadOnly ? (
+                  // Superadmin bypasses read-only + 30-day freeze (canEdit) so they
+                  // can create schedules for any trainer without limits.
+                  return !canEdit ? (
                     <TableRow
                       key={period.periodNumber}
                       className="border-l-[3px] border-l-slate-200 border-b border-white/20"
@@ -484,6 +486,8 @@ export function DayView({
         dayOfWeek={scheduleDialog.dayOfWeek}
         specificDate={dateStr}
         entry={scheduleDialog.entry}
+        staffId={isAdminView ? staffId : undefined}
+        institutionId={isAdminView ? institutionId : undefined}
       />
 
       <WorkDoneDialog
