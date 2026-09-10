@@ -1285,25 +1285,25 @@ function SortableSessionRow({
           </button>
         </td>
       )}
-      <td className="px-3 py-1.5 align-top">
+      <td className="px-3 py-1.5 align-top min-w-[124px] whitespace-nowrap">
         {readOnly ? (
-          <div className="text-xs text-slate-700 text-center whitespace-normal break-words leading-snug py-1.5">{row.date}</div>
+          <div className="text-xs text-slate-700 text-center whitespace-nowrap break-words leading-snug py-1.5">{row.date}</div>
         ) : (
           <Input
             value={row.date}
             onChange={(e) => onUpdate("date", e.target.value)}
-            className="h-8 text-xs rounded-md text-center"
+            className="h-8 w-full min-w-[100px] px-1 text-xs rounded-md text-center"
           />
         )}
       </td>
-      <td className="px-3 py-1.5 align-top">
+      <td className="px-3 py-1.5 align-top min-w-[76px] whitespace-nowrap">
         {readOnly ? (
-          <div className="text-xs text-slate-700 text-center whitespace-normal break-words leading-snug py-1.5">{row.section ? `${row.className}${row.section}` : row.className}</div>
+          <div className="text-xs text-slate-700 text-center whitespace-nowrap break-words leading-snug py-1.5">{row.section ? `${row.className}${row.section}` : row.className}</div>
         ) : (
           <Input
             value={row.section ? `${row.className}${row.section}` : row.className}
             onChange={(e) => handleClassChange(e.target.value)}
-            className="h-8 text-xs rounded-md text-center"
+            className="h-8 w-full min-w-[52px] px-1 text-xs rounded-md text-center"
           />
         )}
       </td>
@@ -2384,7 +2384,7 @@ function SortableEditRow({
           value={value ?? ""}
           onChange={(e) => onFieldChange(field, e.target.value)}
           placeholder={placeholder}
-          className="h-8 text-xs rounded-md"
+          className={`h-8 text-xs rounded-md ${field === "date" ? "w-full min-w-[100px] px-1 text-center" : field === "className" ? "w-full min-w-[52px] px-1 text-center" : ""}`}
         />
       )
     ) : (
@@ -2403,8 +2403,8 @@ function SortableEditRow({
           <GripVertical size={14} />
         </button>
       </td>
-      <td className={cellClass}>{renderCell("date", row.date, "Date")}</td>
-      <td className={cellClass}>{row._isNew ? renderCell("className", row.className, "Class") : <span className="text-slate-600 whitespace-normal break-words leading-snug block">{row.className}{row.section ? ` ${row.section}` : ""}</span>}</td>
+      <td className={`${cellClass} min-w-[124px] whitespace-nowrap`}>{renderCell("date", row.date, "Date")}</td>
+      <td className={`${cellClass} min-w-[76px] whitespace-nowrap`}>{row._isNew ? renderCell("className", row.className, "Class") : <span className="text-slate-600 whitespace-nowrap block">{row.className}{row.section ? ` ${row.section}` : ""}</span>}</td>
       <td className={`${cellClass} min-w-[160px] max-w-[280px]`}>{renderCell("chapterName", row.chapterName, "Chapter")}</td>
       <td className={`${cellClass} min-w-[160px] max-w-[280px]`}>{renderCell("topicName", row.topicName, "Topic")}</td>
       <td className={`${cellClass} min-w-[220px]`}>
