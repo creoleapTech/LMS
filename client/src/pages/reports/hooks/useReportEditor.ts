@@ -148,6 +148,36 @@ export function useReportEditor() {
     });
   }, []);
 
+  const insertRowBelow = useCallback((index: number) => {
+    setReportData((prev) => {
+      if (!prev) return prev;
+      const newRow: ReportRow = {
+        date: "",
+        className: "",
+        section: "",
+        chapterName: "",
+        topicName: "",
+        remarks: "",
+      };
+      const rows = [...prev.rows];
+      rows.splice(index + 1, 0, newRow);
+      return { ...prev, rows };
+    });
+  }, []);
+
+  const moveRow = useCallback((fromIndex: number, toIndex: number) => {
+    setReportData((prev) => {
+      if (!prev) return prev;
+      if (fromIndex === toIndex) return prev;
+      if (fromIndex < 0 || fromIndex >= prev.rows.length) return prev;
+      if (toIndex < 0 || toIndex >= prev.rows.length) return prev;
+      const rows = [...prev.rows];
+      const [moved] = rows.splice(fromIndex, 1);
+      rows.splice(toIndex, 0, moved);
+      return { ...prev, rows };
+    });
+  }, []);
+
   const updateSessionColumn = useCallback((index: number, value: string) => {
     setReportData((prev) => {
       if (!prev || !prev.sessionColumns) return prev;
@@ -390,6 +420,8 @@ export function useReportEditor() {
     updateRow,
     addRow,
     removeRow,
+    insertRowBelow,
+    moveRow,
     updateSessionColumn,
     addBodyItem,
     updateBodyItem,

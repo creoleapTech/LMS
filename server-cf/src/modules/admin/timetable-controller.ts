@@ -3373,7 +3373,9 @@ timetableController.post("/admin-update-report", async (c) => {
 
     // Full-rows replacement (sanitized to the ReportRow shape): the superadmin
     // may edit remarks and rearrange / add / delete rows. All other stored
-    // report fields stay exactly as submitted.
+    // report fields stay exactly as submitted — unless the Edit Report tab
+    // save also sends session stats / columns / body items, in which case
+    // those are sanitized and persisted too.
     const clean = (v: unknown) => (typeof v === "string" ? v : v == null ? "" : String(v));
     stored.rows = reportData.rows.map((r: any) => ({
       date: clean(r?.date),
@@ -3383,6 +3385,63 @@ timetableController.post("/admin-update-report", async (c) => {
       topicName: clean(r?.topicName),
       remarks: clean(r?.remarks),
     }));
+
+    if (reportData.sessionsPlanned !== undefined) {
+      const n = Number(reportData.sessionsPlanned);
+      if (Number.isFinite(n) && n >= 0 && n <= 10000) stored.sessionsPlanned = Math.floor(n);
+    }
+    if (reportData.sessionsCompleted !== undefined) {
+      const n = Number(reportData.sessionsCompleted);
+      if (Number.isFinite(n) && n >= 0 && n <= 10000) stored.sessionsCompleted = Math.floor(n);
+    }
+    if (Array.isArray(reportData.sessionColumns)) {
+      if (reportData.sessionColumns.length < 1 || reportData.sessionColumns.length > 20) {
+        throw new BadRequestError("reportData.sessionColumns must have 1-20 entries");
+      }
+      stored.sessionColumns = reportData.sessionColumns.map((col: unknown) => clean(col).slice(0, 100));
+    }
+    if (Array.isArray(reportData.bodyItems)) {
+      if (reportData.bodyItems.length > 200) {
+        throw new BadRequestError("Too many body items (max 200)");
+      }
+      stored.bodyItems = reportData.bodyItems.map((item: any) => {
+        if (item?.kind === "table" && item?.table) {
+          const columns = Array.isArray(item.table.columns)
+            ? item.table.columns.map((col: unknown) => clean(col).slice(0, 100))
+            : [];
+          if (columns.length < 1 || columns.length > 20) {
+            throw new BadRequestError("Each table must have 1-20 columns");
+          }
+          const rows = Array.isArray(item.table.rows) ? item.table.rows : [];
+          if (rows.length > 1000) throw new BadRequestError("Too many table rows (max 1000)");
+          return {
+            kind: "table",
+            table: {
+              title: clean(item.table.title).slice(0, 500),
+              columns,
+              rows: rows.map((r: any) =>
+                (Array.isArray(r) ? r : []).slice(0, columns.length).map((cell: unknown) => clean(cell).slice(0, 2000))
+              ),
+            },
+            keepOnSamePage: item?.keepOnSamePage !== false,
+          };
+        }
+        if (item?.kind === "content" && item?.content) {
+          const type = item.content.type === "heading" ? "heading" : "paragraph";
+          return {
+            kind: "content",
+            content: {
+              type,
+              text: clean(item.content.text).slice(0, 20000),
+              ...(item.content.format ? { format: item.content.format } : {}),
+              ...(item.content.bold !== undefined ? { bold: !!item.content.bold } : {}),
+            },
+            keepOnSamePage: item?.keepOnSamePage !== false,
+          };
+        }
+        throw new BadRequestError("Invalid body item shape");
+      });
+    }
 
     const normalized = normalizeReportData(stored);
 

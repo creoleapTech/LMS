@@ -77,6 +77,7 @@ import {
   MailCheck,
   Undo2,
   FileSignature,
+  Save,
 } from "lucide-react";
 
 const MONTH_NAMES = [
@@ -112,6 +113,8 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [isDeletingDraft, setIsDeletingDraft] = useState(false);
+  // Superadmin save state (Edit Report tab — persist edits back to the submission)
+  const [isAdminSaving, setIsAdminSaving] = useState(false);
 
   const adminInstitutionId = isAdmin
     ? (typeof user?.institutionId === "object" ? user?.institutionId?._id : user?.institutionId) || ""
@@ -169,6 +172,8 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
     updateRow,
     addRow,
     removeRow,
+    insertRowBelow,
+    moveRow,
     updateSessionColumn,
     addBodyItem,
     updateBodyItem,
@@ -331,6 +336,43 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
     if (reportData) downloadDocx(reportData);
   };
 
+  // Superadmin: persist Edit-Report-tab edits back to the submitted report.
+  // Only available when a submission is loaded (submissionId present).
+  const handleAdminSave = async () => {
+    const submissionId = submissionStatus?.submissionId;
+    if (!reportData || !submissionId) {
+      toast.error("No submitted report loaded to save to");
+      return;
+    }
+    setIsAdminSaving(true);
+    try {
+      const res = await _axios.post("/admin/timetable/admin-update-report", {
+        submissionId,
+        reportData: {
+          rows: reportData.rows,
+          sessionsPlanned: reportData.sessionsPlanned,
+          sessionsCompleted: reportData.sessionsCompleted,
+          sessionColumns: reportData.sessionColumns,
+          bodyItems: reportData.bodyItems,
+        },
+      });
+      if (res.data?.success) {
+        toast.success("Report saved — moved back to pending review");
+        checkSubmissionStatus({
+          year: currentMonth.year,
+          month: currentMonth.month,
+          staffId: isAdminRole ? selectedStaffId : null,
+        });
+      } else {
+        toast.error(res.data?.message || "Failed to save report");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to save report");
+    } finally {
+      setIsAdminSaving(false);
+    }
+  };
+
   const downloadPrincipalSignedBlob = async (submissionId?: string) => {
     if (!submissionId) return;
     try {
@@ -361,6 +403,17 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
     const newIndex = Number(over.id);
     moveBodyItem(oldIndex, newIndex);
   }, [moveBodyItem]);
+
+  const handleSessionDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    // Session row sortable ids are `session-row-<index>`
+    const parse = (id: unknown) => Number(String(id).replace("session-row-", ""));
+    const oldIndex = parse(active.id);
+    const newIndex = parse(over.id);
+    if (Number.isNaN(oldIndex) || Number.isNaN(newIndex)) return;
+    moveRow(oldIndex, newIndex);
+  }, [moveRow]);
 
   const handleAddTable = () => {
     const cols = newTableCols.split(",").map((c) => c.trim()).filter(Boolean);
@@ -776,6 +829,23 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                 );
               })()}
               <div className="flex-1" />
+              {/* Superadmin Save (Edit Report tab) — persists edits to the submission */}
+              {isSuperAdmin && !isApproved && reportData && submissionStatus?.submissionId && (
+                <Button
+                  onClick={handleAdminSave}
+                  disabled={isAdminSaving}
+                  size="sm"
+                  title="Save edits back to the submitted report (moves it to pending review)"
+                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md disabled:opacity-60"
+                >
+                  {isAdminSaving ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Save size={14} />
+                  )}
+                  {isAdminSaving ? "Saving..." : "Save"}
+                </Button>
+              )}
               <Button
                 onClick={handleDownload}
                 disabled={isDownloading}
@@ -887,9 +957,11 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                 </div>
 
                 <div className="overflow-x-auto">
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSessionDragEnd}>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-[#4FA3D1] text-white">
+                        {!isApproved && <th className="px-2 py-2.5 w-8"></th>}
                         {(reportData.sessionColumns || ["Date", "Class", "Chapter", "Topic", "Remarks"]).map((col, ci) => (
                           <th key={ci} className="px-3 py-2.5">
                             <input
@@ -900,95 +972,35 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                             />
                           </th>
                         ))}
-                        <th className={`px-3 py-2.5 text-center font-bold w-12 ${isApproved ? "hidden" : ""}`}></th>
+                        <th className={`px-3 py-2.5 text-center font-bold w-20 ${isApproved ? "hidden" : ""}`}></th>
                       </tr>
                     </thead>
+                    <SortableContext items={reportData.rows.map((_, i) => `session-row-${i}`)} strategy={verticalListSortingStrategy}>
                     <tbody>
                       {reportData.rows.length === 0 ? (
                         <tr>
-                          <td colSpan={isApproved ? 5 : 6} className="text-center py-8 text-muted-foreground">
+                          <td colSpan={isApproved ? 5 : 7} className="text-center py-8 text-muted-foreground">
                             {isApproved ? "No session entries." : 'No session entries. Click "Add Row" to create one.'}
                           </td>
                         </tr>
                       ) : (
                         reportData.rows.map((row, index) => (
-                          <tr key={index} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                            <td className="px-3 py-1.5 align-top">
-                              <Input
-                                value={row.date}
-                                onChange={(e) => updateRow(index, "date", e.target.value)}
-                                className="h-8 text-xs rounded-md text-center"
-                                readOnly={isApproved}
-                              />
-                            </td>
-                            <td className="px-3 py-1.5 align-top">
-                              <Input
-                                value={row.section ? `${row.className}${row.section}` : row.className}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  const match = val.match(/^(\d+)\s*([a-zA-Z]*)$/);
-                                  if (match) {
-                                    updateRow(index, "className", match[1]);
-                                    updateRow(index, "section", match[2]);
-                                  } else {
-                                    updateRow(index, "className", val);
-                                    updateRow(index, "section", "");
-                                  }
-                                }}
-                                className="h-8 text-xs rounded-md text-center"
-                                readOnly={isApproved}
-                              />
-                            </td>
-                            <td className="px-3 py-1.5 align-top min-w-[160px] max-w-[280px]">
-                              {isApproved ? (
-                                <div className="text-xs text-slate-700 whitespace-normal break-words leading-snug py-1.5">{row.chapterName}</div>
-                              ) : (
-                                <Textarea
-                                  value={row.chapterName}
-                                  onChange={(e) => updateRow(index, "chapterName", e.target.value)}
-                                  className="min-h-[32px] w-full text-xs rounded-md resize-none overflow-hidden whitespace-pre-wrap break-words"
-                                  rows={1}
-                                />
-                              )}
-                            </td>
-                            <td className="px-3 py-1.5 align-top min-w-[160px] max-w-[280px]">
-                              {isApproved ? (
-                                <div className="text-xs text-slate-700 whitespace-normal break-words leading-snug py-1.5">{row.topicName}</div>
-                              ) : (
-                                <Textarea
-                                  value={row.topicName}
-                                  onChange={(e) => updateRow(index, "topicName", e.target.value)}
-                                  className="min-h-[32px] w-full text-xs rounded-md resize-none overflow-hidden whitespace-pre-wrap break-words"
-                                  rows={1}
-                                />
-                              )}
-                            </td>
-                            <td className="px-3 py-1.5 align-top min-w-[200px]">
-                              {isApproved ? (
-                                <div className="text-xs text-slate-700 whitespace-normal break-words leading-snug py-1.5">{row.remarks}</div>
-                              ) : (
-                                <Textarea
-                                  value={row.remarks}
-                                  onChange={(e) => updateRow(index, "remarks", e.target.value)}
-                                  className="min-h-[32px] w-full text-xs rounded-md resize-none overflow-hidden whitespace-pre-wrap break-words"
-                                  rows={1}
-                                />
-                              )}
-                            </td>
-                            <td className={`px-3 py-1.5 text-center ${isApproved ? "hidden" : ""}`}>
-                              <button
-                                onClick={() => removeRow(index)}
-                                className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
-                                title="Remove row"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </td>
-                          </tr>
+                          <SortableSessionRow
+                            key={`session-row-${index}`}
+                            id={`session-row-${index}`}
+                            row={row}
+                            index={index}
+                            readOnly={isApproved}
+                            onUpdate={(field, value) => updateRow(index, field, value)}
+                            onRemove={() => removeRow(index)}
+                            onInsertBelow={() => insertRowBelow(index)}
+                          />
                         ))
                       )}
                     </tbody>
+                    </SortableContext>
                   </table>
+                  </DndContext>
                 </div>
               </div>
 
@@ -1012,6 +1024,20 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
 
           {/* Bottom Action Bar */}
           <div className="flex items-center gap-3 pb-8">
+            {isSuperAdmin && !isApproved && reportData && submissionStatus?.submissionId && (
+              <Button
+                onClick={handleAdminSave}
+                disabled={isAdminSaving}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-300/30 disabled:opacity-60"
+              >
+                {isAdminSaving ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Save size={16} />
+                )}
+                {isAdminSaving ? "Saving..." : "Save"}
+              </Button>
+            )}
             <Button
               onClick={handleDownload}
               disabled={isDownloading}
@@ -1207,6 +1233,138 @@ function ParagraphEditor({ content, onUpdate, readOnly }: { content: { text: str
     );
   }
   return <ReportBodyEditor content={content.text} onChange={onUpdate} placeholder="Write here..." />;
+}
+
+// ─── Sortable Session Row (Edit Report tab — drag reorder + add row below) ───
+
+function SortableSessionRow({
+  id,
+  row,
+  readOnly,
+  onUpdate,
+  onRemove,
+  onInsertBelow,
+}: {
+  id: string;
+  row: ReportRow;
+  index: number;
+  readOnly?: boolean;
+  onUpdate: (field: keyof ReportRow, value: string) => void;
+  onRemove: () => void;
+  onInsertBelow: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: readOnly });
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const handleClassChange = (val: string) => {
+    const match = val.match(/^(\d+)\s*([a-zA-Z]*)$/);
+    if (match) {
+      onUpdate("className", match[1]);
+      onUpdate("section", match[2]);
+    } else {
+      onUpdate("className", val);
+      onUpdate("section", "");
+    }
+  };
+
+  return (
+    <tr ref={setNodeRef} style={style} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors bg-white">
+      {!readOnly && (
+        <td className="px-2 py-1.5 text-center w-8 align-top">
+          <button
+            {...attributes}
+            {...listeners}
+            className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-grab active:cursor-grabbing touch-none"
+            title="Drag to reorder"
+          >
+            <GripVertical size={14} />
+          </button>
+        </td>
+      )}
+      <td className="px-3 py-1.5 align-top">
+        {readOnly ? (
+          <div className="text-xs text-slate-700 text-center whitespace-normal break-words leading-snug py-1.5">{row.date}</div>
+        ) : (
+          <Input
+            value={row.date}
+            onChange={(e) => onUpdate("date", e.target.value)}
+            className="h-8 text-xs rounded-md text-center"
+          />
+        )}
+      </td>
+      <td className="px-3 py-1.5 align-top">
+        {readOnly ? (
+          <div className="text-xs text-slate-700 text-center whitespace-normal break-words leading-snug py-1.5">{row.section ? `${row.className}${row.section}` : row.className}</div>
+        ) : (
+          <Input
+            value={row.section ? `${row.className}${row.section}` : row.className}
+            onChange={(e) => handleClassChange(e.target.value)}
+            className="h-8 text-xs rounded-md text-center"
+          />
+        )}
+      </td>
+      <td className="px-3 py-1.5 align-top min-w-[160px] max-w-[280px]">
+        {readOnly ? (
+          <div className="text-xs text-slate-700 whitespace-normal break-words leading-snug py-1.5">{row.chapterName}</div>
+        ) : (
+          <Textarea
+            value={row.chapterName}
+            onChange={(e) => onUpdate("chapterName", e.target.value)}
+            className="min-h-[32px] w-full text-xs rounded-md resize-none overflow-hidden whitespace-pre-wrap break-words"
+            rows={1}
+          />
+        )}
+      </td>
+      <td className="px-3 py-1.5 align-top min-w-[160px] max-w-[280px]">
+        {readOnly ? (
+          <div className="text-xs text-slate-700 whitespace-normal break-words leading-snug py-1.5">{row.topicName}</div>
+        ) : (
+          <Textarea
+            value={row.topicName}
+            onChange={(e) => onUpdate("topicName", e.target.value)}
+            className="min-h-[32px] w-full text-xs rounded-md resize-none overflow-hidden whitespace-pre-wrap break-words"
+            rows={1}
+          />
+        )}
+      </td>
+      <td className="px-3 py-1.5 align-top min-w-[200px]">
+        {readOnly ? (
+          <div className="text-xs text-slate-700 whitespace-normal break-words leading-snug py-1.5">{row.remarks}</div>
+        ) : (
+          <Textarea
+            value={row.remarks}
+            onChange={(e) => onUpdate("remarks", e.target.value)}
+            className="min-h-[32px] w-full text-xs rounded-md resize-none overflow-hidden whitespace-pre-wrap break-words"
+            rows={1}
+          />
+        )}
+      </td>
+      {!readOnly && (
+        <td className="px-2 py-1.5 text-center whitespace-nowrap align-top">
+          <div className="inline-flex items-center gap-0.5">
+            <button
+              onClick={onInsertBelow}
+              className="p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-colors"
+              title="Add row below"
+            >
+              <ArrowDownToLine size={14} />
+            </button>
+            <button
+              onClick={onRemove}
+              className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
+              title="Remove row"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </td>
+      )}
+    </tr>
+  );
 }
 
 // ─── Sortable Body Item Editor (drag & drop wrapper) ───
