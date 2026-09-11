@@ -4,7 +4,7 @@ import type { Bindings, Variables } from "../../env";
 import { getDb } from "../../db";
 import { v4 as uuid } from "uuid";
 import { nowISO } from "../../lib/utils";
-import { eq, and, like, or, count, inArray, sql } from "drizzle-orm";
+import { eq, and, like, or, count, inArray, ne, sql } from "drizzle-orm";
 import { adminAuth } from "../../middleware/admin-auth";
 import {
   classes,
@@ -158,6 +158,59 @@ function buildLeader(members: any[], leaderId: string | null | undefined) {
   return members.find((m: any) => m._id === leaderId) ?? null;
 }
 
+async function findCrossGroupConflicts(
+  db: any,
+  studentIds: string[],
+  classId: string,
+  excludeGroupId?: string,
+) {
+  const uniqueIds = [...new Set(studentIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return [];
+
+  const conflicts: { studentId: string; studentName: string | null; groupId: string; groupName: string }[] = [];
+  for (let i = 0; i < uniqueIds.length; i += 40) {
+    const chunkIds = uniqueIds.slice(i, i + 40);
+    const conditions: any[] = [
+      eq(studentGroups.classId, classId),
+      eq(studentGroups.isDeleted, 0),
+      inArray(studentGroupMembers.studentId, chunkIds),
+    ];
+    if (excludeGroupId) {
+      conditions.push(ne(studentGroupMembers.groupId, excludeGroupId));
+    }
+    const rows = await db
+      .select({
+        studentId: studentGroupMembers.studentId,
+        studentName: students.name,
+        groupId: studentGroups.id,
+        groupName: studentGroups.name,
+      })
+      .from(studentGroupMembers)
+      .innerJoin(studentGroups, eq(studentGroupMembers.groupId, studentGroups.id))
+      .leftJoin(students, eq(studentGroupMembers.studentId, students.id))
+      .where(and(...conditions));
+    conflicts.push(...(rows as any[]));
+  }
+  return conflicts;
+}
+
+// A student can belong to only one group per class-section.
+async function assertNoCrossGroupConflicts(
+  db: any,
+  studentIds: string[],
+  classId: string,
+  excludeGroupId?: string,
+) {
+  const conflicts = await findCrossGroupConflicts(db, studentIds, classId, excludeGroupId);
+  if (conflicts.length > 0) {
+    const first = conflicts[0];
+    const extra = conflicts.length > 1 ? ` (and ${conflicts.length - 1} more)` : "";
+    throw new BadRequestError(
+      `"${first.studentName || "A selected student"}" is already in group "${first.groupName}" in this class-section${extra}. A student can only belong to one group per class-section.`,
+    );
+  }
+}
+
 async function getGroupMemberIds(db: any, groupId: string): Promise<string[]> {
   const rows = await db
     .select({ studentId: studentGroupMembers.studentId })
@@ -185,6 +238,7 @@ async function setGroupLeader(
 ) {
   const classData = await fetchClassById(db, group.classId);
   await validateStudentIdsForClass(db, [studentId], classData);
+  await assertNoCrossGroupConflicts(db, [studentId], classData.id, group.id);
 
   const now = nowISO();
   const existing = await db
@@ -269,6 +323,8 @@ groupController.post("/", async (c) => {
   if (leaderId && !memberIds.includes(leaderId)) {
     memberIds = [...memberIds, leaderId];
   }
+
+  await assertNoCrossGroupConflicts(db, memberIds, classData.id);
 
   const groupId = uuid();
   const now = nowISO();
@@ -545,6 +601,7 @@ groupController.patch("/:id", async (c) => {
     const classData = await fetchClassById(db, group.classId);
 
     const validated = await validateStudentIdsForClass(db, parsed.data.studentIds, classData);
+    await assertNoCrossGroupConflicts(db, validated, group.classId, id);
 
     // Delete existing members
     await db.delete(studentGroupMembers).where(eq(studentGroupMembers.groupId, id));
@@ -677,6 +734,7 @@ groupController.post("/:id/members", async (c) => {
   if (!classData) throw new BadRequestError("Class not found for this group");
 
   const validated = await validateStudentIdsForClass(db, studentIds, classData);
+  await assertNoCrossGroupConflicts(db, validated, group.classId, id);
 
   const existing = await db
     .select({ studentId: studentGroupMembers.studentId })

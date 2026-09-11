@@ -96,6 +96,7 @@ export function GroupsTab({ institutionId }: Props) {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["groups", institutionId] });
+    queryClient.invalidateQueries({ queryKey: ["groups-for-class", institutionId] });
   };
 
   const createMutation = useMutation({

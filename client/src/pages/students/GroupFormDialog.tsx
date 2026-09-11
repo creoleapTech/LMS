@@ -114,16 +114,50 @@ export function GroupFormDialog({ open, onOpenChange, group, institutionId, clas
     [classStudents],
   );
 
+  // Groups already created in the selected class-section.
+  // Students grouped elsewhere are hidden from the picker —
+  // a student can belong to only one group per class-section.
+  const { data: classGroups = [], isLoading: classGroupsLoading } = useQuery<IGroup[]>({
+    queryKey: ["groups-for-class", institutionId, selectedClassId],
+    queryFn: async () => {
+      const { data } = await _axios.get("/admin/groups", {
+        params: { institutionId, classId: selectedClassId, limit: 100 },
+      });
+      return data?.data ?? [];
+    },
+    enabled: open && !!selectedClassId && !!institutionId,
+    staleTime: 30 * 1000,
+  });
+
+  const assignedElsewhereIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const g of classGroups) {
+      if (group && g._id === group._id) continue; // own members stay visible while editing
+      for (const m of g.members ?? []) ids.add(m._id);
+    }
+    return ids;
+  }, [classGroups, group]);
+
+  const availableStudents = useMemo(
+    () => sortedClassStudents.filter((s) => !assignedElsewhereIds.has(s._id)),
+    [sortedClassStudents, assignedElsewhereIds],
+  );
+
+  const hiddenCount = useMemo(
+    () => sortedClassStudents.filter((s) => assignedElsewhereIds.has(s._id)).length,
+    [sortedClassStudents, assignedElsewhereIds],
+  );
+
   const filteredStudents = useMemo(() => {
     const q = studentSearch.trim().toLowerCase();
-    if (!q) return sortedClassStudents;
-    return sortedClassStudents.filter(
+    if (!q) return availableStudents;
+    return availableStudents.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
         (s.rollNumber || "").toLowerCase().includes(q) ||
         (s.admissionNumber || "").toLowerCase().includes(q),
     );
-  }, [sortedClassStudents, studentSearch]);
+  }, [availableStudents, studentSearch]);
 
   const syncLeaderWithSelection = (next: Set<string>) => {
     // A leader must stay one of the assigned students
@@ -277,6 +311,11 @@ export function GroupFormDialog({ open, onOpenChange, group, institutionId, clas
                 <Badge variant="secondary" className="ml-1">
                   {selectedStudentIds.size} selected
                 </Badge>
+                {hiddenCount > 0 && (
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">
+                    · {hiddenCount} already in another group
+                  </span>
+                )}
               </Label>
               {filteredStudents.length > 0 && (
                 <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={toggleAll}>
@@ -289,13 +328,15 @@ export function GroupFormDialog({ open, onOpenChange, group, institutionId, clas
               <p className="text-sm text-muted-foreground border border-dashed rounded-xl px-4 py-6 text-center">
                 Select a class-section first to see its students.
               </p>
-            ) : studentsLoading ? (
+            ) : studentsLoading || classGroupsLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : classStudents.length === 0 ? (
+            ) : availableStudents.length === 0 ? (
               <p className="text-sm text-muted-foreground border border-dashed rounded-xl px-4 py-6 text-center">
-                No students found in this class-section.
+                {classStudents.length === 0
+                  ? "No students found in this class-section."
+                  : "All students in this class-section are already in other groups."}
               </p>
             ) : (
               <>
