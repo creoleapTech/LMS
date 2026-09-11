@@ -26,6 +26,28 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+// Roll-number-wise ordering for the student picker.
+// Natural (numeric-aware) sort so "2" comes before "10" and
+// prefixed values like "SJE26002" sort after "SJE26001".
+// Students without a roll number go last, tie-broken by name.
+function studentRollKey(s: { rollNumber?: string | null; username?: string | null }): string {
+  return (s.rollNumber || s.username || "").trim();
+}
+
+function compareStudentsByRollNumber(
+  a: { rollNumber?: string | null; username?: string | null; name: string },
+  b: { rollNumber?: string | null; username?: string | null; name: string },
+): number {
+  const ra = studentRollKey(a);
+  const rb = studentRollKey(b);
+  if (!ra && !rb) return a.name.localeCompare(b.name);
+  if (!ra) return 1;
+  if (!rb) return -1;
+  const natural = ra.localeCompare(rb, undefined, { numeric: true, sensitivity: "base" });
+  if (natural !== 0) return natural;
+  return a.name.localeCompare(b.name);
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -86,16 +108,22 @@ export function GroupFormDialog({ open, onOpenChange, group, institutionId, clas
     staleTime: 30 * 1000,
   });
 
+  // Class students ordered roll-number-wise
+  const sortedClassStudents = useMemo(
+    () => [...classStudents].sort(compareStudentsByRollNumber),
+    [classStudents],
+  );
+
   const filteredStudents = useMemo(() => {
     const q = studentSearch.trim().toLowerCase();
-    if (!q) return classStudents;
-    return classStudents.filter(
+    if (!q) return sortedClassStudents;
+    return sortedClassStudents.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
         (s.rollNumber || "").toLowerCase().includes(q) ||
         (s.admissionNumber || "").toLowerCase().includes(q),
     );
-  }, [classStudents, studentSearch]);
+  }, [sortedClassStudents, studentSearch]);
 
   const syncLeaderWithSelection = (next: Set<string>) => {
     // A leader must stay one of the assigned students
@@ -129,11 +157,11 @@ export function GroupFormDialog({ open, onOpenChange, group, institutionId, clas
     }
   };
 
-  // Selected students with names (for the leader picker).
+  // Selected students with names (for the leader picker), roll-number-wise.
   // Falls back to the group's existing members for ids missing from the class list.
   const selectedStudents = useMemo(() => {
     const byId = new Map<string, { _id: string; name: string; rollNumber?: string }>();
-    for (const s of classStudents) {
+    for (const s of sortedClassStudents) {
       byId.set(s._id, { _id: s._id, name: s.name, rollNumber: s.rollNumber || s.username });
     }
     for (const m of group?.members ?? []) {
@@ -142,8 +170,8 @@ export function GroupFormDialog({ open, onOpenChange, group, institutionId, clas
     return Array.from(selectedStudentIds)
       .map((id) => byId.get(id))
       .filter((s): s is { _id: string; name: string; rollNumber?: string } => !!s)
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [classStudents, group, selectedStudentIds]);
+      .sort(compareStudentsByRollNumber);
+  }, [sortedClassStudents, group, selectedStudentIds]);
 
   const activeClasses = useMemo(
     () =>
