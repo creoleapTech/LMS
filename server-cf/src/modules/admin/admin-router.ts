@@ -11,6 +11,7 @@ import { departmentController } from "./department-controller";
 import { staffController } from "./staff-controller";
 import { classController } from "./class-controller";
 import { studentController } from "./student-controller";
+import { groupController } from "./group-controller";
 import { curriculumController } from "./curriculum-controller";
 import { filteredCurriculumController } from "./filtered-curriculum-controller";
 import { gradeBookController } from "./grade-book-controller";
@@ -57,6 +58,7 @@ adminBaseRouter.route("/departments", departmentController);
 adminBaseRouter.route("/staff", staffController);
 adminBaseRouter.route("/classes", classController);
 adminBaseRouter.route("/students", studentController);
+adminBaseRouter.route("/groups", groupController);
 
 // Curriculum
 adminBaseRouter.route("/curriculum", curriculumController);

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
 import { StudentTable } from "./StudentTable";
 import { ClassTable } from "@/pages/classes/ClassTable";
+import { GroupsTab } from "./GroupsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Users, Shapes, KeyRound } from "lucide-react";
+import { Building2, Users, Shapes, KeyRound, UsersRound } from "lucide-react";
 import { StudentCredentialsPanel } from "./StudentCredentialsPanel";
 
 export function StudentManagementPage() {
@@ -95,6 +96,10 @@ export function StudentManagementPage() {
               <Users className="h-4 w-4" />
               Students
             </TabsTrigger>
+            <TabsTrigger value="groups" className="gap-1.5">
+              <UsersRound className="h-4 w-4" />
+              Groups
+            </TabsTrigger>
             {!isAdmin && (
               <TabsTrigger value="credentials" className="gap-1.5">
                 <KeyRound className="h-4 w-4" />
@@ -109,6 +114,10 @@ export function StudentManagementPage() {
 
           <TabsContent value="students">
             <StudentTable institutionId={effectiveInstitutionId} />
+          </TabsContent>
+
+          <TabsContent value="groups">
+            <GroupsTab institutionId={effectiveInstitutionId} />
           </TabsContent>
 
           {!isAdmin && (

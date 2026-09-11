@@ -162,6 +162,28 @@ export const courses = sqliteTable("courses", {
   index("courses_code_idx").on(table.code),
 ]);
 
+// ─── student_groups ───────────────────────────────
+export const studentGroups = sqliteTable("student_groups", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  classId: text("class_id").notNull().references(() => classes.id),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  leaderId: text("leader_id").references(() => students.id),
+  createdBy: text("created_by"),
+  isActive: integer("is_active").default(1),
+  isDeleted: integer("is_deleted").default(0),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
+}, (table) => [
+  index("student_groups_class_id_idx").on(table.classId),
+  index("student_groups_institution_id_idx").on(table.institutionId),
+  index("student_groups_leader_id_idx").on(table.leaderId),
+  index("student_groups_is_deleted_idx").on(table.isDeleted),
+  index("student_groups_is_active_idx").on(table.isActive),
+  index("student_groups_name_idx").on(table.name),
+]);
+
 // ─── batches ──────────────────────────────────────
 export const batches = sqliteTable("batches", {
   id: text("id").primaryKey(),
