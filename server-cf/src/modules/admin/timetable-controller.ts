@@ -274,6 +274,16 @@ function recurringEntryForDate(entry: any, dateKey: string) {
   return { ...entry, status: "scheduled", completedAt: null, __omitTopicsCovered: true };
 }
 
+/**
+ * A recurring template is only effective from the calendar date (IST) it was
+ * created onwards. Past dates must never pick it up — otherwise creating or
+ * editing a recurring schedule would retroactively change history.
+ */
+function isRecurringEffectiveOn(entry: any, dateKey: string): boolean {
+  if (!entry?.createdAt) return true;
+  return toDateKey(entry.createdAt) <= dateKey;
+}
+
 /** Fetch working days for an institution (defaults to Mon-Fri). */
 async function getWorkingDays(db: any, institutionId: string): Promise<number[]> {
   const [pc] = await db
@@ -607,9 +617,9 @@ function buildMonthSummary(
 
     const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-    // Recurring entries for this day of week
+    // Recurring entries for this day of week — only from the day the template was created
     const recurringForDay = recurringEntries
-      .filter((e) => e.dayOfWeek === dow)
+      .filter((e) => e.dayOfWeek === dow && isRecurringEffectiveOn(e, dateStr))
       .map((e) => recurringEntryForDate(e, dateStr));
 
     // One-off entries for this specific date
@@ -766,7 +776,9 @@ timetableController.get("/my-day", async (c) => {
         eq(timetableEntries.isDeleted, 0),
       ),
     );
-  const recurringEntries = rawRecurringEntries.map((entry: any) => recurringEntryForDate(entry, dateKey));
+  const recurringEntries = rawRecurringEntries
+    .filter((entry: any) => isRecurringEffectiveOn(entry, dateKey))
+    .map((entry: any) => recurringEntryForDate(entry, dateKey));
 
   // Get one-off entries for this specific date
   const dayStart = dateKeyToISOString(dateKey);
@@ -1142,6 +1154,12 @@ timetableController.patch("/:id", async (c) => {
     const targetDateKey = toDateKey(body.date);
     const targetSpecificDate = dateKeyToISOString(targetDateKey);
 
+    if (!isRecurringEffectiveOn(entry, targetDateKey)) {
+      throw new BadRequestError(
+        "A recurring schedule cannot be changed for dates before it was created",
+      );
+    }
+
     // Check for existing one-off for this date
     const [existingOneOff] = await db
       .select()
@@ -1279,6 +1297,12 @@ timetableController.patch("/:id/complete", async (c) => {
   const targetDateSource = body.date || entry.specificDate || now;
   const targetDateKey = toDateKey(targetDateSource);
   const targetSpecificDate = dateKeyToISOString(targetDateKey);
+
+  if (entry.isRecurring === 1 && !isRecurringEffectiveOn(entry, targetDateKey)) {
+    throw new BadRequestError(
+      "A recurring class cannot be marked for a date before the schedule was created",
+    );
+  }
 
   if (!entry.staffId || !entry.classId || entry.periodNumber === null || entry.periodNumber === undefined) {
     throw new BadRequestError("Timetable entry must have staff, class and period assigned");
@@ -1702,6 +1726,12 @@ timetableController.delete("/:id", async (c) => {
   if (dateQuery) {
     const targetDateKey = toDateKey(dateQuery);
 
+    if (!isRecurringEffectiveOn(entry, targetDateKey)) {
+      throw new BadRequestError(
+        "A recurring schedule cannot be changed for dates before it was created",
+      );
+    }
+
     // Check if there's a one-off entry for this date
     const oneOffForDate = workdoneEntries.find(
       (e: any) => e.specificDate && toDateKey(e.specificDate) === targetDateKey,
@@ -1974,7 +2004,9 @@ timetableController.get("/staff-day", async (c) => {
         eq(timetableEntries.isDeleted, 0),
       ),
     );
-  const recurringEntries = rawRecurringEntries.map((entry: any) => recurringEntryForDate(entry, dateKey));
+  const recurringEntries = rawRecurringEntries
+    .filter((entry: any) => isRecurringEffectiveOn(entry, dateKey))
+    .map((entry: any) => recurringEntryForDate(entry, dateKey));
 
   const dayStart = dateKeyToISOString(dateKey);
   const dayEnd = dateKeyEndISOString(dateKey);
@@ -2193,7 +2225,7 @@ async function buildMonthlyReportData(
     if (!workingDays.includes(dow) && activeOneOff.length === 0) continue;
 
     const recurringForDay = recurringEntries
-      .filter((e: any) => e.dayOfWeek === dow)
+      .filter((e: any) => e.dayOfWeek === dow && isRecurringEffectiveOn(e, dateStr))
       .map((e: any) => recurringEntryForDate(e, dateStr));
 
     const cancelledPeriods = new Set(cancelledOneOff.map((e: any) => e.periodNumber));
