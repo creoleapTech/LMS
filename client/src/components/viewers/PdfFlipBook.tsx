@@ -113,8 +113,8 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
       availW: number, availH: number, ar: number, fs: boolean,
     ) => {
       // In fullscreen the nav arrows and page-info pill float over the book
-      // (absolute overlays), so nothing is reserved — the book is scaled to
-      // cover the entire viewport.
+      // (absolute overlays), so nothing is reserved — the book can grow to the
+      // largest size that still shows the entire page (no cropping).
       // In normal mode the ResizeObserver gives us the exact container rect; reserve
       // nav buttons (44px × 2 + 16px) and page-info bar (52px).
       const navW  = fs ? 0 : 44 * 2 + 16;
@@ -134,16 +134,6 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
         // Two-page spread: each page is `w` wide, book renders `2w`
         h = h0; w = h / ar;
         if (w * 2 > w0) { w = w0 / 2; h = w * ar; }
-      }
-
-      if (fs) {
-        // Fullscreen: scale the book up until it covers the whole viewport.
-        // The page aspect rarely matches the screen, so the overflowing edges
-        // are cropped — the book stays centered and is clipped by the book area.
-        const coverW = portrait ? w : w * 2;
-        const coverScale = Math.max(availW / coverW, availH / h);
-        w *= coverScale;
-        h *= coverScale;
       }
 
       setDimensions({
