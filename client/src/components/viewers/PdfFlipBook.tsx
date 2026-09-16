@@ -448,7 +448,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
               className={`group flex items-center justify-center rounded-full shrink-0
                          transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed
                          ${isFullscreen
-                           ? "absolute left-5 top-1/2 -translate-y-1/2 z-30 w-14 h-14 bg-black/45 hover:bg-black/60 text-white border border-white/25 shadow-lg backdrop-blur-sm"
+                           ? "absolute bottom-6 left-5 z-30 w-14 h-14 bg-black/45 hover:bg-black/60 text-white border border-white/25 shadow-lg backdrop-blur-sm"
                            : "w-10 h-10 md:w-11 md:h-11 neo-btn"
                          }`}
             >
@@ -613,7 +613,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
               className={`group flex items-center justify-center rounded-full shrink-0
                          transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed
                          ${isFullscreen
-                           ? "absolute right-5 top-1/2 -translate-y-1/2 z-30 w-14 h-14 bg-black/45 hover:bg-black/60 text-white border border-white/25 shadow-lg backdrop-blur-sm"
+                           ? "absolute bottom-6 right-5 z-30 w-14 h-14 bg-black/45 hover:bg-black/60 text-white border border-white/25 shadow-lg backdrop-blur-sm"
                            : "w-10 h-10 md:w-11 md:h-11 neo-btn"
                          }`}
             >
