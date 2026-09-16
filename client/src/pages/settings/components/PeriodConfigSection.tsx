@@ -1,13 +1,29 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { _axios } from "@/lib/axios";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Clock, Plus, Trash2, Save, Loader2 } from "lucide-react";
+import { Clock, Plus, Trash2, Save, Loader2, GripVertical } from "lucide-react";
 import type { IPeriodConfig, IPeriodSlot } from "@/types/timetable";
 
 const DAY_OPTIONS = [
@@ -20,14 +36,113 @@ const DAY_OPTIONS = [
   { value: 6, label: "Sat" },
 ];
 
-function defaultPeriod(num: number): IPeriodSlot {
+type PeriodRow = IPeriodSlot & { rowKey: string };
+
+function defaultPeriod(num: number): PeriodRow {
   return {
+    rowKey: crypto.randomUUID(),
     periodNumber: num,
     label: `Period ${num}`,
     startTime: "08:00",
     endTime: "08:45",
     isBreak: false,
   };
+}
+
+function SortablePeriodRow({
+  period,
+  displayNumber,
+  onUpdate,
+  onRemove,
+}: {
+  period: PeriodRow;
+  displayNumber: number;
+  onUpdate: (field: keyof IPeriodSlot, value: any) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: period.rowKey,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+        zIndex: isDragging ? 10 : undefined,
+      }}
+      className={`flex items-center gap-3 p-3 rounded-xl border ${
+        period.isBreak ? "bg-slate-50 border-slate-200" : "bg-white border-slate-100"
+      }`}
+    >
+      {/* Drag handle */}
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        aria-label="Drag to reorder period"
+        title="Drag to reorder"
+        className="cursor-grab active:cursor-grabbing touch-none text-slate-400 hover:text-slate-600 shrink-0"
+      >
+        <GripVertical size={16} />
+      </button>
+
+      {/* Period number badge */}
+      <span className={`text-sm font-black min-w-[32px] text-center py-1 rounded-lg ${
+        period.isBreak
+          ? "bg-slate-200 text-slate-600"
+          : "bg-indigo-100 text-indigo-700"
+      }`}>
+        {period.isBreak ? "B" : displayNumber}
+      </span>
+
+      {/* Label */}
+      <Input
+        value={period.label || ""}
+        onChange={(e) => onUpdate("label", e.target.value)}
+        placeholder="Label"
+        className="max-w-[120px] h-8 text-sm rounded-lg"
+        maxLength={50}
+      />
+
+      {/* Start time */}
+      <Input
+        type="time"
+        value={period.startTime}
+        onChange={(e) => onUpdate("startTime", e.target.value)}
+        className="max-w-[110px] h-8 text-sm rounded-lg"
+      />
+
+      <span className="text-slate-600 font-bold">→</span>
+
+      {/* End time */}
+      <Input
+        type="time"
+        value={period.endTime}
+        onChange={(e) => onUpdate("endTime", e.target.value)}
+        className="max-w-[110px] h-8 text-sm rounded-lg"
+      />
+
+      {/* Break checkbox */}
+      <div className="flex items-center gap-1.5">
+        <Checkbox
+          checked={period.isBreak}
+          onCheckedChange={(checked) => onUpdate("isBreak", !!checked)}
+        />
+        <span className="text-sm text-slate-600 font-medium">Break</span>
+      </div>
+
+      {/* Delete */}
+      <button
+        onClick={onRemove}
+        className="p-1.5 rounded-lg hover:bg-red-50 text-slate-600 hover:text-red-500 transition-colors"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
 }
 
 export function PeriodConfigSection({ institutionId }: { institutionId?: string } = {}) {
@@ -47,18 +162,27 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
     staleTime: 5 * 60 * 1000,
   });
 
-  const [periods, setPeriods] = useState<IPeriodSlot[]>([]);
+  const [periods, setPeriods] = useState<PeriodRow[]>([]);
   const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5]);
 
   useEffect(() => {
     if (config) {
-      setPeriods(config.periods.length > 0 ? config.periods : [defaultPeriod(1)]);
+      setPeriods(
+        config.periods.length > 0
+          ? config.periods.map((p) => ({ ...p, rowKey: crypto.randomUUID() }))
+          : [defaultPeriod(1)]
+      );
       setWorkingDays(config.workingDays);
     } else if (!isLoading) {
       setPeriods([defaultPeriod(1)]);
       setWorkingDays([1, 2, 3, 4, 5]);
     }
   }, [config, isLoading]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor)
+  );
 
   // Renumber: non-break periods get sequential numbers; breaks get high unique numbers
   const renumberedPeriods = useMemo(() => {
@@ -76,7 +200,10 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload: any = { periods: renumberedPeriods, workingDays };
+      const payload: any = {
+        periods: renumberedPeriods.map(({ rowKey: _rowKey, ...p }) => p),
+        workingDays,
+      };
       if (institutionId) payload.institutionId = institutionId;
       const { data: res } = await _axios.post("/admin/period-config", payload);
       return res.data;
@@ -94,7 +221,8 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
     const nonBreakMax = Math.max(0, ...periods.filter((p) => !p.isBreak).map((p) => p.periodNumber));
     const nextNum = nonBreakMax + 1;
     const lastPeriod = periods[periods.length - 1];
-    const newPeriod: IPeriodSlot = {
+    const newPeriod: PeriodRow = {
+      rowKey: crypto.randomUUID(),
       periodNumber: nextNum,
       label: `Period ${nextNum}`,
       startTime: lastPeriod?.endTime || "08:00",
@@ -104,12 +232,25 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
     setPeriods([...periods, newPeriod]);
   };
 
-  const removePeriod = (idx: number) => {
-    setPeriods(periods.filter((_, i) => i !== idx));
+  const removePeriod = (rowKey: string) => {
+    setPeriods((prev) => prev.filter((p) => p.rowKey !== rowKey));
   };
 
-  const updatePeriod = (idx: number, field: keyof IPeriodSlot, value: any) => {
-    setPeriods(periods.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
+  const updatePeriod = (rowKey: string, field: keyof IPeriodSlot, value: any) => {
+    setPeriods((prev) =>
+      prev.map((p) => (p.rowKey === rowKey ? { ...p, [field]: value } : p))
+    );
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setPeriods((prev) => {
+      const oldIndex = prev.findIndex((p) => p.rowKey === active.id);
+      const newIndex = prev.findIndex((p) => p.rowKey === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
   };
 
   const toggleWorkingDay = (day: number) => {
@@ -161,74 +302,32 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
           <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             Periods ({periods.length})
           </Label>
+          <p className="text-xs text-slate-500">
+            Drag the handle to reorder periods — the saved period numbers follow this order.
+          </p>
 
-          <div className="space-y-2">
-            {periods.map((period, idx) => (
-              <div
-                key={idx}
-                className={`flex items-center gap-3 p-3 rounded-xl border ${
-                  period.isBreak
-                    ? "bg-slate-50 border-slate-200"
-                    : "bg-white border-slate-100"
-                }`}
-              >
-                {/* Period number badge */}
-                <span className={`text-sm font-black min-w-[32px] text-center py-1 rounded-lg ${
-                  period.isBreak
-                    ? "bg-slate-200 text-slate-600"
-                    : "bg-indigo-100 text-indigo-700"
-                }`}>
-                  {period.isBreak ? "B" : period.periodNumber}
-                </span>
-
-                {/* Label */}
-                <Input
-                  value={period.label || ""}
-                  onChange={(e) => updatePeriod(idx, "label", e.target.value)}
-                  placeholder="Label"
-                  className="max-w-[120px] h-8 text-sm rounded-lg"
-                  maxLength={50}
-                />
-
-                {/* Start time */}
-                <Input
-                  type="time"
-                  value={period.startTime}
-                  onChange={(e) => updatePeriod(idx, "startTime", e.target.value)}
-                  className="max-w-[110px] h-8 text-sm rounded-lg"
-                />
-
-                <span className="text-slate-600 font-bold">→</span>
-
-                {/* End time */}
-                <Input
-                  type="time"
-                  value={period.endTime}
-                  onChange={(e) => updatePeriod(idx, "endTime", e.target.value)}
-                  className="max-w-[110px] h-8 text-sm rounded-lg"
-                />
-
-                {/* Break checkbox */}
-                <div className="flex items-center gap-1.5">
-                  <Checkbox
-                    checked={period.isBreak}
-                    onCheckedChange={(checked) =>
-                      updatePeriod(idx, "isBreak", !!checked)
-                    }
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={periods.map((p) => p.rowKey)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2">
+                {periods.map((period, idx) => (
+                  <SortablePeriodRow
+                    key={period.rowKey}
+                    period={period}
+                    displayNumber={renumberedPeriods[idx]?.periodNumber ?? period.periodNumber}
+                    onUpdate={(field, value) => updatePeriod(period.rowKey, field, value)}
+                    onRemove={() => removePeriod(period.rowKey)}
                   />
-                  <span className="text-sm text-slate-600 font-medium">Break</span>
-                </div>
-
-                {/* Delete */}
-                <button
-                  onClick={() => removePeriod(idx)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 text-slate-600 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
 
           <Button
             variant="outline"
