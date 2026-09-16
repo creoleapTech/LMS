@@ -23,8 +23,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Clock, Plus, Trash2, Save, Loader2, GripVertical } from "lucide-react";
+import { Clock, Plus, Trash2, Save, Loader2, GripVertical, AlertTriangle } from "lucide-react";
 import type { IPeriodConfig, IPeriodSlot } from "@/types/timetable";
+import {
+  findPeriodConflicts,
+  conflictedIndexes,
+  formatTimeRange12h,
+  displayNumbers,
+  payloadNumbers,
+} from "./periodUtils";
 
 const DAY_OPTIONS = [
   { value: 0, label: "Sun" },
@@ -52,11 +59,13 @@ function defaultPeriod(num: number): PeriodRow {
 function SortablePeriodRow({
   period,
   displayNumber,
+  hasConflict,
   onUpdate,
   onRemove,
 }: {
   period: PeriodRow;
-  displayNumber: number;
+  displayNumber: number | "B";
+  hasConflict?: boolean;
   onUpdate: (field: keyof IPeriodSlot, value: any) => void;
   onRemove: () => void;
 }) {
@@ -73,8 +82,12 @@ function SortablePeriodRow({
         opacity: isDragging ? 0.6 : 1,
         zIndex: isDragging ? 10 : undefined,
       }}
-      className={`flex items-center gap-3 p-3 rounded-xl border ${
-        period.isBreak ? "bg-slate-50 border-slate-200" : "bg-white border-slate-100"
+      className={`flex flex-wrap items-center gap-3 p-3 rounded-xl border ${
+        hasConflict
+          ? "border-red-300 bg-red-50"
+          : period.isBreak
+            ? "bg-slate-50 border-slate-200"
+            : "bg-white border-slate-100"
       }`}
     >
       {/* Drag handle */}
@@ -95,7 +108,7 @@ function SortablePeriodRow({
           ? "bg-slate-200 text-slate-600"
           : "bg-indigo-100 text-indigo-700"
       }`}>
-        {period.isBreak ? "B" : displayNumber}
+        {displayNumber}
       </span>
 
       {/* Label */}
@@ -107,22 +120,22 @@ function SortablePeriodRow({
         maxLength={50}
       />
 
-      {/* Start time */}
+      {/* Start time — wide enough that the AM/PM segment is never clipped */}
       <Input
         type="time"
         value={period.startTime}
         onChange={(e) => onUpdate("startTime", e.target.value)}
-        className="max-w-[110px] h-8 text-sm rounded-lg"
+        className="w-[136px] shrink-0 h-8 text-sm rounded-lg"
       />
 
       <span className="text-slate-600 font-bold">→</span>
 
-      {/* End time */}
+      {/* End time — wide enough that the AM/PM segment is never clipped */}
       <Input
         type="time"
         value={period.endTime}
         onChange={(e) => onUpdate("endTime", e.target.value)}
-        className="max-w-[110px] h-8 text-sm rounded-lg"
+        className="w-[136px] shrink-0 h-8 text-sm rounded-lg"
       />
 
       {/* Break checkbox */}
@@ -184,24 +197,29 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
     useSensor(KeyboardSensor)
   );
 
-  // Renumber: non-break periods get sequential numbers; breaks get high unique numbers
-  const renumberedPeriods = useMemo(() => {
-    let counter = 0;
-    let breakCounter = 0;
-    return periods.map((p) => {
-      if (!p.isBreak) {
-        counter++;
-        return { ...p, periodNumber: counter };
-      }
-      breakCounter++;
-      return { ...p, periodNumber: 10000 + breakCounter };
-    });
-  }, [periods]);
+  // Live display numbers (teaching periods 1..N in current order, "B" for breaks)
+  const rowNumbers = useMemo(() => displayNumbers(periods), [periods]);
+
+  // Overlapping time slots — two rows must never share the same time range
+  const conflicts = useMemo(() => findPeriodConflicts(periods), [periods]);
+  const conflicted = useMemo(() => conflictedIndexes(periods), [periods]);
+  const hasConflicts = conflicts.length > 0;
+
+  const slotName = (idx: number) => {
+    const p = periods[idx];
+    const num = rowNumbers[idx];
+    const name = p?.label?.trim() || (num === "B" ? "Break" : `Period ${num}`);
+    return `${name} (${formatTimeRange12h(p?.startTime, p?.endTime)})`;
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const numbers = payloadNumbers(periods);
       const payload: any = {
-        periods: renumberedPeriods.map(({ rowKey: _rowKey, ...p }) => p),
+        periods: periods.map(({ rowKey: _rowKey, ...p }, i) => ({
+          ...p,
+          periodNumber: numbers[i],
+        })),
         workingDays,
       };
       if (institutionId) payload.institutionId = institutionId;
@@ -306,6 +324,27 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
             Drag the handle to reorder periods — the saved period numbers follow this order.
           </p>
 
+          {/* Overlap validation warning */}
+          {hasConflicts && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5"
+            >
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-600" />
+              <div className="text-sm text-red-700">
+                <p className="font-semibold">Overlapping period timings</p>
+                <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                  {conflicts.map((c, i) => (
+                    <li key={i}>
+                      {slotName(c.indexA)} overlaps {slotName(c.indexB)}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1">Fix the timings before saving.</p>
+              </div>
+            </div>
+          )}
+
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -320,7 +359,8 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
                   <SortablePeriodRow
                     key={period.rowKey}
                     period={period}
-                    displayNumber={renumberedPeriods[idx]?.periodNumber ?? period.periodNumber}
+                    displayNumber={rowNumbers[idx]}
+                    hasConflict={conflicted.has(idx)}
                     onUpdate={(field, value) => updatePeriod(period.rowKey, field, value)}
                     onRemove={() => removePeriod(period.rowKey)}
                   />
@@ -344,7 +384,8 @@ export function PeriodConfigSection({ institutionId }: { institutionId?: string 
         <div className="flex justify-end pt-2 border-t">
           <Button
             onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending || periods.length === 0}
+            disabled={saveMutation.isPending || periods.length === 0 || hasConflicts}
+            title={hasConflicts ? "Fix the overlapping timings before saving" : undefined}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 gap-1.5"
           >
             {saveMutation.isPending ? (
