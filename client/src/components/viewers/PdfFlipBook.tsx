@@ -507,11 +507,18 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                   )}
                 </div>
               ) : (
-                <div
-                  className="relative shrink-0"
-                  style={{ width: bookSpreadW, height: dimensions.height }}
-                >
-                  <SmartBoardZoomContainer className="absolute inset-0 w-full h-full flex items-center justify-center" disabled={false} sideFloating>
+                <div className="absolute inset-0">
+                  <SmartBoardZoomContainer
+                    className="absolute inset-0 w-full h-full flex items-center justify-center"
+                    disabled={false}
+                    sideFloating
+                    contentWidth={bookSpreadW}
+                    contentHeight={dimensions.height}
+                  >
+                    <div
+                      className="relative shrink-0"
+                      style={{ width: bookSpreadW, height: dimensions.height }}
+                    >
                     <HTMLFlipBook
                       key={flipbookKey}
                       ref={flipBookRef}
@@ -544,6 +551,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
                         <Page key={i} src={src} pageNum={i + 1} totalPages={totalPages} />
                       ))}
                     </HTMLFlipBook>
+                    </div>
                   </SmartBoardZoomContainer>
                   {enableAnnotation && (
                     <AnnotationCanvas

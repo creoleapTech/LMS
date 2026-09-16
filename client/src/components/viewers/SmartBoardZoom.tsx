@@ -36,17 +36,37 @@ export function SmartBoardZoomContainer({
   disabled,
   className,
   sideFloating = false,
+  contentWidth,
+  contentHeight,
 }: {
   children: React.ReactNode;
   disabled?: boolean;
   className?: string;
   /** When true, hint + toolbar are floating overlays on the sides (for fullscreen) */
   sideFloating?: boolean;
+  /** Unscaled size of the zoomable content — panning can reach its edges but not fly off */
+  contentWidth?: number;
+  contentHeight?: number;
 }) {
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoomBarOpen, setZoomBarOpen] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
+
+  // Pan bounds — keep the content edges reachable without letting it fly away.
+  // Uses the real content size when provided, else a scale-based heuristic.
+  const clampPan = useCallback((p: { x: number; y: number }, s: number) => {
+    if (s <= 1) return { x: 0, y: 0 };
+    const vp = viewportRef.current;
+    let bx: number, by: number;
+    if (vp && typeof contentWidth === "number" && typeof contentHeight === "number") {
+      bx = Math.max(0, (contentWidth * s - vp.clientWidth) / 2);
+      by = Math.max(0, (contentHeight * s - vp.clientHeight) / 2);
+    } else {
+      bx = by = (s - 1) * 400;
+    }
+    return { x: clamp(p.x, -bx, bx), y: clamp(p.y, -by, by) };
+  }, [contentWidth, contentHeight]);
 
   // pointer tracking for pinch/pan
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
@@ -99,18 +119,14 @@ export function SmartBoardZoomContainer({
     } catch {}
   }, [scale, pan]);
 
-  const setScaleClamped = useCallback((next: number, center?: { x: number; y: number }) => {
+  const setScaleClamped = useCallback((next: number) => {
     const clamped = clamp(next, MIN_ZOOM, MAX_ZOOM);
     setScale(clamped);
-    if (clamped === 1) setPan({ x: 0, y: 0 });
-    // optionally adjust pan to keep center point stable — simplified: no offset
-    if (center) {
-      // keep pinch center stable (basic)
-    }
+    setPan((prev) => (clamped === 1 ? { x: 0, y: 0 } : clampPan(prev, clamped)));
     // First interaction dismisses the hint (user has understood)
     if (clamped !== 1) setHintVisible(false);
     return clamped;
-  }, []);
+  }, [clampPan]);
 
   const zoomIn = useCallback(() => {
     const n = setScaleClamped(scale + ZOOM_STEP);
@@ -138,11 +154,11 @@ export function SmartBoardZoomContainer({
     const next = clamp(scale * (1 + delta), MIN_ZOOM, MAX_ZOOM);
     if (next !== scale) {
       setScale(next);
-      if (next === 1) setPan({ x: 0, y: 0 });
+      setPan((prev) => (next === 1 ? { x: 0, y: 0 } : clampPan(prev, next)));
       logZoom("wheel", { deltaY: e.deltaY, nextScale: next });
       if (next !== 1) setHintVisible(false);
     }
-  }, [disabled, scale, logZoom]);
+  }, [disabled, scale, logZoom, clampPan]);
 
   // Pointer handlers — unified for mouse/touch/pen (stylus)
   const onPointerDown = useCallback((e: React.PointerEvent) => {
@@ -170,7 +186,7 @@ export function SmartBoardZoomContainer({
         // double tap → toggle 1x ↔ 2x
         const next = scale > 1.5 ? 1 : 2;
         setScale(next);
-        if (next === 1) setPan({ x: 0, y: 0 });
+        setPan((prev) => (next === 1 ? { x: 0, y: 0 } : clampPan(prev, next)));
         logZoom("double_tap", { nextScale: next, pointerType: e.pointerType });
         lastTap.current = 0;
         setHintVisible(false);
@@ -178,7 +194,7 @@ export function SmartBoardZoomContainer({
         lastTap.current = now;
       }
     }
-  }, [disabled, scale, pan, logZoom]);
+  }, [disabled, scale, pan, logZoom, clampPan]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (disabled) return;
@@ -191,20 +207,15 @@ export function SmartBoardZoomContainer({
       const next = clamp(pinchStart.current.scale * (curDist / pinchStart.current.dist), MIN_ZOOM, MAX_ZOOM);
       if (next !== scale) {
         setScale(next);
-        if (next === 1) setPan({ x: 0, y: 0 });
+        setPan((prev) => (next === 1 ? { x: 0, y: 0 } : clampPan(prev, next)));
       }
     } else if (pointers.current.size === 1 && panStart.current && scale > 1) {
       const dx = e.clientX - panStart.current.x;
       const dy = e.clientY - panStart.current.y;
       // allow panning with pen, finger, or mouse when zoomed
-      // clamp pan so content doesn't fly off — ± (scale-1)*200px heuristic
-      const bound = (scale - 1) * 400;
-      setPan({
-        x: clamp(panStart.current.panX + dx, -bound, bound),
-        y: clamp(panStart.current.panY + dy, -bound, bound),
-      });
+      setPan(clampPan({ x: panStart.current.panX + dx, y: panStart.current.panY + dy }, scale));
     }
-  }, [disabled, scale]);
+  }, [disabled, scale, clampPan]);
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
     pointers.current.delete(e.pointerId);
@@ -266,7 +277,7 @@ export function SmartBoardZoomContainer({
           // fallback for mouse double-click if pointer double-tap missed
           const next = scale > 1.5 ? 1 : 2;
           setScale(next);
-          if (next === 1) setPan({ x: 0, y: 0 });
+          setPan((prev) => (next === 1 ? { x: 0, y: 0 } : clampPan(prev, next)));
           logZoom("double_click", { nextScale: next });
           setHintVisible(false);
         }}
