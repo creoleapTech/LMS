@@ -113,8 +113,8 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
       availW: number, availH: number, ar: number, fs: boolean,
     ) => {
       // In fullscreen the nav arrows and page-info pill float over the book
-      // (absolute overlays), so nothing is reserved — the book uses the entire
-      // viewport and is only limited by the page aspect ratio.
+      // (absolute overlays), so nothing is reserved — the book is scaled to
+      // cover the entire viewport.
       // In normal mode the ResizeObserver gives us the exact container rect; reserve
       // nav buttons (44px × 2 + 16px) and page-info bar (52px).
       const navW  = fs ? 0 : 44 * 2 + 16;
@@ -134,6 +134,16 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
         // Two-page spread: each page is `w` wide, book renders `2w`
         h = h0; w = h / ar;
         if (w * 2 > w0) { w = w0 / 2; h = w * ar; }
+      }
+
+      if (fs) {
+        // Fullscreen: scale the book up until it covers the whole viewport.
+        // The page aspect rarely matches the screen, so the overflowing edges
+        // are cropped — the book stays centered and is clipped by the book area.
+        const coverW = portrait ? w : w * 2;
+        const coverScale = Math.max(availW / coverW, availH / h);
+        w *= coverScale;
+        h *= coverScale;
       }
 
       setDimensions({
@@ -435,7 +445,9 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
         {/* ── Book area — measured by ResizeObserver in normal mode ── */}
         <div
           ref={bookAreaRef}
-          className="flex-1 min-h-0 flex flex-col items-center justify-center w-full relative"
+          className={`flex-1 min-h-0 flex flex-col items-center justify-center w-full relative ${
+            isFullscreen ? "overflow-hidden" : ""
+          }`}
         >
           {/* Book + nav buttons */}
           <div className="flex items-center justify-center w-full shrink-0">
@@ -446,7 +458,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
               className={`group flex items-center justify-center rounded-full shrink-0
                          transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed
                          ${isFullscreen
-                           ? "absolute left-2 top-1/2 -translate-y-1/2 z-30 w-14 h-14 bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm"
+                           ? "absolute left-5 top-1/2 -translate-y-1/2 z-30 w-14 h-14 bg-black/45 hover:bg-black/60 text-white border border-white/25 shadow-lg backdrop-blur-sm"
                            : "w-10 h-10 md:w-11 md:h-11 neo-btn"
                          }`}
             >
@@ -603,7 +615,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
               className={`group flex items-center justify-center rounded-full shrink-0
                          transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed
                          ${isFullscreen
-                           ? "absolute right-2 top-1/2 -translate-y-1/2 z-30 w-14 h-14 bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm"
+                           ? "absolute right-5 top-1/2 -translate-y-1/2 z-30 w-14 h-14 bg-black/45 hover:bg-black/60 text-white border border-white/25 shadow-lg backdrop-blur-sm"
                            : "w-10 h-10 md:w-11 md:h-11 neo-btn"
                          }`}
             >
