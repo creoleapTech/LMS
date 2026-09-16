@@ -112,12 +112,13 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
     const calcFromRect = useCallback((
       availW: number, availH: number, ar: number, fs: boolean,
     ) => {
-      // In fullscreen the browser gives us the full screen; reserve space for
-      // nav buttons (56px × 2 + 32px gaps) and the page-info bar (60px) + padding (48px).
+      // In fullscreen the nav arrows and page-info pill float over the book
+      // (absolute overlays), so nothing is reserved — the book uses the entire
+      // viewport and is only limited by the page aspect ratio.
       // In normal mode the ResizeObserver gives us the exact container rect; reserve
       // nav buttons (44px × 2 + 16px) and page-info bar (52px).
-      const navW  = fs ? 56 * 2 + 32 : 44 * 2 + 16;
-      const infoH = fs ? 60 + 48      : 52;
+      const navW  = fs ? 0 : 44 * 2 + 16;
+      const infoH = fs ? 0 : 52;
 
       const portrait = availW < (fs ? 700 : 600);
       setUsePortrait(portrait);
@@ -445,7 +446,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
               className={`group flex items-center justify-center rounded-full shrink-0
                          transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed
                          ${isFullscreen
-                           ? "w-14 h-14 bg-white/15 hover:bg-white/25 text-white"
+                           ? "absolute left-2 top-1/2 -translate-y-1/2 z-30 w-14 h-14 bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm"
                            : "w-10 h-10 md:w-11 md:h-11 neo-btn"
                          }`}
             >
@@ -602,7 +603,7 @@ export const PdfFlipBook = forwardRef<PdfFlipBookHandle, PdfFlipBookProps>(
               className={`group flex items-center justify-center rounded-full shrink-0
                          transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed
                          ${isFullscreen
-                           ? "w-14 h-14 bg-white/15 hover:bg-white/25 text-white"
+                           ? "absolute right-2 top-1/2 -translate-y-1/2 z-30 w-14 h-14 bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm"
                            : "w-10 h-10 md:w-11 md:h-11 neo-btn"
                          }`}
             >
