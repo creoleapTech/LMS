@@ -3629,14 +3629,35 @@ timetableController.post("/save-report-draft", async (c) => {
     if (user.role === "admin") {
       throw new BadRequestError("Admins cannot save report drafts");
     }
-    const staffId = user.id;
-    const institutionId = resolveInstitutionId(user);
-    const rawBody = await c.req.json<ReportParams & { forceRecall?: boolean }>();
+    const rawBody = await c.req.json<ReportParams & { forceRecall?: boolean; institutionId?: string | null }>();
     const forceRecall = (rawBody as any)?.forceRecall === true;
-    // Strip control flag so it never persists inside stored reportData
+    // Strip control flags so they never persist inside stored reportData
     delete (rawBody as any).forceRecall;
-    const body = normalizeReportData(rawBody);
+    delete (rawBody as any).institutionId;
     const db = getDb(c.env.DB);
+
+    // Superadmin may save a draft on behalf of the selected teacher (Edit
+    // Report tab). Teachers/staff may only ever save their own draft.
+    let staffId = user.id;
+    let institutionId: string;
+    const targetStaffId =
+      user.role === "super_admin" && typeof rawBody.staffId === "string" && rawBody.staffId
+        ? rawBody.staffId
+        : null;
+    if (targetStaffId) {
+      const [staffRow] = await db
+        .select({ institutionId: staff.institutionId })
+        .from(staff)
+        .where(eq(staff.id, targetStaffId))
+        .limit(1);
+      if (!staffRow) throw new BadRequestError("Selected teacher not found");
+      if (!staffRow.institutionId) throw new BadRequestError("Selected teacher has no institution");
+      staffId = targetStaffId;
+      institutionId = staffRow.institutionId;
+    } else {
+      institutionId = resolveInstitutionId(user);
+    }
+    const body = normalizeReportData(rawBody);
 
     const year = body.year;
     const monthNum = MONTH_NAMES.indexOf(body.monthName) + 1;
@@ -3696,6 +3717,38 @@ timetableController.post("/save-report-draft", async (c) => {
         .returning();
       return c.json({ success: true, data: updated });
     } else {
+      // A soft-deleted record for the same staff+year+month still occupies the
+      // unique index slot — revive it as a fresh draft instead of failing the insert.
+      const [softDeleted] = await db
+        .select()
+        .from(reportSubmissions)
+        .where(
+          and(
+            eq(reportSubmissions.staffId, staffId),
+            eq(reportSubmissions.year, year),
+            eq(reportSubmissions.month, monthNum),
+          ),
+        )
+        .limit(1);
+
+      if (softDeleted) {
+        const [revived] = await db
+          .update(reportSubmissions)
+          .set({
+            reportData: reportDataJson,
+            status: "draft",
+            isDeleted: 0,
+            adminApproval: "pending",
+            adminComment: null,
+            reviewedAt: null,
+            reviewedBy: null,
+            updatedAt: now,
+          })
+          .where(eq(reportSubmissions.id, softDeleted.id))
+          .returning();
+        return c.json({ success: true, data: revived });
+      }
+
       const id = uuid();
       const [created] = await db
         .insert(reportSubmissions)

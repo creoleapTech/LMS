@@ -336,14 +336,26 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
     if (reportData) downloadDocx(reportData);
   };
 
-  // Superadmin: persist Edit-Report-tab edits back to the submitted report.
-  // Only available when a submission is loaded (submissionId present).
+  // Superadmin: persist Edit-Report-tab edits. Submitted reports are updated
+  // in place (moved back to pending review); generated/unsaved reports are
+  // saved as a draft on behalf of the selected teacher.
   const handleAdminSave = async () => {
+    if (!reportData) return;
     const submissionId = submissionStatus?.submissionId;
-    if (!reportData || !submissionId) {
-      toast.error("No submitted report loaded to save to");
+
+    if (!submissionId) {
+      if (!selectedStaffId) {
+        toast.error("Select a teacher first");
+        return;
+      }
+      await saveDraft(reportData, {
+        staffId: selectedStaffId,
+        institutionId: effectiveInstitutionId,
+        successMessage: "Draft saved for the selected teacher",
+      });
       return;
     }
+
     setIsAdminSaving(true);
     try {
       const res = await _axios.post("/admin/timetable/admin-update-report", {
@@ -829,21 +841,21 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
                 );
               })()}
               <div className="flex-1" />
-              {/* Superadmin Save (Edit Report tab) — persists edits to the submission */}
-              {isSuperAdmin && !isApproved && reportData && submissionStatus?.submissionId && (
+              {/* Superadmin Save (Edit Report tab) — persists edits to the submission or teacher draft */}
+              {isSuperAdmin && !isApproved && reportData && (submissionStatus?.submissionId || selectedStaffId) && (
                 <Button
                   onClick={handleAdminSave}
-                  disabled={isAdminSaving}
+                  disabled={isAdminSaving || isSavingDraft}
                   size="sm"
-                  title="Save edits back to the submitted report (moves it to pending review)"
+                  title={submissionStatus?.submissionId ? "Save edits back to the submitted report (moves it to pending review)" : "Save changes as a draft for the selected teacher"}
                   className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold hover:from-indigo-700 hover:to-violet-700 transition-all shadow-md disabled:opacity-60"
                 >
-                  {isAdminSaving ? (
+                  {isAdminSaving || isSavingDraft ? (
                     <Loader2 size={14} className="animate-spin" />
                   ) : (
                     <Save size={14} />
                   )}
-                  {isAdminSaving ? "Saving..." : "Save"}
+                  {isAdminSaving || isSavingDraft ? "Saving..." : "Save"}
                 </Button>
               )}
               <Button
@@ -1024,18 +1036,19 @@ export default function ReportsPage({ draftId }: { draftId?: string } = {}) {
 
           {/* Bottom Action Bar */}
           <div className="flex items-center gap-3 pb-8">
-            {isSuperAdmin && !isApproved && reportData && submissionStatus?.submissionId && (
+            {isSuperAdmin && !isApproved && reportData && (submissionStatus?.submissionId || selectedStaffId) && (
               <Button
                 onClick={handleAdminSave}
-                disabled={isAdminSaving}
+                disabled={isAdminSaving || isSavingDraft}
+                title={submissionStatus?.submissionId ? "Save edits back to the submitted report (moves it to pending review)" : "Save changes as a draft for the selected teacher"}
                 className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-300/30 disabled:opacity-60"
               >
-                {isAdminSaving ? (
+                {isAdminSaving || isSavingDraft ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
                   <Save size={16} />
                 )}
-                {isAdminSaving ? "Saving..." : "Save"}
+                {isAdminSaving || isSavingDraft ? "Saving..." : "Save"}
               </Button>
             )}
             <Button

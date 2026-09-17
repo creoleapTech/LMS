@@ -302,12 +302,16 @@ export function useReportEditor() {
     }
   }, []);
 
-  const saveDraft = useCallback(async (data: ReportParams, opts?: { forceRecall?: boolean }) => {
+  const saveDraft = useCallback(async (data: ReportParams, opts?: { forceRecall?: boolean; staffId?: string | null; institutionId?: string | null; successMessage?: string }) => {
     setIsSavingDraft(true);
     try {
-      const res = await _axios.post("/admin/timetable/save-report-draft", opts?.forceRecall ? { ...data, forceRecall: true } : data);
+      const payload: ReportParams & { forceRecall?: boolean; institutionId?: string | null } =
+        opts?.forceRecall ? { ...data, forceRecall: true } : { ...data };
+      if (opts?.staffId) payload.staffId = opts.staffId;
+      if (opts?.institutionId) payload.institutionId = opts.institutionId;
+      const res = await _axios.post("/admin/timetable/save-report-draft", payload);
       if (res.data?.success) {
-        toast.success("Draft saved successfully");
+        toast.success(opts?.successMessage || "Draft saved successfully");
         setSubmissionStatus((prev) => ({ ...prev, submitted: false, hasDraft: true, draftId: res.data.data?.id }));
       } else {
         throw new Error("Save draft failed");
@@ -321,7 +325,7 @@ export function useReportEditor() {
           const monthNum =
             ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].indexOf(data.monthName) + 1;
           if (data.year && monthNum) {
-            const st = await _axios.get(`/admin/timetable/report-submission?year=${data.year}&month=${monthNum}`);
+            const st = await _axios.get(`/admin/timetable/report-submission?year=${data.year}&month=${monthNum}${opts?.staffId ? `&staffId=${opts.staffId}` : ""}`);
             const sub = st.data?.data;
             if (sub) {
               if (sub.status === "draft") {
