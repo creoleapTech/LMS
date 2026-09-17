@@ -70,8 +70,18 @@ export interface ReportParams {
 const FROM_ORG = "CREOLEAP TECHNOLOGIES PVT LTD";
 const TITLE_COLOR = "660000";
 const HEADER_BLUE = "4FA3D1";
-const BORDER_SINGLE = { style: BorderStyle.SINGLE, size: 1, color: "999999" };
+const BORDER_SINGLE = { style: BorderStyle.SINGLE, size: 6, color: "000000" };
 const ALL_BORDERS = { top: BORDER_SINGLE, bottom: BORDER_SINGLE, left: BORDER_SINGLE, right: BORDER_SINGLE };
+// Table-level grid (incl. inner lines) so Word/PDF/print render a solid grid
+// instead of relying only on cell borders, which some renderers wash out.
+const TABLE_BORDERS = {
+  top: BORDER_SINGLE,
+  bottom: BORDER_SINGLE,
+  left: BORDER_SINGLE,
+  right: BORDER_SINGLE,
+  insideHorizontal: BORDER_SINGLE,
+  insideVertical: BORDER_SINGLE,
+};
 const COMPACT_CELL_MARGINS = {
   top: 40,
   bottom: 40,
@@ -346,6 +356,7 @@ function buildStyledTable(
       : { size: 100, type: WidthType.PERCENTAGE },
     margins: cellMargins,
     layout: fixedWidths ? TableLayoutType.FIXED : TableLayoutType.AUTOFIT,
+    borders: TABLE_BORDERS,
     rows: [headerRow, ...rows],
   });
 
