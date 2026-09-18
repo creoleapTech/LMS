@@ -1,7 +1,9 @@
 import React from "react";
+import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import type {
   ExaminationDetail,
   ExaminationColumn,
+  SortConfig,
 } from "../types";
 import { evaluateFormula } from "../lib/formulaEngine";
 import { RosterCell } from "./RosterCell";
@@ -16,6 +18,19 @@ interface StudentRosterGridProps {
   onDeleteColumn: (columnId: string) => void;
   onReorderColumn: (columnId: string, direction: "left" | "right") => void;
   localCells?: Map<string, string>; // key = `${studentId}:${columnId}`
+  /** Active sort (null = roster order). Clicking a header cycles asc → desc → none. */
+  sortConfig?: SortConfig | null;
+  onSortToggle?: (key: string) => void;
+}
+
+/**
+ * Sort indicator for a header: active direction arrow, or a faint
+ * unsorted chevron shown on hover.
+ */
+function SortIcon({ active, direction }: { active: boolean; direction?: "asc" | "desc" }) {
+  if (active && direction === "asc") return <ArrowUp className="h-3 w-3 text-indigo-600" />;
+  if (active && direction === "desc") return <ArrowDown className="h-3 w-3 text-indigo-600" />;
+  return <ChevronsUpDown className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover/sort:opacity-100 transition-opacity" />;
 }
 
 /**
@@ -34,6 +49,8 @@ export function StudentRosterGrid({
   onDeleteColumn,
   onReorderColumn,
   localCells,
+  sortConfig = null,
+  onSortToggle,
 }: StudentRosterGridProps) {
   // Sort user columns by their order field
   const sortedColumns = [...examination.columns].sort(
@@ -57,17 +74,34 @@ export function StudentRosterGrid({
           <tr>
             {/* Default: Student Name */}
             <th className="sticky top-0 left-0 z-30 w-[220px] min-w-[220px] max-w-[220px] bg-[var(--neo-bg)] px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider border-b border-r border-border/50 whitespace-nowrap">
-              Student Name
+              <SortableLabel
+                label="Student Name"
+                sortKey="studentName"
+                sortConfig={sortConfig}
+                onSortToggle={onSortToggle}
+              />
             </th>
 
             {/* Default: Class */}
             <th className="sticky top-0 left-[220px] z-30 w-[80px] min-w-[80px] max-w-[80px] bg-[var(--neo-bg)] px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wider border-b border-r border-border/50 whitespace-nowrap">
-              Class
+              <SortableLabel
+                label="Class"
+                sortKey="grade"
+                sortConfig={sortConfig}
+                onSortToggle={onSortToggle}
+                centered
+              />
             </th>
 
             {/* Default: Section */}
             <th className="sticky top-0 left-[300px] z-30 w-[80px] min-w-[80px] max-w-[80px] bg-[var(--neo-bg)] px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wider border-b border-r-2 border-slate-400 dark:border-slate-500 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.16)] dark:shadow-[4px_0_8px_-2px_rgba(0,0,0,0.5)] whitespace-nowrap">
-              Section
+              <SortableLabel
+                label="Section"
+                sortKey="section"
+                sortConfig={sortConfig}
+                onSortToggle={onSortToggle}
+                centered
+              />
             </th>
 
             {/* User-defined columns */}
@@ -77,7 +111,12 @@ export function StudentRosterGrid({
                 className="sticky top-0 z-10 bg-[var(--neo-bg)] px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider border-b border-r border-border/40 whitespace-nowrap min-w-[120px]"
               >
                 <div className="flex items-center gap-1">
-                  <span>{column.name}</span>
+                  <SortableLabel
+                    label={column.name}
+                    sortKey={column.id}
+                    sortConfig={sortConfig}
+                    onSortToggle={onSortToggle}
+                  />
                   {!isReadOnly && (
                     <ColumnHeaderMenu
                       column={column}
@@ -117,7 +156,7 @@ export function StudentRosterGrid({
                 colSpan={totalColumns}
                 className="px-3 py-8 text-center text-sm text-muted-foreground border-b border-border/40"
               >
-                No students in this grade yet — add sections or check enrolments
+                No students to show — try a different section filter or add sections
               </td>
             </tr>
           ) : (
@@ -219,5 +258,38 @@ export function StudentRosterGrid({
         </tbody>
       </table>
     </div>
+  );
+}
+
+// ─── SortableLabel ────────────────────────────────────────────────────────────
+
+function SortableLabel({
+  label,
+  sortKey,
+  sortConfig,
+  onSortToggle,
+  centered = false,
+}: {
+  label: string;
+  sortKey: string;
+  sortConfig?: SortConfig | null;
+  onSortToggle?: (key: string) => void;
+  centered?: boolean;
+}) {
+  const active = sortConfig?.key === sortKey;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSortToggle?.(sortKey)}
+      title={`Sort by ${label}`}
+      aria-label={`Sort by ${label}`}
+      className={`group/sort inline-flex items-center gap-1 uppercase tracking-wider hover:text-indigo-600 transition-colors ${
+        centered ? "justify-center w-full" : ""
+      } ${active ? "text-indigo-600" : ""}`}
+    >
+      <span>{label}</span>
+      <SortIcon active={!!active} direction={sortConfig?.direction} />
+    </button>
   );
 }

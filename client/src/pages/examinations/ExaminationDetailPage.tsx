@@ -32,8 +32,13 @@ import { ConfigureClassesDialog } from "./components/ConfigureClassesDialog";
 import { StudentRosterGrid } from "./components/StudentRosterGrid";import { ColumnConfigSheet } from "./components/ColumnConfigSheet";
 import { ExaminationFormDialog } from "./components/ExaminationFormDialog";
 import { ExaminationExportButton } from "./components/ExaminationExportButton";
-import type { ExaminationColumn, ExaminationDetail } from "./types";
+import type { ExaminationColumn, ExaminationDetail, SortConfig } from "./types";
 import { columnsForGrade, studentsForGrade } from "./types";
+import {
+  filterStudentsBySection,
+  sectionsInStudents,
+  sortStudents,
+} from "./lib/sorting";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -84,6 +89,9 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
   // Only one grade is visible/edited at a time
   const [activeGrade, setActiveGrade] = useState<string>("");
+  // Section filter + sorting within the active grade
+  const [sectionFilter, setSectionFilter] = useState<string>("all");
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [columnSheetOpen, setColumnSheetOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<ExaminationColumn | undefined>(undefined);
   const [deleteExamOpen, setDeleteExamOpen] = useState(false);
@@ -172,6 +180,13 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
     }
   }, [grades, activeGrade]);
 
+  // Reset section filter + sorting whenever the active grade changes —
+  // both are scoped to one grade's roster and columns.
+  useEffect(() => {
+    setSectionFilter("all");
+    setSortConfig(null);
+  }, [activeGrade]);
+
   // ── Active grade's slice ───────────────────────────────────────────────────
   const gradeColumns = useMemo(
     () => (activeGrade ? columnsForGrade(localColumns, activeGrade) : []),
@@ -181,6 +196,24 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
     () => (examination && activeGrade ? studentsForGrade(examination.students, activeGrade) : []),
     [examination, activeGrade]
   );
+
+  // ── Section filter + sorting (view-only; never mutates stored data) ────────
+  const availableSections = useMemo(() => sectionsInStudents(gradeStudents), [gradeStudents]);
+
+  const visibleStudents = useMemo(() => {
+    if (!examination) return [];
+    const filtered = filterStudentsBySection(gradeStudents, sectionFilter);
+    return sortStudents(filtered, sortConfig, gradeColumns, examination.cells, localCells);
+  }, [examination, gradeStudents, sectionFilter, sortConfig, gradeColumns, localCells]);
+
+  // Header click cycles asc → desc → none
+  const handleSortToggle = useCallback((key: string) => {
+    setSortConfig((prev) => {
+      if (!prev || prev.key !== key) return { key, direction: "asc" };
+      if (prev.direction === "asc") return { key, direction: "desc" };
+      return null;
+    });
+  }, []);
 
   // ── Cell change handler with debounced save ────────────────────────────────
   const handleCellChange = useCallback(
@@ -396,7 +429,7 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
   const examinationWithLocalState: ExaminationDetail = {
     ...examination,
     columns: gradeColumns,
-    students: gradeStudents,
+    students: visibleStudents,
     selectedClassIds,
   };
 
@@ -508,13 +541,73 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
           </p>
         ) : (
           <>
-            {!isReadOnly && (
-              <p className="text-xs text-muted-foreground mb-3">
-                Showing Grade {activeGrade} — columns and formulas below apply only to this grade.
-                Sections {gradeStudents.length > 0 ? [...new Set(gradeStudents.map((s) => s.section))].join(", ") : "—"} share
-                this grade&apos;s columns.
-              </p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Showing Grade {activeGrade}
+              {sectionFilter !== "all" ? ` • Section ${sectionFilter}` : ""}
+              {" "}— {visibleStudents.length} of {gradeStudents.length} students.
+              {!isReadOnly && (
+                <> Columns and formulas below apply only to this grade.</>
+              )}
+            </p>
+
+            {/* Section filter */}
+            {availableSections.length > 1 && (
+              <div className="flex flex-wrap items-center gap-2 mb-3" aria-label="Filter by section">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Section:
+                </span>
+                <button
+                  key="all"
+                  type="button"
+                  onClick={() => setSectionFilter("all")}
+                  aria-pressed={sectionFilter === "all"}
+                  className={[
+                    "rounded-full px-3 py-1 text-xs font-medium border transition-all",
+                    sectionFilter === "all"
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-transparent text-foreground border-border hover:border-indigo-400",
+                  ].join(" ")}
+                >
+                  All
+                </button>
+                {availableSections.map((section) => {
+                  const isActive = sectionFilter === section;
+                  return (
+                    <button
+                      key={section}
+                      type="button"
+                      onClick={() => setSectionFilter(section)}
+                      aria-pressed={isActive}
+                      className={[
+                        "rounded-full px-3 py-1 text-xs font-medium border transition-all",
+                        isActive
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-transparent text-foreground border-border hover:border-indigo-400",
+                      ].join(" ")}
+                    >
+                      {section}
+                    </button>
+                  );
+                })}
+              </div>
             )}
+
+            {sortConfig && (
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs text-muted-foreground">
+                  Sorted by {sortLabel(sortConfig, gradeColumns)}
+                  {sortConfig.direction === "asc" ? " (lowest first)" : " (highest first)"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSortConfig(null)}
+                  className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                >
+                  Clear sort
+                </button>
+              </div>
+            )}
+
             <StudentRosterGrid
               examination={examinationWithLocalState}
               isReadOnly={isReadOnly}
@@ -524,6 +617,8 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
               onDeleteColumn={handleDeleteColumn}
               onReorderColumn={handleReorderColumn}
               localCells={localCells}
+              sortConfig={sortConfig}
+              onSortToggle={handleSortToggle}
             />
           </>
         )}
@@ -576,6 +671,16 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
       </AlertDialog>
     </div>
   );
+}
+
+// ─── sortLabel ────────────────────────────────────────────────────────────────
+
+/** Human-readable label for the active sort (default column or user column name). */
+function sortLabel(sort: SortConfig, columns: ExaminationColumn[]): string {
+  if (sort.key === "studentName") return "Student Name";
+  if (sort.key === "grade") return "Class";
+  if (sort.key === "section") return "Section";
+  return columns.find((c) => c.id === sort.key)?.name ?? "column";
 }
 
 // ─── BackLink ─────────────────────────────────────────────────────────────────

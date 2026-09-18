@@ -64,6 +64,21 @@ export interface StudentRow {
   section: string;
 }
 
+// ---------------------------------------------------------------------------
+// Roster view: section filter + sorting
+// ---------------------------------------------------------------------------
+
+export type SortDirection = "asc" | "desc";
+
+export interface SortConfig {
+  /** "studentName" | "grade" | "section" for default columns, else a column id */
+  key: string;
+  direction: SortDirection;
+}
+
+export const DEFAULT_SORT_KEYS = ["studentName", "grade", "section"] as const;
+export type DefaultSortKey = (typeof DEFAULT_SORT_KEYS)[number];
+
 // Examination with fully resolved data (detail view)
 export interface ExaminationDetail extends Examination {
   students: StudentRow[];
