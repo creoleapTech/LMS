@@ -131,6 +131,11 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
     for (const cell of examination.cells) {
       cellMap.set(`${cell.studentId}:${cell.columnId}`, cell.value);
     }
+    // Overlay edits that haven't successfully saved yet — a background
+    // refresh must never wipe what the user typed.
+    for (const [k, v] of dirtyCellsRef.current) {
+      cellMap.set(k, v);
+    }
     setLocalCells(cellMap);
     setLocalColumns(examination.columns);
     setSelectedClassIds(examination.selectedClassIds);
@@ -212,9 +217,20 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
         saveCellsMutation.mutate(
           { id, cells: dirtyCells },
           {
-            onSettled: () => {
+            // Only forget cells the server actually stored. Failed edits
+            // stay dirty: they survive refreshes (see overlay above) and
+            // ride along with the next save as an automatic retry.
+            onSuccess: (saved) => {
               setIsSaving(false);
-              dirtyCellsRef.current.clear();
+              const savedKeys = new Set(
+                (saved ?? []).map((c: { studentId: string; columnId: string }) => `${c.studentId}:${c.columnId}`)
+              );
+              for (const key of [...dirtyCellsRef.current.keys()]) {
+                if (savedKeys.has(key)) dirtyCellsRef.current.delete(key);
+              }
+            },
+            onError: () => {
+              setIsSaving(false);
             },
           }
         );

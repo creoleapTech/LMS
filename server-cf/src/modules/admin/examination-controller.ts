@@ -871,13 +871,24 @@ examinationController.patch("/:id/cells", async (c) => {
   for (const cell of body.cells) {
     if (!cell.studentId || !cell.columnId) continue;
 
-    // Column must belong to this examination
-    if (!columnGrade.has(cell.columnId)) continue;
+    // Column must belong to this examination. A stale column id (e.g. the
+    // grade's columns were reconfigured in another tab) fails loudly instead
+    // of vanishing silently — the client keeps the edit and tells the user
+    // to refresh.
+    if (!columnGrade.has(cell.columnId)) {
+      throw new BadRequestError(
+        "A column no longer exists in this examination — refresh the page and re-enter the value"
+      );
+    }
 
     // Student must belong to the examination's selection, and the student's
     // grade must match the column's grade (no cross-grade writes)
     const classId = studentClass.get(cell.studentId);
-    if (!classId) continue;
+    if (!classId) {
+      throw new BadRequestError(
+        "A student is no longer part of this examination — refresh the page and re-enter the value"
+      );
+    }
     const colGrade = columnGrade.get(cell.columnId) ?? "";
     const stuGrade = gradeByClass.get(classId) ?? "";
     if (colGrade && stuGrade && colGrade !== stuGrade) {
