@@ -117,7 +117,7 @@ export function StudentRosterGrid({
                 colSpan={totalColumns}
                 className="px-3 py-8 text-center text-sm text-muted-foreground border-b border-border/40"
               >
-                Select classes above to populate the student roster
+                No students in this grade yet — add sections or check enrolments
               </td>
             </tr>
           ) : (

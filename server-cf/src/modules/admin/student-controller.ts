@@ -1326,12 +1326,27 @@ studentController.get("/:id/profile", async (c) => {
         return false;
       }
     });
+    // Student's grade determines which per-grade column set applies
+    let studentGrade = "";
+    if (student.classId) {
+      const [cls] = await db
+        .select({ grade: classes.grade })
+        .from(classes)
+        .where(eq(classes.id, student.classId))
+        .limit(1);
+      studentGrade = cls?.grade ?? "";
+    }
     for (const ex of relevantExams) {
-      const cols = await db
+      const allCols = await db
         .select()
         .from(examinationColumns)
         .where(eq(examinationColumns.examinationId, ex.id))
         .orderBy(examinationColumns.order);
+      // Per-grade columns: show the student's grade set; legacy ungraded
+      // columns ("") remain visible to every grade until healed.
+      const cols = allCols.filter(
+        (c: any) => (c.grade ?? "") === "" || (c.grade ?? "") === studentGrade
+      );
       const cells = await db
         .select()
         .from(examinationCells)

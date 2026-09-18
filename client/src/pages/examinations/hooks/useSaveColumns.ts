@@ -3,14 +3,14 @@ import { toast } from "sonner";
 import { _axios } from "@/lib/axios";
 import type { ExaminationColumn } from "../types";
 
-type SaveColumnsVariables = { id: string; columns: ExaminationColumn[] };
+type SaveColumnsVariables = { id: string; grade: string; columns: ExaminationColumn[] };
 
 export function useSaveColumns() {
   const queryClient = useQueryClient();
 
   return useMutation<ExaminationColumn[], Error, SaveColumnsVariables>({
-    mutationFn: async ({ id, columns }) => {
-      const res = await _axios.put(`/admin/examinations/${id}/columns`, { columns });
+    mutationFn: async ({ id, grade, columns }) => {
+      const res = await _axios.put(`/admin/examinations/${id}/columns`, { grade, columns });
       return res.data.data;
     },
     onSuccess: (_data, { id }) => {

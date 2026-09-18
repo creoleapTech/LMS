@@ -20,6 +20,7 @@ describe("Property 8: Default columns are always present and non-removable", () 
         fc.array(
           fc.record({
             id: fc.uuid(),
+            grade: fc.constant("1"),
             name: fc.string({ minLength: 1, maxLength: 20 }),
             type: fc.constantFrom("number" as const, "text" as const),
             order: fc.nat(),

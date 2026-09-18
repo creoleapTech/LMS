@@ -21,10 +21,14 @@ export const examinations = sqliteTable("examinations", {
 ]);
 
 // ─── examination_columns ─────────────────────────────
-// User-defined columns for an examination (number, text, or formula)
+// User-defined columns for an examination, scoped per grade.
+// Each grade in an examination has its own independent set of columns
+// (all sections of the same grade share the same columns).
 export const examinationColumns = sqliteTable("examination_columns", {
   id:             text("id").primaryKey(),
   examinationId:  text("examination_id").notNull().references(() => examinations.id),
+  // Grade this column belongs to (e.g. "1", "2"). Columns are independent per grade.
+  grade:          text("grade").notNull().default(""),
   name:           text("name").notNull(),
   type:           text("type", { enum: ["number", "text", "formula"] }).notNull(),
   formula:        text("formula"),   // Only populated when type === "formula"
@@ -34,6 +38,7 @@ export const examinationColumns = sqliteTable("examination_columns", {
   updatedAt:      text("updated_at"),
 }, (table) => [
   index("examination_columns_examination_id_idx").on(table.examinationId),
+  index("examination_columns_examination_grade_idx").on(table.examinationId, table.grade),
 ]);
 
 // ─── examination_cells ───────────────────────────────

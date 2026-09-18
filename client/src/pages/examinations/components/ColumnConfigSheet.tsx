@@ -39,7 +39,8 @@ interface ColumnConfigSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   existingColumns: ExaminationColumn[];
-  onSave: (column: Omit<ExaminationColumn, "id" | "order">) => void;
+  // Grade is injected by the caller (active grade tab) — uniqueness is per grade
+  onSave: (column: Omit<ExaminationColumn, "id" | "order" | "grade">) => void;
   editingColumn?: ExaminationColumn;
 }
 

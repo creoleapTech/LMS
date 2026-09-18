@@ -16,6 +16,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { _axios } from "@/lib/axios";
 import { useAuthStore } from "@/store/userAuthStore";
@@ -50,7 +57,9 @@ export interface ExaminationFormDialogProps {
 /**
  * ExaminationFormDialog
  *
- * Create mode: name field + class selector with "Select All" toggle.
+ * Create mode: name field + single-grade class selector. Each grade owns an
+ * independent column set, so a new assessment starts with sections from one
+ * grade only — more grades can be added later from the assessment page.
  * Edit mode: name field only (classes are managed on the detail page).
  *
  * Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4
@@ -70,8 +79,9 @@ export function ExaminationFormDialog({
       ? (user?.institutionId as { _id: string })?._id ?? ""
       : user?.institutionId ?? "";
 
-  // ── Class selection state (create mode only) ───────────────────────────────
+  // ── Class selection state (create mode only, single grade) ────────────────
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
 
   // ── Fetch classes (create mode only) ──────────────────────────────────────
   const { data: classesData = [], isLoading: classesLoading } = useQuery<ClassItem[]>({
@@ -95,13 +105,32 @@ export function ExaminationFormDialog({
       return a.section.localeCompare(b.section);
     });
 
-  const allSelected = classList.length > 0 && selectedClassIds.length === classList.length;
+  // Distinct grades for the grade picker
+  const availableGrades = [...new Set(classList.map((c) => c.grade))].sort(
+    (a, b) => (Number(a) || 0) - (Number(b) || 0)
+  );
 
-  const handleSelectAll = () => {
-    if (allSelected) {
+  // Sections of the chosen grade only — one grade per assessment at creation
+  const gradeSections = selectedGrade
+    ? classList.filter((c) => c.grade === selectedGrade)
+    : [];
+
+  const allSectionsSelected =
+    gradeSections.length > 0 && selectedClassIds.length === gradeSections.length;
+
+  const handleGradeChange = (grade: string) => {
+    setSelectedGrade(grade);
+    // Pre-select all sections of the newly chosen grade
+    setSelectedClassIds(
+      classList.filter((c) => c.grade === grade).map((c) => c._id)
+    );
+  };
+
+  const handleSelectAllSections = () => {
+    if (allSectionsSelected) {
       setSelectedClassIds([]);
     } else {
-      setSelectedClassIds(classList.map((c) => c._id));
+      setSelectedClassIds(gradeSections.map((c) => c._id));
     }
   };
 
@@ -127,7 +156,10 @@ export function ExaminationFormDialog({
   useEffect(() => {
     if (open) {
       reset({ name: mode === "edit" && examination ? examination.name : "" });
-      if (mode === "create") setSelectedClassIds([]);
+      if (mode === "create") {
+        setSelectedClassIds([]);
+        setSelectedGrade("");
+      }
     }
   }, [open, mode, examination, reset]);
 
@@ -174,7 +206,7 @@ export function ExaminationFormDialog({
               </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground mt-0.5">
                 {mode === "create"
-                  ? "Enter a name and select the classes to include."
+                  ? "Enter a name, pick one grade, and select its sections. Each grade keeps its own columns — more grades can be added later."
                   : "Update the examination name."}
               </DialogDescription>
             </div>
@@ -204,12 +236,12 @@ export function ExaminationFormDialog({
               )}
             </div>
 
-            {/* ── Class selector (create mode only) ───────────────────────── */}
+            {/* ── Class selector (create mode only, single grade) ─────────── */}
             {mode === "create" && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">
-                    Select Classes
+                    Select Grade & Sections
                     {selectedClassIds.length > 0 && (
                       <span className="ml-2 text-xs font-normal text-indigo-600">
                         ({selectedClassIds.length} selected)
@@ -217,19 +249,19 @@ export function ExaminationFormDialog({
                     )}
                   </Label>
 
-                  {/* Select All toggle */}
-                  {classList.length > 0 && (
+                  {/* Select All sections within the chosen grade */}
+                  {gradeSections.length > 0 && (
                     <button
                       type="button"
-                      onClick={handleSelectAll}
+                      onClick={handleSelectAllSections}
                       className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
                     >
-                      {allSelected ? (
+                      {allSectionsSelected ? (
                         <CheckSquare className="h-3.5 w-3.5" />
                       ) : (
                         <Square className="h-3.5 w-3.5" />
                       )}
-                      {allSelected ? "Deselect All" : "Select All"}
+                      {allSectionsSelected ? "Deselect All" : "Select All"}
                     </button>
                   )}
                 </div>
@@ -245,32 +277,60 @@ export function ExaminationFormDialog({
                     No classes available for your institution.
                   </p>
                 ) : (
-                  <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto py-1">
-                    {classList.map((cls) => {
-                      const isSelected = selectedClassIds.includes(cls._id);
-                      const label = formatClassLabel(cls.grade, cls.section);
-                      return (
-                        <button
-                          key={cls._id}
-                          type="button"
-                          onClick={() => handleToggleClass(cls._id)}
-                          aria-pressed={isSelected}
-                          className={[
-                            "rounded-full px-3 py-1.5 text-sm font-medium transition-all border",
-                            isSelected
-                              ? "bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200"
-                              : "bg-transparent text-foreground border-border hover:border-indigo-400 hover:text-indigo-600",
-                          ].join(" ")}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-3">
+                    {/* Grade picker — one grade per new assessment */}
+                    <Select value={selectedGrade} onValueChange={handleGradeChange}>
+                      <SelectTrigger className="w-full rounded-xl">
+                        <SelectValue placeholder="Select a grade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableGrades.map((grade) => (
+                          <SelectItem key={grade} value={grade}>
+                            Grade {grade}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Sections of the chosen grade */}
+                    {selectedGrade ? (
+                      <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto py-1">
+                        {gradeSections.map((cls) => {
+                          const isSelected = selectedClassIds.includes(cls._id);
+                          return (
+                            <button
+                              key={cls._id}
+                              type="button"
+                              onClick={() => handleToggleClass(cls._id)}
+                              aria-pressed={isSelected}
+                              className={[
+                                "rounded-full px-3 py-1.5 text-sm font-medium transition-all border",
+                                isSelected
+                                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200"
+                                  : "bg-transparent text-foreground border-border hover:border-indigo-400 hover:text-indigo-600",
+                              ].join(" ")}
+                            >
+                              Section {cls.section}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground py-1">
+                        Choose a grade to see its sections.
+                      </p>
+                    )}
+                    {selectedGrade && (
+                      <p className="text-xs text-muted-foreground">
+                        {formatClassLabel(selectedGrade, gradeSections.map((c) => c.section).join(", ") || "—")} — all
+                        selected sections share this grade&apos;s columns.
+                      </p>
+                    )}
                   </div>
                 )}
 
                 <p className="text-xs text-muted-foreground">
-                  You can also add or change classes later from the examination page.
+                  You can add more grades later from the assessment page — each grade keeps its own columns and formulas.
                 </p>
               </div>
             )}

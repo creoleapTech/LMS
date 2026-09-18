@@ -9,11 +9,19 @@ export type ColumnType = "number" | "text" | "formula";
 
 export interface ExaminationColumn {
   id: string;       // UUID
+  grade: string;    // Grade scope — each grade owns an independent column set
   name: string;     // Display name, used in formula references
   type: ColumnType;
   formula?: string; // Only for type === "formula"
   maxMarks?: number; // Only for type === "number"
   order: number;    // Display order (0-indexed, after default columns)
+}
+
+export interface GradeTab {
+  grade: string;
+  studentCount: number;
+  columnCount: number;
+  sectionCount: number;
 }
 
 // Default columns are synthetic — not stored in the columns array
@@ -77,6 +85,7 @@ export interface UpdateExaminationPayload {
 }
 
 export interface SaveColumnsPayload {
+  grade: string;
   columns: ExaminationColumn[];
 }
 
@@ -127,6 +136,44 @@ export const columnConfigSchema = z
 // ---------------------------------------------------------------------------
 // Pure utility functions
 // ---------------------------------------------------------------------------
+
+/**
+ * Returns the columns belonging to a single grade, sorted by order.
+ * Legacy columns with an empty grade are treated as belonging to the
+ * requested grade (pre-migration shared data).
+ */
+export function columnsForGrade(
+  columns: ExaminationColumn[],
+  grade: string
+): ExaminationColumn[] {
+  return columns
+    .filter((c) => (c.grade ?? "") === "" || c.grade === grade)
+    .sort((a, b) => a.order - b.order);
+}
+
+/**
+ * Returns the students belonging to a single grade, sorted by section then name.
+ */
+export function studentsForGrade(
+  students: StudentRow[],
+  grade: string
+): StudentRow[] {
+  return students
+    .filter((s) => s.grade === grade)
+    .sort((a, b) => {
+      const sc = a.section.localeCompare(b.section);
+      if (sc !== 0) return sc;
+      return a.name.localeCompare(b.name);
+    });
+}
+
+/**
+ * Derives the distinct grades present in a student roster, in numeric order.
+ */
+export function gradesFromStudents(students: StudentRow[]): string[] {
+  const grades = [...new Set(students.map((s) => s.grade).filter((g) => g !== ""))];
+  return grades.sort((a, b) => (Number(a) || 0) - (Number(b) || 0));
+}
 
 export const ABSENT_CODES = ["AB", "ABS", "ABSENT", "A"] as const;
 

@@ -32,6 +32,8 @@ interface ConfigureClassesDialogProps {
   selectedClassIds: string[];
   onApply: (ids: string[]) => void;
   institutionId: string;
+  /** All columns in the examination (with grade scope) — used for removal warnings */
+  columns?: Array<{ grade?: string }>;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -43,11 +45,17 @@ interface ConfigureClassesDialogProps {
  * Classes are grouped by grade. Clicking a grade header toggles all its
  * sections. Clicking a section chip toggles just that section.
  * A single "Apply" button saves the whole selection at once (bulk update).
+ *
+ * Each grade owns an independent column set: all sections of one grade share
+ * the same columns, while different grades have different columns/formulas.
+ * Removing the last section of a grade permanently deletes that grade's
+ * columns and marks (warned inline before applying).
  */
 export function ConfigureClassesDialog({
   selectedClassIds,
   onApply,
   institutionId,
+  columns = [],
 }: ConfigureClassesDialogProps) {
   const [open, setOpen] = useState(false);
   // Local draft selection — only committed on Apply
@@ -147,7 +155,26 @@ export function ConfigureClassesDialog({
   const buttonLabel =
     selectedCount === 0
       ? "Configure Classes"
-      : `${selectedCount} class${selectedCount !== 1 ? "es" : ""} selected`;
+      : `${selectedCount} section${selectedCount !== 1 ? "s" : ""} selected`;
+
+  // ── Grades that would lose their last section on Apply (columns deleted) ──
+  const columnCountByGrade = new Map<string, number>();
+  for (const col of columns) {
+    const g = col.grade ?? "";
+    if (!g) continue;
+    columnCountByGrade.set(g, (columnCountByGrade.get(g) ?? 0) + 1);
+  }
+  const gradesLosingAllSections = gradeGroups
+    .filter((group) => {
+      const gradeIds = group.classes.map((c) => c._id);
+      const hadSelection = gradeIds.some((id) => selectedClassIds.includes(id));
+      const keepsSelection = gradeIds.some((id) => draft.includes(id));
+      return hadSelection && !keepsSelection && (columnCountByGrade.get(group.grade) ?? 0) > 0;
+    })
+    .map((g) => ({
+      grade: g.grade,
+      columns: columnCountByGrade.get(g.grade) ?? 0,
+    }));
 
   return (
     <>
@@ -169,7 +196,8 @@ export function ConfigureClassesDialog({
           <div className="px-6 pt-6 pb-4 border-b border-white/20 shrink-0">
             <DialogTitle className="text-lg font-semibold">Configure Classes</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground mt-0.5">
-              Select grades and sections to include in this examination.
+              Select grades and sections to include. Sections of the same grade share
+              one set of columns — each grade has its own columns and formulas.
             </DialogDescription>
           </div>
 
@@ -238,6 +266,9 @@ export function ConfigureClassesDialog({
                         </span>
                         <span className="text-xs text-muted-foreground ml-auto">
                           {selectedInGrade.length}/{gradeIds.length} sections
+                          {(columnCountByGrade.get(group.grade) ?? 0) > 0 && (
+                            <> • {columnCountByGrade.get(group.grade)} column{(columnCountByGrade.get(group.grade) ?? 0) !== 1 ? "s" : ""}</>
+                          )}
                         </span>
                       </button>
                     </div>
@@ -271,6 +302,15 @@ export function ConfigureClassesDialog({
               })
             )}
           </div>
+
+          {/* Removal warning */}
+          {gradesLosingAllSections.length > 0 && (
+            <div className="mx-6 mb-2 rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-xs text-destructive">
+              Removing all sections of{" "}
+              {gradesLosingAllSections.map((g) => `Grade ${g.grade} (${g.columns} column${g.columns !== 1 ? "s" : ""})`).join(", ")}{" "}
+              will permanently delete {gradesLosingAllSections.length > 1 ? "those grades'" : "that grade's"} columns and marks.
+            </div>
+          )}
 
           {/* Footer */}
           <div className="shrink-0 flex items-center justify-between px-6 py-4 border-t border-white/20">

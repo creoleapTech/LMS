@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Pencil,
@@ -7,6 +8,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
+import { _axios } from "@/lib/axios";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +33,7 @@ import { StudentRosterGrid } from "./components/StudentRosterGrid";import { Colu
 import { ExaminationFormDialog } from "./components/ExaminationFormDialog";
 import { ExaminationExportButton } from "./components/ExaminationExportButton";
 import type { ExaminationColumn, ExaminationDetail } from "./types";
+import { columnsForGrade, studentsForGrade } from "./types";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -44,6 +47,12 @@ interface ExaminationDetailPageProps {
  * ExaminationDetailPage
  *
  * Full spreadsheet editor for a single examination.
+ *
+ * Each grade owns an independent column set (all sections of one grade share
+ * the same columns/formulas). Only one grade is shown at a time via grade
+ * tabs — the roster grid, column configuration, and export all operate on the
+ * active grade.
+ *
  * Requirements: 4.1, 4.4, 5.1, 5.6, 5.7, 9.1, 9.2, 10.1, 10.2, 10.3,
  *               11.1, 11.2, 11.3, 11.4, 12.1, 12.2, 12.3, 12.4,
  *               14.1, 14.2, 14.3, 14.4, 15.1, 15.2, 15.3, 15.4, 16.1
@@ -70,8 +79,11 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
 
   // ── Local state ────────────────────────────────────────────────────────────
   const [localCells, setLocalCells] = useState<Map<string, string>>(new Map());
+  // All grades' columns (grade-scoped on the server)
   const [localColumns, setLocalColumns] = useState<ExaminationColumn[]>([]);
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
+  // Only one grade is visible/edited at a time
+  const [activeGrade, setActiveGrade] = useState<string>("");
   const [columnSheetOpen, setColumnSheetOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<ExaminationColumn | undefined>(undefined);
   const [deleteExamOpen, setDeleteExamOpen] = useState(false);
@@ -82,6 +94,33 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Track dirty cells for the debounced save
   const dirtyCellsRef = useRef<Map<string, string>>(new Map());
+
+  // ── Derive institution id (needed for the classes lookup) ────────────────
+  const institutionId = useMemo(() => {
+    if (!examination) return "";
+    return typeof examination.institutionId === "string"
+      ? examination.institutionId
+      : ((examination.institutionId as { _id: string })?._id ?? "");
+  }, [examination]);
+
+  // ── Classes lookup: resolves selected class IDs → grades (for grade tabs) ──
+  const { data: classesData = [] } = useQuery<Array<{ _id: string; grade: string; section: string }>>({
+    queryKey: ["classes-list", institutionId],
+    queryFn: async () => {
+      const res = await _axios.get("/admin/classes", {
+        params: { institutionId, limit: 200 },
+      });
+      return res.data?.data ?? [];
+    },
+    enabled: !!institutionId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const gradeByClassId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of classesData) map.set(c._id, c.grade);
+    return map;
+  }, [classesData]);
 
   // ── Initialize local state from server data ────────────────────────────────
   useEffect(() => {
@@ -96,6 +135,47 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
     setLocalColumns(examination.columns);
     setSelectedClassIds(examination.selectedClassIds);
   }, [examination]);
+
+  // ── Grades in this examination (one tab per grade) ─────────────────────────
+  // Union of grades from the class selection, the roster, and stored columns —
+  // so tabs survive empty rosters and freshly added grades.
+  const grades: string[] = useMemo(() => {
+    const set = new Set<string>();
+    for (const cid of selectedClassIds) {
+      const g = gradeByClassId.get(cid);
+      if (g) set.add(g);
+    }
+    if (examination) {
+      for (const s of examination.students) if (s.grade) set.add(s.grade);
+      for (const c of localColumns) {
+        const g = (c as ExaminationColumn).grade ?? "";
+        if (g) set.add(g);
+      }
+    }
+    return [...set].sort((a, b) => (Number(a) || 0) - (Number(b) || 0));
+  }, [selectedClassIds, gradeByClassId, examination, localColumns]);
+
+  // Keep the active grade valid: default to the first grade, and fall back
+  // when the active grade loses its last section.
+  useEffect(() => {
+    if (grades.length === 0) {
+      setActiveGrade("");
+      return;
+    }
+    if (!activeGrade || !grades.includes(activeGrade)) {
+      setActiveGrade(grades[0]);
+    }
+  }, [grades, activeGrade]);
+
+  // ── Active grade's slice ───────────────────────────────────────────────────
+  const gradeColumns = useMemo(
+    () => (activeGrade ? columnsForGrade(localColumns, activeGrade) : []),
+    [localColumns, activeGrade]
+  );
+  const gradeStudents = useMemo(
+    () => (examination && activeGrade ? studentsForGrade(examination.students, activeGrade) : []),
+    [examination, activeGrade]
+  );
 
   // ── Cell change handler with debounced save ────────────────────────────────
   const handleCellChange = useCallback(
@@ -146,75 +226,93 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
   // ── Column operations ──────────────────────────────────────────────────────
 
   const handleAddColumn = useCallback(() => {
+    if (!activeGrade) return;
     setEditingColumn(undefined);
     setColumnSheetOpen(true);
-  }, []);
+  }, [activeGrade]);
 
   const handleEditColumn = useCallback((column: ExaminationColumn) => {
     setEditingColumn(column);
     setColumnSheetOpen(true);
   }, []);
 
+  // Persist helper: replaces the active grade's columns locally + on server.
+  // Other grades' columns are untouched.
+  const persistGradeColumns = useCallback(
+    (nextGradeColumns: ExaminationColumn[]) => {
+      const normalized = nextGradeColumns.map((col, idx) => ({
+        ...col,
+        grade: activeGrade,
+        order: idx,
+      }));
+      setLocalColumns((prev) => [
+        ...prev.filter((col) => (col.grade ?? "") !== activeGrade),
+        ...normalized,
+      ]);
+      saveColumnsMutation.mutate({ id, grade: activeGrade, columns: normalized });
+    },
+    [activeGrade, id, saveColumnsMutation]
+  );
+
   const handleColumnSave = useCallback(
-    (columnData: Omit<ExaminationColumn, "id" | "order">) => {
-      let updatedColumns: ExaminationColumn[];
+    (columnData: Omit<ExaminationColumn, "id" | "order" | "grade">) => {
+      // Name uniqueness is enforced within the active grade only
+      const nameLower = columnData.name.trim().toLowerCase();
+      const isDuplicate = gradeColumns.some(
+        (col) =>
+          col.name.toLowerCase() === nameLower &&
+          (!editingColumn || col.id !== editingColumn.id)
+      );
+      if (isDuplicate) return;
+
+      let nextGradeColumns: ExaminationColumn[];
 
       if (editingColumn) {
-        // Edit existing column
-        updatedColumns = localColumns.map((col) =>
+        // Edit existing column (stays in the active grade)
+        nextGradeColumns = gradeColumns.map((col) =>
           col.id === editingColumn.id
-            ? { ...col, ...columnData }
+            ? { ...col, ...columnData, name: columnData.name.trim(), grade: activeGrade }
             : col
         );
       } else {
-        // Add new column
+        // Add new column to the active grade
         const newColumn: ExaminationColumn = {
           ...columnData,
+          name: columnData.name.trim(),
           id: crypto.randomUUID(),
-          order: localColumns.length,
+          grade: activeGrade,
+          order: gradeColumns.length,
         };
-        updatedColumns = [...localColumns, newColumn];
+        nextGradeColumns = [...gradeColumns, newColumn];
       }
 
-      setLocalColumns(updatedColumns);
-      saveColumnsMutation.mutate({ id, columns: updatedColumns });
+      persistGradeColumns(nextGradeColumns);
     },
-    [editingColumn, localColumns, id, saveColumnsMutation]
+    [editingColumn, gradeColumns, activeGrade, persistGradeColumns]
   );
 
   const handleDeleteColumn = useCallback(
     (columnId: string) => {
-      const updatedColumns = localColumns.filter((col) => col.id !== columnId);
-      setLocalColumns(updatedColumns);
-      saveColumnsMutation.mutate({ id, columns: updatedColumns });
+      persistGradeColumns(gradeColumns.filter((col) => col.id !== columnId));
     },
-    [localColumns, id, saveColumnsMutation]
+    [gradeColumns, persistGradeColumns]
   );
 
   const handleReorderColumn = useCallback(
     (columnId: string, direction: "left" | "right") => {
-      const sorted = [...localColumns].sort((a, b) => a.order - b.order);
+      const sorted = [...gradeColumns].sort((a, b) => a.order - b.order);
       const index = sorted.findIndex((col) => col.id === columnId);
       if (index === -1) return;
 
       const swapIndex = direction === "left" ? index - 1 : index + 1;
       if (swapIndex < 0 || swapIndex >= sorted.length) return;
 
-      // Swap order values
-      const updatedColumns = localColumns.map((col) => {
-        if (col.id === sorted[index].id) {
-          return { ...col, order: sorted[swapIndex].order };
-        }
-        if (col.id === sorted[swapIndex].id) {
-          return { ...col, order: sorted[index].order };
-        }
-        return col;
-      });
-
-      setLocalColumns(updatedColumns);
-      saveColumnsMutation.mutate({ id, columns: updatedColumns });
+      // Swap positions, then renormalize order 0..n
+      const reordered = [...sorted];
+      [reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]];
+      persistGradeColumns(reordered);
     },
-    [localColumns, id, saveColumnsMutation]
+    [gradeColumns, persistGradeColumns]
   );
 
   // ── Delete examination ─────────────────────────────────────────────────────
@@ -223,6 +321,25 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
       onSuccess: () => navigate({ to: "/examinations" }),
     });
   }, [id, deleteMutation, navigate]);
+
+  // ── Per-grade counts for the grade tabs ────────────────────────────────────
+  const studentCountByGrade = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of examination?.students ?? []) {
+      map.set(s.grade, (map.get(s.grade) ?? 0) + 1);
+    }
+    return map;
+  }, [examination?.students]);
+
+  const columnCountByGrade = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const c of localColumns) {
+      const g = c.grade ?? "";
+      if (!g) continue;
+      map.set(g, (map.get(g) ?? 0) + 1);
+    }
+    return map;
+  }, [localColumns]);
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (isLoading) {
@@ -257,16 +374,13 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
     );
   }
 
-  // ── Derive institution id ──────────────────────────────────────────────────
-  const institutionId =
-    typeof examination.institutionId === "string"
-      ? examination.institutionId
-      : (examination.institutionId as { _id: string })?._id ?? "";
-
-  // ── Build examination with local state for rendering ──────────────────────
+  // ── Build examination slice for the active grade ───────────────────────────
+  // The grid, column sheet, and export all operate on one grade at a time.
+  // (Plain const — safe after the early returns above.)
   const examinationWithLocalState: ExaminationDetail = {
     ...examination,
-    columns: localColumns,
+    columns: gradeColumns,
+    students: gradeStudents,
     selectedClassIds,
   };
 
@@ -301,8 +415,11 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
             </Button>
           )}
 
-          {/* Export button */}
-          <ExaminationExportButton examination={examinationWithLocalState} />
+          {/* Export button — exports the active grade only */}
+          <ExaminationExportButton
+            examination={examinationWithLocalState}
+            fileSuffix={activeGrade ? `-Grade-${activeGrade}` : ""}
+          />
 
           {/* Delete button — admin/super_admin only */}
           {isAdminOrSuperAdmin && (
@@ -329,32 +446,81 @@ export default function ExaminationDetailPage({ id }: ExaminationDetailPageProps
               updateMutation.mutate({ id, selectedClassIds: ids });
             }}
             institutionId={institutionId}
+            columns={localColumns}
           />
+        </div>
+      )}
+
+      {/* Grade tabs — one grade visible at a time, each with own columns */}
+      {grades.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4" role="tablist" aria-label="Grades">
+          {grades.map((grade) => {
+            const isActive = grade === activeGrade;
+            const sc = studentCountByGrade.get(grade) ?? 0;
+            const cc = columnCountByGrade.get(grade) ?? 0;
+            return (
+              <button
+                key={grade}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveGrade(grade)}
+                className={[
+                  "rounded-xl px-4 py-2 text-sm font-semibold border transition-all",
+                  isActive
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200"
+                    : "bg-transparent text-foreground border-border hover:border-indigo-400 hover:text-indigo-600",
+                ].join(" ")}
+              >
+                Grade {grade}
+                <span className={`ml-2 text-xs font-normal ${isActive ? "text-indigo-100" : "text-muted-foreground"}`}>
+                  {sc} student{sc !== 1 ? "s" : ""} • {cc} column{cc !== 1 ? "s" : ""}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 
       {/* Roster grid */}
       <div className="neo-card rounded-2xl p-5">
-        <StudentRosterGrid
-          examination={examinationWithLocalState}
-          isReadOnly={isReadOnly}
-          onCellChange={handleCellChange}
-          onAddColumn={handleAddColumn}
-          onEditColumn={handleEditColumn}
-          onDeleteColumn={handleDeleteColumn}
-          onReorderColumn={handleReorderColumn}
-          localCells={localCells}
-        />
+        {grades.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            {isReadOnly
+              ? "No classes have been assigned to this assessment yet."
+              : "Select classes above to populate the student roster — each grade gets its own columns."}
+          </p>
+        ) : (
+          <>
+            {!isReadOnly && (
+              <p className="text-xs text-muted-foreground mb-3">
+                Showing Grade {activeGrade} — columns and formulas below apply only to this grade.
+                Sections {gradeStudents.length > 0 ? [...new Set(gradeStudents.map((s) => s.section))].join(", ") : "—"} share
+                this grade&apos;s columns.
+              </p>
+            )}
+            <StudentRosterGrid
+              examination={examinationWithLocalState}
+              isReadOnly={isReadOnly}
+              onCellChange={handleCellChange}
+              onAddColumn={handleAddColumn}
+              onEditColumn={handleEditColumn}
+              onDeleteColumn={handleDeleteColumn}
+              onReorderColumn={handleReorderColumn}
+              localCells={localCells}
+            />
+          </>
+        )}
       </div>
 
-      {/* Column config sheet */}
+      {/* Column config sheet (active grade's columns only) */}
       <ColumnConfigSheet
         open={columnSheetOpen}
         onOpenChange={(open) => {
           setColumnSheetOpen(open);
           if (!open) setEditingColumn(undefined);
         }}
-        existingColumns={localColumns}
+        existingColumns={gradeColumns}
         onSave={handleColumnSave}
         editingColumn={editingColumn}
       />

@@ -1,0 +1,2 @@
+ALTER TABLE `examination_columns` ADD `grade` text DEFAULT '' NOT NULL;--> statement-breakpoint
+CREATE INDEX `examination_columns_examination_grade_idx` ON `examination_columns` (`examination_id`,`grade`);

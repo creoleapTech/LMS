@@ -11,6 +11,8 @@ import type { ExaminationDetail } from "../types";
 
 interface ExaminationExportButtonProps {
   examination: ExaminationDetail;
+  /** Appended to the exported filename, e.g. "-Grade-1" for per-grade exports */
+  fileSuffix?: string;
 }
 
 /**
@@ -63,6 +65,7 @@ function buildRows(examination: ExaminationDetail): string[][] {
  */
 export function ExaminationExportButton({
   examination,
+  fileSuffix = "",
 }: ExaminationExportButtonProps) {
   function handleExportCsv() {
     const rows = buildRows(examination);
@@ -74,7 +77,7 @@ export function ExaminationExportButton({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${examination.name}.csv`;
+    a.download = `${examination.name}${fileSuffix}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -84,7 +87,7 @@ export function ExaminationExportButton({
     const ws = XLSX.utils.aoa_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Roster");
-    XLSX.writeFile(wb, `${examination.name}.xlsx`);
+    XLSX.writeFile(wb, `${examination.name}${fileSuffix}.xlsx`);
   }
 
   return (
