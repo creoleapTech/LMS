@@ -30,7 +30,7 @@ interface StudentRosterGridProps {
 function SortIcon({ active, direction }: { active: boolean; direction?: "asc" | "desc" }) {
   if (active && direction === "asc") return <ArrowUp className="h-3 w-3 text-indigo-600" />;
   if (active && direction === "desc") return <ArrowDown className="h-3 w-3 text-indigo-600" />;
-  return <ChevronsUpDown className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover/sort:opacity-100 transition-opacity" />;
+  return <ChevronsUpDown className="h-3 w-3 text-muted-foreground/60 group-hover/sort:text-indigo-600 transition-colors" />;
 }
 
 /**
